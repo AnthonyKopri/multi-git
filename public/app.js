@@ -1553,6 +1553,9 @@ function createFileListItem(filePath, statusChar, isStaged) {
   li.dataset.path = filePath;
   li.dataset.staged = isStaged;
   li.dataset.status = statusChar;
+  li.title = statusChar === 'U'
+    ? 'Click to resolve conflict'
+    : (isStaged ? 'Click to unstage this file' : 'Click to stage this file');
 
   if (activeDiffFile && activeDiffFile.path === filePath && activeDiffFile.staged === isStaged) {
     li.classList.add('active');
@@ -1585,6 +1588,7 @@ function createFileListItem(filePath, statusChar, isStaged) {
     const btnResolve = document.createElement('button');
     btnResolve.className = 'btn btn-secondary btn-sm';
     btnResolve.style.padding = '2px 6px';
+    btnResolve.setAttribute('aria-label', `Resolve conflict in ${filePath}`);
     btnResolve.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">dynamic_form</span> Resolve';
     btnResolve.onclick = (e) => {
       e.stopPropagation();
@@ -1592,22 +1596,19 @@ function createFileListItem(filePath, statusChar, isStaged) {
     };
     fileActions.appendChild(btnResolve);
   } else {
-    // Normal files: stage / unstage button
-    const btnToggle = document.createElement('button');
-    btnToggle.className = 'btn btn-icon btn-sm';
-    btnToggle.style.width = '24px';
-    btnToggle.style.height = '24px';
-    btnToggle.title = isStaged ? 'Unstage' : 'Stage';
-    btnToggle.innerHTML = `<span class="material-symbols-outlined" style="font-size: 14px;">${isStaged ? 'remove' : 'add'}</span>`;
-    btnToggle.onclick = async (e) => {
+    // Normal files: row click toggles stage state; this action opens the diff.
+    const btnDiff = document.createElement('button');
+    btnDiff.className = 'btn btn-icon btn-sm';
+    btnDiff.style.width = '24px';
+    btnDiff.style.height = '24px';
+    btnDiff.title = 'View Diff';
+    btnDiff.setAttribute('aria-label', `View diff for ${filePath}`);
+    btnDiff.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">difference</span>';
+    btnDiff.onclick = (e) => {
       e.stopPropagation();
-      if (isStaged) {
-        await unstageFiles([filePath]);
-      } else {
-        await stageFiles([filePath]);
-      }
+      selectDiffFile(filePath, isStaged, statusChar);
     };
-    fileActions.appendChild(btnToggle);
+    fileActions.appendChild(btnDiff);
 
     // Discard button (only for unstaged changes)
     if (!isStaged) {
@@ -1616,6 +1617,7 @@ function createFileListItem(filePath, statusChar, isStaged) {
       btnDiscard.style.width = '24px';
       btnDiscard.style.height = '24px';
       btnDiscard.title = 'Discard Changes';
+      btnDiscard.setAttribute('aria-label', `Discard changes in ${filePath}`);
       btnDiscard.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">delete</span>';
       btnDiscard.onclick = async (e) => {
         e.stopPropagation();
@@ -1627,9 +1629,17 @@ function createFileListItem(filePath, statusChar, isStaged) {
 
   li.appendChild(fileActions);
 
-  // Click on item loads diff in the File Diff tab
-  li.onclick = () => {
-    selectDiffFile(filePath, isStaged, statusChar);
+  li.onclick = async () => {
+    if (statusChar === 'U') {
+      openConflictResolver(filePath);
+      return;
+    }
+
+    if (isStaged) {
+      await unstageFiles([filePath]);
+    } else {
+      await stageFiles([filePath]);
+    }
   };
 
   return li;
