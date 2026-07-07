@@ -1,0 +1,55 @@
+{
+  "name": "multi-git",
+  "version": "1.0.0",
+  "description": "A lightweight Git GUI client with dynamic SSH key switching",
+  "main": "main.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "desktop": "electron .",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win nsis portable",
+    "build-standalone": "electron-builder --win portable --config.directories.output=dist-standalone"
+  },
+  "keywords": [
+    "git",
+    "gui",
+    "ssh",
+    "github",
+    "multi-account"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "electron": "^42.3.2",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.multigit.client",
+    "productName": "Multi-Git Client",
+    "files": [
+      "main.js",
+      "preload.js",
+      "server.js",
+      "package.json",
+      "public/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

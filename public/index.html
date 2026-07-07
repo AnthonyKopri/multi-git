@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Git GUI Client</title>
+  <!-- Modern Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- APP WRAPPER -->
+  <div id="app" class="app-layout">
+    
+    <!-- TOP NAVBAR -->
+    <header class="navbar">
+      <div class="brand">
+        <span class="material-symbols-outlined logo-icon">alt_route</span>
+        <h1>Multi-Git</h1>
+      </div>
+
+      <!-- Header Segments: Repository / Branch / SSH Profile -->
+      <div class="header-segments">
+
+        <!-- Repository Segment -->
+        <div class="segment-wrapper" id="repo-segment-wrapper">
+          <button id="repo-segment" class="header-segment" title="Switch repository">
+            <span class="material-symbols-outlined segment-icon">folder</span>
+            <span class="segment-text">
+              <span class="segment-label">Repository</span>
+              <span id="repo-segment-name" class="segment-value">None selected</span>
+              <span id="repo-segment-path" class="segment-sub"></span>
+            </span>
+            <span class="material-symbols-outlined segment-caret">expand_more</span>
+          </button>
+          <div id="repo-dropdown" class="header-dropdown hidden">
+            <div class="dropdown-title">Recent repositories</div>
+            <ul id="repo-dropdown-list" class="dropdown-list">
+              <li class="dropdown-empty">No recent repositories</li>
+            </ul>
+            <div class="dropdown-footer">
+              <button id="btn-open-repo" class="btn btn-secondary btn-sm" title="Open repository folder">
+                <span class="material-symbols-outlined" style="font-size: 16px;">folder_open</span>
+                <span>Open</span>
+              </button>
+              <button id="btn-create-repo" class="btn btn-secondary btn-sm" title="Create new Git repository">
+                <span class="material-symbols-outlined" style="font-size: 16px;">add_box</span>
+                <span>New</span>
+              </button>
+              <button id="btn-clone-repo" class="btn btn-secondary btn-sm" title="Clone a repository">
+                <span class="material-symbols-outlined" style="font-size: 16px;">cloud_download</span>
+                <span>Clone</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Branch Segment -->
+        <div class="segment-wrapper" id="branch-segment-wrapper">
+          <button id="branch-segment" class="header-segment" title="Switch branch">
+            <span class="material-symbols-outlined segment-icon">call_split</span>
+            <span class="segment-text">
+              <span class="segment-label">Branch</span>
+              <span class="segment-value-row">
+                <span id="branch-segment-name" class="segment-value">—</span>
+                <span id="branch-ahead-badge" class="count-badge count-ahead hidden" title="Commits ahead of remote"></span>
+                <span id="branch-behind-badge" class="count-badge count-behind hidden" title="Commits behind remote"></span>
+                <span id="branch-state-badge" class="count-badge count-state hidden"></span>
+              </span>
+            </span>
+            <span class="material-symbols-outlined segment-caret">expand_more</span>
+          </button>
+          <div id="branch-dropdown" class="header-dropdown hidden">
+            <div class="dropdown-search">
+              <input type="text" id="branch-filter-input" placeholder="Filter branches..." autocomplete="off">
+            </div>
+            <ul id="branch-dropdown-list" class="dropdown-list">
+              <li class="dropdown-empty">No branches</li>
+            </ul>
+            <div class="dropdown-footer dropdown-footer-column">
+              <div class="dropdown-inline-form">
+                <input type="text" id="header-new-branch-input" placeholder="New branch name..." autocomplete="off">
+                <button id="btn-header-create-branch" class="btn btn-primary btn-sm" title="Create and checkout branch">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SSH Profile Segment (active git key indicator) -->
+        <div class="segment-wrapper" id="profile-segment-wrapper">
+          <button id="profile-segment" class="header-segment segment-profile" title="Switch SSH key profile for this repository">
+            <span class="segment-icon-stack">
+              <span class="material-symbols-outlined segment-icon">key</span>
+              <span id="profile-color-dot" class="profile-dot profile-dot-system"></span>
+            </span>
+            <span class="segment-text">
+              <span class="segment-label">SSH Key</span>
+              <span class="segment-value-row">
+                <span id="profile-segment-name" class="segment-value">System SSH</span>
+                <span id="profile-vault-icon" class="material-symbols-outlined profile-vault-glyph hidden" title=""></span>
+              </span>
+            </span>
+            <span class="material-symbols-outlined segment-caret">expand_more</span>
+          </button>
+          <div id="profile-dropdown" class="header-dropdown header-dropdown-right hidden">
+            <div class="dropdown-title">SSH key for this repository</div>
+            <ul id="profile-dropdown-list" class="dropdown-list">
+              <!-- Rendered dynamically -->
+            </ul>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-identity" id="identity-row" title="Commit author identity used in this repository">
+              <span class="material-symbols-outlined" style="font-size: 16px;">badge</span>
+              <span id="identity-text" class="identity-text">Identity: unknown</span>
+              <button id="btn-edit-identity" class="btn btn-text btn-sm" title="Edit commit name/email for this repo">Edit</button>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-footer">
+              <span id="dropdown-vault-status" class="vault-chip">Vault: —</span>
+              <button id="btn-dropdown-vault" class="btn btn-secondary btn-sm">Unlock</button>
+              <button id="btn-manage-ssh" class="btn btn-secondary btn-sm" title="Manage SSH profiles">
+                <span class="material-symbols-outlined" style="font-size: 16px;">settings</span>
+                <span>Manage</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Global Controls -->
+      <div class="global-actions">
+        <button id="btn-refresh" class="btn btn-icon" title="Refresh status (F5)">
+          <span class="material-symbols-outlined">refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN BODY -->
+    <main id="main-content" class="main-body disabled-view">
+      
+      <!-- SIDEBAR (BRANCHES & MERGING) -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <div class="section-header">
+            <h3>Branches</h3>
+          </div>
+          
+          <!-- Branch Creation -->
+          <div class="branch-create-box">
+            <input type="text" id="new-branch-input" placeholder="New branch name...">
+            <button id="btn-create-branch" class="btn btn-primary btn-sm" title="Create and checkout branch">
+              <span class="material-symbols-outlined">add</span>
+            </button>
+          </div>
+
+          <!-- Branch Lists -->
+          <div class="branch-lists">
+            <h4>Local Branches</h4>
+            <ul id="local-branches-list" class="branch-list-ul">
+              <!-- Rendered dynamically -->
+            </ul>
+            
+            <h4 class="mt-4">Remote Branches</h4>
+            <ul id="remote-branches-list" class="branch-list-ul">
+              <!-- Rendered dynamically -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Merge / Rebase section -->
+        <div class="sidebar-section border-t mt-4 pt-4">
+          <div class="section-header">
+            <h3>Merge / Rebase</h3>
+          </div>
+          <p class="section-desc">Integrate another branch into current</p>
+          <div class="integration-controls">
+            <select id="integrate-branch-select" aria-label="Branch to merge or rebase">
+              <!-- Local + Remote branches -->
+            </select>
+            <div class="btn-group mt-2">
+              <button id="btn-merge" class="btn btn-secondary btn-sm">
+                <span class="material-symbols-outlined">call_merge</span> Merge
+              </button>
+              <button id="btn-rebase" class="btn btn-secondary btn-sm">
+                <span class="material-symbols-outlined">swap_calls</span> Rebase
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stashes section -->
+        <div class="sidebar-section border-t mt-4 pt-4">
+          <div class="section-header">
+            <h3>Stashes</h3>
+            <button id="btn-stash-save" class="btn btn-text btn-sm" title="Stash all current changes">
+              <span class="material-symbols-outlined" style="font-size: 16px;">archive</span>
+              <span>Stash</span>
+            </button>
+          </div>
+          <ul id="stash-list" class="stash-list-ul">
+            <li class="empty-state">No stashes</li>
+          </ul>
+        </div>
+
+        <!-- Tags section -->
+        <div class="sidebar-section border-t mt-4 pt-4">
+          <div class="section-header">
+            <h3>Tags</h3>
+          </div>
+          <ul id="tag-list" class="stash-list-ul">
+            <li class="empty-state">No tags</li>
+          </ul>
+        </div>
+
+        <!-- Safety Net: operation checkpoints + recoverable discards -->
+        <div class="sidebar-section border-t mt-4 pt-4">
+          <div class="section-header">
+            <h3>Safety Net</h3>
+            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-dim);" title="Risky operations save a checkpoint here so they can be undone. Discarded files can be restored for 24 hours.">health_and_safety</span>
+          </div>
+          <div class="branch-lists">
+            <h4>Undoable Operations</h4>
+            <ul id="checkpoint-list" class="stash-list-ul">
+              <li class="empty-state">No recent operations</li>
+            </ul>
+            <h4 class="mt-4">Recently Discarded</h4>
+            <ul id="trash-list" class="stash-list-ul">
+              <li class="empty-state">Nothing discarded recently</li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+
+      <!-- CENTER PANEL (STAGE & COMMIT) -->
+      <section class="center-panel">
+        
+        <!-- View Tabs -->
+        <div class="view-tabs">
+          <button id="tab-staging" class="tab-btn active">
+            <span class="material-symbols-outlined" style="font-size: 16px;">rule</span>
+            <span>Staging Area</span>
+          </button>
+          <button id="tab-diff" class="tab-btn">
+            <span class="material-symbols-outlined" style="font-size: 16px;">difference</span>
+            <span>File Diff</span>
+          </button>
+          <button id="tab-explorer" class="tab-btn">
+            <span class="material-symbols-outlined" style="font-size: 16px;">folder_zip</span>
+            <span>Workspace Explorer</span>
+          </button>
+        </div>
+        
+        <!-- Conflict Banner (Shows when git is in merge/rebase conflict) -->
+        <div id="conflict-banner" class="conflict-banner hidden">
+          <div class="conflict-banner-content">
+            <span class="material-symbols-outlined icon-alert">warning</span>
+            <div>
+              <h4>Git Conflict Active</h4>
+              <p>Resolve the conflicting files below to continue your merge or rebase.</p>
+            </div>
+          </div>
+          <div class="conflict-banner-actions">
+            <button id="btn-continue-conflict" class="btn btn-success btn-sm">Continue</button>
+            <button id="btn-abort-conflict" class="btn btn-danger btn-sm">Abort</button>
+          </div>
+        </div>
+
+        <!-- STAGING WORKSPACE VIEW -->
+        <div id="staging-view" class="view-pane">
+          <div class="staging-workspace">
+            
+            <!-- Staging Files List -->
+            <div class="files-lists-container">
+              <!-- Unstaged Files -->
+              <div class="file-list-card">
+                <div class="card-header">
+                  <h3>Unstaged Changes</h3>
+                  <div class="card-header-actions">
+                    <button id="btn-discard-all" class="btn btn-text btn-sm btn-text-danger" title="Discard all unstaged changes">Discard All</button>
+                    <button id="btn-stage-all" class="btn btn-text btn-sm">Stage All</button>
+                  </div>
+                </div>
+                <ul id="unstaged-files-list" class="file-list">
+                  <!-- Rendered dynamically -->
+                  <li class="empty-state">No modified files</li>
+                </ul>
+              </div>
+
+              <!-- Staged Files -->
+              <div class="file-list-card">
+                <div class="card-header">
+                  <h3>Staged Changes</h3>
+                  <button id="btn-unstage-all" class="btn btn-text btn-sm">Unstage All</button>
+                </div>
+                <ul id="staged-files-list" class="file-list">
+                  <!-- Rendered dynamically -->
+                  <li class="empty-state">No staged files</li>
+                </ul>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Commit Panel -->
+          <div class="commit-panel">
+            <!-- Conventional-commit quick templates -->
+            <div class="commit-template-row">
+              <input type="text" id="commit-scope-input" placeholder="scope" title="Optional scope, e.g. api, ui — used as type(scope): ..." autocomplete="off">
+              <div id="commit-template-chips" class="template-chips">
+                <!-- Chips rendered dynamically -->
+              </div>
+              <span id="commit-format-hint" class="commit-format-hint hidden" title="Conventional format: type(scope): summary">not conventional</span>
+            </div>
+            <div class="commit-input-wrapper">
+              <textarea id="commit-msg-input" placeholder="Type commit message (Ctrl+Enter to commit)..." rows="2"></textarea>
+              <div class="commit-buttons">
+                <button id="btn-commit" class="btn btn-primary">
+                  <span class="material-symbols-outlined">done_all</span>
+                  <span id="btn-commit-label">Commit</span>
+                </button>
+                <label class="amend-row" title="Replace the last commit with the staged changes and this message">
+                  <input type="checkbox" id="commit-amend-checkbox">
+                  <span>Amend last commit</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILE DIFF VIEW -->
+        <div id="diff-view" class="view-pane hidden">
+          <div class="diff-workspace">
+            <aside class="diff-files-pane">
+              <div class="card-header">
+                <h3>Modified Files</h3>
+                <button id="btn-diff-refresh" class="btn btn-icon btn-sm" title="Refresh modified files">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                </button>
+              </div>
+              <ul id="diff-files-list" class="file-list diff-file-list">
+                <li class="empty-state">No modified files</li>
+              </ul>
+            </aside>
+
+            <div class="diff-viewer-card">
+              <div class="card-header diff-view-header">
+                <div class="diff-title-group">
+                  <button id="btn-diff-back" class="btn btn-text btn-sm" title="Back to Staging Area">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">arrow_back</span>
+                    <span>Staging</span>
+                  </button>
+                  <h3 id="diff-file-title">File Diff</h3>
+                  <span id="diff-file-type" class="badge">Unselected</span>
+                </div>
+                <div id="diff-actions" class="card-header-actions hidden">
+                  <button id="btn-diff-toggle-stage" class="btn btn-secondary btn-sm">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                    <span id="btn-diff-toggle-stage-label">Stage</span>
+                  </button>
+                  <button id="btn-diff-discard" class="btn btn-secondary btn-sm btn-text-danger" title="Discard this file's changes">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    <span>Discard</span>
+                  </button>
+                </div>
+              </div>
+              <div id="diff-content" class="diff-body">
+                <div class="diff-empty-state">
+                  <span class="material-symbols-outlined">difference</span>
+                  <p>Select a modified file to view changes</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPLORER WORKSPACE VIEW -->
+        <div id="explorer-view" class="view-pane hidden">
+          <div class="explorer-layout">
+            
+            <!-- Left Pane: Collapsible Tree Directory -->
+            <div class="tree-pane">
+              <div class="card-header">
+                <h3>Files Tree</h3>
+                <button id="btn-refresh-tree" class="btn btn-icon btn-sm" style="width:28px; height:28px;" title="Refresh Tree">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">refresh</span>
+                </button>
+              </div>
+              <div id="file-tree-container" class="tree-container">
+                <!-- Collapsible directory tree structure rendered here -->
+                <div class="tree-loading">Select or open a repository...</div>
+              </div>
+            </div>
+
+            <!-- Right Pane: File Contents & Blame View -->
+            <div class="file-view-pane">
+              <div class="card-header">
+                <h3 id="explorer-file-title">No File Selected</h3>
+                <div class="file-view-actions">
+                  <button id="btn-toggle-blame" class="btn btn-secondary btn-sm" disabled>
+                    <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
+                    <span>Show Blame</span>
+                  </button>
+                </div>
+              </div>
+              <div id="explorer-file-body" class="file-viewer-body">
+                <div class="file-empty-state">
+                  <span class="material-symbols-outlined">description</span>
+                  <p>Select a file in the tree to view its content or Git blame</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SYNC & OUTPUT LOG PANEL (RIGHT COLUMN) -->
+      <section class="sync-panel">
+        
+        <!-- Push / Pull Box -->
+        <div class="sync-card">
+          <div class="card-header">
+            <h3>Remote Sync</h3>
+          </div>
+          
+          <!-- Active SSH profile indicator (change it from the header key segment) -->
+          <button id="sync-profile-line" class="sync-profile-line" type="button" title="Click to change the SSH key for this repository">
+            <span id="sync-profile-dot" class="profile-dot profile-dot-system"></span>
+            <span>Using: <b id="sync-profile-name">System SSH</b></span>
+          </button>
+
+          <div class="remote-origin-helper">
+            <div id="remote-origin-text" class="remote-origin-text">Origin: unknown</div>
+            <button id="btn-convert-origin-ssh" class="btn btn-secondary btn-sm hidden" type="button">
+              <span class="material-symbols-outlined" style="font-size: 16px;">swap_horiz</span>
+              <span>Convert Origin to SSH</span>
+            </button>
+          </div>
+
+          <div class="sync-buttons">
+            <button id="btn-fetch" class="btn btn-secondary flex-1" title="Fetch from origin (with prune)">
+              <span class="material-symbols-outlined">sync</span>
+              <span>Fetch</span>
+            </button>
+            <button id="btn-pull" class="btn btn-secondary flex-1">
+              <span class="material-symbols-outlined">download</span>
+              <span>Pull</span>
+              <span id="pull-count-badge" class="count-badge count-behind hidden"></span>
+            </button>
+            <button id="btn-push" class="btn btn-primary flex-1">
+              <span class="material-symbols-outlined">upload</span>
+              <span>Push</span>
+              <span id="push-count-badge" class="count-badge count-ahead hidden"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Commit History List -->
+        <div class="history-card" style="position: relative; overflow: hidden;">
+          
+          <!-- History List Pane -->
+          <div id="history-list-view" class="history-list-view" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="card-header">
+              <h3>Recent Commits</h3>
+              <button id="btn-undo-commit" class="btn btn-text btn-sm" title="Undo the last commit (keeps its changes staged)">
+                <span class="material-symbols-outlined" style="font-size: 16px;">undo</span>
+                <span>Undo</span>
+              </button>
+            </div>
+            <ul id="commit-history-list" class="commit-list">
+              <!-- Rendered dynamically -->
+            </ul>
+          </div>
+          
+          <!-- Detailed Commit Drawer (overlay inside history-card) -->
+          <div id="commit-details-drawer" class="commit-details-drawer hidden">
+            <div class="drawer-header">
+              <button id="btn-close-drawer" class="btn btn-text btn-sm" style="padding:0;">
+                <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle;">arrow_back</span>
+                <span>Back</span>
+              </button>
+              <h4 id="drawer-hash" class="badge">hash</h4>
+            </div>
+            <div class="drawer-body">
+              <div class="commit-meta-block">
+                <div id="drawer-msg" class="commit-detail-msg">Commit Message</div>
+                <div class="commit-detail-sub">
+                  <span id="drawer-author" class="commit-detail-author">Author</span>
+                  <span id="drawer-date" class="commit-detail-date">Date</span>
+                </div>
+              </div>
+
+              <!-- History actions for this commit -->
+              <div class="drawer-actions">
+                <button id="btn-drawer-cherry-pick" class="btn btn-secondary btn-sm" title="Apply this commit onto the current branch">
+                  <span class="material-symbols-outlined" style="font-size: 15px;">move_down</span>
+                  <span>Cherry-pick</span>
+                </button>
+                <button id="btn-drawer-revert" class="btn btn-secondary btn-sm" title="Create a new commit that undoes this one">
+                  <span class="material-symbols-outlined" style="font-size: 15px;">undo</span>
+                  <span>Revert</span>
+                </button>
+                <button id="btn-drawer-tag" class="btn btn-secondary btn-sm" title="Create a tag at this commit">
+                  <span class="material-symbols-outlined" style="font-size: 15px;">sell</span>
+                  <span>Tag</span>
+                </button>
+                <button id="btn-drawer-copy-sha" class="btn btn-secondary btn-sm" title="Copy the full commit SHA">
+                  <span class="material-symbols-outlined" style="font-size: 15px;">content_copy</span>
+                  <span>SHA</span>
+                </button>
+                <div class="drawer-reset-row">
+                  <div class="select-wrapper" style="flex: 0 0 92px;">
+                    <select id="drawer-reset-mode" title="soft: keep changes staged · mixed: keep changes unstaged · hard: discard changes">
+                      <option value="mixed" selected>mixed</option>
+                      <option value="soft">soft</option>
+                      <option value="hard">hard</option>
+                    </select>
+                  </div>
+                  <button id="btn-drawer-reset" class="btn btn-secondary btn-sm flex-1" title="Move the current branch to this commit">
+                    <span class="material-symbols-outlined" style="font-size: 15px;">restart_alt</span>
+                    <span>Reset to here</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="changed-files-section">
+                <h5 id="drawer-files-heading">Files Changed</h5>
+                <ul id="drawer-files-list" class="changed-files-ul">
+                  <!-- List of changed files -->
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Terminal Output Logger -->
+        <div class="logger-card">
+          <div class="card-header">
+            <h3>Terminal Log</h3>
+            <button id="btn-clear-logs" class="btn btn-text btn-sm">Clear</button>
+          </div>
+          <div id="terminal-logs" class="logger-body">
+            <div>Multi-Git GUI Client ready. Open a repository to get started.</div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- NO REPO STATE OVERLAY -->
+  <div id="no-repo-overlay" class="fullscreen-overlay">
+    <div class="overlay-card">
+      <span class="material-symbols-outlined main-icon">source</span>
+      <h2>Welcome to Multi-Git Client</h2>
+      <p>Select or enter a local Git repository path to start managing your commits, branches, and pushing with custom SSH profiles.</p>
+      
+      <div class="overlay-form" style="display: flex; flex-direction: row; gap: 12px; width: 100%;">
+        <button id="btn-overlay-open" class="btn btn-primary" style="flex: 1;">
+          <span class="material-symbols-outlined">folder_open</span>
+          <span>Open Folder</span>
+        </button>
+        <button id="btn-overlay-create" class="btn btn-secondary" style="flex: 1; border-color: var(--color-primary);">
+          <span class="material-symbols-outlined" style="color: var(--color-primary);">add_box</span>
+          <span>New Repo</span>
+        </button>
+        <button id="btn-overlay-clone" class="btn btn-secondary" style="flex: 1;">
+          <span class="material-symbols-outlined">cloud_download</span>
+          <span>Clone</span>
+        </button>
+      </div>
+
+      <div class="recent-list-section">
+        <h3>Recent Repositories</h3>
+        <ul id="overlay-recent-list" class="recent-ul">
+          <li class="empty-state">No recently opened repositories</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SSH CONFIGURATION MODAL -->
+  <div id="ssh-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>SSH Profile Manager</h2>
+        <button id="btn-close-ssh-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Add profiles to switch SSH credentials on the fly during push/pull actions.
+        </p>
+
+        <div class="alert alert-warning">
+          <span class="material-symbols-outlined">warning</span>
+          <p>
+            <strong>Passphrase Support:</strong> You can test and keep passphrases in an encrypted vault. Unlock the vault with your master key before saving passwords.
+          </p>
+        </div>
+
+        <div class="vault-controls">
+          <span id="vault-status-text" class="vault-status">Vault: Locked</span>
+          <button type="button" id="btn-unlock-vault" class="btn btn-secondary btn-sm">Unlock Vault</button>
+          <button type="button" id="btn-lock-vault" class="btn btn-secondary btn-sm">Lock Vault</button>
+        </div>
+
+        <!-- SSH Profile Form -->
+        <form id="ssh-profile-form" class="modal-form">
+          <input type="hidden" id="ssh-profile-id">
+          
+          <div class="form-group">
+            <label for="ssh-label">Profile Name / Label</label>
+            <input type="text" id="ssh-label" placeholder="e.g. Work GitLab, Personal GitHub" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="ssh-key-path">Path to Private Key</label>
+            <input type="text" id="ssh-key-path" placeholder="e.g. C:\Users\Username\.ssh\id_ed25519" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ssh-user-name">Commit Name (optional)</label>
+              <input type="text" id="ssh-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="ssh-user-email">Commit Email (optional)</label>
+              <input type="email" id="ssh-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="ssh-passphrase">SSH Passphrase (optional)</label>
+            <input type="password" id="ssh-passphrase" placeholder="Enter passphrase to test or store">
+          </div>
+
+          <div class="keep-password-row">
+            <input type="checkbox" id="ssh-keep-password">
+            <label for="ssh-keep-password">Keep password (encrypted vault)</label>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-test-ssh-form" class="btn btn-secondary">Test Key</button>
+            <button type="button" id="btn-cancel-ssh" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-save-ssh" class="btn btn-primary">Save Profile</button>
+          </div>
+        </form>
+
+        <div class="generator-section">
+          <h3>Generate New SSH Key</h3>
+          <p class="modal-desc">Create a new key pair and auto-register it as a profile for immediate use.</p>
+          <div id="ssh-generate-feedback" class="inline-feedback hidden"></div>
+
+          <form id="ssh-generate-form" class="modal-form">
+            <div class="form-group">
+              <label for="ssh-generate-label">Profile Name / Label</label>
+              <input type="text" id="ssh-generate-label" placeholder="e.g. New GitHub Key" required>
+            </div>
+
+            <div class="form-group">
+              <label for="ssh-generate-key-name">Key File Name (optional)</label>
+              <input type="text" id="ssh-generate-key-name" placeholder="e.g. id_ed25519_work">
+            </div>
+
+            <div class="form-group">
+              <label for="ssh-generate-key-type">Key Type</label>
+              <select id="ssh-generate-key-type">
+                <option value="ed25519" selected>ed25519 (recommended)</option>
+                <option value="rsa">RSA 4096</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ssh-generate-user-name">Commit Name (optional)</label>
+                <input type="text" id="ssh-generate-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="ssh-generate-user-email">Commit Email (optional)</label>
+                <input type="email" id="ssh-generate-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ssh-generate-passphrase">Passphrase (optional)</label>
+              <input type="password" id="ssh-generate-passphrase" placeholder="Leave empty for no passphrase">
+            </div>
+
+            <div class="keep-password-row">
+              <input type="checkbox" id="ssh-generate-keep-password">
+              <label for="ssh-generate-keep-password">Keep password (encrypted vault)</label>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" id="btn-generate-ssh" class="btn btn-primary">
+                <span class="material-symbols-outlined">vpn_key</span>
+                <span>Create Key + Profile</span>
+              </button>
+            </div>
+          </form>
+
+          <div id="ssh-generated-result" class="generated-result hidden">
+            <h4>Last Generated Key</h4>
+            <div class="generated-result-grid">
+              <div class="form-group">
+                <label for="ssh-generated-private">Private Key</label>
+                <input type="text" id="ssh-generated-private" readonly>
+              </div>
+              <div class="form-group">
+                <label for="ssh-generated-public">Public Key</label>
+                <input type="text" id="ssh-generated-public" readonly>
+              </div>
+            </div>
+            <div class="form-actions generated-actions">
+              <button type="button" id="btn-open-generated-location" class="btn btn-secondary">Open Key Folder</button>
+              <button type="button" id="btn-copy-generated-private-path" class="btn btn-secondary">Copy Private Key Path</button>
+              <button type="button" id="btn-copy-generated-public-path" class="btn btn-secondary">Copy Public Key Path</button>
+              <button type="button" id="btn-copy-generated-public-key" class="btn btn-secondary">Copy Public Key</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Registered Keys Table/List -->
+        <div class="profiles-list-section">
+          <h3>Registered Profiles</h3>
+          <div class="table-wrapper">
+            <table class="ssh-profiles-table">
+              <colgroup>
+                <col style="width: 21%;">
+                <col style="width: 39%;">
+                <col style="width: 12%;">
+                <col style="width: 28%;">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Profile Name</th>
+                  <th>Key Path</th>
+                  <th>Password</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ssh-profiles-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Account auto-select rules -->
+        <div class="profiles-list-section">
+          <h3>Auto-Select Rules</h3>
+          <p class="modal-desc">
+            Automatically pick the right account when a repository opens, based on its origin remote URL.
+            Example: <code>github.com/your-org</code> &rarr; Work account.
+          </p>
+          <div class="rule-add-row">
+            <input type="text" id="rule-match-input" placeholder="Remote URL contains... e.g. github.com/your-org" autocomplete="off">
+            <div class="select-wrapper" style="width: 200px; flex-shrink: 0;">
+              <select id="rule-profile-select">
+                <!-- Accounts rendered dynamically -->
+              </select>
+            </div>
+            <button type="button" id="btn-add-rule" class="btn btn-secondary btn-sm">
+              <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+              <span>Add Rule</span>
+            </button>
+          </div>
+          <ul id="account-rules-list" class="account-rules-list">
+            <li class="empty-state">No auto-select rules</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MERGE CONFLICT RESOLUTION MODAL -->
+  <div id="conflict-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h2>Resolve Merge Conflict</h2>
+        <span id="conflict-file-path-badge" class="badge badge-warning">file.txt</span>
+        <button id="btn-close-conflict-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body conflict-editor-layout">
+        
+        <p class="modal-desc">
+          Compare conflicted blocks and edit the content. Once finished, click "Save & Resolve" to stage the file.
+        </p>
+
+        <!-- Quick actions -->
+        <div class="conflict-quick-actions">
+          <button id="btn-conflict-keep-ours" class="btn btn-secondary btn-sm" title="Revert to Our branch version">
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span>Use HEAD (Ours)</span>
+          </button>
+          <button id="btn-conflict-keep-theirs" class="btn btn-secondary btn-sm" title="Accept Their branch version">
+            <span>Use Incoming (Theirs)</span>
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
+
+        <div class="editor-pane">
+          <!-- Textarea loaded with the conflict content -->
+          <textarea id="conflict-textarea" spellcheck="false"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button id="btn-cancel-conflict-modal" class="btn btn-secondary">Cancel</button>
+          <button id="btn-save-conflict-resolution" class="btn btn-success">
+            <span class="material-symbols-outlined">check</span>
+            <span>Save & Mark Resolved</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- CLONE REPOSITORY MODAL -->
+  <div id="clone-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Clone Repository</h2>
+        <button id="btn-close-clone-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Clone a remote repository using one of your SSH key profiles.</p>
+        <div id="clone-feedback" class="inline-feedback hidden"></div>
+
+        <form id="clone-form" class="modal-form">
+          <div class="form-group">
+            <label for="clone-url">Repository URL</label>
+            <input type="text" id="clone-url" placeholder="git@github.com:owner/repo.git" required autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="clone-parent-dir">Clone into folder</label>
+            <div class="input-with-button">
+              <input type="text" id="clone-parent-dir" placeholder="Select a destination folder..." required>
+              <button type="button" id="btn-clone-browse" class="btn btn-secondary btn-sm">Browse…</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="clone-folder-name">Folder name (optional)</label>
+            <input type="text" id="clone-folder-name" placeholder="Derived from URL when empty" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="clone-profile-select">SSH Key Profile</label>
+            <div class="select-wrapper">
+              <select id="clone-profile-select">
+                <option value="">Default (System SSH)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-clone" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-start-clone" class="btn btn-primary">
+              <span class="material-symbols-outlined">cloud_download</span>
+              <span>Clone</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- GIT IDENTITY MODAL -->
+  <div id="identity-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2>Commit Identity</h2>
+        <button id="btn-close-identity-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Author name and email used for commits in <b id="identity-repo-name">this repository</b>. Set these per repo when switching between accounts.</p>
+        <form id="identity-form" class="modal-form">
+          <div class="form-group">
+            <label for="identity-name">Name</label>
+            <input type="text" id="identity-name" placeholder="Jane Doe" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="identity-email">Email</label>
+            <input type="email" id="identity-email" placeholder="jane@example.com" required autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-identity" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-save-identity" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- GENERIC CONFIRM DIALOG -->
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2 id="confirm-title">Are you sure?</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" class="confirm-message"></p>
+        <label id="confirm-checkbox-row" class="amend-row hidden">
+          <input type="checkbox" id="confirm-checkbox">
+          <span id="confirm-checkbox-label"></span>
+        </label>
+        <div class="form-actions">
+          <button type="button" id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="button" id="btn-confirm-ok" class="btn btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GENERIC TEXT/PASSWORD PROMPT DIALOG -->
+  <div id="prompt-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2 id="prompt-title">Input required</h2>
+      </div>
+      <div class="modal-body">
+        <form id="prompt-form" class="modal-form">
+          <div class="form-group">
+            <label for="prompt-input" id="prompt-label">Value</label>
+            <input type="password" id="prompt-input" autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button type="button" id="btn-prompt-cancel" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-prompt-ok" class="btn btn-primary">OK</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

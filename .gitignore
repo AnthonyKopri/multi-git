@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+
+# Electron and packaged build outputs
+dist/
+dist-standalone/
+out/
+release/
+releases/
+build/
+*.blockmap
+*.dmg
+*.exe
+*.msi
+*.AppImage
+*.deb
+*.rpm
+*.snap
+*.asar
+
+# Runtime logs and reports
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+report.*.json
+
+# Environment, secrets, and local app state
+.env
+.env.*
+!.env.example
+!.env.sample
+.npmrc
+.multi-git-client-config.json
+.multi-git-client-secrets.json
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+known_hosts*
+
+# Local scratch repositories and generated test workspaces
+test-repo/
+test-repo2/
+tmp/
+temp/
+.tmp/
+.temp/
+multi-git-trash/
+
+# Tool, assistant, and editor-local configuration
+.agents/
+.claude/
+.vscode/
+.idea/
+*.code-workspace
+.gitold/
+
+# OS and filesystem noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Coverage and cache artifacts
+coverage/
+.nyc_output/
+.cache/
+.parcel-cache/
+.eslintcache
+*.tsbuildinfo
