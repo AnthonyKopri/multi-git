@@ -4,55 +4,40 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933.svg)](https://nodejs.org/)
 [![Electron](https://img.shields.io/badge/Electron-desktop-47848f.svg)](https://www.electronjs.org/)
 
-Multi-Git Client is a lightweight Git GUI for people who work across multiple repositories, GitHub accounts, and SSH identities. It gives you a local desktop or browser-based interface for day-to-day Git work, with first-class support for switching SSH keys per repository.
+Multi-Git Client is a desktop Git client for people who work across multiple repositories, GitHub accounts, and SSH identities. It is meant to feel closer to GitHub Desktop than a terminal cheat sheet: open a repository, choose an account, review changes, click buttons, and let the app handle the Git commands behind the scenes.
 
-The app is intentionally simple: a local Express backend executes Git commands, and a web UI or Electron shell gives you a practical interface for staging, committing, branching, syncing, inspecting history, resolving conflicts, and managing SSH profiles.
+The app runs locally. An Electron window provides the desktop experience, while a local Express backend performs Git and filesystem operations for the UI.
 
-## Highlights
+## What You Can Do
 
-- Manage multiple local Git repositories from one UI.
-- Switch SSH keys per repository before pushing, pulling, fetching, or cloning.
-- Create and test SSH profiles, generate new SSH keys, and copy public keys.
-- Store SSH passphrases in an optional encrypted local vault.
-- Auto-select an account profile from repository origin URL rules.
+- Open recent local repositories from a repository picker.
+- Clone repositories from the desktop UI.
+- Switch SSH key profiles per repository before fetch, pull, push, or clone.
+- Generate, test, and manage SSH keys without leaving the app.
+- Save SSH passphrases in an optional encrypted local vault.
+- Auto-select the right account based on a repository's origin URL.
 - Stage, unstage, discard, commit, amend, and undo the last commit.
-- View diffs, modified files, file contents, file blame, and commit history.
-- Fetch, pull, push, force-push with lease, and convert GitHub HTTPS remotes to SSH.
+- Review file diffs and browse changed files.
+- Browse the repository tree and inspect Git blame.
+- Fetch, pull, push, and force-push with lease.
+- Convert compatible GitHub HTTPS remotes to SSH.
 - Create, checkout, merge, rebase, and delete branches.
-- Clone repositories with the selected SSH profile.
-- Resolve merge and rebase conflicts from the UI.
-- Stash, apply, pop, and drop stashes.
-- Create, push, inspect, and delete tags.
-- Cherry-pick, revert, and reset from commit history.
-- Use a safety net for recent risky operations and discarded files.
+- Resolve merge and rebase conflicts from a visual conflict workflow.
+- Manage stashes and tags.
+- Cherry-pick, revert, reset, and inspect commits from the history drawer.
+- Restore recently discarded files and undo recent risky operations from Safety Net.
 
-## Screens
+## Install And Launch
 
-Multi-Git is organized around a few everyday Git workflows:
+### For Desktop Users
 
-- **Repository header**: select recent repositories, clone a repository, inspect the current branch, and switch the active SSH key.
-- **Staging area**: stage files, inspect diffs, discard changes, commit, amend, and undo the last commit.
-- **Workspace explorer**: browse repository files and toggle Git blame for a selected file.
-- **Branch drawer**: create, checkout, merge, rebase, and delete local branches while seeing remote branches.
-- **Remote sync panel**: fetch, pull, push, force-push with lease, and convert compatible GitHub HTTPS remotes to SSH.
-- **History drawer**: inspect commits, view changed files, create tags, cherry-pick, revert, reset, and inspect per-file history.
-- **SSH Profile Manager**: register keys, generate keys, save optional identities, test profiles, copy public keys, and configure auto-select rules.
-- **Safety Net**: undo recent checkpointed operations and restore recently discarded files.
+Download a packaged build from the project's releases when one is available, then launch **Multi-Git Client** like a normal desktop app.
 
-## Requirements
+Once the window opens, you should not need to type Git commands for day-to-day work. The app exposes common Git actions through repository panels, tabs, buttons, dropdowns, and dialogs.
 
-- Git available on your `PATH`.
-- Node.js 18 or newer.
-- npm.
-- OpenSSH tools available on your `PATH` for SSH key validation and generation:
-  - `ssh`
-  - `ssh-keygen`
+### From Source
 
-For packaged desktop builds, the current `electron-builder` configuration targets Windows NSIS and portable executables.
-
-## Quick Start
-
-Clone the repository and install dependencies:
+If you are running the app from source, install dependencies once:
 
 ```bash
 git clone https://github.com/AnthonyKopri/multi-git.git
@@ -60,147 +45,223 @@ cd multi-git
 npm install
 ```
 
-Run the browser-based app:
-
-```bash
-npm start
-```
-
-Then open:
-
-```text
-http://localhost:3000
-```
-
-Run the Electron desktop app:
+Start the desktop app:
 
 ```bash
 npm run desktop
 ```
 
-The desktop app starts the local backend automatically and loads it in an Electron window. In desktop mode, the backend asks the operating system for an available port, so a busy port `3000` should not prevent startup.
-
-## Common Workflows
-
-### Open an Existing Repository
-
-1. Start Multi-Git with `npm start` or `npm run desktop`.
-2. Select a local Git repository folder from the welcome screen.
-3. Multi-Git stores the repository path in your recent repositories list.
-4. Use the staging, sync, branch, history, and explorer panels as needed.
-
-### Add an SSH Profile
-
-1. Open **SSH Profile Manager**.
-2. Enter a profile label, private key path, and optional Git author identity.
-3. Optionally enter a passphrase and choose whether to keep it in the encrypted vault.
-4. Click **Test** to validate the key with `ssh-keygen`.
-5. Save the profile.
-
-An SSH profile contains:
-
-- a human-friendly label,
-- a private key path,
-- optional `user.name` and `user.email` values for repository commits,
-- optional saved passphrase metadata.
-
-### Generate a New SSH Key
-
-1. Open **SSH Profile Manager**.
-2. Fill out **Generate New SSH Key**.
-3. Choose a key type, such as `ed25519` or `rsa`.
-4. Add an optional passphrase.
-5. Create the key and profile.
-6. Copy the generated public key and add it to your Git host.
-
-Generated keys are written to your user `.ssh` directory using a unique file name derived from the profile label.
-
-### Use Different GitHub Accounts
-
-A typical setup might look like this:
-
-| Profile | Key | Identity | Example repository |
-| --- | --- | --- | --- |
-| Personal | `~/.ssh/id_ed25519_personal` | `Jane Doe <jane@personal.example>` | `github.com/janedoe/*` |
-| Work | `~/.ssh/id_ed25519_work` | `Jane Doe <jane@company.example>` | `github.com/company/*` |
-
-Then add auto-select rules:
-
-| Match text | Profile |
-| --- | --- |
-| `github.com/janedoe` | Personal |
-| `github.com/company` | Work |
-
-When a repository opens, Multi-Git can match the origin remote URL and select the right SSH profile.
-
-### Convert a GitHub HTTPS Remote to SSH
-
-SSH profiles only affect SSH remotes. If a repository uses a GitHub HTTPS origin like:
-
-```text
-https://github.com/owner/repo.git
-```
-
-Multi-Git can convert it to:
-
-```text
-git@github.com:owner/repo.git
-```
-
-Use **Convert Origin to SSH** in the Remote Sync panel. Non-GitHub or non-standard HTTPS remotes need to be changed manually.
-
-### Clone with an SSH Profile
-
-1. Click **Clone**.
-2. Enter an SSH repository URL:
-
-```text
-git@github.com:owner/repo.git
-```
-
-3. Select the destination folder.
-4. Pick an SSH profile or use your system SSH configuration.
-5. Start the clone.
-
-If you select an SSH profile, Multi-Git runs `git clone` with a custom `GIT_SSH_COMMAND` that points Git at that profile's private key.
-
-### Commit with the Right Identity
-
-SSH keys authenticate network operations, but commit authorship comes from Git config. Multi-Git lets you set the local repository identity:
+You can also run the browser version during development:
 
 ```bash
-git config user.name "Jane Doe"
-git config user.email "jane@example.com"
+npm start
 ```
 
-You can edit that identity from the UI. If a selected SSH profile has an expected name and email, Multi-Git can warn when the repository identity does not match.
+Then open `http://localhost:3000`.
 
-### Resolve Conflicts
+## Requirements
 
-When merge, rebase, cherry-pick, or revert operations hit conflicts:
+- Git installed and available to the app.
+- OpenSSH tools available for SSH key validation and generation.
+- Node.js 18 or newer when running from source.
 
-1. Multi-Git shows a conflict banner.
-2. Open each conflicting file.
-3. Choose current/incoming sections or edit the file manually.
-4. Save and stage the resolved file.
-5. Continue the operation, or abort it.
+For normal use, you interact with the app UI. Git, OpenSSH, and Node are runtime/development requirements, not the primary user interface.
 
-## Safety Features
+## First Run
 
-Multi-Git includes a few guardrails for common mistakes:
+When Multi-Git opens, the welcome screen gives you three main choices:
 
-- Risky history operations capture in-memory checkpoints before merge, rebase, cherry-pick, revert, and reset.
-- Checkpoints can be undone from **Safety Net** until the app restarts.
-- Discarded file contents are copied to a local temporary trash area before deletion.
-- Trash entries expire after 24 hours and keep the most recent 30 saved files per repository.
-- Force-push uses `--force-with-lease`, not plain `--force`.
-- The backend binds to `127.0.0.1` and rejects non-localhost Host/Origin values.
+1. **Select Folder**: open an existing local Git repository.
+2. **Clone**: clone a remote repository into a local folder.
+3. **Recent Repositories**: reopen a repository you already used.
 
-These features are helpful, but they are not a substitute for normal Git backups, remote branches, or careful review before destructive operations.
+After a repository is opened, the main window shows:
 
-## Local Data and Security
+- a top header for the current repository, branch, and SSH key profile,
+- a left workflow area for branches, stashes, tags, and Safety Net,
+- central tabs for **Staging Area** and **Workspace Explorer**,
+- a right-side **Remote Sync** and **Recent Commits** area,
+- a bottom **Terminal Log** that shows what the app did for transparency.
 
-Multi-Git stores application state in your home directory:
+## Main UI Areas
+
+### Repository Header
+
+Use the **Repository** segment to switch between recent repositories or open another folder.
+
+Use the **Branch** segment to see the current branch and ahead/behind indicators.
+
+Use the **SSH Key** segment to pick the active SSH profile for the current repository. This is the profile used by sync actions such as fetch, pull, push, and tag push.
+
+### Staging Area
+
+The **Staging Area** tab is the everyday commit workflow.
+
+- **Unstaged Changes** shows modified and untracked files.
+- **Stage All** moves every unstaged file into the staged list.
+- Clicking an individual file lets you inspect its diff.
+- **Stage** and **Unstage** move selected files between unstaged and staged.
+- **Discard** removes local changes for a file.
+- **Discard All** removes all unstaged changes after confirmation.
+- **Staged Changes** shows what will be included in the next commit.
+- The commit box lets you enter a message, optionally amend the previous commit, and create the commit.
+- **Undo Last Commit** performs a soft undo so the last commit's changes stay staged.
+
+The diff view is read-oriented: select a changed file, review additions and deletions, then use the staging buttons to decide what belongs in the next commit.
+
+### Workspace Explorer
+
+The **Workspace Explorer** tab lets you inspect repository files without switching tools.
+
+- Browse the repository tree.
+- Select a file to view its contents.
+- Toggle **Blame** to see commit attribution per line.
+- Open commit details from related history views.
+
+### Branches
+
+The **Branches** panel shows local and remote branches.
+
+- Create a branch from the branch creation field.
+- Click a local branch to check it out.
+- Click a remote branch to create and check out a local tracking branch.
+- Use the delete action on local branches.
+- If a branch is not fully merged, the UI can offer a force-delete confirmation.
+
+### Merge And Rebase
+
+Use the **Merge / Rebase** panel to integrate another branch into the current branch.
+
+- Pick a branch from the dropdown.
+- Click **Merge** to merge it into the current branch.
+- Click **Rebase** to replay the current branch onto the selected branch.
+- If conflicts happen, Multi-Git opens the conflict workflow.
+- Use the conflict banner to continue or abort once files are resolved.
+
+### Remote Sync
+
+The **Remote Sync** panel handles network operations.
+
+- **Fetch** updates remote tracking information.
+- **Pull** pulls the current branch from origin.
+- **Push** pushes the current branch to origin.
+- If a push is rejected because the remote has new commits, the app can prompt for a safer force-push with lease.
+- **Convert Origin to SSH** converts compatible GitHub HTTPS origins to SSH so SSH profiles can be used.
+
+The panel also shows which SSH profile is active. Click the profile line or the header's **SSH Key** segment to change it.
+
+### Recent Commits
+
+The **Recent Commits** list shows commit history for the current repository.
+
+Click a commit to open the commit drawer. From there you can:
+
+- view commit metadata,
+- inspect changed files,
+- open file history,
+- copy the commit SHA,
+- cherry-pick the commit,
+- revert the commit,
+- reset the current branch to that commit,
+- create a tag at that commit.
+
+Reset actions create a Safety Net checkpoint before running.
+
+### Stashes
+
+The **Stashes** panel manages temporary work.
+
+- Click **Stash** to stash current changes, including untracked files.
+- Use **Apply** to apply a stash while keeping it.
+- Use **Pop** to apply and remove a stash.
+- Use **Drop** to delete a stash after confirmation.
+
+### Tags
+
+The **Tags** panel lists local tags.
+
+- Show the tagged commit.
+- Push a tag to origin using the active SSH profile.
+- Delete a local tag after confirmation.
+- Create a tag from the commit drawer in **Recent Commits**.
+
+### Safety Net
+
+The **Safety Net** panel exists for "I clicked the scary thing" moments.
+
+- **Undoable Operations** lists recent checkpointed operations such as merge, rebase, cherry-pick, revert, and reset.
+- **Recently Discarded** lists files copied aside before discard actions.
+- Restore discarded files from the UI.
+- Undo checkpointed operations while the app is still running.
+
+Checkpoints are in-memory and reset when the app restarts. Discarded file copies expire after 24 hours and keep the most recent 30 entries per repository.
+
+## SSH Profiles And Accounts
+
+Open **SSH Profile Manager** from the **SSH Key** header dropdown.
+
+### Register An Existing Key
+
+Use the profile form to add:
+
+- **Profile Name / Label**: a readable account name, such as `Personal` or `Work`.
+- **Private Key Path**: the private key file to use.
+- **Name** and **Email**: optional commit identity for repositories using this profile.
+- **SSH Passphrase**: optional passphrase for encrypted keys.
+- **Keep Password**: save the passphrase in the encrypted local vault.
+
+Use **Test** to validate the key, then **Save Profile**.
+
+### Generate A New Key
+
+In **Generate New SSH Key**:
+
+1. Enter a profile label.
+2. Pick a key type.
+3. Optionally choose a key file name.
+4. Optionally enter a passphrase.
+5. Click **Create Key + Profile**.
+6. Copy the public key from **Last Generated Key** and add it to your Git host.
+
+The new profile appears in **Registered Profiles** immediately.
+
+### Auto-Select Rules
+
+Use **Auto-Select Rules** to map repositories to accounts.
+
+Example:
+
+| Match text | Selected profile |
+| --- | --- |
+| `github.com/your-name` | Personal |
+| `github.com/your-company` | Work |
+
+When a repository opens, Multi-Git compares its origin URL with these rules and can select the matching SSH profile automatically.
+
+### Commit Identity
+
+The SSH profile controls authentication for network operations. Commit authorship is separate. Use the **Identity** row in the SSH profile dropdown to edit the repository's commit name and email.
+
+If a profile has an expected name and email, Multi-Git can warn when the repository identity does not match the selected account.
+
+## Conflict Resolution
+
+When a merge, rebase, cherry-pick, or revert hits conflicts, Multi-Git shows a conflict banner in the staging area.
+
+To resolve:
+
+1. Click a conflicted file.
+2. Review the conflict blocks.
+3. Choose the current version, incoming version, or edit the resolved content manually.
+4. Click **Save & Resolve** to write and stage the file.
+5. Repeat for every conflicted file.
+6. Click **Continue** from the conflict banner.
+
+If you want to abandon the operation, use **Abort** from the same banner.
+
+## Local Data And Security
+
+Multi-Git stores local app state in your home directory:
 
 ```text
 ~/.multi-git-client-config.json
@@ -212,12 +273,12 @@ The config file contains recent repositories, SSH profile metadata, and account 
 Saved passphrases are encrypted locally with:
 
 - AES-256-GCM for encryption,
-- `crypto.scryptSync` for deriving a key from your master key,
+- a key derived from your master key,
 - a random salt and IV.
 
-The vault is unlocked in memory while the app is running. Lock it from the UI when you no longer need saved passphrases.
+The vault is unlocked in memory while the app is running. Use **Lock Vault** from the SSH Profile Manager when you no longer need saved passphrases.
 
-The backend executes Git and filesystem operations for local repositories. For that reason, it is designed as a local-only service and should not be exposed to a network.
+The backend is intended for local use only. It binds to `127.0.0.1` and rejects non-localhost Host/Origin values because it can execute Git and filesystem operations on local repositories.
 
 ## Project Structure
 
@@ -234,123 +295,59 @@ multi-git/
 `-- LICENSE          # MIT license
 ```
 
-## npm Scripts
+## Developer Commands
+
+These commands are for contributors and source builds, not for normal Git workflows inside the app.
 
 | Command | Description |
 | --- | --- |
-| `npm start` | Start the Express app on `http://localhost:3000`. |
+| `npm start` | Start the local browser app on `http://localhost:3000`. |
 | `npm run dev` | Alias for `npm start`. |
 | `npm run desktop` | Start the Electron desktop app. |
 | `npm run build` | Build with Electron Builder using the package config. |
 | `npm run build-win` | Build Windows NSIS and portable targets. |
 | `npm run build-standalone` | Build a Windows portable target into `dist-standalone`. |
 
-## Local API Examples
+## Developer API Reference
 
-The UI talks to a local JSON API. These examples are useful for debugging while the server is running.
+The desktop UI talks to a local JSON API. Most users should not need this section, but it is useful for debugging and contributions.
 
-Get app config:
+Common API areas include:
 
-```bash
-curl http://localhost:3000/api/config
-```
+- `/api/config` for recent repositories, SSH profiles, and account rules.
+- `/api/secrets/*` for vault status, unlock, and lock.
+- `/api/config/ssh/*` for SSH profiles, key generation, public keys, and validation.
+- `/api/git/status`, `/api/git/diff`, and `/api/git/log` for repository inspection.
+- `/api/git/stage`, `/api/git/unstage`, `/api/git/discard`, and `/api/git/commit` for staging and committing.
+- `/api/git/fetch`, `/api/git/pull`, `/api/git/push`, and `/api/git/clone` for sync and clone operations.
+- `/api/git/merge`, `/api/git/rebase`, `/api/git/abort`, and `/api/git/conflict/*` for branch integration and conflict resolution.
+- `/api/git/stash/*`, `/api/git/tags`, `/api/git/tag`, and `/api/git/tag/push` for stashes and tags.
 
-Check repository status:
-
-```bash
-curl -H "x-repo-path: /path/to/repo" \
-  http://localhost:3000/api/git/status
-```
-
-Stage files:
-
-```bash
-curl -X POST http://localhost:3000/api/git/stage \
-  -H "Content-Type: application/json" \
-  -H "x-repo-path: /path/to/repo" \
-  -d '{"files":["README.md"]}'
-```
-
-Commit staged changes:
-
-```bash
-curl -X POST http://localhost:3000/api/git/commit \
-  -H "Content-Type: application/json" \
-  -H "x-repo-path: /path/to/repo" \
-  -d '{"message":"Update documentation"}'
-```
-
-Fetch with an SSH profile:
-
-```bash
-curl -X POST http://localhost:3000/api/git/fetch \
-  -H "Content-Type: application/json" \
-  -H "x-repo-path: /path/to/repo" \
-  -d '{"profileId":"PROFILE_ID"}'
-```
-
-On Windows PowerShell, quote JSON accordingly:
-
-```powershell
-Invoke-RestMethod -Method Post http://localhost:3000/api/git/stage `
-  -Headers @{ "x-repo-path" = "C:\path\to\repo" } `
-  -ContentType "application/json" `
-  -Body '{"files":["README.md"]}'
-```
-
-## Development Notes
-
-- The project currently uses plain JavaScript, Express, and Electron.
-- There is no build step for the web UI.
-- Static assets are served directly from `public/`.
-- Git commands are executed with `spawn`, with repository paths passed through request headers.
-- SSH profile operations use `GIT_SSH_COMMAND` so Git uses the selected private key for a single operation.
-- The Electron preload exposes only a folder picker bridge as `window.desktopApi.selectFolder()`.
+Repository-scoped endpoints receive the selected repository path through the `x-repo-path` header.
 
 ## Troubleshooting
 
-### `git` is not recognized
+### The App Cannot Find Git
 
-Install Git and make sure it is available on your terminal `PATH`.
+Install Git and make sure it is available to desktop applications on your system path. Restart Multi-Git after changing PATH settings.
 
-### SSH profile does not affect push or pull
+### SSH Profile Does Not Affect Push Or Pull
 
-Check that the repository origin is an SSH URL:
+Open the **Remote Sync** panel and check the origin remote. SSH profiles apply to SSH remotes, not HTTPS remotes.
 
-```bash
-git remote -v
-```
+If the repository uses a compatible GitHub HTTPS origin, click **Convert Origin to SSH**. For other hosts, update the remote URL in your Git hosting settings or another Git tool.
 
-SSH profiles do not apply to HTTPS remotes. Convert a GitHub HTTPS origin from the UI or run:
+### Vault Is Locked
 
-```bash
-git remote set-url origin git@github.com:owner/repo.git
-```
+Open **SSH Profile Manager** and unlock the vault before using profiles with saved passphrases.
 
-### Vault is locked
+### Port 3000 Is Already In Use
 
-Unlock the vault from the SSH Profile Manager before using profiles with saved passphrases.
+The Electron desktop app chooses a free local port automatically. If you are running browser mode from source, set a different `PORT` before starting the server.
 
-### Port 3000 is already in use
+### Build Output Is Large
 
-Browser mode uses `PORT` or `3000` by default:
-
-```bash
-PORT=3001 npm start
-```
-
-In PowerShell:
-
-```powershell
-$env:PORT = "3001"
-npm start
-```
-
-Desktop mode automatically asks the operating system for a free port.
-
-### Electron build output is large
-
-That is normal for Electron. Generated folders such as `dist/` and `dist-standalone/` are ignored by Git.
+That is normal for Electron apps. Generated folders such as `dist/` and `dist-standalone/` are ignored by Git.
 
 ## Contributing
 
