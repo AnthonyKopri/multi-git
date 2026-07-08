@@ -446,18 +446,15 @@
           </div>
 
           <div class="sync-buttons">
-            <button id="btn-fetch" class="btn btn-secondary flex-1" title="Fetch from origin (with prune)">
-              <span class="material-symbols-outlined">sync</span>
-              <span>Fetch</span>
+            <button id="btn-fetch" class="btn btn-secondary flex-1" title="Fetch" aria-label="Fetch">
+              <span class="material-symbols-outlined" aria-hidden="true">sync</span>
             </button>
-            <button id="btn-pull" class="btn btn-secondary flex-1">
-              <span class="material-symbols-outlined">download</span>
-              <span>Pull</span>
+            <button id="btn-pull" class="btn btn-secondary flex-1" title="Pull" aria-label="Pull">
+              <span class="material-symbols-outlined" aria-hidden="true">download</span>
               <span id="pull-count-badge" class="count-badge count-behind hidden"></span>
             </button>
-            <button id="btn-push" class="btn btn-primary flex-1">
-              <span class="material-symbols-outlined">upload</span>
-              <span>Push</span>
+            <button id="btn-push" class="btn btn-primary flex-1" title="Push" aria-label="Push">
+              <span class="material-symbols-outlined" aria-hidden="true">upload</span>
               <span id="push-count-badge" class="count-badge count-ahead hidden"></span>
             </button>
           </div>
