@@ -8,6 +8,12 @@ let logWindow = null;
 let backendServer;
 let serverUrl = 'http://localhost:3000';
 
+// Windows uses this ID to associate windows with the packaged executable and
+// its embedded icon instead of the Electron host process.
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.multigit.client');
+}
+
 async function handleSelectFolder() {
   if (!mainWindow) {
     return '';
@@ -84,6 +90,7 @@ function createStartupFailureWindow(error) {
     width: 700,
     height: 450,
     title: 'Multi-Git Client - Startup Error',
+    icon: path.join(__dirname, 'Multi Git Logo.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
