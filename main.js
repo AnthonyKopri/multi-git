@@ -30,7 +30,7 @@ function createWindow() {
     width: 1280,
     height: 850,
     title: 'Multi-Git Client',
-    icon: path.join(__dirname, 'public', 'favicon.ico'),
+    icon: path.join(__dirname, 'Multi Git Logo.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -64,7 +64,7 @@ function openLogWindow() {
     width: 720,
     height: 520,
     title: 'Multi-Git - Terminal Log',
-    icon: path.join(__dirname, 'public', 'favicon.ico'),
+    icon: path.join(__dirname, 'Multi Git Logo.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true

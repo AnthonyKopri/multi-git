@@ -35,9 +35,11 @@
       "preload.js",
       "server.js",
       "ssh-config.js",
+      "Multi Git Logo.ico",
       "package.json",
       "public/**/*"
     ],
+    "icon": "Multi Git Logo.ico",
     "directories": {
       "output": "dist"
     },
