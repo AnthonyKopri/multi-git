@@ -1323,9 +1323,13 @@ select {
 
 .ssh-key-setup-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.ssh-key-setup-actions .btn {
+  white-space: nowrap;
 }
 
 .ssh-key-form-section {
