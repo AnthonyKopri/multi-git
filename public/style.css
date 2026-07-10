@@ -1243,17 +1243,122 @@ select {
   margin-bottom: 16px;
 }
 
+.vault-status-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+
+.vault-status-card[data-vault-state="unlocked"] {
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.vault-status-card[data-vault-state="locked"] {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+}
+
+.vault-status-icon {
+  color: var(--color-info);
+  line-height: 1;
+}
+
+.vault-status-card[data-vault-state="unlocked"] .vault-status-icon {
+  color: var(--color-success);
+}
+
+.vault-status-card[data-vault-state="locked"] .vault-status-icon {
+  color: var(--color-warning);
+}
+
+.vault-status-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .vault-controls {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  flex-shrink: 0;
 }
 
 .vault-status {
   font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.vault-status-detail {
+  margin-top: 2px;
   color: var(--text-muted);
-  margin-right: 6px;
+  font-size: 0.75rem;
+}
+
+.ssh-key-setup {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ssh-key-setup h3,
+.ssh-key-form-header h3 {
+  font-size: 0.9375rem;
+  margin-bottom: 8px;
+}
+
+.ssh-key-setup .modal-desc,
+.ssh-key-form-header .modal-desc {
+  margin-bottom: 0;
+}
+
+.ssh-key-setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ssh-key-form-section {
+  padding: 18px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ssh-key-form-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 720px) {
+  .vault-status-card,
+  .ssh-key-setup {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vault-controls,
+  .ssh-key-setup-actions {
+    justify-content: flex-start;
+  }
+
+  .vault-controls .btn,
+  .ssh-key-setup-actions .btn {
+    flex: 1;
+  }
 }
 
 .keep-password-row {
@@ -1282,10 +1387,9 @@ select {
 }
 
 .generator-section {
-  border-top: 1px solid var(--border-color);
-  margin-top: 8px;
+  border-color: rgba(99, 102, 241, 0.45);
+  margin-top: 0;
   padding-top: 18px;
-  margin-bottom: 20px;
 }
 
 .generator-section h3 {

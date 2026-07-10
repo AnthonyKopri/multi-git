@@ -16,7 +16,7 @@
 
   <!-- APP WRAPPER -->
   <div id="app" class="app-layout">
-    
+
     <!-- TOP NAVBAR -->
     <header class="navbar">
       <div class="brand">
@@ -578,67 +578,104 @@
       </div>
       <div class="modal-body">
         <p class="modal-desc">
-          Add profiles to switch SSH credentials on the fly during push/pull actions.
+          Add an SSH key profile, then select it for the repositories that should use it for fetch, pull, and push. Commit identity is optional and separate from SSH authentication.
         </p>
 
-        <div class="alert alert-warning">
-          <span class="material-symbols-outlined">warning</span>
-          <p>
-            <strong>Passphrase Support:</strong> You can test and keep passphrases in an encrypted vault. Unlock the vault with your master key before saving passwords.
-          </p>
-        </div>
-
-        <div class="vault-controls">
-          <span id="vault-status-text" class="vault-status">Vault: Locked</span>
-          <button type="button" id="btn-unlock-vault" class="btn btn-secondary btn-sm">Unlock Vault</button>
-          <button type="button" id="btn-lock-vault" class="btn btn-secondary btn-sm">Lock Vault</button>
-        </div>
-
-        <!-- SSH Profile Form -->
-        <form id="ssh-profile-form" class="modal-form">
-          <input type="hidden" id="ssh-profile-id">
-          
-          <div class="form-group">
-            <label for="ssh-label">Profile Name / Label</label>
-            <input type="text" id="ssh-label" placeholder="e.g. Work GitLab, Personal GitHub" required>
+        <section id="vault-status-card" class="vault-status-card" data-vault-state="uninitialized">
+          <div class="vault-status-icon" aria-hidden="true">
+            <span id="vault-status-icon" class="material-symbols-outlined">lock</span>
           </div>
-          
-          <div class="form-group">
-            <label for="ssh-key-path">Path to Private Key</label>
-            <input type="text" id="ssh-key-path" placeholder="e.g. C:\Users\Username\.ssh\id_ed25519" required>
+          <div class="vault-status-content">
+            <p id="vault-status-text" class="vault-status">Passphrase vault is not set up</p>
+            <p id="vault-status-detail" class="vault-status-detail">A vault is optional. Set one up only if you want Multi-Git to save SSH passphrases on this computer.</p>
           </div>
+          <div class="vault-controls">
+            <button type="button" id="btn-setup-vault" class="btn btn-primary btn-sm">Set Up Vault</button>
+            <button type="button" id="btn-unlock-vault" class="btn btn-secondary btn-sm hidden">Unlock Vault</button>
+            <button type="button" id="btn-lock-vault" class="btn btn-secondary btn-sm hidden">Lock Vault</button>
+          </div>
+        </section>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="ssh-user-name">Commit Name (optional)</label>
-              <input type="text" id="ssh-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+        <section class="ssh-key-setup">
+          <div>
+            <h3>Add an SSH key</h3>
+            <p class="modal-desc">Choose the option that matches what you have today. Both options create a profile you can select for a repository.</p>
+          </div>
+          <div class="ssh-key-setup-actions">
+            <button type="button" id="btn-show-add-key" class="btn btn-secondary" aria-expanded="false" aria-controls="ssh-existing-key-section">
+              <span class="material-symbols-outlined">folder_open</span>
+              <span>Add Key From File</span>
+            </button>
+            <button type="button" id="btn-show-generate-key" class="btn btn-primary" aria-expanded="false" aria-controls="ssh-generate-section">
+              <span class="material-symbols-outlined">vpn_key</span>
+              <span>Generate Key</span>
+            </button>
+          </div>
+        </section>
+
+        <section id="ssh-existing-key-section" class="ssh-key-form-section hidden">
+          <div class="ssh-key-form-header">
+            <div>
+              <h3 id="ssh-existing-key-heading">Add an Existing Key</h3>
+              <p class="modal-desc">Point Multi-Git to a private key file you already use, then test and save its profile.</p>
             </div>
+            <button type="button" id="btn-hide-add-key" class="btn-close" aria-label="Close existing key form">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <form id="ssh-profile-form" class="modal-form">
+            <input type="hidden" id="ssh-profile-id">
+
             <div class="form-group">
-              <label for="ssh-user-email">Commit Email (optional)</label>
-              <input type="email" id="ssh-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+              <label for="ssh-label">Profile Name / Label</label>
+              <input type="text" id="ssh-label" placeholder="e.g. Work GitLab, Personal GitHub" required>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label for="ssh-passphrase">SSH Passphrase (optional)</label>
-            <input type="password" id="ssh-passphrase" placeholder="Enter passphrase to test or store">
-          </div>
+            <div class="form-group">
+              <label for="ssh-key-path">Path to Private Key</label>
+              <input type="text" id="ssh-key-path" placeholder="e.g. C:\Users\Username\.ssh\id_ed25519" required>
+            </div>
 
-          <div class="keep-password-row">
-            <input type="checkbox" id="ssh-keep-password">
-            <label for="ssh-keep-password">Keep password (encrypted vault)</label>
-          </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ssh-user-name">Commit Name (optional)</label>
+                <input type="text" id="ssh-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="ssh-user-email">Commit Email (optional)</label>
+                <input type="email" id="ssh-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+              </div>
+            </div>
 
-          <div class="form-actions">
-            <button type="button" id="btn-test-ssh-form" class="btn btn-secondary">Test Key</button>
-            <button type="button" id="btn-cancel-ssh" class="btn btn-secondary">Cancel</button>
-            <button type="submit" id="btn-save-ssh" class="btn btn-primary">Save Profile</button>
-          </div>
-        </form>
+            <div class="form-group">
+              <label for="ssh-passphrase">SSH Passphrase (optional)</label>
+              <input type="password" id="ssh-passphrase" placeholder="Enter passphrase to test or store">
+            </div>
 
-        <div class="generator-section">
-          <h3>Generate New SSH Key</h3>
-          <p class="modal-desc">Create a new key pair and auto-register it as a profile for immediate use.</p>
+            <div class="keep-password-row">
+              <input type="checkbox" id="ssh-keep-password">
+              <label for="ssh-keep-password">Save passphrase in the encrypted vault</label>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" id="btn-test-ssh-form" class="btn btn-secondary">Test Key</button>
+              <button type="button" id="btn-cancel-ssh" class="btn btn-secondary">Close Form</button>
+              <button type="submit" id="btn-save-ssh" class="btn btn-primary">Save Profile</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="ssh-generate-section" class="ssh-key-form-section generator-section hidden">
+          <div class="ssh-key-form-header">
+            <div>
+              <h3>Generate a New SSH Key</h3>
+              <p class="modal-desc">Create a new key pair, register its profile, then copy the public key to your Git host.</p>
+            </div>
+            <button type="button" id="btn-hide-generate-key" class="btn-close" aria-label="Close key generator">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
           <div id="ssh-generate-feedback" class="inline-feedback hidden"></div>
 
           <form id="ssh-generate-form" class="modal-form">
@@ -678,7 +715,7 @@
 
             <div class="keep-password-row">
               <input type="checkbox" id="ssh-generate-keep-password">
-              <label for="ssh-generate-keep-password">Keep password (encrypted vault)</label>
+              <label for="ssh-generate-keep-password">Save passphrase in the encrypted vault</label>
             </div>
 
             <div class="form-actions">
@@ -708,7 +745,7 @@
               <button type="button" id="btn-copy-generated-public-key" class="btn btn-secondary">Copy Public Key</button>
             </div>
           </div>
-        </div>
+        </section>
 
         <!-- SSH config integration setting -->
         <div class="keep-password-row" id="ssh-config-setting-row" title="When enabled, Multi-Git maintains a managed block in ~/.ssh/config so other tools (Git Bash, IDEs) use the same key as the active profile.">
@@ -765,6 +802,37 @@
             <li class="empty-state">No auto-select rules</li>
           </ul>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VAULT FIRST-TIME SETUP DIALOG -->
+  <div id="vault-setup-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2>Set Up Passphrase Vault</h2>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">The vault encrypts SSH passphrases saved on this computer. It is optional and is only needed when you choose to save a passphrase with an SSH profile.</p>
+        <div class="alert alert-warning">
+          <span class="material-symbols-outlined">key</span>
+          <p><strong>Keep this master key safe.</strong> Multi-Git cannot recover saved passphrases if you forget it. The master key is never stored by the app.</p>
+        </div>
+        <form id="vault-setup-form" class="modal-form">
+          <div class="form-group">
+            <label for="vault-master-key">Choose a master key</label>
+            <input type="password" id="vault-master-key" autocomplete="new-password" required>
+          </div>
+          <div class="form-group">
+            <label for="vault-master-key-confirm">Confirm master key</label>
+            <input type="password" id="vault-master-key-confirm" autocomplete="new-password" required>
+          </div>
+          <div id="vault-setup-feedback" class="inline-feedback hidden" role="alert"></div>
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-vault-setup" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-save-vault-setup" class="btn btn-primary">Create and Unlock Vault</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

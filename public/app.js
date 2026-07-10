@@ -159,6 +159,13 @@ const sshUserName = document.getElementById('ssh-user-name');
 const sshUserEmail = document.getElementById('ssh-user-email');
 const sshPassphrase = document.getElementById('ssh-passphrase');
 const sshKeepPassword = document.getElementById('ssh-keep-password');
+const sshExistingKeySection = document.getElementById('ssh-existing-key-section');
+const sshExistingKeyHeading = document.getElementById('ssh-existing-key-heading');
+const btnShowAddKey = document.getElementById('btn-show-add-key');
+const btnHideAddKey = document.getElementById('btn-hide-add-key');
+const sshGenerateSection = document.getElementById('ssh-generate-section');
+const btnShowGenerateKey = document.getElementById('btn-show-generate-key');
+const btnHideGenerateKey = document.getElementById('btn-hide-generate-key');
 const sshGenerateForm = document.getElementById('ssh-generate-form');
 const sshGenerateLabel = document.getElementById('ssh-generate-label');
 const sshGenerateKeyName = document.getElementById('ssh-generate-key-name');
@@ -176,9 +183,20 @@ const btnOpenGeneratedLocation = document.getElementById('btn-open-generated-loc
 const btnCopyGeneratedPrivatePath = document.getElementById('btn-copy-generated-private-path');
 const btnCopyGeneratedPublicPath = document.getElementById('btn-copy-generated-public-path');
 const btnCopyGeneratedPublicKey = document.getElementById('btn-copy-generated-public-key');
+const vaultStatusCard = document.getElementById('vault-status-card');
 const vaultStatusText = document.getElementById('vault-status-text');
+const vaultStatusDetail = document.getElementById('vault-status-detail');
+const vaultStatusIcon = document.getElementById('vault-status-icon');
+const btnSetupVault = document.getElementById('btn-setup-vault');
 const btnUnlockVault = document.getElementById('btn-unlock-vault');
 const btnLockVault = document.getElementById('btn-lock-vault');
+const vaultSetupModal = document.getElementById('vault-setup-modal');
+const vaultSetupForm = document.getElementById('vault-setup-form');
+const vaultMasterKey = document.getElementById('vault-master-key');
+const vaultMasterKeyConfirm = document.getElementById('vault-master-key-confirm');
+const vaultSetupFeedback = document.getElementById('vault-setup-feedback');
+const btnCancelVaultSetup = document.getElementById('btn-cancel-vault-setup');
+const btnSaveVaultSetup = document.getElementById('btn-save-vault-setup');
 const btnTestSshForm = document.getElementById('btn-test-ssh-form');
 const btnCancelSsh = document.getElementById('btn-cancel-ssh');
 const sshProfilesTableBody = document.getElementById('ssh-profiles-table-body');
@@ -1190,20 +1208,43 @@ function updateSshProfilesUI() {
 }
 
 function updateVaultStatusUI() {
+  let state = 'uninitialized';
+  let title = 'Passphrase vault is not set up';
+  let detail = 'A vault is optional. Set one up only if you want Multi-Git to save SSH passphrases on this computer.';
+  let icon = 'lock';
+
+  if (vaultStatus.unlocked) {
+    state = 'unlocked';
+    title = 'Passphrase vault is unlocked';
+    detail = 'Saved passphrases can be used and new ones can be encrypted for this app session. Lock it when you are finished.';
+    icon = 'lock_open';
+  } else if (vaultStatus.hasVault) {
+    state = 'locked';
+    title = 'Passphrase vault is locked';
+    detail = 'Saved passphrases stay encrypted on disk. Unlock the vault before using or saving a passphrase.';
+    icon = 'lock';
+  }
+
+  if (vaultStatusCard) {
+    vaultStatusCard.dataset.vaultState = state;
+  }
   if (vaultStatusText) {
-    if (vaultStatus.unlocked) {
-      vaultStatusText.innerText = 'Vault: Unlocked';
-      vaultStatusText.classList.add('logger-line-success');
-      vaultStatusText.classList.remove('logger-line-error');
-    } else if (vaultStatus.hasVault) {
-      vaultStatusText.innerText = 'Vault: Locked';
-      vaultStatusText.classList.add('logger-line-error');
-      vaultStatusText.classList.remove('logger-line-success');
-    } else {
-      vaultStatusText.innerText = 'Vault: Not Initialized';
-      vaultStatusText.classList.remove('logger-line-success');
-      vaultStatusText.classList.remove('logger-line-error');
-    }
+    vaultStatusText.innerText = title;
+  }
+  if (vaultStatusDetail) {
+    vaultStatusDetail.innerText = detail;
+  }
+  if (vaultStatusIcon) {
+    vaultStatusIcon.innerText = icon;
+  }
+  if (btnSetupVault) {
+    btnSetupVault.classList.toggle('hidden', state !== 'uninitialized');
+  }
+  if (btnUnlockVault) {
+    btnUnlockVault.classList.toggle('hidden', state !== 'locked');
+  }
+  if (btnLockVault) {
+    btnLockVault.classList.toggle('hidden', state !== 'unlocked');
   }
 
   renderProfileUI();
@@ -3379,14 +3420,7 @@ async function saveConflictResolution() {
 
 // ----------------- SSH PROFILES MANAGER -----------------
 function openSshModal() {
-  // Clear form
-  sshProfileId.value = '';
-  sshLabel.value = '';
-  sshKeyPath.value = '';
-  sshUserName.value = '';
-  sshUserEmail.value = '';
-  sshPassphrase.value = '';
-  sshKeepPassword.checked = false;
+  resetSshProfileForm();
   sshGenerateLabel.value = '';
   sshGenerateKeyName.value = '';
   sshGenerateKeyType.value = 'ed25519';
@@ -3397,10 +3431,49 @@ function openSshModal() {
   ruleMatchInput.value = '';
   clearGeneratedSshResult();
   setGenerateFeedback('', 'info', true);
+  hideSshKeyForms();
   closeAllDropdowns();
   sshModal.classList.remove('hidden');
   ensureSshManagerInteractive();
   refreshVaultStatus();
+}
+
+function hideSshKeyForms() {
+  if (sshExistingKeySection) sshExistingKeySection.classList.add('hidden');
+  if (sshGenerateSection) sshGenerateSection.classList.add('hidden');
+  if (btnShowAddKey) btnShowAddKey.setAttribute('aria-expanded', 'false');
+  if (btnShowGenerateKey) btnShowGenerateKey.setAttribute('aria-expanded', 'false');
+  if (sshExistingKeyHeading) sshExistingKeyHeading.innerText = 'Add an Existing Key';
+  resetSshProfileForm();
+}
+
+function resetSshProfileForm() {
+  sshProfileId.value = '';
+  sshLabel.value = '';
+  sshKeyPath.value = '';
+  sshUserName.value = '';
+  sshUserEmail.value = '';
+  sshPassphrase.value = '';
+  sshKeepPassword.checked = false;
+}
+
+function showSshKeyForm(type) {
+  const showExisting = type === 'existing';
+  const section = showExisting ? sshExistingKeySection : sshGenerateSection;
+
+  if (!section) {
+    return;
+  }
+
+  if (sshExistingKeySection) sshExistingKeySection.classList.toggle('hidden', !showExisting);
+  if (sshGenerateSection) sshGenerateSection.classList.toggle('hidden', showExisting);
+  if (btnShowAddKey) btnShowAddKey.setAttribute('aria-expanded', String(showExisting));
+  if (btnShowGenerateKey) btnShowGenerateKey.setAttribute('aria-expanded', String(!showExisting));
+
+  const firstField = section.querySelector('input:not([type="hidden"]), select');
+  if (firstField) {
+    setTimeout(() => firstField.focus(), 30);
+  }
 }
 
 function ensureSshManagerInteractive() {
@@ -3636,7 +3709,9 @@ async function generateSshKeyAndProfile() {
   }
 
   if (keepPassword && !vaultStatus.unlocked) {
-    setGenerateFeedback('Unlock vault first before keeping passwords.', 'error');
+    setGenerateFeedback(vaultStatus.hasVault
+      ? 'Unlock the vault before saving a passphrase.'
+      : 'Set up and unlock the vault before saving a passphrase.', 'error');
     return;
   }
 
@@ -3713,6 +3788,8 @@ function loadSshProfileIntoForm(profile) {
   sshUserEmail.value = profile.userEmail || '';
   sshPassphrase.value = '';
   sshKeepPassword.checked = Boolean(profile.hasSavedPassword);
+  if (sshExistingKeyHeading) sshExistingKeyHeading.innerText = 'Edit SSH Key Profile';
+  showSshKeyForm('existing');
 }
 
 async function saveSshProfile() {
@@ -3730,7 +3807,9 @@ async function saveSshProfile() {
   }
 
   if (keepPassword && !vaultStatus.unlocked) {
-    showToast('Unlock the vault first before keeping passwords.', 'warn');
+    showToast(vaultStatus.hasVault
+      ? 'Unlock the vault before saving a passphrase.'
+      : 'Set up and unlock the vault before saving a passphrase.', 'warn');
     return;
   }
 
@@ -3751,11 +3830,7 @@ async function saveSshProfile() {
       logToTerminal(`SSH Profile "${label}" saved.`, 'success');
       showToast(`SSH profile "${label}" saved.`, 'success');
       // Reset form
-      sshProfileId.value = '';
-      sshLabel.value = '';
-      sshKeyPath.value = '';
-      sshPassphrase.value = '';
-      sshKeepPassword.checked = false;
+      hideSshKeyForms();
 
       const snapshotApplied = applyConfigSnapshot(data.config);
       if (!snapshotApplied) {
@@ -3771,11 +3846,14 @@ async function saveSshProfile() {
 }
 
 async function unlockVault() {
+  if (!vaultStatus.hasVault) {
+    openVaultSetupModal();
+    return;
+  }
+
   const masterKey = await promptDialog({
     title: 'Unlock Vault',
-    label: vaultStatus.hasVault
-      ? 'Master key'
-      : 'Choose a master key (a new encrypted vault will be created)',
+    label: 'Master key',
     type: 'password'
   });
   if (!masterKey) {
@@ -3801,6 +3879,87 @@ async function unlockVault() {
     }
   } catch (err) {
     logToTerminal('Unlock vault failed: ' + err.message, 'error');
+  }
+}
+
+function setVaultSetupFeedback(message, type = 'error', hide = false) {
+  if (!vaultSetupFeedback) {
+    return;
+  }
+
+  if (hide || !message) {
+    vaultSetupFeedback.className = 'inline-feedback hidden';
+    vaultSetupFeedback.innerText = '';
+    return;
+  }
+
+  vaultSetupFeedback.className = `inline-feedback ${type}`;
+  vaultSetupFeedback.innerText = message;
+}
+
+function openVaultSetupModal() {
+  if (!vaultSetupModal || vaultStatus.hasVault) {
+    return;
+  }
+
+  vaultMasterKey.value = '';
+  vaultMasterKeyConfirm.value = '';
+  setVaultSetupFeedback('', 'error', true);
+  vaultSetupModal.classList.remove('hidden');
+  setTimeout(() => vaultMasterKey.focus(), 30);
+}
+
+function closeVaultSetupModal() {
+  if (!vaultSetupModal) {
+    return;
+  }
+
+  vaultMasterKey.value = '';
+  vaultMasterKeyConfirm.value = '';
+  setVaultSetupFeedback('', 'error', true);
+  vaultSetupModal.classList.add('hidden');
+}
+
+async function setupVault() {
+  const masterKey = vaultMasterKey.value;
+  const confirmation = vaultMasterKeyConfirm.value;
+
+  if (!masterKey) {
+    setVaultSetupFeedback('Choose a master key before creating the vault.');
+    vaultMasterKey.focus();
+    return;
+  }
+  if (masterKey !== confirmation) {
+    setVaultSetupFeedback('The master keys do not match. Enter the same key in both fields.');
+    vaultMasterKeyConfirm.focus();
+    return;
+  }
+
+  setButtonBusy(btnSaveVaultSetup, true);
+  setVaultSetupFeedback('Creating encrypted vault...', 'info');
+  try {
+    const res = await fetch('/api/secrets/unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ masterKey })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setVaultSetupFeedback(data.error || 'Failed to create the vault.');
+      return;
+    }
+
+    vaultStatus = { hasVault: data.hasVault, unlocked: data.unlocked };
+    updateVaultStatusUI();
+    closeVaultSetupModal();
+    logToTerminal('Passphrase vault created and unlocked.', 'success');
+    showToast('Passphrase vault created and unlocked.', 'success');
+    await loadConfig();
+  } catch (err) {
+    logToTerminal('Create vault failed: ' + err.message, 'error');
+    setVaultSetupFeedback('Create vault failed: ' + err.message);
+  } finally {
+    setButtonBusy(btnSaveVaultSetup, false);
   }
 }
 
@@ -4585,6 +4744,11 @@ function closeOpenModalOnEscape() {
     return;
   }
 
+  if (vaultSetupModal && !vaultSetupModal.classList.contains('hidden')) {
+    closeVaultSetupModal();
+    return;
+  }
+
   if (cloneModal && !cloneModal.classList.contains('hidden')) {
     cloneModal.classList.add('hidden');
     return;
@@ -4684,15 +4848,17 @@ function setupListeners() {
     closeAllDropdowns();
     if (vaultStatus.unlocked) {
       lockVault();
-    } else {
+    } else if (vaultStatus.hasVault) {
       unlockVault();
+    } else {
+      openVaultSetupModal();
     }
   };
   btnEditIdentity.onclick = openIdentityModal;
 
   // SSH Modal
   btnCloseSshModal.onclick = () => sshModal.classList.add('hidden');
-  btnCancelSsh.onclick = () => sshModal.classList.add('hidden');
+  btnCancelSsh.onclick = hideSshKeyForms;
   sshModal.onclick = (e) => {
     if (e.target === sshModal) {
       sshModal.classList.add('hidden');
@@ -4702,8 +4868,32 @@ function setupListeners() {
     e.preventDefault();
     saveSshProfile();
   };
+  if (btnShowAddKey) {
+    btnShowAddKey.onclick = () => {
+      resetSshProfileForm();
+      showSshKeyForm('existing');
+    };
+  }
+  if (btnHideAddKey) btnHideAddKey.onclick = hideSshKeyForms;
+  if (btnShowGenerateKey) btnShowGenerateKey.onclick = () => showSshKeyForm('generate');
+  if (btnHideGenerateKey) btnHideGenerateKey.onclick = hideSshKeyForms;
+  if (btnSetupVault) btnSetupVault.onclick = openVaultSetupModal;
   if (btnUnlockVault) btnUnlockVault.onclick = unlockVault;
   if (btnLockVault) btnLockVault.onclick = lockVault;
+  if (btnCancelVaultSetup) btnCancelVaultSetup.onclick = closeVaultSetupModal;
+  if (vaultSetupForm) {
+    vaultSetupForm.onsubmit = (e) => {
+      e.preventDefault();
+      setupVault();
+    };
+  }
+  if (vaultSetupModal) {
+    vaultSetupModal.onclick = (e) => {
+      if (e.target === vaultSetupModal) {
+        closeVaultSetupModal();
+      }
+    };
+  }
   if (btnTestSshForm) btnTestSshForm.onclick = testSshForm;
   const sshManageConfigCheckbox = document.getElementById('ssh-manage-config-checkbox');
   if (sshManageConfigCheckbox) sshManageConfigCheckbox.onchange = onSshConfigSettingChanged;

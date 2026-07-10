@@ -200,21 +200,21 @@ Checkpoints are in-memory and reset when the app restarts. Discarded file copies
 
 Open **SSH Profile Manager** from the **SSH Key** header dropdown.
 
-### Register An Existing Key
+### Add An Existing Key
 
-Use the profile form to add:
+Select **Add Key From File**, then use the profile form to add:
 
 - **Profile Name / Label**: a readable account name, such as `Personal` or `Work`.
 - **Private Key Path**: the private key file to use.
 - **Name** and **Email**: optional commit identity for repositories using this profile.
 - **SSH Passphrase**: optional passphrase for encrypted keys.
-- **Keep Password**: save the passphrase in the encrypted local vault.
+- **Save passphrase in the encrypted vault**: store the passphrase locally so Multi-Git can use it after you unlock the vault.
 
 Use **Test** to validate the key, then **Save Profile**.
 
 ### Generate A New Key
 
-In **Generate New SSH Key**:
+Select **Generate Key**, then:
 
 1. Enter a profile label.
 2. Pick a key type.
@@ -224,6 +224,14 @@ In **Generate New SSH Key**:
 6. Copy the public key from **Last Generated Key** and add it to your Git host.
 
 The new profile appears in **Registered Profiles** immediately.
+
+### Passphrase Vault
+
+The passphrase vault is optional. You only need it when you want Multi-Git to save an SSH key passphrase.
+
+- **First time:** Select **Set Up Vault**, choose a master key, and confirm it. The master key is not stored and cannot be recovered, so keep it somewhere safe.
+- **Locked:** Saved passphrases remain encrypted on disk but cannot be used. Select **Unlock Vault** and enter the master key before saving or using a passphrase.
+- **Unlocked:** Multi-Git can use saved passphrases and save new ones during the current app session. Select **Lock Vault** when you are finished to remove the decryption key from app memory.
 
 ### Auto-Select Rules
 
@@ -276,7 +284,7 @@ Saved passphrases are encrypted locally with:
 - a key derived from your master key,
 - a random salt and IV.
 
-The vault is unlocked in memory while the app is running. Use **Lock Vault** from the SSH Profile Manager when you no longer need saved passphrases.
+The vault is unlocked only in memory while the app is running. Set it up from **SSH Profile Manager** only if you want to save SSH passphrases. Use **Lock Vault** when you no longer need saved passphrases; this removes the decryption key from memory while leaving the encrypted vault file intact.
 
 The backend is intended for local use only. It binds to `127.0.0.1` and rejects non-localhost Host/Origin values because it can execute Git and filesystem operations on local repositories.
 
