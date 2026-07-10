@@ -15,6 +15,7 @@ let lastGeneratedSshKey = null;
 let isGeneratingSshKey = false;
 let originRemoteInfo = null;
 let lastFocusRefresh = 0;
+let appSettings = { manageSshConfig: true };
 
 // DOM Elements
 const appContainer = document.getElementById('main-content');
@@ -90,6 +91,7 @@ const stagedFilesList = document.getElementById('staged-files-list');
 const btnStageAll = document.getElementById('btn-stage-all');
 const btnUnstageAll = document.getElementById('btn-unstage-all');
 const btnDiscardAll = document.getElementById('btn-discard-all');
+const filenameWrapToggle = document.getElementById('filename-wrap-toggle');
 const diffFileTitle = document.getElementById('diff-file-title');
 const diffFileType = document.getElementById('diff-file-type');
 const diffContent = document.getElementById('diff-content');
@@ -134,15 +136,11 @@ const btnPull = document.getElementById('btn-pull');
 const btnPush = document.getElementById('btn-push');
 const pullCountBadge = document.getElementById('pull-count-badge');
 const pushCountBadge = document.getElementById('push-count-badge');
-const syncProfileLine = document.getElementById('sync-profile-line');
-const syncProfileDot = document.getElementById('sync-profile-dot');
-const syncProfileName = document.getElementById('sync-profile-name');
-const btnConvertOriginSsh = document.getElementById('btn-convert-origin-ssh');
-const remoteOriginText = document.getElementById('remote-origin-text');
+const btnRemoteProtocol = document.getElementById('btn-remote-protocol');
+const remoteProtocolLabel = document.getElementById('remote-protocol-label');
+const btnOpenLogs = document.getElementById('btn-open-logs');
 const commitHistoryList = document.getElementById('commit-history-list');
 const btnUndoCommit = document.getElementById('btn-undo-commit');
-const terminalLogs = document.getElementById('terminal-logs');
-const btnClearLogs = document.getElementById('btn-clear-logs');
 
 // Overlays & Modals
 const noRepoOverlay = document.getElementById('no-repo-overlay');
@@ -254,22 +252,23 @@ const statusLabels = {
 };
 
 // ----------------- LOGGER HELPER -----------------
+// Log lines are streamed to the server, which buffers them and broadcasts to
+// the standalone terminal log window (logs.html) over SSE.
 function logToTerminal(text, type = 'info') {
-  const line = document.createElement('div');
-  if (type === 'error') {
-    line.className = 'logger-line-error';
-    line.innerText = `[ERROR] ${text}`;
-  } else if (type === 'success') {
-    line.className = 'logger-line-success';
-    line.innerText = `[SUCCESS] ${text}`;
-  } else if (type === 'cmd') {
-    line.className = 'logger-line-cmd';
-    line.innerText = `$ ${text}`;
+  fetch('/api/logs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, type })
+  }).catch(() => console.log(`[${type}] ${text}`));
+}
+
+function openLogWindow() {
+  if (window.desktopApi && window.desktopApi.openLogWindow) {
+    window.desktopApi.openLogWindow();
   } else {
-    line.innerText = text;
+    // Browser mode: reuse the same named tab on repeated clicks
+    window.open('/logs.html', 'multi-git-logs');
   }
-  terminalLogs.appendChild(line);
-  terminalLogs.scrollTop = terminalLogs.scrollHeight;
 }
 
 // ----------------- UI HELPERS (toast / confirm / prompt / busy) -----------------
@@ -453,9 +452,11 @@ async function loadConfig() {
     sshProfiles = data.sshProfiles || [];
     accountRules = data.accountRules || [];
     vaultStatus = data.vaultStatus || { hasVault: false, unlocked: false };
+    appSettings = data.settings || { manageSshConfig: true };
 
     updateRecentReposUI();
     updateSshProfilesUI();
+    renderSshConfigSetting();
   } catch (err) {
     logToTerminal('Failed to load application configurations: ' + err.message, 'error');
   }
@@ -566,6 +567,7 @@ function setActiveProfile(id, options = {}) {
     }
   }
   renderProfileUI();
+  applySshConfigForActiveProfile();
 
   if (!options.silent) {
     const profile = getActiveProfile();
@@ -573,6 +575,152 @@ function setActiveProfile(id, options = {}) {
     logToTerminal(`Active SSH key for this repository: ${label}`);
     showToast(`SSH key: ${label}`, 'info', 2500);
     maybeOfferIdentity(profile);
+  }
+}
+
+// ---- Startup SSH key health check ----
+let sshHealthCheckDone = false;
+
+async function validateSshProfilesOnStartup() {
+  if (sshHealthCheckDone || sshProfiles.length === 0) return;
+  sshHealthCheckDone = true;
+
+  try {
+    const res = await fetch('/api/config/ssh/validate-all', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.unavailable) return;
+
+    const problems = (data.results || []).filter(r => r.status === 'missing' || r.status === 'invalid');
+    (data.results || []).forEach(r => {
+      if (r.status === 'passphrase') {
+        logToTerminal(`SSH key "${r.label}" is passphrase-protected.`);
+      }
+    });
+    if (problems.length === 0) return;
+
+    const list = document.getElementById('ssh-health-list');
+    list.innerHTML = '';
+    problems.forEach(p => {
+      logToTerminal(`SSH key problem — ${p.label} (${p.privateKeyPath}): ${p.message}`, 'error');
+
+      const li = document.createElement('li');
+
+      const title = document.createElement('div');
+      title.className = 'ssh-health-item-title';
+      title.innerText = p.label;
+
+      const pathLine = document.createElement('div');
+      pathLine.className = 'ssh-health-item-path';
+      pathLine.innerText = p.privateKeyPath || '(no key path)';
+
+      const reason = document.createElement('div');
+      reason.className = 'ssh-health-item-reason';
+      reason.innerText = p.status === 'missing' ? 'Key file not found on disk.' : p.message;
+
+      li.appendChild(title);
+      li.appendChild(pathLine);
+      li.appendChild(reason);
+      list.appendChild(li);
+    });
+
+    document.getElementById('ssh-health-modal').classList.remove('hidden');
+  } catch (err) {
+    // Never block startup on the health check
+    console.warn('SSH key startup validation failed:', err);
+  }
+}
+
+function renderSshConfigSetting() {
+  const checkbox = document.getElementById('ssh-manage-config-checkbox');
+  if (checkbox) {
+    checkbox.checked = appSettings.manageSshConfig !== false;
+  }
+}
+
+async function onSshConfigSettingChanged(e) {
+  const enabled = e.target.checked;
+  let removeManagedBlock = false;
+
+  if (!enabled) {
+    const { confirmed, checked } = await confirmDialog(
+      'Multi-Git will stop writing to ~/.ssh/config. Pushes and pulls inside the app keep working with the selected key, but external tools will use whatever your own SSH config says.',
+      {
+        title: 'Manage SSH config yourself?',
+        confirmLabel: 'Stop managing',
+        checkboxLabel: 'Also remove the multi-git managed block from ~/.ssh/config',
+        checkboxChecked: true
+      }
+    );
+    if (!confirmed) {
+      e.target.checked = true;
+      return;
+    }
+    removeManagedBlock = checked;
+  }
+
+  try {
+    const res = await fetch('/api/config/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ manageSshConfig: enabled, removeManagedBlock })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      logToTerminal(data.error || 'Failed to save SSH config setting.', 'error');
+      showToast(data.error || 'Failed to save SSH config setting.', 'error');
+      renderSshConfigSetting();
+      return;
+    }
+
+    applyConfigSnapshot(data.config);
+    if (data.warning) {
+      logToTerminal(data.warning, 'error');
+    }
+
+    if (enabled) {
+      logToTerminal('Multi-Git will keep ~/.ssh/config in sync with the active key.', 'success');
+      // Re-apply immediately for the current repository
+      applySshConfigForActiveProfile();
+    } else {
+      logToTerminal('Multi-Git will no longer touch ~/.ssh/config.', 'info');
+    }
+  } catch (err) {
+    logToTerminal('Failed to save SSH config setting: ' + err.message, 'error');
+    renderSshConfigSetting();
+  }
+}
+
+// Keep ~/.ssh/config pointing at the active key so external tools (Git Bash,
+// IDEs) use it too. The server no-ops when the user manages their own config.
+async function applySshConfigForActiveProfile() {
+  if (!activeRepo) return;
+
+  try {
+    const res = await fetch('/api/config/ssh/apply-ssh-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profileId: activeProfileId, repoPath: activeRepo })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      logToTerminal(data.error || 'Failed to update ~/.ssh/config.', 'error');
+      return;
+    }
+    if (data.skipped) return;
+    if (data.warning) {
+      logToTerminal(data.warning, 'error');
+    }
+    if (data.updated) {
+      logToTerminal(
+        data.removed
+          ? `~/.ssh/config: removed multi-git entry for ${data.host} (System SSH).`
+          : `~/.ssh/config updated: ${data.host} now uses the active key.`
+      );
+    }
+  } catch (err) {
+    logToTerminal('Failed to update ~/.ssh/config: ' + err.message, 'error');
   }
 }
 
@@ -781,13 +929,9 @@ function renderProfileUI() {
   if (profile) {
     profileColorDot.classList.remove('profile-dot-system');
     profileColorDot.style.backgroundColor = profileColor(profile.id);
-    syncProfileDot.classList.remove('profile-dot-system');
-    syncProfileDot.style.backgroundColor = profileColor(profile.id);
   } else {
     profileColorDot.classList.add('profile-dot-system');
     profileColorDot.style.backgroundColor = '';
-    syncProfileDot.classList.add('profile-dot-system');
-    syncProfileDot.style.backgroundColor = '';
   }
 
   // Vault glyph next to the profile name (saved passphrase indicator)
@@ -805,9 +949,6 @@ function renderProfileUI() {
   } else {
     profileVaultIcon.classList.add('hidden');
   }
-
-  // Sync panel line
-  syncProfileName.innerText = profile ? profile.label : 'System SSH';
 
   // Vault chip + button in dropdown
   dropdownVaultStatus.classList.remove('vault-open', 'vault-locked');
@@ -1247,8 +1388,37 @@ async function refreshAll() {
   }
 }
 
+function renderRemoteProtocolButton() {
+  if (!btnRemoteProtocol) return;
+
+  if (!activeRepo || !originRemoteInfo || !originRemoteInfo.remoteUrl) {
+    btnRemoteProtocol.classList.add('hidden');
+    return;
+  }
+
+  const { remoteUrl, protocol, canToggle, suggestedUrl } = originRemoteInfo;
+  btnRemoteProtocol.classList.remove('hidden');
+
+  if (!canToggle) {
+    btnRemoteProtocol.disabled = true;
+    remoteProtocolLabel.innerText = 'Remote';
+    btnRemoteProtocol.title = `Origin: ${remoteUrl}\nThis URL cannot be switched automatically.`;
+    btnRemoteProtocol.classList.remove('protocol-ssh', 'protocol-https');
+    return;
+  }
+
+  const isSsh = protocol === 'ssh';
+  btnRemoteProtocol.disabled = false;
+  remoteProtocolLabel.innerText = isSsh ? 'SSH' : 'HTTPS';
+  btnRemoteProtocol.classList.toggle('protocol-ssh', isSsh);
+  btnRemoteProtocol.classList.toggle('protocol-https', !isSsh);
+  btnRemoteProtocol.title = `Origin: ${remoteUrl}\nClick to switch to ${isSsh ? 'HTTPS' : 'SSH'} (${suggestedUrl})`;
+}
+
 async function refreshOriginRemoteInfo() {
   if (!activeRepo) {
+    originRemoteInfo = null;
+    renderRemoteProtocolButton();
     return;
   }
 
@@ -1257,74 +1427,51 @@ async function refreshOriginRemoteInfo() {
       headers: { 'x-repo-path': activeRepo }
     });
     const data = await res.json();
-
-    if (!res.ok) {
-      originRemoteInfo = null;
-      if (remoteOriginText) {
-        remoteOriginText.innerText = `Origin: ${data.error || 'Unavailable'}`;
-      }
-      if (btnConvertOriginSsh) {
-        btnConvertOriginSsh.classList.add('hidden');
-      }
-      return;
-    }
-
-    originRemoteInfo = data;
-    if (remoteOriginText) {
-      remoteOriginText.innerText = `Origin: ${data.remoteUrl}`;
-      remoteOriginText.title = data.remoteUrl;
-    }
-
-    if (btnConvertOriginSsh) {
-      const shouldShow = Boolean(data.canConvertToSsh);
-      if (shouldShow) {
-        btnConvertOriginSsh.classList.remove('hidden');
-      } else {
-        btnConvertOriginSsh.classList.add('hidden');
-      }
-    }
+    originRemoteInfo = res.ok ? data : null;
   } catch (err) {
     originRemoteInfo = null;
-    if (remoteOriginText) {
-      remoteOriginText.innerText = 'Origin: unavailable';
-    }
-    if (btnConvertOriginSsh) {
-      btnConvertOriginSsh.classList.add('hidden');
-    }
   }
+
+  renderRemoteProtocolButton();
 }
 
-async function convertOriginToSsh() {
-  if (!activeRepo) {
+async function toggleRemoteProtocol() {
+  if (!activeRepo || !originRemoteInfo || !originRemoteInfo.canToggle) {
+    return;
+  }
+
+  const targetProtocol = originRemoteInfo.protocol === 'ssh' ? 'HTTPS' : 'SSH';
+  const { confirmed } = await confirmDialog(
+    `Change the origin remote from\n${originRemoteInfo.remoteUrl}\nto\n${originRemoteInfo.suggestedUrl}`,
+    { title: `Switch origin to ${targetProtocol}?`, confirmLabel: `Switch to ${targetProtocol}` }
+  );
+  if (!confirmed) {
     return;
   }
 
   try {
-    if (btnConvertOriginSsh) {
-      btnConvertOriginSsh.disabled = true;
-    }
+    btnRemoteProtocol.disabled = true;
 
-    const res = await fetch('/api/git/remote/origin/convert-ssh', {
+    const res = await fetch('/api/git/remote/origin/toggle-protocol', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-repo-path': activeRepo }
     });
     const data = await res.json();
 
     if (!res.ok) {
-      logToTerminal(data.error || 'Failed to convert origin to SSH.', 'error');
-      showToast(data.error || 'Failed to convert origin to SSH.', 'error', 7000);
+      logToTerminal(data.error || 'Failed to switch origin remote protocol.', 'error');
+      showToast(data.error || 'Failed to switch origin remote protocol.', 'error', 7000);
       return;
     }
 
-    logToTerminal(`Origin converted to SSH: ${data.remoteUrl}`, 'success');
-    showToast('Origin remote converted to SSH.', 'success');
-    await refreshOriginRemoteInfo();
+    logToTerminal(`git remote set-url origin ${data.remoteUrl}`, 'cmd');
+    logToTerminal(`Origin switched to ${targetProtocol}: ${data.remoteUrl}`, 'success');
+    showToast(`Origin remote switched to ${targetProtocol}.`, 'success');
   } catch (err) {
-    logToTerminal('Failed to convert origin remote: ' + err.message, 'error');
+    logToTerminal('Failed to switch origin remote: ' + err.message, 'error');
   } finally {
-    if (btnConvertOriginSsh) {
-      btnConvertOriginSsh.disabled = false;
-    }
+    btnRemoteProtocol.disabled = false;
+    await refreshOriginRemoteInfo();
   }
 }
 
@@ -1404,6 +1551,8 @@ function renderBranchHeader() {
 }
 
 function renderStagingLists(staged, unstaged, conflicts) {
+  updateCommitAvailability(staged);
+
   // Render Unstaged Files
   if (unstaged.length === 0 && conflicts.length === 0) {
     unstagedFilesList.innerHTML = '<li class="empty-state">No modified files</li>';
@@ -1442,6 +1591,18 @@ function renderStagingLists(staged, unstaged, conflicts) {
       updateActiveFileItems();
     }
   }
+}
+
+function updateCommitAvailability(staged = []) {
+  const hasStagedChanges = Array.isArray(staged) && staged.length > 0;
+  btnCommit.disabled = !hasStagedChanges;
+  btnCommit.title = hasStagedChanges ? 'Commit staged changes' : 'Stage changes before committing';
+}
+
+function setFilenameWrapping(enabled) {
+  [unstagedFilesList, stagedFilesList].forEach((list) => {
+    list.closest('.file-list-card').classList.toggle('wrap-file-names', enabled);
+  });
 }
 
 function getDiffEntries(staged = [], unstaged = [], conflicts = []) {
@@ -1849,6 +2010,11 @@ async function discardAllChanges() {
 async function commitChanges() {
   const message = commitMsgInput.value.trim();
   const amend = commitAmendCheckbox.checked;
+  if (!currentStatus || !currentStatus.staged || currentStatus.staged.length === 0) {
+    showToast('Stage at least one change before committing.', 'warn');
+    updateCommitAvailability(currentStatus ? currentStatus.staged : []);
+    return;
+  }
   if (!message) {
     showToast('Enter a commit message first.', 'warn');
     commitMsgInput.focus();
@@ -1913,7 +2079,7 @@ async function commitChanges() {
   } catch (err) {
     logToTerminal('Failed to commit: ' + err.message, 'error');
   } finally {
-    btnCommit.disabled = false;
+    updateCommitAvailability(currentStatus ? currentStatus.staged : []);
   }
 }
 
@@ -2427,67 +2593,261 @@ async function performSync(action, opts = {}) {
   }
 }
 
-// ----------------- COMMIT HISTORY -----------------
+// ----------------- COMMIT HISTORY (GRAPH) -----------------
+const GRAPH_PAGE_SIZE = 200;
+const GRAPH_LANE_COLOR_COUNT = 8;
+const GRAPH_LANE_WIDTH = 14;
+const GRAPH_ROW_HEIGHT = 46;
+const GRAPH_MAX_VISIBLE_LANES = 8;
+
+let graphCommits = [];
+let graphHashes = new Set();
+let graphHasMore = false;
+let graphLoading = false;
+
+// Straight-lane layout over topologically ordered commits. Each lane "waits"
+// for a commit hash; a commit lands on the first lane waiting for it (new
+// tips open a lane), its first parent continues the lane, extra parents fork
+// out, and other lanes waiting for the same hash merge in.
+function computeGraphLayout(commits) {
+  const lanes = [];      // lanes[i] = hash this lane is waiting for, or null (free)
+  const laneColors = [];
+  let colorCounter = 0;
+  const rows = [];
+  let maxLanes = 1;
+
+  const allocLane = (hash, allocatedThisRow) => {
+    let idx = lanes.indexOf(null);
+    if (idx === -1) {
+      idx = lanes.length;
+      lanes.push(null);
+      laneColors.push(0);
+    }
+    lanes[idx] = hash;
+    laneColors[idx] = colorCounter++ % GRAPH_LANE_COLOR_COUNT;
+    allocatedThisRow.add(idx);
+    return idx;
+  };
+
+  commits.forEach((commit) => {
+    const allocatedThisRow = new Set();
+    const activeAbove = lanes.slice();
+
+    const matching = [];
+    lanes.forEach((h, i) => { if (h === commit.hash) matching.push(i); });
+
+    const lane = matching.length > 0 ? matching[0] : allocLane(commit.hash, allocatedThisRow);
+    const edges = [];
+
+    // Other lanes waiting for this same commit collapse into its dot
+    for (let k = 1; k < matching.length; k++) {
+      const i = matching[k];
+      edges.push({ type: 'in', lane: i, color: laneColors[i] });
+      lanes[i] = null;
+    }
+
+    const parents = commit.parents || [];
+    lanes[lane] = parents[0] || null;
+
+    // Extra parents of a merge commit fork out of the dot
+    for (let p = 1; p < parents.length; p++) {
+      let j = lanes.indexOf(parents[p]);
+      if (j === -1 || j === lane) {
+        j = allocLane(parents[p], allocatedThisRow);
+      }
+      edges.push({ type: 'out', lane: j, color: laneColors[j] });
+    }
+
+    // Lanes that simply pass through this row (active above and below,
+    // untouched by this commit)
+    const passLanes = [];
+    lanes.forEach((h, i) => {
+      if (h !== null && i !== lane && !allocatedThisRow.has(i)) {
+        passLanes.push({ lane: i, color: laneColors[i] });
+      }
+    });
+
+    rows.push({
+      commit,
+      lane,
+      color: laneColors[lane],
+      lineAbove: activeAbove[lane] === commit.hash,
+      lineBelow: lanes[lane] !== null,
+      passLanes,
+      edges
+    });
+    maxLanes = Math.max(maxLanes, lanes.length);
+  });
+
+  return { rows, maxLanes };
+}
+
+function graphLaneX(lane) {
+  return Math.min(lane, GRAPH_MAX_VISIBLE_LANES - 1) * GRAPH_LANE_WIDTH + GRAPH_LANE_WIDTH / 2;
+}
+
+function buildGraphRowSvg(row, gutterWidth) {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width', gutterWidth);
+  svg.setAttribute('height', GRAPH_ROW_HEIGHT);
+  svg.classList.add('commit-graph-gutter');
+
+  const midY = GRAPH_ROW_HEIGHT / 2;
+  const dotX = graphLaneX(row.lane);
+
+  const addPath = (d, colorIdx) => {
+    const p = document.createElementNS(svgNS, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke-width', '2');
+    p.style.stroke = `var(--graph-lane-${colorIdx})`;
+    svg.appendChild(p);
+  };
+
+  row.passLanes.forEach(({ lane, color }) => {
+    const x = graphLaneX(lane);
+    addPath(`M ${x} 0 V ${GRAPH_ROW_HEIGHT}`, color);
+  });
+
+  if (row.lineAbove) {
+    addPath(`M ${dotX} 0 V ${midY}`, row.color);
+  }
+  if (row.lineBelow) {
+    addPath(`M ${dotX} ${midY} V ${GRAPH_ROW_HEIGHT}`, row.color);
+  }
+
+  row.edges.forEach((edge) => {
+    const x = graphLaneX(edge.lane);
+    if (edge.type === 'in') {
+      // A lane above merges into this commit's dot
+      addPath(`M ${x} 0 C ${x} ${midY * 0.8}, ${dotX} ${midY * 0.4}, ${dotX} ${midY}`, edge.color);
+    } else {
+      // This commit forks out to a parent lane below
+      addPath(`M ${dotX} ${midY} C ${dotX} ${midY + midY * 0.6}, ${x} ${midY + midY * 0.2}, ${x} ${GRAPH_ROW_HEIGHT}`, edge.color);
+    }
+  });
+
+  const dot = document.createElementNS(svgNS, 'circle');
+  dot.setAttribute('cx', dotX);
+  dot.setAttribute('cy', midY);
+  dot.setAttribute('r', '4');
+  dot.style.fill = `var(--graph-lane-${row.color})`;
+  dot.style.stroke = 'var(--bg-card)';
+  dot.setAttribute('stroke-width', '1.5');
+  svg.appendChild(dot);
+
+  return svg;
+}
+
+function renderCommitGraph() {
+  const previousScrollTop = commitHistoryList.scrollTop;
+  commitHistoryList.innerHTML = '';
+
+  if (graphCommits.length === 0) {
+    commitHistoryList.innerHTML = '<li class="empty-state">No commits yet</li>';
+    return;
+  }
+
+  const { rows, maxLanes } = computeGraphLayout(graphCommits);
+  const gutterWidth = Math.min(maxLanes, GRAPH_MAX_VISIBLE_LANES) * GRAPH_LANE_WIDTH;
+
+  rows.forEach((row) => {
+    const commit = row.commit;
+    const li = document.createElement('li');
+    li.className = 'commit-graph-row';
+    li.onclick = () => showCommitDetails(commit.hash);
+
+    li.appendChild(buildGraphRowSvg(row, gutterWidth));
+
+    const content = document.createElement('div');
+    content.className = 'commit-graph-content';
+
+    const msgRow = document.createElement('div');
+    msgRow.className = 'commit-graph-msg-row';
+
+    const refs = (commit.refs || []).slice(0, 2);
+    refs.forEach(ref => {
+      const chip = document.createElement('span');
+      chip.className = 'ref-chip';
+      chip.innerText = ref.replace(/^HEAD -> /, '');
+      chip.title = ref;
+      chip.style.borderColor = `var(--graph-lane-${row.color})`;
+      msgRow.appendChild(chip);
+    });
+
+    const msg = document.createElement('span');
+    msg.className = 'commit-msg';
+    msg.innerText = commit.message;
+    msg.title = commit.message;
+    msgRow.appendChild(msg);
+
+    const meta = document.createElement('div');
+    meta.className = 'commit-meta';
+
+    const author = document.createElement('span');
+    author.className = 'commit-author';
+    author.innerText = commit.author;
+
+    const date = document.createElement('span');
+    date.innerText = commit.date;
+
+    meta.appendChild(author);
+    meta.appendChild(date);
+
+    content.appendChild(msgRow);
+    content.appendChild(meta);
+    li.appendChild(content);
+
+    commitHistoryList.appendChild(li);
+  });
+
+  if (graphHasMore) {
+    const loader = document.createElement('li');
+    loader.className = 'empty-state commit-graph-loader';
+    loader.innerText = 'Scroll to load more…';
+    commitHistoryList.appendChild(loader);
+  }
+
+  commitHistoryList.scrollTop = previousScrollTop;
+}
+
+async function fetchCommitPage(skip) {
+  const res = await fetch(`/api/git/log?limit=${GRAPH_PAGE_SIZE}&skip=${skip}&all=1`, {
+    headers: { 'x-repo-path': activeRepo }
+  });
+  return res.json();
+}
+
 async function refreshCommitHistory() {
   try {
-    const res = await fetch('/api/git/log', {
-      headers: { 'x-repo-path': activeRepo }
-    });
-    const data = await res.json();
-
-    if (data.commits && data.commits.length > 0) {
-      commitHistoryList.innerHTML = '';
-      data.commits.forEach(commit => {
-        const li = document.createElement('li');
-        li.className = 'commit-history-item';
-        li.style.cursor = 'pointer';
-
-        const meta = document.createElement('div');
-        meta.className = 'commit-meta';
-
-        const author = document.createElement('span');
-        author.className = 'commit-author';
-        author.innerText = commit.author;
-
-        const date = document.createElement('span');
-        date.innerText = commit.date;
-
-        meta.appendChild(author);
-        meta.appendChild(date);
-
-        const msg = document.createElement('div');
-        msg.className = 'commit-msg';
-        msg.innerText = commit.message;
-        msg.title = commit.message;
-
-        li.appendChild(meta);
-        li.appendChild(msg);
-
-        // Branch / tag decorations
-        const refs = (commit.refs || []).slice(0, 3);
-        if (refs.length > 0) {
-          const refsRow = document.createElement('div');
-          refsRow.style.cssText = 'display:flex; gap:4px; margin-top:3px; flex-wrap:wrap;';
-          refs.forEach(ref => {
-            const chip = document.createElement('span');
-            chip.className = 'ref-chip';
-            chip.innerText = ref.replace(/^HEAD -> /, '');
-            chip.title = ref;
-            refsRow.appendChild(chip);
-          });
-          li.appendChild(refsRow);
-        }
-
-        // Add click listener to show commit details
-        li.onclick = () => showCommitDetails(commit.hash);
-
-        commitHistoryList.appendChild(li);
-      });
-    } else {
-      commitHistoryList.innerHTML = '<li class="empty-state">No commits yet</li>';
-    }
+    const data = await fetchCommitPage(0);
+    graphCommits = data.commits || [];
+    graphHashes = new Set(graphCommits.map(c => c.hash));
+    graphHasMore = Boolean(data.hasMore);
   } catch (err) {
-    commitHistoryList.innerHTML = '<li class="empty-state">No commits yet</li>';
+    graphCommits = [];
+    graphHashes = new Set();
+    graphHasMore = false;
+  }
+  renderCommitGraph();
+}
+
+async function loadMoreCommits() {
+  if (graphLoading || !graphHasMore || !activeRepo) return;
+  graphLoading = true;
+
+  try {
+    const data = await fetchCommitPage(graphCommits.length);
+    const fresh = (data.commits || []).filter(c => !graphHashes.has(c.hash));
+    fresh.forEach(c => graphHashes.add(c.hash));
+    graphCommits = graphCommits.concat(fresh);
+    graphHasMore = Boolean(data.hasMore);
+    renderCommitGraph();
+  } catch (err) {
+    logToTerminal('Failed to load more commits: ' + err.message, 'error');
+  } finally {
+    graphLoading = false;
   }
 }
 
@@ -3073,8 +3433,12 @@ function applyConfigSnapshot(snapshot) {
   sshProfiles = snapshot.sshProfiles || [];
   accountRules = snapshot.accountRules || [];
   vaultStatus = snapshot.vaultStatus || { hasVault: false, unlocked: false };
+  if (snapshot.settings) {
+    appSettings = snapshot.settings;
+  }
   updateRecentReposUI();
   updateSshProfilesUI();
+  renderSshConfigSetting();
   return true;
 }
 
@@ -3278,7 +3642,7 @@ async function generateSshKeyAndProfile() {
     const res = await fetch('/api/config/ssh/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label, keyType, keyName, passphrase, keepPassword, userName, userEmail })
+      body: JSON.stringify({ label, keyType, keyName, passphrase, keepPassword, userName, userEmail, repoPath: activeRepo })
     });
     const data = await res.json();
 
@@ -3291,6 +3655,12 @@ async function generateSshKeyAndProfile() {
 
     logToTerminal(`SSH key created and profile "${label}" registered.`, 'success');
     showToast(`SSH key created and profile "${label}" registered.`, 'success');
+    if (data.sshConfigUpdated) {
+      logToTerminal(`~/.ssh/config updated: ${data.sshConfigHost} now uses the new key.`, 'success');
+    }
+    if (data.sshConfigWarning) {
+      logToTerminal(data.sshConfigWarning, 'error');
+    }
     renderGeneratedSshResult(data);
     sshGeneratePassphrase.value = '';
     sshGenerateKeepPassword.checked = false;
@@ -4306,7 +4676,6 @@ function setupListeners() {
     }
   };
   btnEditIdentity.onclick = openIdentityModal;
-  syncProfileLine.onclick = openProfileDropdown;
 
   // SSH Modal
   btnCloseSshModal.onclick = () => sshModal.classList.add('hidden');
@@ -4323,6 +4692,21 @@ function setupListeners() {
   if (btnUnlockVault) btnUnlockVault.onclick = unlockVault;
   if (btnLockVault) btnLockVault.onclick = lockVault;
   if (btnTestSshForm) btnTestSshForm.onclick = testSshForm;
+  const sshManageConfigCheckbox = document.getElementById('ssh-manage-config-checkbox');
+  if (sshManageConfigCheckbox) sshManageConfigCheckbox.onchange = onSshConfigSettingChanged;
+
+  // SSH key health modal (startup validation)
+  const sshHealthModal = document.getElementById('ssh-health-modal');
+  document.getElementById('btn-ssh-health-dismiss').onclick = () => sshHealthModal.classList.add('hidden');
+  document.getElementById('btn-ssh-health-open').onclick = () => {
+    sshHealthModal.classList.add('hidden');
+    openSshModal();
+  };
+  sshHealthModal.onclick = (e) => {
+    if (e.target === sshHealthModal) {
+      sshHealthModal.classList.add('hidden');
+    }
+  };
   if (sshGenerateForm) {
     sshGenerateForm.onsubmit = (e) => {
       e.preventDefault();
@@ -4362,6 +4746,7 @@ function setupListeners() {
   btnStageAll.onclick = () => stageFiles(['.']);
   btnUnstageAll.onclick = () => unstageFiles(['.']);
   btnDiscardAll.onclick = discardAllChanges;
+  filenameWrapToggle.onchange = () => setFilenameWrapping(filenameWrapToggle.checked);
 
   // Stash
   btnStashSave.onclick = stashChanges;
@@ -4382,17 +4767,20 @@ function setupListeners() {
   btnFetch.onclick = () => performSync('fetch');
   btnPull.onclick = () => performSync('pull');
   btnPush.onclick = () => performSync('push');
-  if (btnConvertOriginSsh) {
-    btnConvertOriginSsh.onclick = convertOriginToSsh;
-  }
+  btnRemoteProtocol.onclick = toggleRemoteProtocol;
 
   // Undo last commit
   btnUndoCommit.onclick = undoLastCommit;
 
-  // Terminal clearing
-  btnClearLogs.onclick = () => {
-    terminalLogs.innerHTML = '<div>Terminal logs cleared.</div>';
-  };
+  // Lazy-load older commits when the history graph is scrolled near the bottom
+  commitHistoryList.addEventListener('scroll', () => {
+    if (commitHistoryList.scrollTop + commitHistoryList.clientHeight >= commitHistoryList.scrollHeight - 300) {
+      loadMoreCommits();
+    }
+  });
+
+  // Terminal log window
+  btnOpenLogs.onclick = openLogWindow;
 
   // Conflict Modal
   btnCloseConflictModal.onclick = () => conflictModal.classList.add('hidden');
@@ -4533,6 +4921,9 @@ window.onload = async () => {
   renderBranchHeader();
   renderProfileUI();
   await loadConfig();
+
+  // Warn about missing/corrupt SSH keys (fire-and-forget; must not delay startup)
+  validateSshProfilesOnStartup();
 
   // Auto-open last repository if available
   if (recentRepos.length > 0) {

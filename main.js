@@ -4,6 +4,7 @@ const path = require('path');
 const { startServer } = require('./server.js');
 
 let mainWindow;
+let logWindow = null;
 let backendServer;
 let serverUrl = 'http://localhost:3000';
 
@@ -45,6 +46,36 @@ function createWindow() {
 
   mainWindow.on('closed', function () {
     mainWindow = null;
+    // The log window is a companion of the main window, not a reason to keep
+    // the app alive on its own.
+    if (logWindow && !logWindow.isDestroyed()) {
+      logWindow.close();
+    }
+  });
+}
+
+function openLogWindow() {
+  if (logWindow && !logWindow.isDestroyed()) {
+    logWindow.focus();
+    return;
+  }
+
+  logWindow = new BrowserWindow({
+    width: 720,
+    height: 520,
+    title: 'Multi-Git - Terminal Log',
+    icon: path.join(__dirname, 'public', 'favicon.ico'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  logWindow.setMenuBarVisibility(false);
+  logWindow.loadURL(`${serverUrl}/logs.html`);
+
+  logWindow.on('closed', function () {
+    logWindow = null;
   });
 }
 
@@ -77,6 +108,7 @@ function createStartupFailureWindow(error) {
 
 async function startApp() {
   ipcMain.handle('app:select-folder', handleSelectFolder);
+  ipcMain.handle('app:open-log-window', () => openLogWindow());
 
   try {
     // Port 0 = let the OS pick a free port, so a busy port 3000 (or a second

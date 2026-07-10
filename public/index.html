@@ -136,6 +136,24 @@
 
       <!-- Global Controls -->
       <div class="global-actions">
+        <button id="btn-remote-protocol" class="btn btn-chip hidden" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
+          <span id="remote-protocol-label">SSH</span>
+        </button>
+        <button id="btn-fetch" class="btn btn-icon" title="Fetch" aria-label="Fetch">
+          <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+        </button>
+        <button id="btn-pull" class="btn btn-icon" title="Pull" aria-label="Pull">
+          <span class="material-symbols-outlined" aria-hidden="true">download</span>
+          <span id="pull-count-badge" class="count-badge count-behind hidden"></span>
+        </button>
+        <button id="btn-push" class="btn btn-icon" title="Push" aria-label="Push">
+          <span class="material-symbols-outlined" aria-hidden="true">upload</span>
+          <span id="push-count-badge" class="count-badge count-ahead hidden"></span>
+        </button>
+        <button id="btn-open-logs" class="btn btn-icon" title="Open terminal log window" aria-label="Open terminal log window">
+          <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+        </button>
         <button id="btn-refresh" class="btn btn-icon" title="Refresh status (F5)">
           <span class="material-symbols-outlined">refresh</span>
         </button>
@@ -275,6 +293,12 @@
         <!-- STAGING WORKSPACE VIEW -->
         <div id="staging-view" class="view-pane">
           <div class="staging-workspace">
+            <div class="staging-display-options">
+              <label class="filename-wrap-option" for="filename-wrap-toggle" title="Wrap long file names in both lists">
+                <input id="filename-wrap-toggle" type="checkbox">
+                <span>Wrap file names</span>
+              </label>
+            </div>
             
             <!-- Staging Files List -->
             <div class="files-lists-container">
@@ -297,7 +321,9 @@
               <div class="file-list-card">
                 <div class="card-header">
                   <h3>Staged Changes</h3>
-                  <button id="btn-unstage-all" class="btn btn-text btn-sm">Unstage All</button>
+                  <div class="card-header-actions">
+                    <button id="btn-unstage-all" class="btn btn-text btn-sm">Unstage All</button>
+                  </div>
                 </div>
                 <ul id="staged-files-list" class="file-list">
                   <!-- Rendered dynamically -->
@@ -321,7 +347,7 @@
             <div class="commit-input-wrapper">
               <textarea id="commit-msg-input" placeholder="Type commit message (Ctrl+Enter to commit)..." rows="2"></textarea>
               <div class="commit-buttons">
-                <button id="btn-commit" class="btn btn-primary">
+                <button id="btn-commit" class="btn btn-primary" disabled title="Stage changes before committing">
                   <span class="material-symbols-outlined">done_all</span>
                   <span id="btn-commit-label">Commit</span>
                 </button>
@@ -422,43 +448,8 @@
 
       </section>
 
-      <!-- SYNC & OUTPUT LOG PANEL (RIGHT COLUMN) -->
+      <!-- COMMIT HISTORY PANEL (RIGHT COLUMN) -->
       <section class="sync-panel">
-        
-        <!-- Push / Pull Box -->
-        <div class="sync-card">
-          <div class="card-header">
-            <h3>Remote Sync</h3>
-          </div>
-          
-          <!-- Active SSH profile indicator (change it from the header key segment) -->
-          <button id="sync-profile-line" class="sync-profile-line" type="button" title="Click to change the SSH key for this repository">
-            <span id="sync-profile-dot" class="profile-dot profile-dot-system"></span>
-            <span>Using: <b id="sync-profile-name">System SSH</b></span>
-          </button>
-
-          <div class="remote-origin-helper">
-            <div id="remote-origin-text" class="remote-origin-text">Origin: unknown</div>
-            <button id="btn-convert-origin-ssh" class="btn btn-secondary btn-sm hidden" type="button">
-              <span class="material-symbols-outlined" style="font-size: 16px;">swap_horiz</span>
-              <span>Convert Origin to SSH</span>
-            </button>
-          </div>
-
-          <div class="sync-buttons">
-            <button id="btn-fetch" class="btn btn-secondary flex-1" title="Fetch" aria-label="Fetch">
-              <span class="material-symbols-outlined" aria-hidden="true">sync</span>
-            </button>
-            <button id="btn-pull" class="btn btn-secondary flex-1" title="Pull" aria-label="Pull">
-              <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              <span id="pull-count-badge" class="count-badge count-behind hidden"></span>
-            </button>
-            <button id="btn-push" class="btn btn-primary flex-1" title="Push" aria-label="Push">
-              <span class="material-symbols-outlined" aria-hidden="true">upload</span>
-              <span id="push-count-badge" class="count-badge count-ahead hidden"></span>
-            </button>
-          </div>
-        </div>
 
         <!-- Commit History List -->
         <div class="history-card" style="position: relative; overflow: hidden;">
@@ -466,7 +457,7 @@
           <!-- History List Pane -->
           <div id="history-list-view" class="history-list-view" style="display: flex; flex-direction: column; height: 100%;">
             <div class="card-header">
-              <h3>Recent Commits</h3>
+              <h3>History</h3>
               <button id="btn-undo-commit" class="btn btn-text btn-sm" title="Undo the last commit (keeps its changes staged)">
                 <span class="material-symbols-outlined" style="font-size: 16px;">undo</span>
                 <span>Undo</span>
@@ -537,17 +528,6 @@
             </div>
           </div>
           
-        </div>
-
-        <!-- Terminal Output Logger -->
-        <div class="logger-card">
-          <div class="card-header">
-            <h3>Terminal Log</h3>
-            <button id="btn-clear-logs" class="btn btn-text btn-sm">Clear</button>
-          </div>
-          <div id="terminal-logs" class="logger-body">
-            <div>Multi-Git GUI Client ready. Open a repository to get started.</div>
-          </div>
         </div>
 
       </section>
@@ -728,6 +708,12 @@
               <button type="button" id="btn-copy-generated-public-key" class="btn btn-secondary">Copy Public Key</button>
             </div>
           </div>
+        </div>
+
+        <!-- SSH config integration setting -->
+        <div class="keep-password-row" id="ssh-config-setting-row" title="When enabled, Multi-Git maintains a managed block in ~/.ssh/config so other tools (Git Bash, IDEs) use the same key as the active profile.">
+          <input type="checkbox" id="ssh-manage-config-checkbox">
+          <label for="ssh-manage-config-checkbox">Keep ~/.ssh/config in sync with the active key (uncheck if you manage your SSH config yourself)</label>
         </div>
 
         <!-- Registered Keys Table/List -->
@@ -925,6 +911,23 @@
         <div class="form-actions">
           <button type="button" id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
           <button type="button" id="btn-confirm-ok" class="btn btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SSH KEY HEALTH WARNING (startup validation) -->
+  <div id="ssh-health-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2>SSH key problems detected</h2>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-message">The following SSH profiles have keys that are missing or unreadable. Pushes and pulls using them will fail until they are fixed.</p>
+        <ul id="ssh-health-list" class="ssh-health-list"></ul>
+        <div class="form-actions">
+          <button type="button" id="btn-ssh-health-dismiss" class="btn btn-secondary">Dismiss</button>
+          <button type="button" id="btn-ssh-health-open" class="btn btn-primary">Open SSH Manager</button>
         </div>
       </div>
     </div>

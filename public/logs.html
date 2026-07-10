@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Git — Terminal Log</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body {
+      height: 100%;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-app);
+      padding: 12px;
+      gap: 10px;
+    }
+    .log-window-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .log-window-header h3 {
+      font-size: 0.875rem;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+    .log-window-header .log-status {
+      font-size: 0.6875rem;
+      color: var(--text-dim);
+      margin-left: 8px;
+    }
+    #log-output {
+      flex: 1;
+      min-height: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="log-window-header">
+    <div>
+      <h3 style="display:inline;">Terminal Log</h3>
+      <span id="log-status" class="log-status">connecting…</span>
+    </div>
+    <button id="btn-clear-view" class="btn btn-text btn-sm">Clear view</button>
+  </div>
+  <div id="log-output" class="logger-body"></div>
+
+  <script>
+    const output = document.getElementById('log-output');
+    const statusEl = document.getElementById('log-status');
+    let stickToBottom = true;
+
+    output.addEventListener('scroll', () => {
+      stickToBottom = output.scrollTop + output.clientHeight >= output.scrollHeight - 8;
+    });
+
+    document.getElementById('btn-clear-view').onclick = () => {
+      output.innerHTML = '';
+      appendLine({ text: 'View cleared (history is kept on the server).', type: 'info' });
+    };
+
+    function appendLine(entry) {
+      const line = document.createElement('div');
+      if (entry.type === 'error') {
+        line.className = 'logger-line-error';
+        line.innerText = '[ERROR] ' + entry.text;
+      } else if (entry.type === 'success') {
+        line.className = 'logger-line-success';
+        line.innerText = '[SUCCESS] ' + entry.text;
+      } else if (entry.type === 'cmd') {
+        line.className = 'logger-line-cmd';
+        line.innerText = '$ ' + entry.text;
+      } else {
+        line.innerText = entry.text;
+      }
+      output.appendChild(line);
+      if (stickToBottom) {
+        output.scrollTop = output.scrollHeight;
+      }
+    }
+
+    const source = new EventSource('/api/logs/stream');
+
+    source.addEventListener('backlog', (e) => {
+      output.innerHTML = '';
+      const entries = JSON.parse(e.data);
+      if (entries.length === 0) {
+        appendLine({ text: 'Multi-Git terminal log ready. Git activity will appear here.', type: 'info' });
+      } else {
+        entries.forEach(appendLine);
+      }
+      statusEl.innerText = 'live';
+    });
+
+    source.onmessage = (e) => appendLine(JSON.parse(e.data));
+
+    source.onerror = () => {
+      statusEl.innerText = 'reconnecting…';
+    };
+    source.onopen = () => {
+      statusEl.innerText = 'live';
+    };
+  </script>
+</body>
+</html>

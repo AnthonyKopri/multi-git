@@ -5,6 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+const sshConfig = require('./ssh-config.js');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -28,6 +30,55 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ----------------- TERMINAL LOG STREAM -----------------
+// The UI posts every log line here; the standalone log window subscribes via
+// SSE. The ring buffer lets a reopened window replay recent history.
+const LOG_BUFFER_MAX = 2000;
+const logBuffer = [];
+const logSseClients = new Set();
+
+app.post('/api/logs', (req, res) => {
+  const { text, type } = req.body || {};
+  if (typeof text !== 'string') {
+    return res.status(400).json({ error: 'Log text is required.' });
+  }
+
+  const entry = {
+    ts: Date.now(),
+    type: ['error', 'success', 'cmd', 'info'].includes(type) ? type : 'info',
+    text
+  };
+  logBuffer.push(entry);
+  if (logBuffer.length > LOG_BUFFER_MAX) {
+    logBuffer.shift();
+  }
+
+  const payload = `data: ${JSON.stringify(entry)}\n\n`;
+  for (const client of logSseClients) {
+    client.write(payload);
+  }
+
+  res.json({ success: true });
+});
+
+app.get('/api/logs/stream', (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive'
+  });
+  res.flushHeaders();
+
+  res.write(`event: backlog\ndata: ${JSON.stringify(logBuffer)}\n\n`);
+  logSseClients.add(res);
+
+  const keepAlive = setInterval(() => res.write(': ping\n\n'), 30000);
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    logSseClients.delete(res);
+  });
+});
 
 // Path to the config file stored in the user's home directory
 const CONFIG_FILE = path.join(os.homedir(), '.multi-git-client-config.json');
@@ -241,8 +292,54 @@ function sanitizeConfigForClient(config) {
       hasSavedPassword: savedPassphraseIds.has(profile.id)
     })),
     accountRules: config.accountRules || [],
-    vaultStatus: getVaultStatus()
+    vaultStatus: getVaultStatus(),
+    settings: {
+      manageSshConfig: !config.settings || config.settings.manageSshConfig !== false
+    }
   };
+}
+
+function isSshConfigManagementEnabled(config) {
+  return !config.settings || config.settings.manageSshConfig !== false;
+}
+
+// Updates the managed block in ~/.ssh/config so the given host uses the given
+// key (or drops the host entry when keyPath is null). config.sshConfigHosts is
+// the source of truth the block is regenerated from.
+function syncSshConfigForHost(host, keyPath) {
+  const config = readConfig();
+  if (!isSshConfigManagementEnabled(config)) {
+    return { skipped: true };
+  }
+
+  const hosts = { ...(config.sshConfigHosts || {}) };
+  if (keyPath) {
+    hosts[host] = keyPath;
+  } else {
+    delete hosts[host];
+  }
+
+  try {
+    const result = sshConfig.applyManagedBlock(hosts);
+    config.sshConfigHosts = hosts;
+    writeConfig(config);
+    return { updated: result.changed, host, warning: result.warning || null };
+  } catch (err) {
+    console.error('Failed to update ~/.ssh/config:', err);
+    return { error: `Could not update ~/.ssh/config: ${err.message}` };
+  }
+}
+
+// Returns the origin host of the repo, or null when there is no usable
+// remote. Callers assigning a key may fall back to github.com; callers
+// removing an entry must not guess a host that belongs to another repo.
+async function deriveOriginHost(repoPath) {
+  if (!repoPath) {
+    return null;
+  }
+  const remoteUrl = await getOriginRemoteUrl(repoPath);
+  const parsed = parseRemoteUrl(remoteUrl);
+  return (parsed && parsed.host) || null;
 }
 
 function validateSshKeyPair(privateKeyPath, passphrase = '') {
@@ -783,6 +880,104 @@ app.delete('/api/config/ssh', (req, res) => {
   res.json({ success: true, config: sanitizeConfigForClient(config) });
 });
 
+// ----------------- APP SETTINGS -----------------
+
+app.post('/api/config/settings', (req, res) => {
+  const { manageSshConfig, removeManagedBlock } = req.body || {};
+  const config = readConfig();
+  config.settings = config.settings || {};
+  config.settings.manageSshConfig = manageSshConfig !== false;
+
+  let warning = null;
+  if (config.settings.manageSshConfig === false || manageSshConfig === false) {
+    if (removeManagedBlock) {
+      try {
+        sshConfig.removeManagedBlock();
+        config.sshConfigHosts = {};
+      } catch (err) {
+        warning = `Could not remove the managed block from ~/.ssh/config: ${err.message}`;
+      }
+    }
+  }
+
+  writeConfig(config);
+  res.json({ success: true, warning, config: sanitizeConfigForClient(config) });
+});
+
+// Called when the active SSH profile for a repository changes; keeps the
+// external ~/.ssh/config pointing at the same key. An empty profileId
+// (System SSH) removes multi-git's claim on that host.
+app.post('/api/config/ssh/apply-ssh-config', async (req, res) => {
+  const { profileId, repoPath } = req.body || {};
+  const config = readConfig();
+
+  if (!isSshConfigManagementEnabled(config)) {
+    return res.json({ success: true, skipped: true });
+  }
+
+  let keyPath = null;
+  if (profileId) {
+    const profile = (config.sshProfiles || []).find(p => p.id === profileId);
+    if (!profile) {
+      return res.status(404).json({ error: 'SSH profile not found.' });
+    }
+    keyPath = profile.privateKeyPath;
+  }
+
+  let host = await deriveOriginHost(repoPath);
+  if (!host) {
+    if (!keyPath) {
+      // No remote and nothing to assign: there is no host entry to remove
+      return res.json({ success: true, skipped: true });
+    }
+    host = 'github.com';
+  }
+
+  const result = syncSshConfigForHost(host, keyPath);
+  if (result.error) {
+    return res.status(500).json({ error: result.error });
+  }
+
+  res.json({
+    success: true,
+    host,
+    updated: Boolean(result.updated),
+    removed: !keyPath,
+    warning: result.warning || null
+  });
+});
+
+// Batch-validates every configured SSH key (used at app startup).
+// "passphrase" means the key is fine but encrypted - not an error.
+app.post('/api/config/ssh/validate-all', async (req, res) => {
+  const config = readConfig();
+  const profiles = config.sshProfiles || [];
+
+  const results = await Promise.all(profiles.map(async (profile) => {
+    const base = { id: profile.id, label: profile.label, privateKeyPath: profile.privateKeyPath };
+
+    if (!profile.privateKeyPath || !fs.existsSync(profile.privateKeyPath)) {
+      return { ...base, status: 'missing', message: 'Key file not found on disk.' };
+    }
+
+    const check = await validateSshKeyPair(profile.privateKeyPath, '');
+    if (check.valid) {
+      return { ...base, status: 'ok', message: 'Key is valid.' };
+    }
+    if (/ssh-keygen execution error/i.test(check.message)) {
+      return { ...base, status: 'unavailable', message: check.message };
+    }
+    if (/passphrase|encrypted/i.test(check.message)) {
+      return { ...base, status: 'passphrase', message: 'Key is valid but protected by a passphrase.' };
+    }
+    return { ...base, status: 'invalid', message: check.message };
+  }));
+
+  // If ssh-keygen itself is missing, don't nag about every profile
+  const unavailable = results.length > 0 && results.every(r => r.status === 'unavailable');
+  res.json({ success: true, unavailable, results: unavailable ? [] : results });
+});
+
 // ----------------- ACCOUNT AUTO-SELECT RULES -----------------
 // Rules map a remote URL substring to an account, e.g. "github.com/work-org"
 // -> Work profile. Evaluated by the client when a repository opens.
@@ -859,7 +1054,8 @@ app.post('/api/config/ssh/generate', async (req, res) => {
     keepPassword = false,
     keyName = '',
     userName = '',
-    userEmail = ''
+    userEmail = '',
+    repoPath = ''
   } = req.body || {};
 
   const safeLabel = typeof label === 'string' ? label.trim() : '';
@@ -933,6 +1129,10 @@ app.post('/api/config/ssh/generate', async (req, res) => {
       return res.status(500).json({ error: 'Failed to persist generated SSH profile to config.' });
     }
 
+    // Point ~/.ssh/config at the new key so external tools use it too
+    const originHost = (await deriveOriginHost(repoPath)) || 'github.com';
+    const sshConfigResult = syncSshConfigForHost(originHost, privateKeyPath);
+
     return res.json({
       success: true,
       profileId,
@@ -940,7 +1140,10 @@ app.post('/api/config/ssh/generate', async (req, res) => {
       privateKeyPath,
       publicKeyPath,
       publicKey,
-      config: sanitizeConfigForClient(config)
+      sshConfigUpdated: Boolean(sshConfigResult.updated),
+      sshConfigHost: sshConfigResult.updated ? originHost : null,
+      sshConfigWarning: sshConfigResult.error || sshConfigResult.warning || null,
+      config: sanitizeConfigForClient(readConfig())
     });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Failed to generate SSH key.' });
@@ -1002,24 +1205,35 @@ app.get('/api/git/status', async (req, res) => {
   }
 });
 
-// Get commit log history (last 30 commits)
+// Get commit log history (paginated, with parent hashes for the graph view)
 app.get('/api/git/log', async (req, res) => {
   const repoPath = req.headers['x-repo-path'];
   if (!repoPath) return res.status(400).json({ error: 'No repository path provided' });
 
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 500);
+  const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
+  const includeAll = req.query.all === '1';
+
   try {
     // %x1f (unit separator) cannot appear in commit messages, unlike "|"
-    const { stdout } = await runGitCommand(repoPath, [
-      'log',
-      '-n', '50',
-      '--pretty=format:%H\x1f%an\x1f%ad\x1f%s\x1f%D',
+    const args = ['log'];
+    if (includeAll) {
+      args.push('--all', '--topo-order');
+    }
+    args.push(
+      // Fetch one extra row to know whether more pages exist
+      '-n', String(limit + 1),
+      `--skip=${skip}`,
+      '--pretty=format:%H\x1f%P\x1f%an\x1f%ad\x1f%s\x1f%D',
       '--date=relative'
-    ]);
+    );
+    const { stdout } = await runGitCommand(repoPath, args);
 
-    const commits = stdout.trim() === '' ? [] : stdout.split('\n').map(line => {
-      const [hash, author, date, message, refs] = line.split('\x1f');
+    const rows = stdout.trim() === '' ? [] : stdout.split('\n').map(line => {
+      const [hash, parents, author, date, message, refs] = line.split('\x1f');
       return {
         hash,
+        parents: (parents || '').split(' ').map(p => p.trim()).filter(p => p),
         author,
         date,
         message,
@@ -1027,9 +1241,10 @@ app.get('/api/git/log', async (req, res) => {
       };
     });
 
-    res.json({ success: true, commits });
+    const hasMore = rows.length > limit;
+    res.json({ success: true, commits: hasMore ? rows.slice(0, limit) : rows, hasMore });
   } catch (err) {
-    res.json({ success: true, commits: [] }); // Fail silently on fresh repo with no commits
+    res.json({ success: true, commits: [], hasMore: false }); // Fail silently on fresh repo with no commits
   }
 });
 
@@ -1401,20 +1616,50 @@ function isLikelyHttpRemote(remoteUrl) {
   return /^https?:\/\//i.test(remoteUrl.trim());
 }
 
-function getGithubHttpsToSshCandidate(remoteUrl) {
+// Parses a remote URL into { protocol: 'https'|'ssh'|'other', host, repoPath }.
+// URLs with embedded credentials, custom ssh users/ports, or non-URL paths are
+// classified 'other' so the protocol toggle never rewrites something it cannot
+// round-trip safely.
+function parseRemoteUrl(remoteUrl) {
   if (!remoteUrl || typeof remoteUrl !== 'string') {
     return null;
   }
 
   const trimmed = remoteUrl.trim();
-  const githubHttpsMatch = trimmed.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+?)(\.git)?$/i);
-  if (!githubHttpsMatch) {
+
+  const httpsMatch = trimmed.match(/^https?:\/\/([^/@:]+)\/(.+?)(\.git)?\/?$/i);
+  if (httpsMatch) {
+    return { protocol: 'https', host: httpsMatch[1].toLowerCase(), repoPath: httpsMatch[2] };
+  }
+
+  // scp-like syntax: git@host:path
+  const scpMatch = trimmed.match(/^git@([^/:]+):(.+?)(\.git)?$/i);
+  if (scpMatch) {
+    return { protocol: 'ssh', host: scpMatch[1].toLowerCase(), repoPath: scpMatch[2] };
+  }
+
+  // ssh:// URLs: only the plain git@host form (no port) is toggle-safe
+  const sshUrlMatch = trimmed.match(/^ssh:\/\/git@([^/:]+)\/(.+?)(\.git)?\/?$/i);
+  if (sshUrlMatch) {
+    return { protocol: 'ssh', host: sshUrlMatch[1].toLowerCase(), repoPath: sshUrlMatch[2] };
+  }
+
+  return { protocol: 'other', host: null, repoPath: null };
+}
+
+function getToggledRemoteUrl(remoteUrl) {
+  const parsed = parseRemoteUrl(remoteUrl);
+  if (!parsed || !parsed.host || !parsed.repoPath) {
     return null;
   }
 
-  const owner = githubHttpsMatch[1];
-  const repo = githubHttpsMatch[2];
-  return `git@github.com:${owner}/${repo}.git`;
+  if (parsed.protocol === 'https') {
+    return `git@${parsed.host}:${parsed.repoPath}.git`;
+  }
+  if (parsed.protocol === 'ssh') {
+    return `https://${parsed.host}/${parsed.repoPath}.git`;
+  }
+  return null;
 }
 
 async function runSyncOperationWithProfile(repoPath, gitArgs, profileId, sshKeyPath) {
@@ -1592,20 +1837,22 @@ app.get('/api/git/remote/origin', async (req, res) => {
       return res.status(404).json({ error: 'Origin remote not found.' });
     }
 
-    const suggestedSshUrl = getGithubHttpsToSshCandidate(remoteUrl);
+    const parsed = parseRemoteUrl(remoteUrl);
+    const suggestedUrl = getToggledRemoteUrl(remoteUrl);
     return res.json({
       success: true,
       remoteUrl,
-      isHttp: isLikelyHttpRemote(remoteUrl),
-      canConvertToSsh: Boolean(suggestedSshUrl),
-      suggestedSshUrl
+      protocol: parsed ? parsed.protocol : 'other',
+      host: parsed ? parsed.host : null,
+      canToggle: Boolean(suggestedUrl),
+      suggestedUrl
     });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Failed to inspect origin remote.' });
   }
 });
 
-app.post('/api/git/remote/origin/convert-ssh', async (req, res) => {
+app.post('/api/git/remote/origin/toggle-protocol', async (req, res) => {
   const repoPath = req.headers['x-repo-path'];
   if (!repoPath) {
     return res.status(400).json({ error: 'No repository path provided' });
@@ -1617,17 +1864,18 @@ app.post('/api/git/remote/origin/convert-ssh', async (req, res) => {
       return res.status(404).json({ error: 'Origin remote not found.' });
     }
 
-    const suggestedSshUrl = getGithubHttpsToSshCandidate(remoteUrl);
-    if (!suggestedSshUrl) {
+    const toggledUrl = getToggledRemoteUrl(remoteUrl);
+    if (!toggledUrl) {
       return res.status(400).json({
-        error: 'Origin remote is not a convertible GitHub HTTPS URL. Update the remote manually for this repository.'
+        error: 'Origin remote URL cannot be converted automatically. Update the remote manually for this repository.'
       });
     }
 
-    await runGitCommand(repoPath, ['remote', 'set-url', 'origin', suggestedSshUrl]);
-    return res.json({ success: true, remoteUrl: suggestedSshUrl });
+    await runGitCommand(repoPath, ['remote', 'set-url', 'origin', toggledUrl]);
+    const parsed = parseRemoteUrl(toggledUrl);
+    return res.json({ success: true, remoteUrl: toggledUrl, protocol: parsed ? parsed.protocol : 'other' });
   } catch (err) {
-    return res.status(500).json({ error: err.stderr || err.error?.message || err.message || 'Failed to convert origin remote.' });
+    return res.status(500).json({ error: err.stderr || err.error?.message || err.message || 'Failed to switch origin remote protocol.' });
   }
 });
 
