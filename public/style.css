@@ -2321,17 +2321,11 @@ select {
   to { opacity: 0; transform: translateX(30px); }
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    BUSY SPINNER + SMALL MODALS + MISC
    ========================================================================== */
-.btn-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-top-color: currentColor;
-  border-radius: 50%;
+.btn-spinner-icon {
   animation: btnSpin 0.7s linear infinite;
-  flex-shrink: 0;
 }
 @keyframes btnSpin {
   to { transform: rotate(360deg); }

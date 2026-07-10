@@ -368,15 +368,28 @@ function settlePrompt(value) {
 function setButtonBusy(btn, busy) {
   if (!btn) return;
   if (busy) {
-    if (btn.querySelector('.btn-spinner')) return;
+    if (btn.dataset.busy === 'true') return;
     btn.disabled = true;
-    const spinner = document.createElement('span');
-    spinner.className = 'btn-spinner';
-    btn.prepend(spinner);
+    btn.dataset.busy = 'true';
+
+    // Swap the existing icon in place so icon buttons keep their fixed size
+    // and text buttons do not shift when an action begins.
+    const icon = btn.querySelector('.material-symbols-outlined');
+    if (icon) {
+      icon.dataset.originalIcon = icon.textContent;
+      icon.textContent = 'progress_activity';
+      icon.classList.add('btn-spinner-icon');
+    }
   } else {
     btn.disabled = false;
-    const spinner = btn.querySelector('.btn-spinner');
-    if (spinner) spinner.remove();
+    delete btn.dataset.busy;
+
+    const icon = btn.querySelector('.material-symbols-outlined[data-original-icon]');
+    if (icon) {
+      icon.textContent = icon.dataset.originalIcon;
+      delete icon.dataset.originalIcon;
+      icon.classList.remove('btn-spinner-icon');
+    }
   }
 }
 
