@@ -1,6 +1,6 @@
 {
   "name": "multi-git",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A lightweight Git GUI client with dynamic SSH key switching",
   "main": "main.js",
   "scripts": {

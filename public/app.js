@@ -16,6 +16,7 @@ let isGeneratingSshKey = false;
 let originRemoteInfo = null;
 let lastFocusRefresh = 0;
 let appSettings = { manageSshConfig: true };
+let repoSettings = {};
 
 // DOM Elements
 const appContainer = document.getElementById('main-content');
@@ -484,6 +485,7 @@ async function loadConfig() {
     accountRules = data.accountRules || [];
     vaultStatus = data.vaultStatus || { hasVault: false, unlocked: false };
     appSettings = data.settings || { manageSshConfig: true };
+    repoSettings = data.repoSettings || {};
 
     updateRecentReposUI();
     updateSshProfilesUI();
@@ -1348,7 +1350,7 @@ async function openRepository(repoPath) {
     const data = await res.json();
 
     if (res.ok) {
-      activeRepo = repoPath;
+      activeRepo = data.repoPath || repoPath;
       appContainer.classList.remove('disabled-view');
       noRepoOverlay.classList.add('hidden');
 
@@ -1811,6 +1813,23 @@ function createFileListItem(filePath, statusChar, isStaged) {
     };
     fileActions.appendChild(btnResolve);
   } else {
+    // Ignoring applies to untracked files. Put it before Diff so the destructive
+    // action remains visually separated at the end of the row.
+    if (!isStaged && statusChar === '?') {
+      const btnIgnore = document.createElement('button');
+      btnIgnore.className = 'btn btn-icon btn-sm';
+      btnIgnore.style.width = '24px';
+      btnIgnore.style.height = '24px';
+      btnIgnore.title = 'Ignore File';
+      btnIgnore.setAttribute('aria-label', `Ignore ${filePath}`);
+      btnIgnore.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">block</span>';
+      btnIgnore.onclick = async (e) => {
+        e.stopPropagation();
+        await ignoreFile(filePath);
+      };
+      fileActions.appendChild(btnIgnore);
+    }
+
     // Normal files: row click toggles stage state; this action opens the diff.
     const btnDiff = document.createElement('button');
     btnDiff.className = 'btn btn-icon btn-sm';
@@ -1828,11 +1847,14 @@ function createFileListItem(filePath, statusChar, isStaged) {
     // Discard button (only for unstaged changes)
     if (!isStaged) {
       const btnDiscard = document.createElement('button');
-      btnDiscard.className = 'btn btn-icon btn-sm';
+      btnDiscard.className = 'btn btn-icon btn-sm file-action-destructive';
       btnDiscard.style.width = '24px';
       btnDiscard.style.height = '24px';
-      btnDiscard.title = 'Discard Changes';
-      btnDiscard.setAttribute('aria-label', `Discard changes in ${filePath}`);
+      btnDiscard.title = statusChar === '?' ? 'Delete File' : 'Discard Changes';
+      btnDiscard.setAttribute(
+        'aria-label',
+        statusChar === '?' ? `Delete ${filePath}` : `Discard changes in ${filePath}`
+      );
       btnDiscard.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">delete</span>';
       btnDiscard.onclick = async (e) => {
         e.stopPropagation();
@@ -1993,17 +2015,71 @@ async function unstageFiles(files) {
   }
 }
 
+async function ignoreFile(filePath) {
+  logToTerminal(`Add ${filePath} to .gitignore`, 'cmd');
+  try {
+    const res = await fetch('/api/git/ignore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-repo-path': activeRepo },
+      body: JSON.stringify({ filePath })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      logToTerminal(data.error || 'Failed to ignore file.', 'error');
+      showToast(data.error || 'Failed to ignore file.', 'error');
+      return;
+    }
+
+    logToTerminal(`Ignored ${filePath} with rule ${data.rule}.`, 'success');
+    showToast(`Ignored ${filePath}.`, 'success');
+    if (activeDiffFile && activeDiffFile.path === filePath) {
+      clearDiffView();
+    }
+    await refreshGitStatus();
+  } catch (err) {
+    logToTerminal('Ignore file failed: ' + err.message, 'error');
+    showToast('Failed to ignore file.', 'error');
+  }
+}
+
+function shouldWarnBeforeDelete() {
+  return !activeRepo || !repoSettings[activeRepo] || repoSettings[activeRepo].warnBeforeDelete !== false;
+}
+
+async function disableDeleteWarningForActiveRepo() {
+  if (!activeRepo) return;
+  try {
+    const res = await fetch('/api/config/repo-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repoPath: activeRepo, warnBeforeDelete: false })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save repository preference');
+
+    activeRepo = data.repoPath || activeRepo;
+    repoSettings[activeRepo] = data.repoSettings;
+  } catch (err) {
+    logToTerminal('Could not save delete warning preference: ' + err.message, 'error');
+    showToast('Could not save the delete warning preference.', 'error');
+  }
+}
+
 async function discardChanges(filePath, isUntracked) {
   const confirmMsg = isUntracked
     ? `Permanently DELETE untracked file:\n${filePath}?`
     : `Discard all local changes in:\n${filePath}?`;
 
-  const { confirmed } = await confirmDialog(confirmMsg, {
-    title: isUntracked ? 'Delete untracked file' : 'Discard changes',
-    confirmLabel: isUntracked ? 'Delete' : 'Discard',
-    danger: true
-  });
-  if (!confirmed) return;
+  if (shouldWarnBeforeDelete()) {
+    const { confirmed, checked } = await confirmDialog(confirmMsg, {
+      title: isUntracked ? 'Delete untracked file' : 'Discard changes',
+      confirmLabel: isUntracked ? 'Delete' : 'Discard',
+      danger: true,
+      checkboxLabel: 'do not warn me in this repo'
+    });
+    if (!confirmed) return;
+    if (checked) await disableDeleteWarningForActiveRepo();
+  }
 
   logToTerminal(isUntracked ? `rm ${filePath}` : `git checkout -- ${filePath}`, 'cmd');
   const res = await fetch('/api/git/discard', {

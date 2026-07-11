@@ -698,6 +698,10 @@ select {
   flex-shrink: 0;
 }
 
+.file-actions .file-action-destructive {
+  margin-left: 4px;
+}
+
 .file-list-card.wrap-file-names .file-info,
 .file-list-card.wrap-file-names .file-info .file-name {
   overflow: visible;

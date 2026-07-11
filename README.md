@@ -135,7 +135,9 @@ Use the repository dropdown to reopen recent projects, open another folder, crea
 | --- | --- |
 | Click an unstaged file row | Stages that file. |
 | Click a staged file row | Unstages that file. |
+| Click the ignore icon on an untracked file | Adds that exact path to the repository's `.gitignore`. |
 | Click the diff icon | Opens a line-numbered diff with additions, deletions, and hunks. |
+| Click the trash icon | Confirms before deleting/discarding; the warning can be disabled for that repository from the dialog. |
 | **Stage All** / **Unstage All** | Moves the whole visible set in one action. |
 | Trash icon / **Discard All** | Confirms, snapshots affected file contents, then removes working-tree changes. |
 | **Wrap file names** | Wraps long paths in both staging lists. |

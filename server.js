@@ -292,6 +292,7 @@ function sanitizeConfigForClient(config) {
       hasSavedPassword: savedPassphraseIds.has(profile.id)
     })),
     accountRules: config.accountRules || [],
+    repoSettings: config.repoSettings || {},
     vaultStatus: getVaultStatus(),
     settings: {
       manageSshConfig: !config.settings || config.settings.manageSshConfig !== false
@@ -796,10 +797,36 @@ app.post('/api/config/repo', (req, res) => {
     }
 
     writeConfig(config);
-    res.json({ success: true, config });
+    res.json({ success: true, repoPath: resolvedPath, config: sanitizeConfigForClient(config) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Repository-scoped UI preferences
+app.post('/api/config/repo-settings', (req, res) => {
+  const { repoPath, warnBeforeDelete } = req.body || {};
+  if (!repoPath) {
+    return res.status(400).json({ error: 'Repository path is required' });
+  }
+
+  const resolvedPath = path.resolve(repoPath);
+  if (!fs.existsSync(path.join(resolvedPath, '.git'))) {
+    return res.status(400).json({ error: 'Not a valid Git repository' });
+  }
+
+  const config = readConfig();
+  config.repoSettings = config.repoSettings || {};
+  config.repoSettings[resolvedPath] = {
+    ...(config.repoSettings[resolvedPath] || {}),
+    warnBeforeDelete: warnBeforeDelete !== false
+  };
+  writeConfig(config);
+  res.json({
+    success: true,
+    repoPath: resolvedPath,
+    repoSettings: config.repoSettings[resolvedPath]
+  });
 });
 
 // Remove a repository from recent list
@@ -1369,6 +1396,54 @@ app.post('/api/git/unstage', async (req, res) => {
     res.json({ success: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.stderr || err.error?.message || 'Error unstaging files' });
+  }
+});
+
+// Add an exact, repository-root-relative untracked path to .gitignore.
+app.post('/api/git/ignore', async (req, res) => {
+  const repoPath = req.headers['x-repo-path'];
+  const { filePath } = req.body || {};
+  if (!repoPath) return res.status(400).json({ error: 'No repository path provided' });
+  if (!filePath || typeof filePath !== 'string') {
+    return res.status(400).json({ error: 'File path is required' });
+  }
+
+  const fullPath = resolveInsideRepo(repoPath, filePath);
+  if (!fullPath || /[\r\n]/.test(filePath)) {
+    return res.status(403).json({ error: 'Invalid repository file path' });
+  }
+
+  const relativePath = path.relative(path.resolve(repoPath), fullPath).replace(/\\/g, '/');
+  if (relativePath === '.gitignore') {
+    return res.status(400).json({ error: 'The repository .gitignore cannot ignore itself' });
+  }
+
+  try {
+    const { stdout } = await runGitCommand(repoPath, [
+      'ls-files', '--others', '--exclude-standard', '--', relativePath
+    ]);
+    if (!stdout.trim()) {
+      return res.status(400).json({ error: 'Only untracked files can be ignored' });
+    }
+
+    // Anchor the rule at the repository root and escape gitignore glob syntax
+    // so clicking Ignore always targets this exact path.
+    const escapedPath = relativePath
+      .replace(/[\\*?\[\]]/g, '\\$&')
+      .replace(/ +$/g, spaces => spaces.replace(/ /g, '\\ '));
+    const ignoreRule = `/${escapedPath}`;
+    const ignoreFile = path.join(path.resolve(repoPath), '.gitignore');
+    const current = fs.existsSync(ignoreFile) ? fs.readFileSync(ignoreFile, 'utf8') : '';
+    const existingRules = current.split(/\r?\n/);
+
+    if (!existingRules.includes(ignoreRule)) {
+      const separator = current.length > 0 && !current.endsWith('\n') ? os.EOL : '';
+      fs.appendFileSync(ignoreFile, `${separator}${ignoreRule}${os.EOL}`, 'utf8');
+    }
+
+    res.json({ success: true, rule: ignoreRule });
+  } catch (err) {
+    res.status(500).json({ error: err.stderr || err.error?.message || err.message || 'Error ignoring file' });
   }
 });
 

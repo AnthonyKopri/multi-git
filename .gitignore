@@ -71,3 +71,4 @@ coverage/
 .parcel-cache/
 .eslintcache
 *.tsbuildinfo
+/GITHUB_SETUP.md
