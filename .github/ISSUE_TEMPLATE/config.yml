@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/AnthonyKopri/multi-git/security/advisories/new
+    about: Report vulnerabilities privately. Do not disclose security details in a public issue.
+  - name: Documentation and support
+    url: https://github.com/AnthonyKopri/multi-git/blob/main/SUPPORT.md
+    about: Review troubleshooting guidance and learn what information to include in a support request.

@@ -1,0 +1,87 @@
+name: Feature request
+description: Suggest a useful workflow or improvement for Multi-Git
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Explain the workflow problem first so the project can evaluate different solutions.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find the same request.
+          required: true
+        - label: This request is related to Multi-Git's Git desktop workflow.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the current workflow, who encounters it, and why it is difficult.
+      placeholder: When working with..., I currently have to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe how you imagine the feature working, including relevant buttons, screens, or Git behavior.
+      placeholder: Add a control in... that would...
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example workflow
+      placeholder: |
+        1. Open...
+        2. Select...
+        3. Multi-Git...
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention Git commands, configuration, external clients, or workarounds you currently use.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature area
+      options:
+        - Repositories and cloning
+        - Staging, diffs, and commits
+        - History and commit actions
+        - Branches, merge, rebase, and conflicts
+        - Fetch, pull, push, and remotes
+        - SSH profiles, accounts, and vault
+        - Workspace Explorer and blame
+        - Stashes and tags
+        - Safety Net
+        - Terminal Log
+        - Packaging and cross-platform support
+        - Accessibility or user interface
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I may be willing to help implement or test this feature.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add mockups, examples, or related links if they help explain the request.

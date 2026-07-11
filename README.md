@@ -207,7 +207,7 @@ Merge, rebase, cherry-pick, and revert can all enter the conflict workflow.
 5. Repeat until no conflicts remain.
 6. Click **Continue** in the conflict banner, or **Abort** to abandon a merge/rebase.
 
-In Git terminology, “ours” and “theirs” depend on the operation—especially during rebase—so review the resulting content rather than relying only on the labels.
+In Git terminology, “ours” and “theirs” depend on the operation, especially during rebase, so review the resulting content rather than relying only on the labels.
 
 ### Safety Net
 
@@ -448,6 +448,8 @@ That is normal for Electron applications. Generated `dist/` and `dist-standalone
 ## Contributing
 
 Contributions are welcome, especially for Git edge cases, accessibility, automated tests, macOS/Linux packaging, cross-platform validation, and UI polish.
+
+Please read the [contributing guidelines](CONTRIBUTING.md) before opening a pull request. Use the repository's issue forms for bugs and feature requests, read [SUPPORT.md](SUPPORT.md) for troubleshooting help, and report suspected vulnerabilities privately as described in [SECURITY.md](SECURITY.md). All project participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Before opening a pull request:
 

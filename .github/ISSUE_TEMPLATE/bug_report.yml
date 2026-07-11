@@ -1,0 +1,119 @@
+name: Bug report
+description: Report reproducible behavior that appears incorrect
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Multi-Git. Search existing issues before submitting a new report.
+
+        Do not include private keys, passphrases, vault master keys, tokens, private repository contents, or unredacted personal data. Report security vulnerabilities through the private channel in SECURITY.md.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I am using the latest release or confirmed the issue on the current main branch.
+          required: true
+        - label: This is not a security vulnerability or a request containing sensitive information.
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and its impact clearly.
+      placeholder: Multi-Git displayed or performed...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use a disposable repository and fake or redacted account information.
+      placeholder: |
+        1. Open...
+        2. Select...
+        3. Click...
+        4. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: I expected Multi-Git to...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Multi-Git version
+      description: For example, 1.0.4 or a commit SHA.
+      placeholder: 1.0.4
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation type
+      options:
+        - Windows installer
+        - Windows portable executable
+        - Electron from source
+        - Browser mode from source
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+
+  - type: input
+    id: git-version
+    attributes:
+      label: Git version
+      description: Run `git --version`.
+      placeholder: git version 2.x.x.windows.x
+    validations:
+      required: true
+
+  - type: dropdown
+    id: remote
+    attributes:
+      label: Remote and authentication mode
+      options:
+        - SSH with a Multi-Git profile
+        - SSH with System SSH
+        - HTTPS
+        - No remote involved
+        - Other or unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted Terminal Log output
+      description: Include only the relevant lines. Remove names, paths, URLs, emails, credentials, and private repository data.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add screenshots, repository state, workarounds, or other useful details. Drag files into this field if needed.
