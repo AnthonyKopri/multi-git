@@ -1,0 +1,345 @@
+// Every DOM id the renderer looks up, in one place.
+//
+// The previous code ran 236 `document.getElementById` calls at module load and
+// assigned each to a const. A typo produced a silent `null` that only surfaced
+// as a TypeError much later, in whatever handler happened to touch it first.
+//
+// Here the ids are data. `resolveElements` looks them all up once at startup
+// and throws naming every missing one, so a broken template fails immediately
+// and says what is wrong. ELEMENT_IDS is also what tests/packaging.test.ts
+// checks against index.html.
+
+/** Element ids, grouped the way index.html lays the page out. */
+export const ELEMENT_MAP = {
+  // DOM Elements
+  appContainer: 'main-content',
+  btnOpenRepo: 'btn-open-repo',
+  btnCreateRepo: 'btn-create-repo',
+  btnCloneRepo: 'btn-clone-repo',
+  btnManageSsh: 'btn-manage-ssh',
+  btnRefresh: 'btn-refresh',
+
+  // Header Segments
+  repoSegment: 'repo-segment',
+  repoSegmentName: 'repo-segment-name',
+  repoSegmentPath: 'repo-segment-path',
+  repoDropdown: 'repo-dropdown',
+  repoDropdownList: 'repo-dropdown-list',
+  branchSegment: 'branch-segment',
+  branchSegmentName: 'branch-segment-name',
+  branchAheadBadge: 'branch-ahead-badge',
+  branchBehindBadge: 'branch-behind-badge',
+  branchStateBadge: 'branch-state-badge',
+  branchDropdown: 'branch-dropdown',
+  branchDropdownList: 'branch-dropdown-list',
+  branchFilterInput: 'branch-filter-input',
+  headerNewBranchInput: 'header-new-branch-input',
+  btnHeaderCreateBranch: 'btn-header-create-branch',
+  profileSegment: 'profile-segment',
+  profileSegmentName: 'profile-segment-name',
+  profileColorDot: 'profile-color-dot',
+  profileVaultIcon: 'profile-vault-icon',
+  profileDropdown: 'profile-dropdown',
+  profileDropdownList: 'profile-dropdown-list',
+  dropdownVaultStatus: 'dropdown-vault-status',
+  btnDropdownVault: 'btn-dropdown-vault',
+  identityText: 'identity-text',
+  btnEditIdentity: 'btn-edit-identity',
+
+  // Views Tabs
+  tabStaging: 'tab-staging',
+  tabDiff: 'tab-diff',
+  tabExplorer: 'tab-explorer',
+  stagingView: 'staging-view',
+  diffView: 'diff-view',
+  explorerView: 'explorer-view',
+  btnDiffBack: 'btn-diff-back',
+  diffActions: 'diff-actions',
+  btnDiffToggleStage: 'btn-diff-toggle-stage',
+  btnDiffToggleStageLabel: 'btn-diff-toggle-stage-label',
+  btnDiffDiscard: 'btn-diff-discard',
+  btnDiffRefresh: 'btn-diff-refresh',
+
+  // Sidebar
+  newBranchInput: 'new-branch-input',
+  btnCreateBranch: 'btn-create-branch',
+  localBranchesList: 'local-branches-list',
+  remoteBranchesList: 'remote-branches-list',
+  integrateBranchSelect: 'integrate-branch-select',
+  btnMerge: 'btn-merge',
+  btnRebase: 'btn-rebase',
+  btnStashSave: 'btn-stash-save',
+  stashList: 'stash-list',
+  checkpointList: 'checkpoint-list',
+  trashList: 'trash-list',
+  tagList: 'tag-list',
+
+  // Staging & Diff
+  conflictBanner: 'conflict-banner',
+  btnContinueConflict: 'btn-continue-conflict',
+  btnAbortConflict: 'btn-abort-conflict',
+  unstagedFilesList: 'unstaged-files-list',
+  stagedFilesList: 'staged-files-list',
+  btnStageAll: 'btn-stage-all',
+  btnUnstageAll: 'btn-unstage-all',
+  btnDiscardAll: 'btn-discard-all',
+  filenameWrapToggle: 'filename-wrap-toggle',
+  diffFileTitle: 'diff-file-title',
+  diffFileType: 'diff-file-type',
+  diffContent: 'diff-content',
+  diffFilesList: 'diff-files-list',
+
+  // Explorer View DOM Elements
+  fileTreeContainer: 'file-tree-container',
+  btnRefreshTree: 'btn-refresh-tree',
+  explorerFileTitle: 'explorer-file-title',
+  btnToggleBlame: 'btn-toggle-blame',
+  explorerFileBody: 'explorer-file-body',
+
+  // Commit Details Drawer DOM Elements
+  commitDetailsDrawer: 'commit-details-drawer',
+  btnCloseDrawer: 'btn-close-drawer',
+  drawerHash: 'drawer-hash',
+  drawerMsg: 'drawer-msg',
+  drawerAuthor: 'drawer-author',
+  drawerDate: 'drawer-date',
+  drawerFilesList: 'drawer-files-list',
+  drawerFilesHeading: 'drawer-files-heading',
+  btnDrawerCherryPick: 'btn-drawer-cherry-pick',
+  btnDrawerRevert: 'btn-drawer-revert',
+  btnDrawerTag: 'btn-drawer-tag',
+  btnDrawerCopySha: 'btn-drawer-copy-sha',
+  drawerResetMode: 'drawer-reset-mode',
+  btnDrawerReset: 'btn-drawer-reset',
+
+  // Commit
+  commitMsgInput: 'commit-msg-input',
+  btnCommit: 'btn-commit',
+  btnCommitLabel: 'btn-commit-label',
+  commitAmendCheckbox: 'commit-amend-checkbox',
+  commitScopeInput: 'commit-scope-input',
+  commitTemplateChips: 'commit-template-chips',
+  commitFormatHint: 'commit-format-hint',
+
+  // Sync & History
+  btnFetch: 'btn-fetch',
+  btnPull: 'btn-pull',
+  btnPush: 'btn-push',
+  pullCountBadge: 'pull-count-badge',
+  pushCountBadge: 'push-count-badge',
+  btnRemoteProtocol: 'btn-remote-protocol',
+  remoteProtocolLabel: 'remote-protocol-label',
+  btnOpenLogs: 'btn-open-logs',
+  commitHistoryList: 'commit-history-list',
+  btnUndoCommit: 'btn-undo-commit',
+
+  // Overlays & Modals
+  noRepoOverlay: 'no-repo-overlay',
+  btnOverlayOpen: 'btn-overlay-open',
+  btnOverlayCreate: 'btn-overlay-create',
+  btnOverlayClone: 'btn-overlay-clone',
+  overlayRecentList: 'overlay-recent-list',
+  overlaySshRow: 'overlay-ssh-row',
+  overlaySshTitle: 'overlay-ssh-title',
+  overlaySshDetail: 'overlay-ssh-detail',
+  btnOverlaySsh: 'btn-overlay-ssh',
+  overlaySshBtnLabel: 'overlay-ssh-btn-label',
+  sshModal: 'ssh-modal',
+  btnCloseSshModal: 'btn-close-ssh-modal',
+  sshProfileForm: 'ssh-profile-form',
+  sshProfileId: 'ssh-profile-id',
+  sshLabel: 'ssh-label',
+  sshKeyPath: 'ssh-key-path',
+  sshUserName: 'ssh-user-name',
+  sshUserEmail: 'ssh-user-email',
+  sshPassphrase: 'ssh-passphrase',
+  sshKeepPassword: 'ssh-keep-password',
+  sshExistingKeySection: 'ssh-existing-key-section',
+  sshExistingKeyHeading: 'ssh-existing-key-heading',
+  btnShowAddKey: 'btn-show-add-key',
+  btnHideAddKey: 'btn-hide-add-key',
+  sshGenerateSection: 'ssh-generate-section',
+  btnShowGenerateKey: 'btn-show-generate-key',
+  btnHideGenerateKey: 'btn-hide-generate-key',
+  sshGenerateForm: 'ssh-generate-form',
+  sshGenerateLabel: 'ssh-generate-label',
+  sshGenerateKeyName: 'ssh-generate-key-name',
+  sshGenerateKeyType: 'ssh-generate-key-type',
+  sshGenerateUserName: 'ssh-generate-user-name',
+  sshGenerateUserEmail: 'ssh-generate-user-email',
+  sshGeneratePassphrase: 'ssh-generate-passphrase',
+  sshGenerateKeepPassword: 'ssh-generate-keep-password',
+  btnGenerateSsh: 'btn-generate-ssh',
+  sshGenerateFeedback: 'ssh-generate-feedback',
+  sshGeneratedResult: 'ssh-generated-result',
+  sshGeneratedPrivate: 'ssh-generated-private',
+  sshGeneratedPublic: 'ssh-generated-public',
+  btnOpenGeneratedLocation: 'btn-open-generated-location',
+  btnCopyGeneratedPrivatePath: 'btn-copy-generated-private-path',
+  btnCopyGeneratedPublicPath: 'btn-copy-generated-public-path',
+  btnCopyGeneratedPublicKey: 'btn-copy-generated-public-key',
+  vaultStatusCard: 'vault-status-card',
+  vaultStatusText: 'vault-status-text',
+  vaultStatusDetail: 'vault-status-detail',
+  vaultStatusIcon: 'vault-status-icon',
+  btnSetupVault: 'btn-setup-vault',
+  btnUnlockVault: 'btn-unlock-vault',
+  btnLockVault: 'btn-lock-vault',
+  vaultSetupModal: 'vault-setup-modal',
+  vaultSetupForm: 'vault-setup-form',
+  vaultMasterKey: 'vault-master-key',
+  vaultMasterKeyConfirm: 'vault-master-key-confirm',
+  vaultSetupFeedback: 'vault-setup-feedback',
+  btnCancelVaultSetup: 'btn-cancel-vault-setup',
+  btnSaveVaultSetup: 'btn-save-vault-setup',
+  btnTestSshForm: 'btn-test-ssh-form',
+  btnCancelSsh: 'btn-cancel-ssh',
+  sshProfilesTableBody: 'ssh-profiles-table-body',
+  ruleMatchInput: 'rule-match-input',
+  ruleProfileSelect: 'rule-profile-select',
+  btnAddRule: 'btn-add-rule',
+  accountRulesList: 'account-rules-list',
+  conflictModal: 'conflict-modal',
+  btnCloseConflictModal: 'btn-close-conflict-modal',
+  conflictFilePathBadge: 'conflict-file-path-badge',
+  btnConflictKeepOurs: 'btn-conflict-keep-ours',
+  btnConflictKeepTheirs: 'btn-conflict-keep-theirs',
+  conflictTextarea: 'conflict-textarea',
+  btnCancelConflictModal: 'btn-cancel-conflict-modal',
+  btnSaveConflictResolution: 'btn-save-conflict-resolution',
+
+  // Clone Modal
+  cloneModal: 'clone-modal',
+  btnCloseCloneModal: 'btn-close-clone-modal',
+  cloneFeedback: 'clone-feedback',
+  cloneForm: 'clone-form',
+  cloneUrlInput: 'clone-url',
+  cloneParentDirInput: 'clone-parent-dir',
+  btnCloneBrowse: 'btn-clone-browse',
+  cloneFolderNameInput: 'clone-folder-name',
+  cloneProfileSelect: 'clone-profile-select',
+  btnCancelClone: 'btn-cancel-clone',
+  btnStartClone: 'btn-start-clone',
+
+  // New Repository Modal
+  newRepoModal: 'new-repo-modal',
+  btnCloseNewRepoModal: 'btn-close-new-repo-modal',
+  newRepoForm: 'new-repo-form',
+  newRepoFeedback: 'new-repo-feedback',
+  newRepoPathInput: 'new-repo-path',
+  btnNewRepoBrowse: 'btn-new-repo-browse',
+  newRepoFolderHint: 'new-repo-folder-hint',
+  newRepoVisibility: 'new-repo-visibility',
+  newRepoCreateRemote: 'new-repo-create-remote',
+  newRepoGhStatus: 'new-repo-gh-status',
+  newRepoLicense: 'new-repo-license',
+  newRepoLicenseSummary: 'new-repo-license-summary',
+  newRepoLicenseFields: 'new-repo-license-fields',
+  newRepoLicenseYear: 'new-repo-license-year',
+  newRepoLicenseHolder: 'new-repo-license-holder',
+  newRepoGitignore: 'new-repo-gitignore',
+  newRepoGitignoreHint: 'new-repo-gitignore-hint',
+  btnCancelNewRepo: 'btn-cancel-new-repo',
+  btnCreateNewRepo: 'btn-create-new-repo',
+
+  // Identity Modal
+  identityModal: 'identity-modal',
+  btnCloseIdentityModal: 'btn-close-identity-modal',
+  identityRepoName: 'identity-repo-name',
+  identityForm: 'identity-form',
+  identityNameInput: 'identity-name',
+  identityEmailInput: 'identity-email',
+  btnCancelIdentity: 'btn-cancel-identity',
+
+  // Confirm & Prompt dialogs
+  confirmModal: 'confirm-modal',
+  confirmTitle: 'confirm-title',
+  confirmMessage: 'confirm-message',
+  confirmCheckboxRow: 'confirm-checkbox-row',
+  confirmCheckbox: 'confirm-checkbox',
+  confirmCheckboxLabel: 'confirm-checkbox-label',
+  btnConfirmCancel: 'btn-confirm-cancel',
+  btnConfirmOk: 'btn-confirm-ok',
+  promptModal: 'prompt-modal',
+  promptTitle: 'prompt-title',
+  promptForm: 'prompt-form',
+  promptLabel: 'prompt-label',
+  promptInput: 'prompt-input',
+  btnPromptCancel: 'btn-prompt-cancel',
+  toastContainer: 'toast-container',
+
+  // Startup SSH key health check
+  sshHealthModal: 'ssh-health-modal',
+  sshHealthList: 'ssh-health-list',
+  btnSshHealthDismiss: 'btn-ssh-health-dismiss',
+  btnSshHealthOpen: 'btn-ssh-health-open',
+
+  // SSH config management toggle
+  sshManageConfigCheckbox: 'ssh-manage-config-checkbox'
+} as const;
+
+export type ElementKey = keyof typeof ELEMENT_MAP;
+
+/** Flat list of ids, for the check that every one exists in index.html. */
+export const ELEMENT_IDS: readonly string[] = Object.values(ELEMENT_MAP);
+
+export type Elements = Record<ElementKey, HTMLElement>;
+
+/**
+ * Looks up every id once.
+ *
+ * Missing ids are collected and reported together: fixing a template five
+ * elements at a time, one reload each, is the failure mode this avoids.
+ */
+export function resolveElements(root: Document = document): Elements {
+  const resolved = {} as Record<ElementKey, HTMLElement>;
+  const missing: string[] = [];
+
+  for (const [key, id] of Object.entries(ELEMENT_MAP) as [ElementKey, string][]) {
+    const element = root.getElementById(id);
+    if (element === null) {
+      missing.push(`${key} (#${id})`);
+      continue;
+    }
+    resolved[key] = element;
+  }
+
+  if (missing.length > 0) {
+    const detail = missing.map((entry) => `  - ${entry}`).join('\n');
+    throw new Error(
+      `index.html is missing ${missing.length} element(s) the app requires:\n${detail}`
+    );
+  }
+
+  return resolved;
+}
+
+/**
+ * Narrows an element to a specific tag.
+ *
+ * The registry is typed as HTMLElement because it is built from a plain map.
+ * Call sites that need `.value` or `.checked` state the tag they expect, and
+ * a mismatch throws instead of silently reading undefined.
+ */
+export function as<T extends HTMLElement>(
+  element: HTMLElement,
+  constructor: new () => T
+): T {
+  if (!(element instanceof constructor)) {
+    throw new Error(
+      `Expected #${element.id} to be ${constructor.name}, found ${element.constructor.name}`
+    );
+  }
+  return element;
+}
+
+export const asInput = (element: HTMLElement): HTMLInputElement =>
+  as(element, HTMLInputElement);
+export const asTextArea = (element: HTMLElement): HTMLTextAreaElement =>
+  as(element, HTMLTextAreaElement);
+export const asSelect = (element: HTMLElement): HTMLSelectElement =>
+  as(element, HTMLSelectElement);
+export const asForm = (element: HTMLElement): HTMLFormElement =>
+  as(element, HTMLFormElement);
+export const asButton = (element: HTMLElement): HTMLButtonElement =>
+  as(element, HTMLButtonElement);
