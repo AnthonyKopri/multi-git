@@ -9,7 +9,7 @@
     "desktop": "npm run compile && electron .",
     "compile": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
-    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json && tsc -p tsconfig.test.json",
     "test": "npm run typecheck && vitest run",
     "build": "npm run compile && electron-builder",
     "build-win": "npm run compile && electron-builder --win nsis portable",
