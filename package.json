@@ -2,7 +2,7 @@
   "name": "multi-git",
   "version": "1.0.6",
   "description": "A lightweight Git GUI client with dynamic SSH key switching",
-  "main": "main.js",
+  "main": "out/node/main/main.js",
   "scripts": {
     "start": "npm run compile && node out/node/server/index.js",
     "dev": "npm run compile && node out/node/server/index.js",
@@ -46,13 +46,10 @@
     "appId": "com.multigit.client",
     "productName": "Multi-Git Client",
     "files": [
-      "main.js",
-      "preload.js",
       "out/**/*",
+      "templates/**/*",
       "Multi Git Logo.ico",
-      "package.json",
-      "public/**/*",
-      "templates/**/*"
+      "package.json"
     ],
     "icon": "Multi Git Logo.ico",
     "directories": {
