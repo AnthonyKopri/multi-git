@@ -1061,15 +1061,21 @@ select {
 /* Fullscreen Overlay (For repository selector startup) */
 .fullscreen-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
+  /* 100vw ignores the scrollbar and would add a horizontal one of its own. */
+  width: 100%;
+  height: 100%;
   background-color: rgba(6, 8, 12, 0.85);
   backdrop-filter: var(--glass-backdrop);
   display: flex;
-  align-items: center;
   justify-content: center;
+  /* The card grows with its contents and is taller than a 720px viewport once
+     the SSH setup row is shown. `align-items: center` would centre it and
+     then clip both ends beyond reach, because overflow from a flex-centred
+     item cannot be scrolled to. Scrolling the overlay and centring the card
+     with `margin: auto` instead keeps the top and bottom reachable. */
+  overflow-y: auto;
+  padding: 24px 16px;
   z-index: 100;
   transition: opacity 0.3s ease;
 }
@@ -1081,6 +1087,10 @@ select {
 
 .overlay-card {
   width: 500px;
+  /* Narrow windows must not push the card past the edge. */
+  max-width: 100%;
+  /* Centres within the scrollable overlay without clipping either end. */
+  margin: auto;
   background-color: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
