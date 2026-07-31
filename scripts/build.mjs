@@ -73,20 +73,12 @@ function copyStaticAssets() {
 
   fs.mkdirSync(destination, { recursive: true });
 
-  // app.js in public/ is the pre-migration renderer. Once src/renderer exists
-  // the bundle writes out/web/app.js, and copying the old file over it would
-  // silently ship the un-migrated version.
-  const bundleExists = exists(webEntries[0].in);
   let copied = 0;
 
   for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
     if (!entry.isFile()) {
       continue;
     }
-    if (bundleExists && entry.name === 'app.js') {
-      continue;
-    }
-
     fs.copyFileSync(path.join(source, entry.name), path.join(destination, entry.name));
     copied += 1;
   }
