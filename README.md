@@ -338,6 +338,13 @@ Private key files remain at the paths you choose and are not copied into the con
 
 The Express backend binds to `127.0.0.1` and rejects non-localhost Host and Origin values. This matters because the API can run Git commands and access files inside the selected repository. Do not reverse-proxy or expose the backend to a network.
 
+Several further protections apply, on the principle that a repository's contents are not trusted input — cloning someone else's repository is the app's normal workflow:
+
+- Pages are served with a Content Security Policy whose `script-src` is `self`, so a rendering mistake cannot become script execution in a page that could otherwise drive the API.
+- File reads resolve symlinks before checking containment, so a link inside a repository cannot reach a file outside it.
+- Values that reach a Git or GitHub CLI argument vector are validated, and file paths are separated with `--`, so a branch, tag, or file name that looks like a command-line option is treated as data.
+- Reading a public key is limited to keys registered to a profile or living under `~/.ssh`.
+
 ## Releases
 
 See [GitHub Releases](https://github.com/AnthonyKopri/multi-git/releases) for installers, portable builds, and release notes.
@@ -352,26 +359,42 @@ See [GitHub Releases](https://github.com/AnthonyKopri/multi-git/releases) for in
 
 ```text
 multi-git/
-|-- main.js             # Electron lifecycle, windows, and local backend startup
-|-- preload.js          # Minimal folder-picker and log-window bridge
-|-- server.js           # Local API, Git runner, config, vault, and Safety Net
-|-- ssh-config.js       # Managed ~/.ssh/config block
-|-- repo-templates.js   # License and .gitignore catalogue and rendering
+|-- src/
+|   |-- shared/         # Types describing the API, imported by both sides
+|   |-- main/           # Electron lifecycle, windows, and the preload bridge
+|   |-- server/
+|   |   |-- index.ts    # startServer
+|   |   |-- app.ts      # Express assembly and middleware order
+|   |   |-- app-root.ts # Locates templates/ and static assets in every layout
+|   |   |-- routes/     # One router per area of the API
+|   |   |-- git/        # Runner, argument guards, and output parsers
+|   |   |-- ssh/        # Profiles, keys, askpass, managed ~/.ssh/config block
+|   |   |-- vault/      # Encrypted passphrase storage
+|   |   |-- config/     # Cached, atomically written configuration
+|   |   `-- safety-net/ # Checkpoints and the discard trash
+|   `-- renderer/       # Typed UI modules (migration in progress)
 |-- templates/
 |   |-- licenses/       # License texts from choosealicense.com
 |   `-- gitignore/      # Ignore templates from github/gitignore
 |-- public/
 |   |-- index.html      # Application shell and dialogs
 |   |-- app.js          # Client-side state, rendering, and workflows
+|   |-- logs.js         # Terminal Log window script
 |   |-- style.css       # Application styles
 |   `-- logs.html       # Live Terminal Log window
+|-- tests/              # Vitest: unit, integration, and pre-release checks
 |-- scripts/
+|   |-- build.mjs       # esbuild bundling and static asset copy
+|   |-- release.js      # Version bump and build driver
 |   `-- after-pack.js   # Windows executable icon post-processing
+|-- out/                # Compiled output (generated, not committed)
 |-- package.json        # Scripts, dependencies, and Electron Builder config
 `-- LICENSE             # MIT license
 ```
 
-The UI talks to a localhost JSON API. Repository-scoped requests carry the selected path in the `x-repo-path` header. Git commands are executed as argument arrays with Node's `spawn`; a selected profile is applied per operation with `GIT_SSH_COMMAND`, and saved passphrases use a short-lived askpass bridge.
+The server, the Electron layer, and the shared API types are TypeScript, compiled into `out/`. The renderer is mid-migration: `public/app.js` still drives the UI, while the typed modules it is being rebuilt on live under `src/renderer/`.
+
+The UI talks to a localhost JSON API. Repository-scoped requests carry the selected path in the `x-repo-path` header, which one middleware validates. Git commands are executed as argument arrays with Node's `spawn`, never through a shell; values that could be read as options are validated and pathspecs are separated with `--`. A selected profile is applied per operation with `GIT_SSH_COMMAND`, and saved passphrases use a short-lived askpass bridge.
 
 ## Developer Commands
 
@@ -380,7 +403,9 @@ The UI talks to a localhost JSON API. Repository-scoped requests carry the selec
 | `npm start` | Start browser mode on `http://localhost:3000` (or `PORT`). |
 | `npm run dev` | Alias for `npm start`. |
 | `npm run desktop` | Start the Electron desktop app with a dynamic local port. |
-| `npm test` | Run the static pre-release checks in `scripts/check.js`. |
+| `npm test` | Type-check every source and run the Vitest suite. |
+| `npm run typecheck` | Type-check without running the tests. |
+| `npm run compile` | Build the TypeScript sources into `out/`. |
 | `npm run release` | Bump the version and build, prompting for both. |
 | `npm run release:installer` | Prompt for a version, then build only the installer. |
 | `npm run release:portable` | Prompt for a version, then build only the portable executable. |
@@ -388,7 +413,9 @@ The UI talks to a localhost JSON API. Repository-scoped requests carry the selec
 | `npm run build-win` | Build Windows NSIS installer and portable executable. |
 | `npm run build-standalone` | Build only the portable Windows target into `dist-standalone`. |
 
-There is no frontend compilation step: Express serves the JavaScript, HTML, and CSS directly from `public/`. There is no unit-test suite either; `npm test` runs fast static checks, so exercise Git changes against disposable repositories as well.
+`npm start` and `npm run desktop` compile first, so the TypeScript sources are always current; every `build` and `release` script does the same. Express serves the compiled bundle and the static assets from `out/web`.
+
+`npm test` type-checks every source under `strict` and runs the Vitest suite: the Git output parsers, path containment, argument guards and vault encryption, plus integration tests that drive the real API against throwaway repositories. The renderer is still largely untested, so exercise UI changes against a disposable repository as well.
 
 See [BUILDING.md](BUILDING.md) for the full build, check, and release procedure, including both Windows artifacts and how to bump the version.
 
