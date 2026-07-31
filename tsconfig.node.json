@@ -1,0 +1,10 @@
+{
+  "// ": "Server, Electron main/preload, and the test suite. Runs on Node, so CommonJS and no DOM.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["src/server/**/*.ts", "src/main/**/*.ts", "src/shared/**/*.ts", "tests/**/*.ts"]
+}
