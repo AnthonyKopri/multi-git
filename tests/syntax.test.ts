@@ -12,9 +12,8 @@ import fs from 'node:fs';
 import { fromAppRoot } from '../src/server/app-root';
 
 const CANDIDATES = [
-  'main.js',
-  'preload.js',
   'public/app.js',
+  'public/logs.js',
   'scripts/after-pack.js',
   'scripts/build.mjs',
   'scripts/release.js'
