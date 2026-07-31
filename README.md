@@ -372,13 +372,12 @@ multi-git/
 |   |   |-- vault/      # Encrypted passphrase storage
 |   |   |-- config/     # Cached, atomically written configuration
 |   |   `-- safety-net/ # Checkpoints and the discard trash
-|   `-- renderer/       # Typed UI modules (migration in progress)
+|   `-- renderer/       # UI: state, API client, DOM helpers, and features
 |-- templates/
 |   |-- licenses/       # License texts from choosealicense.com
 |   `-- gitignore/      # Ignore templates from github/gitignore
 |-- public/
 |   |-- index.html      # Application shell and dialogs
-|   |-- app.js          # Client-side state, rendering, and workflows
 |   |-- logs.js         # Terminal Log window script
 |   |-- style.css       # Application styles
 |   `-- logs.html       # Live Terminal Log window
@@ -392,7 +391,7 @@ multi-git/
 `-- LICENSE             # MIT license
 ```
 
-The server, the Electron layer, and the shared API types are TypeScript, compiled into `out/`. The renderer is mid-migration: `public/app.js` still drives the UI, while the typed modules it is being rebuilt on live under `src/renderer/`.
+The whole application is TypeScript, compiled into `out/`. `public/` holds only the HTML, CSS, and the Terminal Log window script, which are copied alongside the bundle at build time.
 
 The UI talks to a localhost JSON API. Repository-scoped requests carry the selected path in the `x-repo-path` header, which one middleware validates. Git commands are executed as argument arrays with Node's `spawn`, never through a shell; values that could be read as options are validated and pathspecs are separated with `--`. A selected profile is applied per operation with `GIT_SSH_COMMAND`, and saved passphrases use a short-lived askpass bridge.
 
@@ -415,7 +414,7 @@ The UI talks to a localhost JSON API. Repository-scoped requests carry the selec
 
 `npm start` and `npm run desktop` compile first, so the TypeScript sources are always current; every `build` and `release` script does the same. Express serves the compiled bundle and the static assets from `out/web`.
 
-`npm test` type-checks every source under `strict` and runs the Vitest suite: the Git output parsers, path containment, argument guards and vault encryption, plus integration tests that drive the real API against throwaway repositories. The renderer is still largely untested, so exercise UI changes against a disposable repository as well.
+`npm test` type-checks every source under `strict` and runs the Vitest suite: the Git output parsers, path containment, argument guards, vault encryption, and the commit-graph layout, plus integration tests that drive the real API against throwaway repositories. The renderer's rendering is not covered by tests, so exercise UI changes against a disposable repository as well.
 
 See [BUILDING.md](BUILDING.md) for the full build, check, and release procedure, including both Windows artifacts and how to bump the version.
 
