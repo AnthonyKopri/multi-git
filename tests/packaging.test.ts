@@ -51,7 +51,7 @@ describe('packaging', () => {
     // src/ into out/ now; nothing at the repository root runs any more.
     expect(packaged).toContain('out/**/*');
 
-    for (const retired of ['server.js', 'ssh-config.js', 'main.js', 'preload.js', 'repo-templates.js']) {
+    for (const retired of ['server.js', 'ssh-config.js', 'main.js', 'preload.js', 'repo-templates.js', 'public/app.js']) {
       expect(fs.existsSync(fromAppRoot(retired)), `${retired} should have been migrated`).toBe(false);
     }
   });
@@ -74,39 +74,22 @@ describe('element ids', () => {
   /**
    * Collects every id the client looks up.
    *
-   * Once src/renderer/dom/elements.ts exists it is imported and asked for its
-   * declared ids, which is exact. Until then the un-migrated public/app.js is
-   * scanned for getElementById calls, which is what scripts/check.js did.
-   * Either way an empty result fails the test, so the check can never quietly
-   * stop finding anything.
+   * scripts/check.js grepped public/app.js for getElementById calls. The
+   * registry is the exact list instead of a pattern match, and an empty
+   * result fails, so this check cannot quietly stop finding anything.
    */
   async function collectLookups(): Promise<{ source: string; ids: Set<string> }> {
-    const registry = fromAppRoot('src', 'renderer', 'dom', 'elements.ts');
+    const module = (await import('../src/renderer/dom/elements')) as {
+      ELEMENT_IDS?: readonly string[];
+    };
 
-    if (fs.existsSync(registry)) {
-      // Indirect specifier: the module does not exist until Phase 5, so a
-      // literal import would fail type resolution before then.
-      const specifier = '../src/renderer/dom/elements';
-      const module = (await import(/* @vite-ignore */ specifier)) as {
-        ELEMENT_IDS?: readonly string[];
-      };
-
-      if (!Array.isArray(module.ELEMENT_IDS)) {
-        throw new Error(
-          'src/renderer/dom/elements.ts must export ELEMENT_IDS so this check can verify it'
-        );
-      }
-
-      return { source: 'src/renderer/dom/elements.ts', ids: new Set(module.ELEMENT_IDS) };
+    if (!Array.isArray(module.ELEMENT_IDS)) {
+      throw new Error(
+        'src/renderer/dom/elements.ts must export ELEMENT_IDS so this check can verify it'
+      );
     }
 
-    const source = fs.readFileSync(fromAppRoot('public', 'app.js'), 'utf8');
-    return {
-      source: 'public/app.js',
-      ids: new Set(
-        [...source.matchAll(/getElementById\('([^']+)'\)/g)].map((match) => match[1] as string)
-      )
-    };
+    return { source: 'src/renderer/dom/elements.ts', ids: new Set(module.ELEMENT_IDS) };
   }
 
   it('resolves every id the client looks up', async () => {

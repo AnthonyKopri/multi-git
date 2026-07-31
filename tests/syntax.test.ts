@@ -12,7 +12,6 @@ import fs from 'node:fs';
 import { fromAppRoot } from '../src/server/app-root';
 
 const CANDIDATES = [
-  'public/app.js',
   'public/logs.js',
   'scripts/after-pack.js',
   'scripts/build.mjs',
