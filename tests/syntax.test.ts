@@ -14,9 +14,6 @@ import { fromAppRoot } from '../src/server/app-root';
 const CANDIDATES = [
   'main.js',
   'preload.js',
-  'server.js',
-  'ssh-config.js',
-  'repo-templates.js',
   'public/app.js',
   'scripts/after-pack.js',
   'scripts/build.mjs',

@@ -4,8 +4,8 @@
   "description": "A lightweight Git GUI client with dynamic SSH key switching",
   "main": "main.js",
   "scripts": {
-    "start": "npm run compile && node server.js",
-    "dev": "npm run compile && node server.js",
+    "start": "npm run compile && node out/node/server/index.js",
+    "dev": "npm run compile && node out/node/server/index.js",
     "desktop": "npm run compile && electron .",
     "compile": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
@@ -48,8 +48,6 @@
     "files": [
       "main.js",
       "preload.js",
-      "server.js",
-      "ssh-config.js",
       "out/**/*",
       "Multi Git Logo.ico",
       "package.json",
