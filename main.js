@@ -1,7 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 
-const { startServer } = require('./server.js');
+const { startServer } = require('./out/node/server/index.js');
 
 let mainWindow;
 let logWindow = null;

@@ -26,10 +26,8 @@ export interface AccountRule {
 }
 
 export interface RepoSettings {
-  /** Profile chosen for this repository; '' means System SSH. */
-  profileId?: string;
-  /** Set when the user disabled the discard confirmation for this repository. */
-  skipDeleteWarning?: boolean;
+  /** Whether discarding a file asks for confirmation first. Defaults to true. */
+  warnBeforeDelete?: boolean;
 }
 
 export interface AppSettings {

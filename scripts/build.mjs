@@ -31,10 +31,7 @@ const WEB_TARGET = 'es2022';
 const nodeEntries = [
   { in: 'src/main/main.ts', out: 'out/node/main/main.js', external: ['electron'] },
   { in: 'src/main/preload.ts', out: 'out/node/main/preload.js', external: ['electron'] },
-  { in: 'src/server/index.ts', out: 'out/node/server/index.js', external: ['express'] },
-  // Transitional: the un-migrated server.js requires this so the extracted
-  // modules have a single implementation. Removed with server.js in Phase 3.
-  { in: 'src/server/legacy-bridge.ts', out: 'out/node/server/legacy-bridge.js' }
+  { in: 'src/server/index.ts', out: 'out/node/server/index.js', external: ['express'] }
 ];
 
 const webEntries = [{ in: 'src/renderer/main.ts', out: 'out/web/app.js' }];

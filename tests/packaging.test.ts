@@ -48,18 +48,19 @@ describe('packaging', () => {
 
   it('lists every top-level runtime source file that still exists', () => {
     // Any of these left un-migrated must remain packaged.
-    const legacyEntryPoints = [
-      'main.js',
-      'preload.js',
-      'server.js',
-      'ssh-config.js',
-      'repo-templates.js',
-      'package.json'
-    ].filter((file) => fs.existsSync(fromAppRoot(file)));
+    const legacyEntryPoints = ['main.js', 'preload.js', 'package.json'].filter((file) =>
+      fs.existsSync(fromAppRoot(file))
+    );
 
     for (const file of legacyEntryPoints) {
       expect(packaged, `${file} exists but is not in build.files`).toContain(file);
     }
+  });
+
+  it('ships the compiled server, which is now the only backend', () => {
+    // main.js requires out/node/server/index.js at runtime.
+    expect(packaged).toContain('out/**/*');
+    expect(fs.existsSync(fromAppRoot('server.js'))).toBe(false);
   });
 
   it('ships the static assets the renderer loads', () => {

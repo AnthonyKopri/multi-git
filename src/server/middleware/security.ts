@@ -13,14 +13,20 @@ import type { NextFunction, Request, Response } from 'express';
  * renderer builds DOM from repository data — branch names, commit messages,
  * file paths — and a strict policy means a crafted repository cannot turn a
  * rendering mistake into script execution in a page that can drive this API.
+ * The Terminal Log window's script was moved into logs.js so this can hold.
  *
- * The font hosts are here because the UI loads Material Symbols and its web
- * fonts from Google Fonts.
+ * style-src does allow 'unsafe-inline', which is a deliberate, narrower
+ * concession: index.html carries around forty static `style` attributes, and
+ * CSS is not a script-execution vector. Removing them is a UI change rather
+ * than a security one, and is tracked separately.
+ *
+ * The font hosts are here because the UI loads Inter, JetBrains Mono, and
+ * Material Symbols from Google Fonts.
  */
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'none'",
   "script-src 'self'",
-  "style-src 'self' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data:",
   "connect-src 'self'",
