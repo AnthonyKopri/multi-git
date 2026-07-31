@@ -67,9 +67,7 @@ can run at the same time.
 
 ## Checks
 
-There is no unit-test suite in this project. `npm test` runs
-[scripts/check.js](scripts/check.js), a set of fast static checks that catch
-the mistakes that otherwise reach a build:
+`npm test` type-checks every TypeScript source and runs the Vitest suite:
 
 ```bash
 npm test
@@ -77,15 +75,20 @@ npm test
 
 It verifies that:
 
-- every shipped JavaScript file parses;
+- every TypeScript source passes `tsc --noEmit` under `strict`, and every
+  remaining JavaScript file still parses;
+- the Git output parsers, path containment, argument guards, and vault
+  encryption behave as specified;
 - every license and `.gitignore` template in the catalogue can be read and
   rendered, and that declared placeholders are actually substituted;
-- every element id `public/app.js` looks up exists in `public/index.html`;
+- every element id the client looks up exists in `public/index.html`;
 - `package.json` `build.files` still lists everything the packaged app needs,
   and the version is a valid semantic version.
 
-Run it before every release. It exits non-zero on the first category that
-fails and prints what broke.
+Run it before every release. Vitest reports every failure rather than stopping
+at the first one.
+
+To type-check without running the suite, use `npm run typecheck`.
 
 Beyond that, verification is manual. The paths worth walking before a release:
 
@@ -261,8 +264,13 @@ window on the output folder, then rerun.
 ### A new source file is missing from the packaged app
 
 The packaged app only contains what `build.files` in `package.json` lists.
-Add new top-level modules and asset folders there. `npm test` fails when a
-known-required entry is missing, but it cannot guess at files you add later.
+Compiled TypeScript is covered by the `out/**/*` entry, so a new module under
+`src/` needs no change. Add new top-level modules and asset folders there.
+`npm test` fails when a known-required entry is missing, but it cannot guess
+at files you add later.
+
+Run `npm run compile` before packaging by hand; every `build*` and `release`
+script already does it.
 
 ### Version numbers disagree
 

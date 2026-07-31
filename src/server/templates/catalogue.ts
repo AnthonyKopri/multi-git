@@ -3,16 +3,28 @@
 // The template bodies live as plain files under templates/ rather than as
 // string literals so they stay byte-identical to their upstream sources
 // (choosealicense.com for licenses, github/gitignore for ignore files).
-const fs = require('fs');
-const path = require('path');
+import type { GitignoreSummary, LicenseField, LicenseSummary } from '../../shared/template-types';
 
-const LICENSE_DIR = path.join(__dirname, 'templates', 'licenses');
-const GITIGNORE_DIR = path.join(__dirname, 'templates', 'gitignore');
+export interface LicenseTemplate {
+  id: string;
+  name: string;
+  summary: string;
+  file: string;
+  /**
+   * Placeholder tokens are not consistent across license families, so every
+   * entry spells out the exact tokens its own text uses. A license with no
+   * tokens is copied verbatim and its placeholder inputs stay hidden.
+   */
+  tokens: Partial<Record<LicenseField, string[]>>;
+}
 
-// Placeholder tokens are not consistent across license families, so every
-// entry spells out the exact tokens its own text uses. A license with no
-// tokens is copied verbatim and its placeholder inputs stay hidden.
-const LICENSES = [
+export interface GitignoreTemplate {
+  id: string;
+  name: string;
+  file: string;
+}
+
+export const LICENSES: readonly LicenseTemplate[] = [
   {
     id: 'mit',
     name: 'MIT License',
@@ -85,7 +97,7 @@ const LICENSES = [
   }
 ];
 
-const GITIGNORES = [
+export const GITIGNORES: readonly GitignoreTemplate[] = [
   { id: 'general', name: 'General (OS files, editors, build output)', file: 'general.gitignore' },
   { id: 'node', name: 'Node / JavaScript', file: 'node.gitignore' },
   { id: 'python', name: 'Python', file: 'python.gitignore' },
@@ -99,94 +111,27 @@ const GITIGNORES = [
   { id: 'godot', name: 'Godot', file: 'godot.gitignore' }
 ];
 
-// Starting point for the "Custom" choice: the file is created so the editor
-// has something to open, and the comments explain the syntax.
-const CUSTOM_GITIGNORE_STARTER = [
-  '# Custom .gitignore',
-  '#',
-  '# One pattern per line. Lines starting with # are comments.',
-  '#   build/        ignore a folder anywhere in the repository',
-  '#   /dist         ignore a folder in the repository root only',
-  '#   *.log         ignore every file with this extension',
-  '#   !keep.log     keep a file an earlier pattern would have ignored',
-  ''
-].join('\n');
-
-function findLicense(id) {
-  return LICENSES.find((license) => license.id === id) || null;
+export function findLicense(id: string): LicenseTemplate | null {
+  return LICENSES.find((license) => license.id === id) ?? null;
 }
 
-function findGitignore(id) {
-  return GITIGNORES.find((entry) => entry.id === id) || null;
+export function findGitignore(id: string): GitignoreTemplate | null {
+  return GITIGNORES.find((entry) => entry.id === id) ?? null;
 }
 
-// Client-facing catalogue: which placeholder inputs a license needs is derived
-// from its token map so the two can never drift apart.
-function listLicenses() {
+/**
+ * Client-facing catalogue. Which placeholder inputs a license needs is derived
+ * from its token map, so the two can never drift apart.
+ */
+export function listLicenses(): LicenseSummary[] {
   return LICENSES.map((license) => ({
     id: license.id,
     name: license.name,
     summary: license.summary,
-    fields: Object.keys(license.tokens)
+    fields: Object.keys(license.tokens) as LicenseField[]
   }));
 }
 
-function listGitignores() {
+export function listGitignores(): GitignoreSummary[] {
   return GITIGNORES.map((entry) => ({ id: entry.id, name: entry.name }));
 }
-
-function readTemplateFile(directory, fileName) {
-  return fs.readFileSync(path.join(directory, fileName), 'utf8');
-}
-
-// Placeholder values are pure file content and never reach a shell, but
-// control characters are still dropped so a pasted value cannot break the
-// line layout of the rendered license.
-function sanitizePlaceholderValue(value) {
-  return String(value === undefined || value === null ? '' : value)
-    .replace(/\p{C}/gu, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
-    .slice(0, 200);
-}
-
-function renderLicense(id, values = {}) {
-  const license = findLicense(id);
-  if (!license) {
-    throw new Error(`Unknown license template: ${id}`);
-  }
-
-  let text = readTemplateFile(LICENSE_DIR, license.file);
-  for (const [field, tokens] of Object.entries(license.tokens)) {
-    const replacement = sanitizePlaceholderValue(values[field]);
-    for (const token of tokens) {
-      text = text.split(token).join(replacement);
-    }
-  }
-
-  return text;
-}
-
-function renderGitignore(id) {
-  if (id === 'custom') {
-    return CUSTOM_GITIGNORE_STARTER;
-  }
-
-  const entry = findGitignore(id);
-  if (!entry) {
-    throw new Error(`Unknown .gitignore template: ${id}`);
-  }
-
-  return readTemplateFile(GITIGNORE_DIR, entry.file);
-}
-
-module.exports = {
-  CUSTOM_GITIGNORE_STARTER,
-  findGitignore,
-  findLicense,
-  listGitignores,
-  listLicenses,
-  renderGitignore,
-  renderLicense,
-  sanitizePlaceholderValue
-};
