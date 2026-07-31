@@ -1,0 +1,11 @@
+{
+  "// ": "Renderer. Bundled by esbuild, so ES modules and DOM types with no Node globals.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["src/renderer/**/*.ts", "src/shared/**/*.ts"]
+}
