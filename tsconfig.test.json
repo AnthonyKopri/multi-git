@@ -1,0 +1,11 @@
+{
+  "// ": "The Vitest suite. It exercises both sides, so it needs Node globals and DOM types together — which is exactly why it is separate from the two source configs, where mixing them would let server code reach for `document`.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["tests/**/*.ts", "vitest.config.ts"]
+}
