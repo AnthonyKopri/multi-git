@@ -56,9 +56,11 @@ Then open `http://localhost:3000`.
 | `preload.js` | Restricted bridge between Electron and the web UI. |
 | `server.js` | Local Express API, Git execution, configuration, vault, and Safety Net. |
 | `ssh-config.js` | Management of Multi-Git's block in `~/.ssh/config`. |
-| `repo-templates.js` | License and `.gitignore` catalogue for the new repository dialog. |
+| `src/shared/` | Types describing the API payloads, imported by both sides. |
+| `src/server/` | TypeScript server modules: Git parsers, argument guards, path containment, vault encryption, and the template catalogue. |
 | `templates/` | Template bodies, kept as verbatim copies of their upstream sources. |
-| `scripts/` | Pre-release checks, the release driver, and the packaging after-pack step. |
+| `tests/` | Vitest suite: unit tests plus the pre-release checks. |
+| `scripts/` | The esbuild build, the release driver, and the packaging after-pack step. |
 | `public/index.html` | Application structure and dialogs. |
 | `public/app.js` | Client-side state, rendering, and workflows. |
 | `public/style.css` | Application styling. |
@@ -89,7 +91,7 @@ docs: clarify portable installation
 
 ## Testing Changes
 
-The project does not currently have a unit-test suite. `npm test` runs the static checks in `scripts/check.js` — every shipped file parses, every license and `.gitignore` template renders, every element id the client looks up exists in the HTML, and the packaging file list is complete. Run it before opening a pull request. Beyond that, every pull request should document the manual checks that were performed.
+`npm test` type-checks every TypeScript source with `tsc --noEmit` and runs the Vitest suite in `tests/` — the Git output parsers, path containment, argument guards, and vault encryption, plus the pre-release checks that every template renders, every element id the client looks up exists in the HTML, and the packaging file list is complete. Run it before opening a pull request. Beyond that, every pull request should document the manual checks that were performed.
 
 Use a disposable repository and test the normal path plus relevant failure paths. Depending on the change, this may include:
 

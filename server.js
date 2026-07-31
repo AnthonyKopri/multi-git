@@ -6,7 +6,18 @@ const path = require('path');
 const os = require('os');
 
 const sshConfig = require('./ssh-config.js');
-const repoTemplates = require('./repo-templates.js');
+// Extracted modules, compiled to out/node by `npm run compile`. Requiring the
+// built bundle keeps a single implementation while server.js is being retired.
+const bridge = require('./out/node/server/legacy-bridge.js');
+
+const {
+  unquoteGitPath, parsePorcelainStatus, parseGitDiffText,
+  parseRemoteUrl, getToggledRemoteUrl, isLikelyHttpRemote,
+  parseConflictBlocks, parseBlameOutput, resolveInsideRepo,
+  deriveVaultKey, encryptWithVaultKey, decryptWithVaultKey
+} = bridge;
+
+const repoTemplates = bridge;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -140,37 +151,11 @@ function getVaultStatus() {
   };
 }
 
-function deriveVaultKey(masterKey, saltHex) {
-  return crypto.scryptSync(masterKey, Buffer.from(saltHex, 'hex'), 32);
-}
 
-function encryptWithVaultKey(text, key) {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
 
-  return {
-    iv: iv.toString('hex'),
-    tag: tag.toString('hex'),
-    data: encrypted.toString('hex')
-  };
-}
 
-function decryptWithVaultKey(payload, key) {
-  const decipher = crypto.createDecipheriv(
-    'aes-256-gcm',
-    key,
-    Buffer.from(payload.iv, 'hex')
-  );
-  decipher.setAuthTag(Buffer.from(payload.tag, 'hex'));
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(payload.data, 'hex')),
-    decipher.final()
-  ]);
 
-  return decrypted.toString('utf8');
-}
+
 
 function ensureVaultShape(vault) {
   if (!vault.passphrases || typeof vault.passphrases !== 'object') {
@@ -439,17 +424,7 @@ function generateSshKeyPair({ privateKeyPath, keyType = 'ed25519', passphrase = 
   });
 }
 
-// Resolve a repo-relative file path and guarantee the result stays inside
-// the repository root (blocks "../" escapes and absolute paths).
-function resolveInsideRepo(repoPath, filePath) {
-  const repoRoot = path.resolve(repoPath);
-  const fullPath = path.resolve(repoRoot, filePath);
-  const relative = path.relative(repoRoot, fullPath);
-  if (relative === '' || relative.startsWith('..') || path.isAbsolute(relative)) {
-    return null;
-  }
-  return fullPath;
-}
+
 
 function normalizeSshPath(targetPath) {
   if (!targetPath || typeof targetPath !== 'string') {
@@ -689,108 +664,9 @@ function runGitCommand(repoPath, args, sshKeyPath = null, options = {}) {
   });
 }
 
-// Git quotes paths containing special characters: "path \"x\".txt"
-function unquoteGitPath(rawPath) {
-  const trimmed = rawPath.trim();
-  if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed
-      .slice(1, -1)
-      .replace(/\\([\\"tnr])/g, (m, ch) => ({ '\\': '\\', '"': '"', t: '\t', n: '\n', r: '\r' }[ch]));
-  }
-  return trimmed;
-}
 
-// Parse PORCELAIN git status
-function parsePorcelainStatus(stdout) {
-  const lines = stdout.split('\n');
-  let branch = 'HEAD';
-  let tracking = '';
-  let ahead = 0;
-  let behind = 0;
-  let detached = false;
-  let noCommits = false;
-  const staged = [];
-  const unstaged = [];
-  const conflicts = [];
 
-  for (const line of lines) {
-    if (!line) continue;
-    if (line.startsWith('## ')) {
-      // Header line, e.g. ## main...origin/main [ahead 1, behind 2]
-      const header = line.substring(3).trim();
 
-      // Edge cases: "## No commits yet on main" and "## HEAD (no branch)"
-      const noCommitsMatch = header.match(/^No commits yet on (.+)$/);
-      if (noCommitsMatch) {
-        branch = noCommitsMatch[1];
-        noCommits = true;
-        continue;
-      }
-      if (header === 'HEAD (no branch)') {
-        branch = '(detached)';
-        detached = true;
-        continue;
-      }
-
-      const parts = header.split('...');
-      branch = parts[0] || 'HEAD';
-
-      if (parts[1]) {
-        // e.g. origin/main [ahead 1, behind 2] or origin/main
-        const trackingParts = parts[1].split(' ');
-        tracking = trackingParts[0];
-
-        const trackingString = parts[1];
-        const aheadMatch = trackingString.match(/ahead (\d+)/);
-        const behindMatch = trackingString.match(/behind (\d+)/);
-        if (aheadMatch) ahead = parseInt(aheadMatch[1], 10);
-        if (behindMatch) behind = parseInt(behindMatch[1], 10);
-      }
-      continue;
-    }
-
-    const indexStatus = line[0];
-    const workTreeStatus = line[1];
-    let filePath = unquoteGitPath(line.substring(3));
-    let origPath = null;
-
-    // Renames/copies list as "old -> new"; show the new path
-    if ((indexStatus === 'R' || indexStatus === 'C') && filePath.includes(' -> ')) {
-      const arrowParts = filePath.split(' -> ');
-      origPath = unquoteGitPath(arrowParts[0]);
-      filePath = unquoteGitPath(arrowParts[1]);
-    }
-
-    // Check for conflict codes
-    // DD (both deleted), AU (added by us, deleted by them), UD (deleted by us, added by them), UA (added by them, deleted by us),
-    // DU (deleted by us, modified by them), UD (modified by us, deleted by them), UU (both modified), AA (both added)
-    const isConflict = 
-      (indexStatus === 'U' || workTreeStatus === 'U') ||
-      (indexStatus === 'A' && workTreeStatus === 'A') ||
-      (indexStatus === 'D' && workTreeStatus === 'D');
-
-    if (isConflict) {
-      conflicts.push({
-        path: filePath,
-        status: `${indexStatus}${workTreeStatus}`
-      });
-    } else {
-      // Staged status is in the first column
-      if (indexStatus !== ' ' && indexStatus !== '?') {
-        staged.push({ path: filePath, status: indexStatus, origPath });
-      }
-      // Unstaged status is in the second column
-      if (workTreeStatus !== ' ' && workTreeStatus !== '?') {
-        unstaged.push({ path: filePath, status: workTreeStatus });
-      } else if (indexStatus === '?') {
-        // Untracked files have '?' in both columns (though porcelain shows '??')
-        unstaged.push({ path: filePath, status: '?' });
-      }
-    }
-  }
-
-  return { branch, tracking, ahead, behind, detached, noCommits, staged, unstaged, conflicts };
-}
 
 function maybeOpenBrowser(url, enabled) {
   if (!enabled) {
@@ -1668,79 +1544,7 @@ app.get('/api/git/diff', async (req, res) => {
   }
 });
 
-function parseGitDiffText(diffText) {
-  const lines = diffText.split('\n');
-  const result = [];
-  let oldLineNum = 0;
-  let newLineNum = 0;
-  let inDiff = false;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    
-    if (!inDiff) {
-      if (line.startsWith('diff --git')) {
-        inDiff = true;
-      }
-      continue;
-    }
-    
-    // Skip general headers and file-mode/rename metadata lines
-    if (
-      line.startsWith('diff --git') || line.startsWith('index ') ||
-      line.startsWith('--- ') || line.startsWith('+++ ') ||
-      line.startsWith('new file mode') || line.startsWith('deleted file mode') ||
-      line.startsWith('old mode') || line.startsWith('new mode') ||
-      line.startsWith('similarity index') || line.startsWith('dissimilarity index') ||
-      line.startsWith('rename from') || line.startsWith('rename to') ||
-      line.startsWith('copy from') || line.startsWith('copy to') ||
-      line.startsWith('Binary files')
-    ) {
-      continue;
-    }
-
-    if (line.startsWith('@@')) {
-      // Parse hunk header: e.g. @@ -12,4 +12,5 @@
-      const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
-      if (match) {
-        oldLineNum = parseInt(match[1], 10);
-        newLineNum = parseInt(match[2], 10);
-        result.push({
-          type: 'hunk',
-          content: line,
-          oldLine: null,
-          newLine: null
-        });
-      }
-      continue;
-    }
-
-    if (line.startsWith('+')) {
-      result.push({
-        type: 'addition',
-        content: line.substring(1),
-        oldLine: null,
-        newLine: newLineNum++
-      });
-    } else if (line.startsWith('-')) {
-      result.push({
-        type: 'deletion',
-        content: line.substring(1),
-        oldLine: oldLineNum++,
-        newLine: null
-      });
-    } else {
-      result.push({
-        type: 'normal',
-        content: line.substring(1),
-        oldLine: oldLineNum++,
-        newLine: newLineNum++
-      });
-    }
-  }
-
-  return result;
-}
 
 function resolveRequestedSshKeyPath(sshKeyPath) {
   if (!sshKeyPath || typeof sshKeyPath !== 'string') {
@@ -1759,59 +1563,11 @@ async function getOriginRemoteUrl(repoPath) {
   }
 }
 
-function isLikelyHttpRemote(remoteUrl) {
-  if (!remoteUrl) {
-    return false;
-  }
 
-  return /^https?:\/\//i.test(remoteUrl.trim());
-}
 
-// Parses a remote URL into { protocol: 'https'|'ssh'|'other', host, repoPath }.
-// URLs with embedded credentials, custom ssh users/ports, or non-URL paths are
-// classified 'other' so the protocol toggle never rewrites something it cannot
-// round-trip safely.
-function parseRemoteUrl(remoteUrl) {
-  if (!remoteUrl || typeof remoteUrl !== 'string') {
-    return null;
-  }
 
-  const trimmed = remoteUrl.trim();
 
-  const httpsMatch = trimmed.match(/^https?:\/\/([^/@:]+)\/(.+?)(\.git)?\/?$/i);
-  if (httpsMatch) {
-    return { protocol: 'https', host: httpsMatch[1].toLowerCase(), repoPath: httpsMatch[2] };
-  }
 
-  // scp-like syntax: git@host:path
-  const scpMatch = trimmed.match(/^git@([^/:]+):(.+?)(\.git)?$/i);
-  if (scpMatch) {
-    return { protocol: 'ssh', host: scpMatch[1].toLowerCase(), repoPath: scpMatch[2] };
-  }
-
-  // ssh:// URLs: only the plain git@host form (no port) is toggle-safe
-  const sshUrlMatch = trimmed.match(/^ssh:\/\/git@([^/:]+)\/(.+?)(\.git)?\/?$/i);
-  if (sshUrlMatch) {
-    return { protocol: 'ssh', host: sshUrlMatch[1].toLowerCase(), repoPath: sshUrlMatch[2] };
-  }
-
-  return { protocol: 'other', host: null, repoPath: null };
-}
-
-function getToggledRemoteUrl(remoteUrl) {
-  const parsed = parseRemoteUrl(remoteUrl);
-  if (!parsed || !parsed.host || !parsed.repoPath) {
-    return null;
-  }
-
-  if (parsed.protocol === 'https') {
-    return `git@${parsed.host}:${parsed.repoPath}.git`;
-  }
-  if (parsed.protocol === 'ssh') {
-    return `https://${parsed.host}/${parsed.repoPath}.git`;
-  }
-  return null;
-}
 
 async function runSyncOperationWithProfile(repoPath, gitArgs, profileId, sshKeyPath) {
   const config = readConfig();
@@ -2111,61 +1867,10 @@ app.get('/api/git/conflict/file', (req, res) => {
 
     const content = fs.readFileSync(fullPath, 'utf8');
 
-    // Parse the file content into blocks (normal vs conflict)
-    const lines = content.split(/\r?\n/);
-    const cleanBlocks = [];
-    let tempBlock = [];
-    let state = 'normal'; // 'normal', 'ours', 'theirs'
-    let oursLines = [];
-    let theirsLines = [];
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.startsWith('<<<<<<<')) {
-        if (tempBlock.length > 0) {
-          cleanBlocks.push({ type: 'normal', text: tempBlock.join('\n') });
-          tempBlock = [];
-        }
-        state = 'ours';
-        oursLines = [];
-      } else if (line.startsWith('=======')) {
-        if (state === 'ours') {
-          state = 'theirs';
-          theirsLines = [];
-        } else {
-          // If ======= outside conflict, treat as normal text
-          tempBlock.push(line);
-        }
-      } else if (line.startsWith('>>>>>>>')) {
-        if (state === 'theirs') {
-          cleanBlocks.push({
-            type: 'conflict',
-            ours: oursLines.join('\n'),
-            theirs: theirsLines.join('\n'),
-            info: line.substring(7).trim()
-          });
-          state = 'normal';
-        } else {
-          tempBlock.push(line);
-        }
-      } else {
-        if (state === 'normal') {
-          tempBlock.push(line);
-        } else if (state === 'ours') {
-          oursLines.push(line);
-        } else if (state === 'theirs') {
-          theirsLines.push(line);
-        }
-      }
-    }
-    if (tempBlock.length > 0) {
-      cleanBlocks.push({ type: 'normal', text: tempBlock.join('\n') });
-    }
-
     res.json({
       success: true,
       rawContent: content,
-      blocks: cleanBlocks
+      blocks: parseConflictBlocks(content)
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2633,33 +2338,8 @@ app.get('/api/git/file/blame', async (req, res) => {
   }
   try {
     const { stdout } = await runGitCommand(repoPath, ['blame', '--date=short', filePath]);
-    
-    const lines = stdout.split('\n');
-    const blameData = [];
-    const regex = /^([\^0-9a-fA-F]+)\s+\((.*?)\s+(\d{4}-\d{2}-\d{2})\s+(\d+)\)\s?(.*)$/;
-    
-    for (const line of lines) {
-      if (!line) continue;
-      const match = line.match(regex);
-      if (match) {
-        blameData.push({
-          hash: match[1],
-          author: match[2].trim(),
-          date: match[3],
-          lineNum: parseInt(match[4], 10),
-          content: match[5]
-        });
-      } else {
-        blameData.push({
-          hash: 'unknown',
-          author: 'unknown',
-          date: '',
-          lineNum: blameData.length + 1,
-          content: line
-        });
-      }
-    }
-    res.json({ success: true, blame: blameData });
+
+    res.json({ success: true, blame: parseBlameOutput(stdout) });
   } catch (err) {
     res.status(500).json({ error: err.stderr || err.error?.message || 'Error executing git blame' });
   }
