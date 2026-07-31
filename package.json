@@ -7,9 +7,13 @@
     "start": "node server.js",
     "dev": "node server.js",
     "desktop": "electron .",
+    "test": "node scripts/check.js",
     "build": "electron-builder",
     "build-win": "electron-builder --win nsis portable",
-    "build-standalone": "electron-builder --win portable --config.directories.output=dist-standalone"
+    "build-standalone": "electron-builder --win portable --config.directories.output=dist-standalone",
+    "release": "node scripts/release.js",
+    "release:installer": "node scripts/release.js --target installer",
+    "release:portable": "node scripts/release.js --target portable"
   },
   "keywords": [
     "git",
@@ -36,9 +40,11 @@
       "preload.js",
       "server.js",
       "ssh-config.js",
+      "repo-templates.js",
       "Multi Git Logo.ico",
       "package.json",
-      "public/**/*"
+      "public/**/*",
+      "templates/**/*"
     ],
     "icon": "Multi Git Logo.ico",
     "directories": {

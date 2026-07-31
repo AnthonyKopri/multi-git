@@ -149,6 +149,11 @@ const btnOverlayOpen = document.getElementById('btn-overlay-open');
 const btnOverlayCreate = document.getElementById('btn-overlay-create');
 const btnOverlayClone = document.getElementById('btn-overlay-clone');
 const overlayRecentList = document.getElementById('overlay-recent-list');
+const overlaySshRow = document.getElementById('overlay-ssh-row');
+const overlaySshTitle = document.getElementById('overlay-ssh-title');
+const overlaySshDetail = document.getElementById('overlay-ssh-detail');
+const btnOverlaySsh = document.getElementById('btn-overlay-ssh');
+const overlaySshBtnLabel = document.getElementById('overlay-ssh-btn-label');
 
 const sshModal = document.getElementById('ssh-modal');
 const btnCloseSshModal = document.getElementById('btn-close-ssh-modal');
@@ -227,6 +232,27 @@ const cloneFolderNameInput = document.getElementById('clone-folder-name');
 const cloneProfileSelect = document.getElementById('clone-profile-select');
 const btnCancelClone = document.getElementById('btn-cancel-clone');
 const btnStartClone = document.getElementById('btn-start-clone');
+
+// New Repository Modal
+const newRepoModal = document.getElementById('new-repo-modal');
+const btnCloseNewRepoModal = document.getElementById('btn-close-new-repo-modal');
+const newRepoForm = document.getElementById('new-repo-form');
+const newRepoFeedback = document.getElementById('new-repo-feedback');
+const newRepoPathInput = document.getElementById('new-repo-path');
+const btnNewRepoBrowse = document.getElementById('btn-new-repo-browse');
+const newRepoFolderHint = document.getElementById('new-repo-folder-hint');
+const newRepoVisibility = document.getElementById('new-repo-visibility');
+const newRepoCreateRemote = document.getElementById('new-repo-create-remote');
+const newRepoGhStatus = document.getElementById('new-repo-gh-status');
+const newRepoLicense = document.getElementById('new-repo-license');
+const newRepoLicenseSummary = document.getElementById('new-repo-license-summary');
+const newRepoLicenseFields = document.getElementById('new-repo-license-fields');
+const newRepoLicenseYear = document.getElementById('new-repo-license-year');
+const newRepoLicenseHolder = document.getElementById('new-repo-license-holder');
+const newRepoGitignore = document.getElementById('new-repo-gitignore');
+const newRepoGitignoreHint = document.getElementById('new-repo-gitignore-hint');
+const btnCancelNewRepo = document.getElementById('btn-cancel-new-repo');
+const btnCreateNewRepo = document.getElementById('btn-create-new-repo');
 
 // Identity Modal
 const identityModal = document.getElementById('identity-modal');
@@ -1089,6 +1115,7 @@ function updateSshProfilesUI() {
   }
   updateVaultStatusUI();
   renderAccountRulesUI();
+  updateOverlaySshStatus();
 
   // Update Profiles Manager Modal Table
   if (sshProfiles.length === 0) {
@@ -1209,6 +1236,25 @@ function updateSshProfilesUI() {
   }
 }
 
+// The welcome overlay covers the whole window, including the header that
+// normally leads to the SSH manager. On a fresh machine with no repositories
+// that left no way to add a key, so the overlay carries its own entry point.
+function updateOverlaySshStatus() {
+  if (!overlaySshRow) return;
+
+  const count = sshProfiles.length;
+  const ready = count > 0;
+
+  overlaySshRow.dataset.sshState = ready ? 'ready' : 'empty';
+  overlaySshTitle.innerText = ready
+    ? `${count} SSH key profile${count === 1 ? '' : 's'} ready`
+    : 'No SSH keys set up yet';
+  overlaySshDetail.innerText = ready
+    ? 'Add another key or edit the existing ones before cloning over SSH.'
+    : 'Generate or add a key here first — cloning and pushing over SSH need one.';
+  overlaySshBtnLabel.innerText = ready ? 'Manage Keys' : 'Set Up Keys';
+}
+
 function updateVaultStatusUI() {
   let state = 'uninitialized';
   let title = 'Passphrase vault is not set up';
@@ -1305,31 +1351,381 @@ async function browseAndOpen() {
   }
 }
 
-// Open folder browser and initialise a new repo in the chosen folder
-async function createNewRepo() {
-  logToTerminal('Opening folder browser to choose new repo location...');
+// ----------------- NEW REPOSITORY WIZARD -----------------
+let repoTemplateCatalog = null;
+let githubCliStatus = null;
+
+function setNewRepoFeedback(message, type = 'info', hide = false) {
+  if (!newRepoFeedback) return;
+  if (hide || !message) {
+    newRepoFeedback.className = 'inline-feedback hidden';
+    newRepoFeedback.innerText = '';
+    return;
+  }
+  newRepoFeedback.className = `inline-feedback ${type}`;
+  newRepoFeedback.innerText = message;
+}
+
+function setFieldHint(element, message, tone = '') {
+  if (!element) return;
+  if (!message) {
+    element.className = 'field-hint hidden';
+    element.innerText = '';
+    return;
+  }
+  element.className = `field-hint${tone ? ` ${tone}` : ''}`;
+  element.innerText = message;
+}
+
+// The catalogue never changes while the app runs, so one fetch is enough.
+async function loadRepoTemplateCatalog() {
+  if (repoTemplateCatalog) return repoTemplateCatalog;
+
+  const res = await fetch('/api/repo-templates');
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Could not load the license and .gitignore templates.');
+  }
+  repoTemplateCatalog = data;
+  return repoTemplateCatalog;
+}
+
+function populateNewRepoTemplateSelects(catalog) {
+  const addOption = (select, value, label) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.innerText = label;
+    select.appendChild(option);
+  };
+
+  newRepoLicense.innerHTML = '';
+  addOption(newRepoLicense, 'none', 'None');
+  (catalog.licenses || []).forEach(license => addOption(newRepoLicense, license.id, license.name));
+
+  newRepoGitignore.innerHTML = '';
+  addOption(newRepoGitignore, 'none', 'None');
+  (catalog.gitignores || []).forEach(entry => addOption(newRepoGitignore, entry.id, entry.name));
+  addOption(newRepoGitignore, 'custom', 'Custom (write my own)');
+}
+
+function findCatalogLicense(id) {
+  return ((repoTemplateCatalog && repoTemplateCatalog.licenses) || []).find(license => license.id === id) || null;
+}
+
+// Pre-fills the copyright holder with a name the user already gave the app,
+// so the common case is a single glance instead of retyping.
+function defaultLicenseHolder() {
+  const activeProfile = sshProfiles.find(profile => profile.id === activeProfileId);
+  if (activeProfile && activeProfile.userName) return activeProfile.userName;
+  if (currentIdentity && currentIdentity.name) return currentIdentity.name;
+  const namedProfile = sshProfiles.find(profile => profile.userName);
+  return namedProfile ? namedProfile.userName : '';
+}
+
+function onNewRepoLicenseChanged() {
+  const license = findCatalogLicense(newRepoLicense.value);
+  setFieldHint(newRepoLicenseSummary, license ? license.summary : '');
+
+  const fields = license ? license.fields || [] : [];
+  newRepoLicenseFields.classList.toggle('hidden', fields.length === 0);
+  newRepoLicenseYear.closest('.form-group').classList.toggle('hidden', !fields.includes('year'));
+  newRepoLicenseHolder.closest('.form-group').classList.toggle('hidden', !fields.includes('holder'));
+}
+
+function onNewRepoGitignoreChanged() {
+  if (newRepoGitignore.value === 'custom') {
+    setFieldHint(
+      newRepoGitignoreHint,
+      'A starter .gitignore is created and opened in your default editor once the repository exists.'
+    );
+  } else {
+    setFieldHint(newRepoGitignoreHint, '');
+  }
+}
+
+async function refreshGithubCliStatus() {
+  setFieldHint(newRepoGhStatus, 'Looking for the GitHub CLI…');
+  try {
+    const res = await fetch('/api/github/cli-status');
+    const data = await res.json();
+    githubCliStatus = res.ok ? data : null;
+  } catch (err) {
+    githubCliStatus = null;
+  }
+  renderGithubCliStatus();
+}
+
+// Visibility can only reach GitHub through the gh CLI, so the checkbox is
+// disabled (and the reason spelled out) whenever gh cannot be used.
+function renderGithubCliStatus() {
+  if (!githubCliStatus || !githubCliStatus.available) {
+    newRepoCreateRemote.checked = false;
+    newRepoCreateRemote.disabled = true;
+    setFieldHint(
+      newRepoGhStatus,
+      'GitHub CLI (gh) was not found, so this stays a local repository. Create the remote yourself to apply the visibility.',
+      'warn'
+    );
+    return;
+  }
+
+  if (!githubCliStatus.authenticated) {
+    newRepoCreateRemote.checked = false;
+    newRepoCreateRemote.disabled = true;
+    setFieldHint(
+      newRepoGhStatus,
+      'GitHub CLI is installed but not signed in. Run "gh auth login" to create remotes from here.',
+      'warn'
+    );
+    return;
+  }
+
+  newRepoCreateRemote.disabled = false;
+  const account = githubCliStatus.account ? ` as ${githubCliStatus.account}` : '';
+  setFieldHint(
+    newRepoGhStatus,
+    `GitHub CLI is signed in${account}. Origin is switched to SSH after the repository is created.`,
+    'success'
+  );
+}
+
+async function fetchNewRepoPreflight(repoPath) {
+  const res = await fetch('/api/git/new-repo/preflight', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repoPath })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Could not inspect that folder.');
+  }
+  return data;
+}
+
+function renderNewRepoFolderHint(info) {
+  if (!info.folderExists) {
+    setFieldHint(newRepoFolderHint, 'This folder does not exist yet and will be created.');
+    return;
+  }
+  if (!info.isDirectory) {
+    setFieldHint(newRepoFolderHint, 'That path is a file, not a folder.', 'warn');
+    return;
+  }
+  if (info.isGitRepo) {
+    setFieldHint(newRepoFolderHint, 'This folder is already a Git repository — use Open Folder instead.', 'warn');
+    return;
+  }
+
+  const existing = [];
+  if (info.existingLicense) existing.push(info.existingLicense);
+  if (info.existingGitignore) existing.push('.gitignore');
+  if (existing.length > 0) {
+    setFieldHint(
+      newRepoFolderHint,
+      `This folder already has ${existing.join(' and ')}. You will be asked before anything is replaced.`,
+      'warn'
+    );
+    return;
+  }
+
+  setFieldHint(
+    newRepoFolderHint,
+    info.isEmpty ? 'Empty folder, ready to initialise.' : 'Existing files are left untouched.'
+  );
+}
+
+async function refreshNewRepoFolderHint() {
+  const repoPath = newRepoPathInput.value.trim();
+  if (!repoPath) {
+    setFieldHint(newRepoFolderHint, '');
+    return;
+  }
+
+  try {
+    renderNewRepoFolderHint(await fetchNewRepoPreflight(repoPath));
+  } catch (err) {
+    setFieldHint(newRepoFolderHint, err.message, 'warn');
+  }
+}
+
+async function browseNewRepoFolder() {
   try {
     const selectedPath = await pickFolderPath();
-    if (!selectedPath) return;  // user cancelled
+    if (!selectedPath) return;
+    newRepoPathInput.value = selectedPath;
+    await refreshNewRepoFolderHint();
+  } catch (err) {
+    logToTerminal('Could not open folder dialog: ' + err.message, 'error');
+    setNewRepoFeedback('Could not open the folder dialog: ' + err.message, 'error');
+  }
+}
 
-    const initRes = await fetch('/api/git/init', {
+async function openNewRepoModal() {
+  closeAllDropdowns();
+
+  newRepoPathInput.value = '';
+  newRepoVisibility.value = 'private';
+  newRepoCreateRemote.checked = false;
+  newRepoLicenseYear.value = String(new Date().getFullYear());
+  newRepoLicenseHolder.value = defaultLicenseHolder();
+  setNewRepoFeedback('', 'info', true);
+  setFieldHint(newRepoFolderHint, '');
+  newRepoModal.classList.remove('hidden');
+  setTimeout(() => newRepoPathInput.focus(), 30);
+
+  try {
+    populateNewRepoTemplateSelects(await loadRepoTemplateCatalog());
+    newRepoLicense.value = 'none';
+    // "General" is the sensible default when no specific stack is chosen.
+    newRepoGitignore.value = 'general';
+  } catch (err) {
+    setNewRepoFeedback(err.message, 'error');
+  }
+
+  onNewRepoLicenseChanged();
+  onNewRepoGitignoreChanged();
+  refreshGithubCliStatus();
+}
+
+async function openRepoFileInEditor(repoPath, filePath) {
+  try {
+    const res = await fetch('/api/git/open-in-editor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ repoPath: selectedPath })
+      body: JSON.stringify({ repoPath, filePath })
     });
-    const initData = await initRes.json();
+    const data = await res.json();
 
-    if (initRes.ok) {
-      logToTerminal(`Git repository initialised at: ${selectedPath}`, 'success');
-      showToast('Repository initialized.', 'success');
-      openRepository(selectedPath);
+    if (res.ok) {
+      logToTerminal(`Opened ${filePath} in your default editor.`, 'success');
+      showToast(`Opened ${filePath} for editing.`, 'info');
     } else {
-      logToTerminal(initData.error, 'error');
-      showToast('Could not initialize repository: ' + initData.error, 'error', 7000);
+      logToTerminal(data.error, 'error');
+      showToast(`Could not open ${filePath}: ${data.error}`, 'warn', 7000);
+    }
+  } catch (err) {
+    logToTerminal(`Could not open ${filePath}: ${err.message}`, 'error');
+  }
+}
+
+async function submitNewRepo() {
+  const repoPath = newRepoPathInput.value.trim();
+  if (!repoPath) {
+    setNewRepoFeedback('Choose a folder for the new repository.', 'error');
+    newRepoPathInput.focus();
+    return;
+  }
+
+  const licenseId = newRepoLicense.value;
+  const gitignoreId = newRepoGitignore.value;
+  const license = findCatalogLicense(licenseId);
+  const licenseHolder = newRepoLicenseHolder.value.trim();
+
+  if (license && (license.fields || []).includes('holder') && !licenseHolder) {
+    setNewRepoFeedback(`The ${license.name} template needs a copyright holder name.`, 'error');
+    newRepoLicenseHolder.focus();
+    return;
+  }
+
+  setButtonBusy(btnCreateNewRepo, true);
+  setNewRepoFeedback('Checking the folder…', 'info');
+
+  try {
+    // Re-inspect right before writing: the folder may have changed since the
+    // path field was last touched.
+    const info = await fetchNewRepoPreflight(repoPath);
+    if (info.folderExists && !info.isDirectory) {
+      setNewRepoFeedback('That path is a file, not a folder.', 'error');
+      return;
+    }
+    if (info.isGitRepo) {
+      setNewRepoFeedback('A Git repository already exists in this folder.', 'error');
+      return;
+    }
+
+    const visibility = newRepoVisibility.value;
+    const createRemote = newRepoCreateRemote.checked && !newRepoCreateRemote.disabled;
+    if (createRemote) {
+      const account = githubCliStatus && githubCliStatus.account ? ` under ${githubCliStatus.account}` : '';
+      const { confirmed } = await confirmDialog(
+        `Create the ${visibility} GitHub repository "${repoBaseName(repoPath)}"${account} and set it as origin?`,
+        { title: 'Create repository on GitHub?', confirmLabel: 'Create' }
+      );
+      if (!confirmed) {
+        setNewRepoFeedback('Cancelled. Nothing was created.', 'info');
+        return;
+      }
+    }
+
+    let replaceLicense = false;
+    if (license && info.existingLicense) {
+      const { confirmed } = await confirmDialog(
+        `${info.existingLicense} already exists in this folder. Replace it with the ${license.name} template?`,
+        { title: `Replace ${info.existingLicense}?`, confirmLabel: 'Replace', danger: true }
+      );
+      replaceLicense = confirmed;
+    }
+
+    let replaceGitignore = false;
+    if (gitignoreId !== 'none' && info.existingGitignore) {
+      const { confirmed } = await confirmDialog(
+        gitignoreId === 'custom'
+          ? '.gitignore already exists in this folder. Replace it with a fresh starter file?'
+          : '.gitignore already exists in this folder. Replace it with the selected template?',
+        { title: 'Replace .gitignore?', confirmLabel: 'Replace', danger: true }
+      );
+      replaceGitignore = confirmed;
+    }
+
+    setNewRepoFeedback('Creating the repository…', 'info');
+    logToTerminal(`git init "${repoPath}"`, 'cmd');
+
+    const res = await fetch('/api/git/new-repo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        repoPath,
+        visibility,
+        licenseId,
+        licenseYear: newRepoLicenseYear.value.trim(),
+        licenseHolder,
+        gitignoreId,
+        replaceLicense,
+        replaceGitignore,
+        createRemote,
+        useSshRemote: true
+      })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      logToTerminal(data.error, 'error');
+      setNewRepoFeedback(data.error || 'Could not create the repository.', 'error');
+      return;
+    }
+
+    (data.steps || []).forEach(step => logToTerminal(step, 'success'));
+    (data.warnings || []).forEach(warning => logToTerminal(warning, 'error'));
+    if (data.remote && data.remote.remoteUrl) {
+      logToTerminal(`origin → ${data.remote.remoteUrl}`, 'success');
+    }
+
+    newRepoModal.classList.add('hidden');
+    showToast(`Repository created at ${repoBaseName(data.repoPath)}.`, 'success');
+    if ((data.warnings || []).length > 0) {
+      showToast(data.warnings[0], 'warn', 8000);
+    }
+
+    await openRepository(data.repoPath);
+
+    if (data.openCustomGitignore) {
+      await openRepoFileInEditor(data.repoPath, '.gitignore');
     }
   } catch (err) {
     logToTerminal('Error creating repository: ' + err.message, 'error');
-    showToast('Error creating repository: ' + err.message, 'error');
+    setNewRepoFeedback('Error creating repository: ' + err.message, 'error');
+  } finally {
+    setButtonBusy(btnCreateNewRepo, false);
   }
 }
 
@@ -3495,7 +3891,9 @@ async function saveConflictResolution() {
 }
 
 // ----------------- SSH PROFILES MANAGER -----------------
-function openSshModal() {
+// options.showForm ('existing' | 'generate') opens straight into that form,
+// which is what the welcome overlay wants when there is no key at all yet.
+function openSshModal(options = {}) {
   resetSshProfileForm();
   sshGenerateLabel.value = '';
   sshGenerateKeyName.value = '';
@@ -3512,6 +3910,10 @@ function openSshModal() {
   sshModal.classList.remove('hidden');
   ensureSshManagerInteractive();
   refreshVaultStatus();
+
+  if (options.showForm) {
+    showSshKeyForm(options.showForm);
+  }
 }
 
 function hideSshKeyForms() {
@@ -4825,6 +5227,11 @@ function closeOpenModalOnEscape() {
     return;
   }
 
+  if (newRepoModal && !newRepoModal.classList.contains('hidden')) {
+    newRepoModal.classList.add('hidden');
+    return;
+  }
+
   if (cloneModal && !cloneModal.classList.contains('hidden')) {
     cloneModal.classList.add('hidden');
     return;
@@ -4912,11 +5319,34 @@ function setupListeners() {
 
   // Open / New / Clone repo (header dropdown + welcome overlay)
   btnOpenRepo.onclick = () => { closeAllDropdowns(); browseAndOpen(); };
-  btnCreateRepo.onclick = () => { closeAllDropdowns(); createNewRepo(); };
+  btnCreateRepo.onclick = () => { closeAllDropdowns(); openNewRepoModal(); };
   btnCloneRepo.onclick = openCloneModal;
   btnOverlayOpen.onclick = browseAndOpen;
-  if (btnOverlayCreate) btnOverlayCreate.onclick = createNewRepo;
+  if (btnOverlayCreate) btnOverlayCreate.onclick = openNewRepoModal;
   if (btnOverlayClone) btnOverlayClone.onclick = openCloneModal;
+  if (btnOverlaySsh) {
+    btnOverlaySsh.onclick = () => {
+      // With no key at all, drop the user straight into the generator.
+      openSshModal(sshProfiles.length === 0 ? { showForm: 'generate' } : {});
+    };
+  }
+
+  // New Repository Modal
+  btnCloseNewRepoModal.onclick = () => newRepoModal.classList.add('hidden');
+  btnCancelNewRepo.onclick = () => newRepoModal.classList.add('hidden');
+  newRepoModal.onclick = (e) => {
+    if (e.target === newRepoModal) {
+      newRepoModal.classList.add('hidden');
+    }
+  };
+  newRepoForm.onsubmit = (e) => {
+    e.preventDefault();
+    submitNewRepo();
+  };
+  btnNewRepoBrowse.onclick = browseNewRepoFolder;
+  newRepoPathInput.onchange = refreshNewRepoFolderHint;
+  newRepoLicense.onchange = onNewRepoLicenseChanged;
+  newRepoGitignore.onchange = onNewRepoGitignoreChanged;
 
   // SSH profile dropdown extras
   btnManageSsh.onclick = () => { closeAllDropdowns(); openSshModal(); };

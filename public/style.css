@@ -1119,6 +1119,50 @@ select {
   margin-bottom: 30px;
 }
 
+.overlay-ssh-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 24px;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+.overlay-ssh-row[data-ssh-state="ready"] {
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+.overlay-ssh-icon {
+  color: var(--color-warning);
+  line-height: 1;
+}
+.overlay-ssh-row[data-ssh-state="ready"] .overlay-ssh-icon {
+  color: var(--color-success);
+}
+.overlay-ssh-text {
+  flex: 1;
+  min-width: 0;
+}
+/* Scoped to .overlay-card so these win over its generic paragraph styling. */
+.overlay-card .overlay-ssh-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+.overlay-card .overlay-ssh-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+.overlay-ssh-row .btn {
+  flex-shrink: 0;
+}
+
 .recent-list-section {
   width: 100%;
   text-align: left;
@@ -2455,6 +2499,20 @@ select {
 }
 #confirm-checkbox-row {
   margin-bottom: 16px;
+}
+
+/* Short explanatory line under a form control. */
+.field-hint {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+.field-hint.warn {
+  color: var(--color-warning);
+}
+.field-hint.success {
+  color: var(--color-success);
 }
 
 .input-with-button {

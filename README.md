@@ -14,6 +14,7 @@ Its defining feature is account-aware SSH: each repository can use its own key a
 ## What You Can Do
 
 - **Work across repositories quickly:** open, create, clone, remember, switch, and remove repositories from the recent list.
+- **Set up a new repository in one dialog:** choose visibility, pick a license template and fill in its placeholders, and add a `.gitignore` from a stack template, a general one, or your own.
 - **Stage and commit with confidence:** click files to stage or unstage, inspect line-by-line diffs, discard safely, amend commits, and use Conventional Commit shortcuts.
 - **See the shape of the project:** browse an all-branches commit graph, inspect commits and changed files, follow file history, and view Git blame.
 - **Sync without the command line:** fetch, pull, push, see ahead/behind counts, switch a compatible origin between HTTPS and SSH, and retry rejected pushes with `--force-with-lease`.
@@ -127,6 +128,17 @@ The application is organized around one active repository:
 
 Use the repository dropdown to reopen recent projects, open another folder, create a repository, clone, or remove an entry from recents. Removing an entry only forgets it in Multi-Git; it does not delete the repository.
 
+### Creating a new repository
+
+**New Repo** opens a setup dialog instead of only running `git init`:
+
+- **Repository folder.** Pick or type a path. A folder that does not exist yet is created. The hint below the field reports whether the folder is empty, already a Git repository, or already contains a `LICENSE` or `.gitignore`.
+- **Visibility.** Choose **Private** or **Public**. Multi-Git holds no API token, so visibility only reaches GitHub through the GitHub CLI. When `gh` is installed and signed in, tick **Create it on GitHub with this visibility** to have `gh repo create` make the remote and set `origin`; the remote is then switched to SSH to match how this app authenticates. Without `gh`, the repository is created locally and the dialog says so.
+- **License.** Pick from MIT, Apache 2.0, GPL/AGPL/LGPL 3.0, MPL 2.0, BSD 2- and 3-Clause, ISC, or the Unlicense. Templates whose text carries placeholders show **Copyright year** and **Copyright holder** fields, pre-filled from the active profile or repository identity. A `LICENSE`, `LICENCE`, or `COPYING` file that already exists is never overwritten without a confirmation.
+- **.gitignore.** Choose a stack template (Node, Python, Rust, Go, Java, C/C++, .NET, Unity, Unreal, Godot), the **General** default that covers OS files, editors, and build output, or **Custom**, which writes a commented starter file and opens it in your default editor. An existing `.gitignore` also asks before being replaced.
+
+Every file the dialog writes, and anything it decided to keep, is reported in the Terminal Log.
+
 ### Staging, diffs, and commits
 
 **Staging Area** is optimized for the daily edit-review-commit loop.
@@ -235,6 +247,8 @@ Authentication and authorship are related in the UI but distinct in Git:
 
 An SSH profile can carry both. When you switch to a profile whose identity differs from the repository, Multi-Git offers to update the repository-local Git identity. It also warns before committing with a mismatched identity or pushing with an account that conflicts with an Auto-Select Rule.
 
+On a machine with no repositories yet, the welcome screen carries its own **Set Up Keys** button. It reports how many key profiles exist and opens the SSH manager, going straight to the generator when there are none, so a first key can be created before the first clone.
+
 #### Add an existing key
 
 Open **SSH Key → Manage SSH Profiles → Add Existing Key**, then enter:
@@ -342,6 +356,10 @@ multi-git/
 |-- preload.js          # Minimal folder-picker and log-window bridge
 |-- server.js           # Local API, Git runner, config, vault, and Safety Net
 |-- ssh-config.js       # Managed ~/.ssh/config block
+|-- repo-templates.js   # License and .gitignore catalogue and rendering
+|-- templates/
+|   |-- licenses/       # License texts from choosealicense.com
+|   `-- gitignore/      # Ignore templates from github/gitignore
 |-- public/
 |   |-- index.html      # Application shell and dialogs
 |   |-- app.js          # Client-side state, rendering, and workflows
@@ -362,11 +380,17 @@ The UI talks to a localhost JSON API. Repository-scoped requests carry the selec
 | `npm start` | Start browser mode on `http://localhost:3000` (or `PORT`). |
 | `npm run dev` | Alias for `npm start`. |
 | `npm run desktop` | Start the Electron desktop app with a dynamic local port. |
+| `npm test` | Run the static pre-release checks in `scripts/check.js`. |
+| `npm run release` | Bump the version and build, prompting for both. |
+| `npm run release:installer` | Prompt for a version, then build only the installer. |
+| `npm run release:portable` | Prompt for a version, then build only the portable executable. |
 | `npm run build` | Build targets configured in `package.json`. |
 | `npm run build-win` | Build Windows NSIS installer and portable executable. |
 | `npm run build-standalone` | Build only the portable Windows target into `dist-standalone`. |
 
-There is no frontend compilation step: Express serves the JavaScript, HTML, and CSS directly from `public/`. There is also no dedicated automated test script yet, so test Git changes against disposable repositories.
+There is no frontend compilation step: Express serves the JavaScript, HTML, and CSS directly from `public/`. There is no unit-test suite either; `npm test` runs fast static checks, so exercise Git changes against disposable repositories as well.
+
+See [BUILDING.md](BUILDING.md) for the full build, check, and release procedure, including both Windows artifacts and how to bump the version.
 
 ## Local API Examples
 
@@ -455,7 +479,7 @@ Please read the [contributing guidelines](CONTRIBUTING.md) before opening a pull
 
 Before opening a pull request:
 
-1. Run the application locally.
+1. Run the application locally and run `npm test` (see [BUILDING.md](BUILDING.md)).
 2. Exercise the changed workflow against a disposable repository, including error and conflict paths.
 3. Do not commit generated builds, local configuration, keys, passphrases, or test repositories.
 4. Keep the change focused and explain its user-visible behavior.

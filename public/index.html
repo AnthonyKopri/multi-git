@@ -558,6 +558,20 @@
         </button>
       </div>
 
+      <!-- SSH keys are needed before the first clone, so the setup entry point
+           has to be reachable while no repository is open yet. -->
+      <div id="overlay-ssh-row" class="overlay-ssh-row" data-ssh-state="empty">
+        <span class="material-symbols-outlined overlay-ssh-icon" aria-hidden="true">vpn_key</span>
+        <div class="overlay-ssh-text">
+          <p id="overlay-ssh-title" class="overlay-ssh-title">No SSH keys set up yet</p>
+          <p id="overlay-ssh-detail" class="overlay-ssh-detail">Add or generate a key first so cloning and pushing over SSH work.</p>
+        </div>
+        <button id="btn-overlay-ssh" class="btn btn-primary btn-sm" type="button">
+          <span class="material-symbols-outlined" style="font-size: 16px;">key</span>
+          <span id="overlay-ssh-btn-label">Set Up Keys</span>
+        </button>
+      </div>
+
       <div class="recent-list-section">
         <h3>Recent Repositories</h3>
         <ul id="overlay-recent-list" class="recent-ul">
@@ -928,6 +942,87 @@
             <button type="submit" id="btn-start-clone" class="btn btn-primary">
               <span class="material-symbols-outlined">cloud_download</span>
               <span>Clone</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW REPOSITORY MODAL -->
+  <div id="new-repo-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>New Repository</h2>
+        <button id="btn-close-new-repo-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Pick a folder, then choose what Multi-Git should put in it before your first commit.</p>
+        <div id="new-repo-feedback" class="inline-feedback hidden"></div>
+
+        <form id="new-repo-form" class="modal-form">
+          <div class="form-group">
+            <label for="new-repo-path">Repository folder</label>
+            <div class="input-with-button">
+              <input type="text" id="new-repo-path" placeholder="Select or type a folder..." required autocomplete="off">
+              <button type="button" id="btn-new-repo-browse" class="btn btn-secondary btn-sm">Browse…</button>
+            </div>
+            <p id="new-repo-folder-hint" class="field-hint hidden"></p>
+          </div>
+
+          <div class="form-group">
+            <label for="new-repo-visibility">Visibility</label>
+            <div class="select-wrapper">
+              <select id="new-repo-visibility">
+                <option value="private" selected>Private</option>
+                <option value="public">Public</option>
+              </select>
+            </div>
+            <div class="keep-password-row">
+              <input type="checkbox" id="new-repo-create-remote">
+              <label for="new-repo-create-remote">Create it on GitHub with this visibility</label>
+            </div>
+            <p id="new-repo-gh-status" class="field-hint">Looking for the GitHub CLI…</p>
+          </div>
+
+          <div class="form-group">
+            <label for="new-repo-license">License</label>
+            <div class="select-wrapper">
+              <select id="new-repo-license">
+                <option value="none" selected>None</option>
+              </select>
+            </div>
+            <p id="new-repo-license-summary" class="field-hint hidden"></p>
+          </div>
+
+          <div id="new-repo-license-fields" class="form-row hidden">
+            <div class="form-group">
+              <label for="new-repo-license-year">Copyright year</label>
+              <input type="text" id="new-repo-license-year" placeholder="2026" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="new-repo-license-holder">Copyright holder</label>
+              <input type="text" id="new-repo-license-holder" placeholder="e.g. Jane Doe" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="new-repo-gitignore">.gitignore</label>
+            <div class="select-wrapper">
+              <select id="new-repo-gitignore">
+                <option value="none" selected>None</option>
+              </select>
+            </div>
+            <p id="new-repo-gitignore-hint" class="field-hint hidden"></p>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-new-repo" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-create-new-repo" class="btn btn-primary">
+              <span class="material-symbols-outlined">add_box</span>
+              <span>Create Repository</span>
             </button>
           </div>
         </form>

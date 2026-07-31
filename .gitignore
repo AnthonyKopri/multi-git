@@ -37,17 +37,32 @@ report.*.json
 .multi-git-client-secrets.json
 *.pem
 *.key
+# Private keys in every format this project can plausibly meet: OpenSSH key
+# pairs (including the id_<type>_<label> names Multi-Git's generator creates),
+# PuTTY keys, and the PKCS#12 bundles used for Windows code signing.
 id_rsa*
 id_ed25519*
+id_ecdsa*
+id_dsa*
+*.ppk
+*.pfx
+*.p12
 known_hosts*
 
 # Local scratch repositories and generated test workspaces
+# CONTRIBUTING.md asks contributors to test against disposable repositories,
+# so the usual names for those are ignored up front.
 test-repo/
 test-repo2/
+test-repos/
+sandbox/
+scratch/
 tmp/
 temp/
 .tmp/
 .temp/
+# The app keeps discarded files under the OS temp directory, not in the
+# repository; this stays as a guard in case that root is ever relocated.
 multi-git-trash/
 
 # Tool, assistant, and editor-local configuration
@@ -55,12 +70,20 @@ multi-git-trash/
 .claude/
 .vscode/
 .idea/
+.vs/
 *.code-workspace
+*.swp
+*.swo
+*~
 .gitold/
 
 # OS and filesystem noise
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
