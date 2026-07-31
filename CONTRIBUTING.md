@@ -52,21 +52,22 @@ Then open `http://localhost:3000`.
 
 | Path | Purpose |
 | --- | --- |
-| `main.js` | Electron lifecycle, windows, and backend startup. |
-| `preload.js` | Restricted bridge between Electron and the web UI. |
-| `server.js` | Local Express API, Git execution, configuration, vault, and Safety Net. |
-| `ssh-config.js` | Management of Multi-Git's block in `~/.ssh/config`. |
 | `src/shared/` | Types describing the API payloads, imported by both sides. |
-| `src/server/` | TypeScript server modules: Git parsers, argument guards, path containment, vault encryption, and the template catalogue. |
+| `src/main/` | Electron lifecycle, windows, and the restricted preload bridge. |
+| `src/server/` | Local API, Git execution, configuration, vault, Safety Net, and the managed `~/.ssh/config` block. |
+| `src/renderer/` | UI: state store, typed API client, DOM helpers, and one folder per feature. |
 | `templates/` | Template bodies, kept as verbatim copies of their upstream sources. |
-| `tests/` | Vitest suite: unit tests plus the pre-release checks. |
+| `tests/` | Vitest suite: unit tests, API integration tests, and the pre-release checks. |
 | `scripts/` | The esbuild build, the release driver, and the packaging after-pack step. |
 | `public/index.html` | Application structure and dialogs. |
-| `public/app.js` | Client-side state, rendering, and workflows. |
 | `public/style.css` | Application styling. |
 | `public/logs.html` | Separate live Terminal Log window. |
+| `public/logs.js` | Terminal Log window script. |
+| `out/` | Compiled output. Generated, and never committed. |
 
-The frontend uses plain JavaScript, HTML, and CSS without a compilation step. Please follow the existing structure and naming patterns unless the contribution specifically proposes changing them.
+The application is TypeScript, compiled with esbuild into `out/`. `npm start` and `npm run desktop` compile first, so the sources are always current. `public/` holds only the HTML, CSS, and the log-window script, which are copied alongside the bundle.
+
+Please follow the existing structure and naming patterns unless the contribution specifically proposes changing them.
 
 ## Coding Guidelines
 
