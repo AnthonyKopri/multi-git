@@ -56,6 +56,9 @@ Then open `http://localhost:3000`.
 | `preload.js` | Restricted bridge between Electron and the web UI. |
 | `server.js` | Local Express API, Git execution, configuration, vault, and Safety Net. |
 | `ssh-config.js` | Management of Multi-Git's block in `~/.ssh/config`. |
+| `repo-templates.js` | License and `.gitignore` catalogue for the new repository dialog. |
+| `templates/` | Template bodies, kept as verbatim copies of their upstream sources. |
+| `scripts/` | Pre-release checks, the release driver, and the packaging after-pack step. |
 | `public/index.html` | Application structure and dialogs. |
 | `public/app.js` | Client-side state, rendering, and workflows. |
 | `public/style.css` | Application styling. |
@@ -86,7 +89,7 @@ docs: clarify portable installation
 
 ## Testing Changes
 
-The project does not currently have an automated test suite. Until one is added, every pull request should document the manual checks that were performed.
+The project does not currently have a unit-test suite. `npm test` runs the static checks in `scripts/check.js` — every shipped file parses, every license and `.gitignore` template renders, every element id the client looks up exists in the HTML, and the packaging file list is complete. Run it before opening a pull request. Beyond that, every pull request should document the manual checks that were performed.
 
 Use a disposable repository and test the normal path plus relevant failure paths. Depending on the change, this may include:
 
@@ -107,13 +110,22 @@ Never test destructive operations against a repository containing work you canno
 Available validation and build commands include:
 
 ```bash
-npm run desktop
-npm start
-npm run build-win
-npm run build-standalone
+npm test
 ```
 
-Generated build output must not be committed.
+```bash
+npm run desktop
+```
+
+```bash
+npm start
+```
+
+```bash
+npm run release
+```
+
+Generated build output must not be committed. [BUILDING.md](BUILDING.md) documents the full check, build, and release procedure for both the installer and the portable executable, including how to bump the version.
 
 ## Opening a Pull Request
 

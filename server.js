@@ -6,6 +6,7 @@ const path = require('path');
 const os = require('os');
 
 const sshConfig = require('./ssh-config.js');
+const repoTemplates = require('./repo-templates.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -510,6 +511,81 @@ function openPathInFileExplorer(targetPath) {
 
     child.unref();
     resolve(true);
+  });
+}
+
+// Hands a file to whatever application the user's desktop has associated with
+// it. On Windows explorer.exe resolves the association (and shows the
+// "Open with" picker when there is none), which is what extension-less files
+// like .gitignore normally hit.
+function openPathInDefaultApp(targetPath) {
+  return new Promise((resolve, reject) => {
+    let command = 'xdg-open';
+    let args = [targetPath];
+
+    if (os.platform() === 'win32') {
+      command = 'explorer';
+    } else if (os.platform() === 'darwin') {
+      // -t routes through the default *text* editor, so a file with no
+      // extension does not land in an unrelated app.
+      command = 'open';
+      args = ['-t', targetPath];
+    }
+
+    const child = spawn(command, args, {
+      shell: false,
+      windowsHide: true,
+      detached: true,
+      stdio: 'ignore'
+    });
+
+    child.on('error', (err) => {
+      reject(new Error(`Failed to open file: ${err.message}`));
+    });
+
+    child.unref();
+    resolve(true);
+  });
+}
+
+// Runs a non-git executable and always resolves, so callers can treat a
+// missing binary (GitHub CLI, for example) as a soft failure.
+function runExternalCommand(command, args, options = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd || undefined,
+      env: { ...process.env, ...(options.envOverrides || {}) },
+      shell: false,
+      windowsHide: true
+    });
+
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, options.timeoutMs || 60000);
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      resolve({ ok: false, code: null, stdout, stderr, error: err.message });
+    });
+
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (timedOut) {
+        return resolve({ ok: false, code, stdout, stderr, error: `${command} timed out` });
+      }
+      resolve({ ok: code === 0, code, stdout, stderr, error: null });
+    });
   });
 }
 
@@ -2195,6 +2271,314 @@ app.post('/api/git/init', async (req, res) => {
     res.json({ success: true, message: 'Git repository initialized successfully' });
   } catch (err) {
     res.status(500).json({ error: err.stderr || err.error?.message || 'Error initializing Git repository' });
+  }
+});
+
+// ----------------- NEW REPOSITORY WIZARD API -----------------
+
+// Any of these names counts as "this folder already has a license", so the
+// wizard asks before overwriting one the user wrote themselves.
+const LICENSE_FILE_PATTERN = /^(LICENSE|LICENCE|COPYING)(\.[A-Za-z0-9]+)?$/i;
+const GITHUB_REPO_NAME_PATTERN = /^[A-Za-z0-9._-]{1,100}$/;
+const LICENSE_YEAR_PATTERN = /^[0-9]{4}(\s*-\s*[0-9]{4})?$/;
+
+function findExistingLicenseFile(folder) {
+  try {
+    const entry = fs
+      .readdirSync(folder, { withFileTypes: true })
+      .find((item) => item.isFile() && LICENSE_FILE_PATTERN.test(item.name));
+    return entry ? entry.name : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function inspectNewRepoTarget(repoPath) {
+  const resolved = path.resolve(repoPath);
+  const exists = fs.existsSync(resolved);
+  const isDirectory = exists && fs.statSync(resolved).isDirectory();
+
+  if (!exists || !isDirectory) {
+    return {
+      repoPath: resolved,
+      folderExists: exists,
+      isDirectory,
+      isGitRepo: false,
+      isEmpty: !exists,
+      existingLicense: null,
+      existingGitignore: false
+    };
+  }
+
+  return {
+    repoPath: resolved,
+    folderExists: true,
+    isDirectory: true,
+    isGitRepo: fs.existsSync(path.join(resolved, '.git')),
+    isEmpty: fs.readdirSync(resolved).length === 0,
+    existingLicense: findExistingLicenseFile(resolved),
+    existingGitignore: fs.existsSync(path.join(resolved, '.gitignore'))
+  };
+}
+
+// The GitHub CLI is the only way this app can create a remote repository:
+// there is no API token anywhere in Multi-Git, and gh already holds the
+// user's own credentials.
+async function detectGithubCli() {
+  const version = await runExternalCommand('gh', ['--version'], { timeoutMs: 15000 });
+  if (!version.ok) {
+    return { available: false, authenticated: false, account: null, version: null };
+  }
+
+  const auth = await runExternalCommand('gh', ['auth', 'status'], {
+    timeoutMs: 20000,
+    envOverrides: { NO_COLOR: '1' }
+  });
+
+  // gh has moved this output between stdout and stderr across versions.
+  const accountMatch = `${auth.stdout}\n${auth.stderr}`.match(/account\s+([A-Za-z0-9-]+)/i);
+
+  return {
+    available: true,
+    authenticated: auth.ok,
+    account: auth.ok && accountMatch ? accountMatch[1] : null,
+    version: (version.stdout.split('\n')[0] || '').trim()
+  };
+}
+
+// Creates the GitHub repository and wires up origin. Never throws: a remote
+// failure must not invalidate the local repository that already exists.
+async function createGithubRepository({ repoPath, visibility, useSshRemote }) {
+  const name = path.basename(repoPath);
+  if (!GITHUB_REPO_NAME_PATTERN.test(name)) {
+    return {
+      error: `"${name}" is not a usable GitHub repository name, so no remote was created. Rename the folder or add the remote by hand.`
+    };
+  }
+
+  const cli = await detectGithubCli();
+  if (!cli.available) {
+    return { error: 'GitHub CLI (gh) was not found on PATH, so the repository stayed local only.' };
+  }
+  if (!cli.authenticated) {
+    return { error: 'GitHub CLI is installed but not signed in. Run "gh auth login", then create the remote.' };
+  }
+
+  const created = await runExternalCommand(
+    'gh',
+    ['repo', 'create', name, `--${visibility}`, '--source', repoPath, '--remote', 'origin'],
+    { cwd: repoPath, timeoutMs: 120000, envOverrides: { NO_COLOR: '1', GH_PROMPT_DISABLED: '1' } }
+  );
+
+  if (!created.ok) {
+    const detail = (created.stderr || created.error || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .pop();
+    return { error: `Could not create the GitHub repository${detail ? `: ${detail}` : '.'} The local repository is ready.` };
+  }
+
+  // gh follows its own git_protocol setting, which defaults to https. This
+  // app authenticates with SSH keys, so line the remote up with that.
+  let remoteUrl = await getOriginRemoteUrl(repoPath);
+  let convertedToSsh = false;
+  if (useSshRemote && isLikelyHttpRemote(remoteUrl)) {
+    const sshUrl = getToggledRemoteUrl(remoteUrl);
+    if (sshUrl) {
+      try {
+        await runGitCommand(repoPath, ['remote', 'set-url', 'origin', sshUrl]);
+        remoteUrl = sshUrl;
+        convertedToSsh = true;
+      } catch (err) {
+        // Keeping the https remote is harmless; the header toggle can switch it.
+      }
+    }
+  }
+
+  const htmlUrl = created.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^https?:\/\//i.test(line))
+    .pop() || null;
+
+  return { name, visibility, account: cli.account, remoteUrl, htmlUrl, convertedToSsh };
+}
+
+app.get('/api/repo-templates', (req, res) => {
+  res.json({
+    success: true,
+    licenses: repoTemplates.listLicenses(),
+    gitignores: repoTemplates.listGitignores()
+  });
+});
+
+app.get('/api/github/cli-status', async (req, res) => {
+  try {
+    res.json({ success: true, ...(await detectGithubCli()) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to inspect the GitHub CLI.' });
+  }
+});
+
+// Reports what is already in the target folder so the UI can ask about
+// replacing a LICENSE or .gitignore before anything is written.
+app.post('/api/git/new-repo/preflight', (req, res) => {
+  const { repoPath } = req.body || {};
+  if (!repoPath || typeof repoPath !== 'string') {
+    return res.status(400).json({ error: 'Repository folder path is required' });
+  }
+
+  try {
+    res.json({ success: true, ...inspectNewRepoTarget(repoPath) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Could not inspect the folder.' });
+  }
+});
+
+app.post('/api/git/new-repo', async (req, res) => {
+  const {
+    repoPath,
+    visibility = 'private',
+    licenseId = 'none',
+    licenseYear = '',
+    licenseHolder = '',
+    gitignoreId = 'none',
+    replaceLicense = false,
+    replaceGitignore = false,
+    createRemote = false,
+    useSshRemote = true
+  } = req.body || {};
+
+  if (!repoPath || typeof repoPath !== 'string') {
+    return res.status(400).json({ error: 'Repository folder path is required' });
+  }
+  if (visibility !== 'private' && visibility !== 'public') {
+    return res.status(400).json({ error: 'Visibility must be either private or public.' });
+  }
+
+  const license = licenseId && licenseId !== 'none' ? repoTemplates.findLicense(licenseId) : null;
+  if (licenseId && licenseId !== 'none' && !license) {
+    return res.status(400).json({ error: `Unknown license template: ${licenseId}` });
+  }
+
+  const wantsGitignore = Boolean(gitignoreId) && gitignoreId !== 'none';
+  const isCustomGitignore = gitignoreId === 'custom';
+  if (wantsGitignore && !isCustomGitignore && !repoTemplates.findGitignore(gitignoreId)) {
+    return res.status(400).json({ error: `Unknown .gitignore template: ${gitignoreId}` });
+  }
+
+  const holder = repoTemplates.sanitizePlaceholderValue(licenseHolder);
+  const year = repoTemplates.sanitizePlaceholderValue(licenseYear) || String(new Date().getFullYear());
+  if (license && license.tokens.holder && !holder) {
+    return res.status(400).json({ error: `The ${license.name} template needs a copyright holder name.` });
+  }
+  if (license && license.tokens.year && !LICENSE_YEAR_PATTERN.test(year)) {
+    return res.status(400).json({ error: 'Copyright year must be a four digit year, optionally a range such as 2023-2026.' });
+  }
+
+  const resolved = path.resolve(repoPath);
+  const steps = [];
+  const warnings = [];
+
+  try {
+    if (fs.existsSync(resolved) && !fs.statSync(resolved).isDirectory()) {
+      return res.status(400).json({ error: 'The selected path is a file, not a folder.' });
+    }
+    if (fs.existsSync(path.join(resolved, '.git'))) {
+      return res.status(400).json({ error: 'A Git repository already exists in this folder' });
+    }
+
+    if (!fs.existsSync(resolved)) {
+      fs.mkdirSync(resolved, { recursive: true });
+      steps.push(`Created folder ${resolved}`);
+    }
+
+    await runGitCommand(resolved, ['init']);
+    steps.push('Initialised an empty Git repository');
+
+    let licenseFile = null;
+    if (license) {
+      const existing = findExistingLicenseFile(resolved);
+      if (existing && !replaceLicense) {
+        warnings.push(`Kept the existing ${existing}; the ${license.name} template was not written.`);
+      } else {
+        licenseFile = existing || 'LICENSE';
+        fs.writeFileSync(
+          path.join(resolved, licenseFile),
+          repoTemplates.renderLicense(license.id, { year, holder }),
+          'utf8'
+        );
+        steps.push(`${existing ? 'Replaced' : 'Added'} ${licenseFile} (${license.name})`);
+      }
+    }
+
+    let gitignoreWritten = false;
+    if (wantsGitignore) {
+      const gitignorePath = path.join(resolved, '.gitignore');
+      const existed = fs.existsSync(gitignorePath);
+      if (existed && !replaceGitignore) {
+        warnings.push(isCustomGitignore
+          ? 'Kept the existing .gitignore and opened it for editing.'
+          : 'Kept the existing .gitignore; the selected template was not written.');
+      } else {
+        fs.writeFileSync(gitignorePath, repoTemplates.renderGitignore(gitignoreId), 'utf8');
+        gitignoreWritten = true;
+        steps.push(`${existed ? 'Replaced' : 'Added'} .gitignore`);
+      }
+    }
+
+    let remote = null;
+    if (createRemote) {
+      const result = await createGithubRepository({ repoPath: resolved, visibility, useSshRemote });
+      if (result.error) {
+        warnings.push(result.error);
+      } else {
+        remote = result;
+        steps.push(`Created ${visibility} GitHub repository ${result.name} and set origin`);
+      }
+    }
+
+    res.json({
+      success: true,
+      repoPath: resolved,
+      visibility,
+      licenseFile,
+      gitignoreWritten,
+      // Custom always ends in the editor, including when an existing
+      // .gitignore was kept: the point of the choice is to edit it.
+      openCustomGitignore: isCustomGitignore,
+      remote,
+      steps,
+      warnings
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.stderr || err.error?.message || err.message || 'Error creating the repository'
+    });
+  }
+});
+
+// Opens a file from inside the repository in the user's default application.
+app.post('/api/git/open-in-editor', async (req, res) => {
+  const { repoPath, filePath } = req.body || {};
+  if (!repoPath || !filePath || typeof filePath !== 'string') {
+    return res.status(400).json({ error: 'Repository path and file path are required' });
+  }
+
+  const fullPath = resolveInsideRepo(repoPath, filePath);
+  if (!fullPath || /[\r\n"]/.test(filePath)) {
+    return res.status(403).json({ error: 'Invalid repository file path' });
+  }
+  if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+
+  try {
+    await openPathInDefaultApp(fullPath);
+    res.json({ success: true, openedPath: fullPath });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to open the file.' });
   }
 });
 
