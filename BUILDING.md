@@ -272,6 +272,17 @@ at files you add later.
 Run `npm run compile` before packaging by hand; every `build*` and `release`
 script already does it.
 
+### `Application entry file "out\node\main\main.js" ... was not found in this archive`
+
+Nothing was compiled before packaging, so electron-builder produced an asar
+with no entry point. `out/` is gitignored, so a fresh clone or a checkout in a
+different working tree has none of it, and the failure looks like a corrupt
+archive rather than a missing build step.
+
+Every packaging path compiles first, so this should not happen. If it does,
+run `npm run compile` and check that `out/node/main/main.js` exists before
+packaging again.
+
 ### Version numbers disagree
 
 If `package.json` and `package-lock.json` drift apart, set both from one place:

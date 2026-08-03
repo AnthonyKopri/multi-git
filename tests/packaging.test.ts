@@ -56,6 +56,30 @@ describe('packaging', () => {
     }
   });
 
+  it('compiles before packaging in every path that packages', () => {
+    // out/ is gitignored, so a fresh checkout has none of it. Any script that
+    // reaches electron-builder without compiling first packages an asar with
+    // no entry point, which only fails at package time and never in
+    // development, where a stale out/ is usually lying around.
+    const scripts = manifest.scripts ?? {};
+    const releaseDriver = fs.readFileSync(fromAppRoot('scripts', 'release.js'), 'utf8');
+
+    for (const [name, command] of Object.entries(scripts)) {
+      if (!command.includes('electron-builder')) {
+        continue;
+      }
+      expect(command, `npm script "${name}" packages without compiling first`).toContain(
+        'compile'
+      );
+    }
+
+    // release.js spawns electron-builder itself, so it has to compile itself.
+    expect(
+      releaseDriver.includes('runCompile'),
+      'scripts/release.js invokes electron-builder without compiling first'
+    ).toBe(true);
+  });
+
   it('ships the static assets the renderer loads', () => {
     const servesFromPublic = packaged.includes('public/**/*');
     const servesFromOut = packaged.some((glob) => glob.startsWith('out/'));
