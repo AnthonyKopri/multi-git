@@ -74,7 +74,7 @@ function buildRow(node: TreeNode, depth: number): HTMLDivElement {
 
   const glyph = icon(isDirectory ? 'folder' : 'description');
   glyph.classList.add('tree-icon', isDirectory ? 'folder-icon' : 'file-icon');
-  children.push(glyph, el('span', { text: node.name }));
+  children.push(glyph, el('span', { className: 'tree-label', text: node.name }));
 
   const row = el('div', {
     className: `tree-item${node.untracked && !isDirectory ? ' tree-item-untracked' : ''}`,

@@ -256,6 +256,8 @@
         </div>
       </aside>
 
+      <div class="pane-resizer pane-resizer-col" data-pane="sidebar" role="separator" aria-orientation="vertical" aria-label="Resize the branches sidebar" title="Drag to resize · double-click to reset" tabindex="0"></div>
+
       <!-- CENTER PANEL (STAGE & COMMIT) -->
       <section class="center-panel">
         
@@ -334,6 +336,8 @@
 
           </div>
 
+          <div class="pane-resizer pane-resizer-row" data-pane="commit" role="separator" aria-orientation="horizontal" aria-label="Resize the commit box" title="Drag to resize · double-click to reset" tabindex="0"></div>
+
           <!-- Commit Panel -->
           <div class="commit-panel">
             <!-- Conventional-commit quick templates -->
@@ -374,6 +378,8 @@
                 <li class="empty-state">No modified files</li>
               </ul>
             </aside>
+
+            <div class="pane-resizer pane-resizer-col" data-pane="diffFiles" role="separator" aria-orientation="vertical" aria-label="Resize the modified files list" title="Drag to resize · double-click to reset" tabindex="0"></div>
 
             <div class="diff-viewer-card">
               <div class="card-header diff-view-header">
@@ -424,10 +430,12 @@
               </div>
             </div>
 
+            <div class="pane-resizer pane-resizer-col" data-pane="tree" role="separator" aria-orientation="vertical" aria-label="Resize the files tree" title="Drag to resize · double-click to reset" tabindex="0"></div>
+
             <!-- Right Pane: File Contents & Blame View -->
             <div class="file-view-pane">
               <div class="card-header">
-                <h3 id="explorer-file-title">No File Selected</h3>
+                <h3 id="explorer-file-title" class="truncate-text">No File Selected</h3>
                 <div class="file-view-actions">
                   <button id="btn-toggle-blame" class="btn btn-secondary btn-sm" disabled>
                     <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
@@ -447,6 +455,8 @@
         </div>
 
       </section>
+
+      <div class="pane-resizer pane-resizer-col" data-pane="history" role="separator" aria-orientation="vertical" aria-label="Resize the history panel" title="Drag to resize · double-click to reset" tabindex="0"></div>
 
       <!-- COMMIT HISTORY PANEL (RIGHT COLUMN) -->
       <section class="sync-panel">
@@ -664,7 +674,12 @@
 
             <div class="form-group">
               <label for="ssh-passphrase">SSH Passphrase (optional)</label>
-              <input type="password" id="ssh-passphrase" placeholder="Enter passphrase to test or store">
+              <div class="password-field">
+                <input type="password" id="ssh-passphrase" placeholder="Enter passphrase to test or store">
+                <button type="button" id="btn-ssh-passphrase-reveal" class="password-reveal" aria-controls="ssh-passphrase" aria-pressed="false">
+                  <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                </button>
+              </div>
             </div>
 
             <div class="keep-password-row">
@@ -724,7 +739,12 @@
 
             <div class="form-group">
               <label for="ssh-generate-passphrase">Passphrase (optional)</label>
-              <input type="password" id="ssh-generate-passphrase" placeholder="Leave empty for no passphrase">
+              <div class="password-field">
+                <input type="password" id="ssh-generate-passphrase" placeholder="Leave empty for no passphrase">
+                <button type="button" id="btn-ssh-generate-passphrase-reveal" class="password-reveal" aria-controls="ssh-generate-passphrase" aria-pressed="false">
+                  <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                </button>
+              </div>
             </div>
 
             <div class="keep-password-row">
@@ -835,11 +855,21 @@
         <form id="vault-setup-form" class="modal-form">
           <div class="form-group">
             <label for="vault-master-key">Choose a master key</label>
-            <input type="password" id="vault-master-key" autocomplete="new-password" required>
+            <div class="password-field">
+              <input type="password" id="vault-master-key" autocomplete="new-password" required>
+              <button type="button" id="btn-vault-master-key-reveal" class="password-reveal" aria-controls="vault-master-key" aria-pressed="false">
+                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label for="vault-master-key-confirm">Confirm master key</label>
-            <input type="password" id="vault-master-key-confirm" autocomplete="new-password" required>
+            <div class="password-field">
+              <input type="password" id="vault-master-key-confirm" autocomplete="new-password" required>
+              <button type="button" id="btn-vault-master-key-confirm-reveal" class="password-reveal" aria-controls="vault-master-key-confirm" aria-pressed="false">
+                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+              </button>
+            </div>
           </div>
           <div id="vault-setup-feedback" class="inline-feedback hidden" role="alert"></div>
           <div class="form-actions">
@@ -1106,7 +1136,12 @@
         <form id="prompt-form" class="modal-form">
           <div class="form-group">
             <label for="prompt-input" id="prompt-label">Value</label>
-            <input type="password" id="prompt-input" autocomplete="off">
+            <div class="password-field">
+              <input type="password" id="prompt-input" autocomplete="off">
+              <button type="button" id="btn-prompt-reveal" class="password-reveal" aria-controls="prompt-input" aria-pressed="false">
+                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+              </button>
+            </div>
           </div>
           <div class="form-actions">
             <button type="button" id="btn-prompt-cancel" class="btn btn-secondary">Cancel</button>

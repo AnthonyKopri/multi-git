@@ -10,6 +10,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { closeAllDropdowns } from '../../ui/dropdown';
 import { withButtonBusy } from '../../ui/busy';
+import { attachPasswordReveal, maskPasswordField } from '../../ui/password-reveal';
 import {
   applyConfigSnapshot,
   loadConfig,
@@ -23,6 +24,11 @@ let ui: Elements;
 
 export function initSshManager(elements: Elements): void {
   ui = elements;
+
+  attachPasswordReveal(ui.sshPassphrase, ui.btnSshPassphraseReveal);
+  attachPasswordReveal(ui.sshGeneratePassphrase, ui.btnSshGeneratePassphraseReveal);
+  attachPasswordReveal(ui.vaultMasterKey, ui.btnVaultMasterKeyReveal);
+  attachPasswordReveal(ui.vaultMasterKeyConfirm, ui.btnVaultMasterKeyConfirmReveal);
 }
 
 type Tone = 'info' | 'error' | 'success' | 'warn';
@@ -46,6 +52,7 @@ function resetProfileForm(): void {
   asInput(ui.sshUserEmail).value = '';
   asInput(ui.sshPassphrase).value = '';
   asInput(ui.sshKeepPassword).checked = false;
+  maskPasswordField(ui.sshPassphrase, ui.btnSshPassphraseReveal);
 }
 
 export function hideKeyForms(): void {
@@ -96,6 +103,7 @@ export function openSshModal(options: { showForm?: 'existing' | 'generate' } = {
   asInput(ui.sshGeneratePassphrase).value = '';
   asInput(ui.sshGenerateKeepPassword).checked = false;
   asInput(ui.ruleMatchInput).value = '';
+  maskPasswordField(ui.sshGeneratePassphrase, ui.btnSshGeneratePassphraseReveal);
 
   clearGeneratedResult();
   setGenerateFeedback('');
@@ -391,6 +399,8 @@ function setVaultSetupFeedback(message: string, tone: Tone = 'error'): void {
 export function openVaultSetupModal(): void {
   asInput(ui.vaultMasterKey).value = '';
   asInput(ui.vaultMasterKeyConfirm).value = '';
+  maskPasswordField(ui.vaultMasterKey, ui.btnVaultMasterKeyReveal);
+  maskPasswordField(ui.vaultMasterKeyConfirm, ui.btnVaultMasterKeyConfirmReveal);
   setVaultSetupFeedback('');
   setHidden(ui.vaultSetupModal, false);
   setTimeout(() => asInput(ui.vaultMasterKey).focus(), 30);

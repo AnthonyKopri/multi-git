@@ -15,6 +15,7 @@ import * as api from './api/endpoints';
 import { initToasts } from './ui/toast';
 import { cancelOpenDialog, hasOpenDialog, initDialogs } from './ui/dialogs';
 import { closeAllDropdowns, initDropdowns, registerDropdown } from './ui/dropdown';
+import { initPanes } from './ui/panes';
 import { logToTerminal, openLogWindow } from './ui/log';
 
 import * as accounts from './features/accounts';
@@ -598,6 +599,7 @@ async function start(): Promise<void> {
   initToasts(ui.toastContainer);
   initDialogs(ui);
   initDropdowns();
+  initPanes();
 
   accounts.initAccounts(ui);
   repo.initRepo(ui, refreshAll);

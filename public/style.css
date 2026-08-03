@@ -279,6 +279,55 @@ select {
   width: 100%;
 }
 
+/* Password field with a show/hide eye.
+   The button sits inside the input's box, so the field keeps the same width
+   and baseline as every other input on the form. */
+.password-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.password-field input {
+  padding-right: 44px;
+}
+/* The prompt dialog is shared with plain text input, where there is nothing to
+   reveal and the field should not reserve room for a button. */
+.password-field:has(> .password-reveal.hidden) input {
+  padding-right: 14px;
+}
+.password-reveal {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.password-reveal:hover {
+  color: var(--text-main);
+  background-color: var(--bg-card);
+}
+.password-reveal:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  color: var(--text-main);
+}
+.password-reveal[aria-pressed="true"] {
+  color: var(--color-primary);
+}
+.password-reveal .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .form-group {
   margin-bottom: 16px;
   display: flex;
@@ -436,11 +485,98 @@ select {
   pointer-events: none;
 }
 
+/* Panel sizes.
+   Each is a drag handle's live value; ui/panes.ts overwrites the custom
+   property on :root and remembers it. The values here are the defaults a
+   double-click on a handle returns to. */
+:root {
+  --sidebar-width: 280px;
+  --history-width: 320px;
+  --tree-pane-width: 280px;
+  --diff-files-width: 260px;
+  --commit-panel-height: 148px;
+}
+
+/* Drag handles between panels.
+   The handle replaces the border it sits on, so resizing does not shift the
+   layout by a pixel when the highlight thickens. */
+.pane-resizer {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  background: none;
+  border: 0;
+  padding: 0;
+  z-index: 4;
+  touch-action: none;
+}
+.pane-resizer-col {
+  width: 7px;
+  cursor: col-resize;
+}
+.pane-resizer-row {
+  height: 7px;
+  cursor: row-resize;
+}
+.pane-resizer::after {
+  content: '';
+  position: absolute;
+  background-color: var(--border-color);
+  transition: background-color 0.15s ease;
+}
+.pane-resizer-col::after {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+}
+.pane-resizer-row::after {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
+}
+.pane-resizer:hover::after,
+.pane-resizer:focus-visible::after,
+.pane-resizer.dragging::after {
+  background-color: var(--color-primary);
+}
+.pane-resizer-col:hover::after,
+.pane-resizer-col:focus-visible::after,
+.pane-resizer-col.dragging::after {
+  width: 3px;
+}
+.pane-resizer-row:hover::after,
+.pane-resizer-row:focus-visible::after,
+.pane-resizer-row.dragging::after {
+  height: 3px;
+}
+.pane-resizer:focus-visible {
+  outline: none;
+}
+
+/* While dragging, the pointer keeps its resize cursor everywhere and no text
+   gets selected under it. */
+body.pane-resizing {
+  user-select: none;
+}
+body.pane-resizing-x,
+body.pane-resizing-x * {
+  cursor: col-resize !important;
+}
+body.pane-resizing-y,
+body.pane-resizing-y * {
+  cursor: row-resize !important;
+}
+
 /* 1. Sidebar Panel */
 .sidebar {
-  width: 280px;
+  flex: 0 0 auto;
+  width: var(--sidebar-width);
+  min-width: 0;
   background-color: var(--bg-panel);
-  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   padding: 20px;
@@ -489,11 +625,13 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 4px;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-width: 0;
 }
 .branch-item:hover {
   background-color: var(--bg-card);
@@ -504,16 +642,24 @@ select {
   font-weight: 600;
   border-left: 3px solid var(--color-primary);
 }
+/* The row is icon + name. Ellipsis belongs on the text element, not on this
+   flex container, which is why long branch names used to run under the delete
+   button instead of truncating. */
 .branch-item .branch-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.branch-item .branch-name > span:not(.material-symbols-outlined) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .branch-item .branch-name .material-symbols-outlined {
   font-size: 18px;
+  flex-shrink: 0;
 }
 
 .border-t {
@@ -525,11 +671,10 @@ select {
 
 /* 2. Center Panel */
 .center-panel {
-  flex: 1.5;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border-color);
   background-color: var(--bg-app);
   overflow: hidden;
 }
@@ -625,12 +770,26 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   margin-bottom: 12px;
+  min-width: 0;
 }
 .card-header h3 {
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-main);
+  min-width: 0;
+}
+/* A header title is a label, not prose: it truncates rather than wrapping onto
+   a second line and pushing the buttons beside it out of the card. */
+.card-header > h3 {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.card-header .card-header-actions,
+.card-header .file-view-actions {
+  flex-shrink: 0;
 }
 
 .file-list {
@@ -749,8 +908,9 @@ select {
 }
 .diff-workspace {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  gap: 16px;
+  /* file list · drag handle · viewer */
+  grid-template-columns: var(--diff-files-width) auto minmax(0, 1fr);
+  gap: 8px;
   flex: 1;
   min-height: 0;
 }
@@ -797,11 +957,14 @@ select {
   gap: 10px;
   min-width: 0;
 }
+/* Shrinks with the pane. The old viewport-relative cap truncated the file name
+   at the same width whether the panel was 400px or 1200px wide. */
 .diff-title-group h3 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: min(480px, 45vw);
+  min-width: 0;
+  flex: 1;
 }
 .diff-title-group .btn {
   flex-shrink: 0;
@@ -880,20 +1043,35 @@ select {
   border-right-color: var(--color-danger-border);
 }
 
-/* Commit Section */
+/* Commit Section
+   Height is the drag handle's value rather than the textarea's rows, so a long
+   commit message can be given as much room as the staging lists can spare. */
 .commit-panel {
+  flex: 0 0 auto;
+  height: var(--commit-panel-height);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background-color: var(--bg-panel);
-  border-top: 1px solid var(--border-color);
-  padding: 16px 20px;
+  padding: 12px 20px 16px;
+  overflow: hidden;
 }
 .commit-input-wrapper {
   display: flex;
   gap: 12px;
-  align-items: flex-end;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
 }
 .commit-input-wrapper textarea {
   flex: 1;
+  height: 100%;
   resize: none;
+}
+/* The buttons keep their natural size and stay at the bottom of a tall box. */
+.commit-input-wrapper .commit-buttons {
+  flex: 0 0 auto;
+  align-self: flex-end;
 }
 .commit-input-wrapper button {
   height: 48px;
@@ -902,7 +1080,9 @@ select {
 
 /* 3. Sync & Logger Column */
 .sync-panel {
-  width: 320px;
+  flex: 0 0 auto;
+  width: var(--history-width);
+  min-width: 0;
   background-color: var(--bg-panel);
   display: flex;
   flex-direction: column;
@@ -1622,6 +1802,16 @@ select {
   display: none !important;
 }
 
+/* One line, ellipsised. `min-width: 0` is the half that is easy to forget:
+   without it a flex item refuses to shrink below its content and pushes the
+   rest of the row out of the panel instead of truncating. */
+.truncate-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* Animations */
 @keyframes pulse-glow {
   0% {
@@ -1704,8 +1894,9 @@ select {
 
 /* Tree pane (left side) */
 .tree-pane {
-  width: 280px;
-  border-right: 1px solid var(--border-color);
+  flex: 0 0 auto;
+  width: var(--tree-pane-width);
+  min-width: 0;
   background-color: var(--bg-panel);
   display: flex;
   flex-direction: column;
@@ -1714,7 +1905,10 @@ select {
 }
 .tree-container {
   flex: 1;
-  overflow-y: auto;
+  /* Both axes scroll. A deeply nested path is wider than any sensible pane,
+     and truncating it to an ellipsis hides exactly the end that identifies
+     the file, so the tree scrolls sideways instead of cutting names off. */
+  overflow: auto;
   font-size: 0.875rem;
 }
 .tree-loading {
@@ -1728,6 +1922,9 @@ select {
 .tree-node {
   display: flex;
   flex-direction: column;
+  /* Rows are as wide as the widest name, not as wide as the pane, so the
+     hover highlight still spans a scrolled-out row. */
+  min-width: max-content;
 }
 .tree-item {
   display: flex;
@@ -1737,10 +1934,15 @@ select {
   cursor: pointer;
   gap: 6px;
   user-select: none;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: max-content;
+}
+/* The name is a child element, so ellipsis on the flex row would never have
+   applied to it; nothing here truncates, but the rule keeps the label from
+   wrapping mid-name when a row is narrower than its content. */
+.tree-label {
+  white-space: nowrap;
 }
 .tree-item:hover {
   background-color: var(--bg-card);
@@ -1750,6 +1952,10 @@ select {
   background-color: var(--color-primary-glow);
   color: #a5b4fc;
   font-weight: 600;
+}
+
+.tree-children {
+  min-width: max-content;
 }
 
 .tree-indent {

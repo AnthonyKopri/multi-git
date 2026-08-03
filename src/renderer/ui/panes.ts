@@ -1,0 +1,254 @@
+// User-resizable panels.
+//
+// The layout used to be fixed at a 280px sidebar, a 320px history column and a
+// 280px file tree. Branch names, file paths and commit subjects are all longer
+// than that on real repositories, so the panels that had to show them were the
+// ones that could not grow, while a wide window spent the extra space on the
+// middle column that needed it least.
+//
+// Each divider in the layout is a handle that writes a CSS custom property on
+// :root; the stylesheet reads those for the panel widths and heights. Sizes
+// are remembered per panel across sessions.
+
+export type PaneName = 'sidebar' | 'history' | 'tree' | 'diffFiles' | 'commit';
+
+export interface PaneSpec {
+  /** Custom property on :root that the stylesheet reads. */
+  variable: string;
+  axis: 'x' | 'y';
+  /**
+   * Sign applied to the pointer delta. -1 when the panel being sized is on the
+   * far side of the handle, where dragging right (or down) makes it smaller.
+   */
+  direction: 1 | -1;
+  min: number;
+  max: number;
+  fallback: number;
+  /**
+   * Space the flexible pane next to this one must keep, used to cap `max` on
+   * small windows.
+   */
+  reserve: number;
+  /**
+   * Other fixed-size panes competing for the same axis. Their current sizes
+   * come off the available space first, so widening both side columns cannot
+   * add up to more than the window holds.
+   */
+  siblings?: readonly PaneName[];
+}
+
+export const PANE_SPECS: Record<PaneName, PaneSpec> = {
+  sidebar: {
+    variable: '--sidebar-width',
+    axis: 'x',
+    direction: 1,
+    min: 190,
+    max: 640,
+    fallback: 280,
+    reserve: 300,
+    siblings: ['history']
+  },
+  history: {
+    variable: '--history-width',
+    axis: 'x',
+    direction: -1,
+    min: 220,
+    max: 720,
+    fallback: 320,
+    reserve: 300,
+    siblings: ['sidebar']
+  },
+  // The Explorer and Diff panes split the centre column, which is already
+  // sized by the two above, so they have no fixed sibling of their own.
+  tree: {
+    variable: '--tree-pane-width',
+    axis: 'x',
+    direction: 1,
+    min: 170,
+    max: 720,
+    fallback: 280,
+    reserve: 260
+  },
+  diffFiles: {
+    variable: '--diff-files-width',
+    axis: 'x',
+    direction: 1,
+    min: 170,
+    max: 640,
+    fallback: 260,
+    reserve: 260
+  },
+  commit: {
+    variable: '--commit-panel-height',
+    axis: 'y',
+    direction: -1,
+    min: 110,
+    max: 560,
+    fallback: 148,
+    // Header, tabs, and enough of the staging lists to still be a file list.
+    reserve: 320
+  }
+};
+
+/** Step taken by the arrow keys when a handle has focus. */
+const KEYBOARD_STEP_PX = 16;
+
+const STORAGE_PREFIX = 'pane_size_';
+
+/**
+ * Clamps a requested size to what the spec allows and what the window can
+ * currently spare.
+ *
+ * Without the `available` term, a size saved on a large monitor would leave a
+ * panel wider than the window it is reopened in, and nothing would give.
+ */
+export function clampPaneSize(spec: PaneSpec, requested: number, available?: number): number {
+  if (!Number.isFinite(requested)) {
+    return spec.fallback;
+  }
+
+  let max = spec.max;
+  if (available !== undefined && available > 0) {
+    // Never let the cap fall below the minimum: a tiny window should pin the
+    // panel at its minimum, not invert the range.
+    max = Math.max(spec.min, Math.min(max, available - spec.reserve));
+  }
+
+  return Math.round(Math.min(Math.max(requested, spec.min), max));
+}
+
+/**
+ * The applied size, read straight off the custom property.
+ *
+ * Deliberately unclamped: `availableFor` calls this for the sibling panes, and
+ * clamping here would recurse.
+ */
+function appliedSize(spec: PaneSpec): number {
+  const raw = parseFloat(document.documentElement.style.getPropertyValue(spec.variable));
+  return Number.isFinite(raw) ? raw : spec.fallback;
+}
+
+function availableFor(spec: PaneSpec): number {
+  const total = spec.axis === 'x' ? window.innerWidth : window.innerHeight;
+  const taken = (spec.siblings ?? []).reduce(
+    (sum, other) => sum + appliedSize(PANE_SPECS[other]),
+    0
+  );
+  return total - taken;
+}
+
+function storedSize(name: PaneName, spec: PaneSpec): number {
+  const raw = window.localStorage.getItem(`${STORAGE_PREFIX}${name}`);
+  // The default is clamped too: on a narrow window even the shipped sizes
+  // leave the middle column with nothing.
+  return clampPaneSize(spec, raw === null ? spec.fallback : Number(raw), availableFor(spec));
+}
+
+function currentSize(name: PaneName, spec: PaneSpec): number {
+  const set = document.documentElement.style.getPropertyValue(spec.variable);
+  return set === '' ? storedSize(name, spec) : clampPaneSize(spec, parseFloat(set), availableFor(spec));
+}
+
+function applySize(spec: PaneSpec, size: number): void {
+  document.documentElement.style.setProperty(spec.variable, `${size}px`);
+}
+
+function persist(name: PaneName, size: number): void {
+  window.localStorage.setItem(`${STORAGE_PREFIX}${name}`, String(size));
+}
+
+/** Clamps, applies, and hands back what was actually used, for persisting. */
+function setSize(spec: PaneSpec, requested: number): number {
+  const size = clampPaneSize(spec, requested, availableFor(spec));
+  applySize(spec, size);
+  return size;
+}
+
+function beginDrag(handle: HTMLElement, name: PaneName, spec: PaneSpec, event: PointerEvent): void {
+  event.preventDefault();
+
+  const origin = spec.axis === 'x' ? event.clientX : event.clientY;
+  const startSize = currentSize(name, spec);
+  let size = startSize;
+
+  handle.setPointerCapture(event.pointerId);
+  handle.classList.add('dragging');
+  document.body.classList.add('pane-resizing', `pane-resizing-${spec.axis}`);
+
+  const onMove = (move: PointerEvent): void => {
+    const position = spec.axis === 'x' ? move.clientX : move.clientY;
+    size = setSize(spec, startSize + (position - origin) * spec.direction);
+  };
+
+  const onEnd = (): void => {
+    handle.removeEventListener('pointermove', onMove);
+    handle.removeEventListener('pointerup', onEnd);
+    handle.removeEventListener('pointercancel', onEnd);
+    handle.classList.remove('dragging');
+    document.body.classList.remove('pane-resizing', `pane-resizing-${spec.axis}`);
+    persist(name, size);
+  };
+
+  handle.addEventListener('pointermove', onMove);
+  handle.addEventListener('pointerup', onEnd);
+  handle.addEventListener('pointercancel', onEnd);
+}
+
+function onKeyDown(name: PaneName, spec: PaneSpec, event: KeyboardEvent): void {
+  const grow = spec.axis === 'x' ? 'ArrowRight' : 'ArrowDown';
+  const shrink = spec.axis === 'x' ? 'ArrowLeft' : 'ArrowUp';
+
+  let requested: number | null = null;
+  if (event.key === grow) {
+    requested = currentSize(name, spec) + KEYBOARD_STEP_PX * spec.direction;
+  } else if (event.key === shrink) {
+    requested = currentSize(name, spec) - KEYBOARD_STEP_PX * spec.direction;
+  } else if (event.key === 'Home' || event.key === 'Enter') {
+    requested = spec.fallback;
+  }
+
+  if (requested === null) {
+    return;
+  }
+
+  event.preventDefault();
+  persist(name, setSize(spec, requested));
+}
+
+function wireHandle(handle: HTMLElement): void {
+  const name = handle.dataset['pane'] as PaneName | undefined;
+  const spec = name ? PANE_SPECS[name] : undefined;
+  if (!name || !spec) {
+    return;
+  }
+
+  handle.setAttribute('aria-valuemin', String(spec.min));
+  handle.setAttribute('aria-valuemax', String(spec.max));
+
+  handle.addEventListener('pointerdown', (event) => beginDrag(handle, name, spec, event));
+  handle.addEventListener('keydown', (event) => onKeyDown(name, spec, event));
+  // A layout dragged into a corner needs a way back that is not arithmetic.
+  handle.addEventListener('dblclick', () => {
+    persist(name, setSize(spec, spec.fallback));
+  });
+}
+
+/** Applies the remembered sizes and makes every handle in the page draggable. */
+export function initPanes(root: ParentNode = document): void {
+  for (const [name, spec] of Object.entries(PANE_SPECS) as [PaneName, PaneSpec][]) {
+    applySize(spec, storedSize(name, spec));
+  }
+
+  for (const handle of root.querySelectorAll<HTMLElement>('.pane-resizer')) {
+    wireHandle(handle);
+  }
+
+  // Shrinking the window can invalidate a size that was fine before. Re-clamp
+  // without persisting: the user's chosen size should come back when there is
+  // room for it again.
+  window.addEventListener('resize', () => {
+    for (const [name, spec] of Object.entries(PANE_SPECS) as [PaneName, PaneSpec][]) {
+      applySize(spec, clampPaneSize(spec, storedSize(name, spec), availableFor(spec)));
+    }
+  });
+}

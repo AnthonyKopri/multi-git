@@ -13,6 +13,7 @@ import {
 import { buildTree, indexTree, sortedChildren } from '../src/renderer/features/explorer/file-tree';
 import { diffEntriesFor, findDiffEntry } from '../src/renderer/features/staging/file-list';
 import { profileColor, repoBaseName, statusLabel } from '../src/renderer/ui/format';
+import { PANE_SPECS, clampPaneSize } from '../src/renderer/ui/panes';
 import type { StatusResponse } from '../src/shared/api-types';
 
 describe('applyCommitType', () => {
@@ -275,5 +276,50 @@ describe('format helpers', () => {
     expect(repoBaseName('D:\\code\\my-repo')).toBe('my-repo');
     expect(repoBaseName('D:/code/my-repo/')).toBe('my-repo');
     expect(repoBaseName(null)).toBe('');
+  });
+});
+
+describe('clampPaneSize', () => {
+  const sidebar = PANE_SPECS.sidebar;
+
+  it('keeps a size that is already in range', () => {
+    expect(clampPaneSize(sidebar, 400, 1600)).toBe(400);
+  });
+
+  it('holds the panel to its own limits', () => {
+    expect(clampPaneSize(sidebar, 10, 1600)).toBe(sidebar.min);
+    expect(clampPaneSize(sidebar, 5000, 4000)).toBe(sidebar.max);
+  });
+
+  it('gives the pane next to it its reserved space on a narrow window', () => {
+    // A size saved on a wide monitor must not push the other panels off a
+    // smaller one when it is restored.
+    expect(clampPaneSize(sidebar, 600, 700)).toBe(700 - sidebar.reserve);
+  });
+
+  it('never inverts the range when the space left is smaller than the reserve', () => {
+    expect(clampPaneSize(sidebar, 600, 300)).toBe(sidebar.min);
+  });
+
+  it('leaves the centre column usable when both side panels are dragged wide', () => {
+    // The two side columns are clamped against each other, so `available`
+    // already has the sibling's width taken off it.
+    const history = PANE_SPECS.history;
+    const window = 1280;
+
+    const sidebarWidth = clampPaneSize(sidebar, 9999, window - history.fallback);
+    const historyWidth = clampPaneSize(history, 9999, window - sidebarWidth);
+
+    expect(window - sidebarWidth - historyWidth).toBeGreaterThanOrEqual(history.reserve);
+  });
+
+  it('falls back when localStorage holds something that is not a number', () => {
+    expect(clampPaneSize(sidebar, Number('not a size'))).toBe(sidebar.fallback);
+  });
+
+  it('applies to the vertical panel the same way', () => {
+    const commit = PANE_SPECS.commit;
+    expect(clampPaneSize(commit, commit.min - 40, 1000)).toBe(commit.min);
+    expect(clampPaneSize(commit, 300, 1000)).toBe(300);
   });
 });
