@@ -168,9 +168,9 @@ async function promptTarget(ask) {
   }
 }
 
-function runBuild(builderEntry, args) {
+function runNode(entry, args, failureMessage) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [builderEntry, ...args], {
+    const child = spawn(process.execPath, [entry, ...args], {
       cwd: ROOT,
       stdio: 'inherit'
     });
@@ -178,9 +178,26 @@ function runBuild(builderEntry, args) {
     child.on('error', reject);
     child.on('close', (code) => {
       if (code === 0) return resolve();
-      reject(new Error(`electron-builder exited with code ${code}`));
+      reject(new Error(`${failureMessage} (exit code ${code})`));
     });
   });
+}
+
+/**
+ * Compiles the TypeScript sources into out/.
+ *
+ * This has to happen here rather than in the npm script, because release.js
+ * invokes electron-builder directly and BUILDING.md documents calling this
+ * file straight from node. out/ is gitignored, so a fresh checkout has none of
+ * it, and electron-builder would package an asar with no entry point.
+ */
+function runCompile() {
+  console.log('Compiling sources...\n');
+  return runNode(path.join(ROOT, 'scripts', 'build.mjs'), [], 'Compilation failed');
+}
+
+function runBuild(builderEntry, args) {
+  return runNode(builderEntry, args, 'electron-builder failed');
 }
 
 async function main() {
@@ -240,6 +257,10 @@ async function main() {
       'electron-builder is not installed. Run "npm install" (with dev dependencies) before building.'
     );
   }
+
+  // Compile before packaging: electron-builder only copies what already
+  // exists on disk.
+  await runCompile();
 
   console.log(`Building: ${target.label}\n`);
   await runBuild(builderEntry, target.args);
