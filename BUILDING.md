@@ -108,6 +108,10 @@ Beyond that, verification is manual. The paths worth walking before a release:
 npm run release
 ```
 
+It builds only. Nothing is uploaded, no GitHub token is needed, and the version
+bump is left uncommitted for you to review. If the build fails the bump is
+rolled back, so a failed release does not leave the project renamed.
+
 ```text
 Current version: 1.0.5
   1) patch  -> 1.0.6

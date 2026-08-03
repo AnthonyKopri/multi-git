@@ -197,7 +197,14 @@ function runCompile() {
 }
 
 function runBuild(builderEntry, args) {
-  return runNode(builderEntry, args, 'electron-builder failed');
+  // electron-builder publishes to GitHub Releases on its own when the npm
+  // lifecycle event is named "release", which every script here is. That
+  // demands a GH_TOKEN and fails without one — and it fails *after* packaging
+  // has succeeded, so the artifacts sit finished in dist/ while the command
+  // reports failure and the version bump is rolled back.
+  //
+  // This driver builds; uploading a release is a separate, deliberate step.
+  return runNode(builderEntry, ['--publish', 'never', ...args], 'electron-builder failed');
 }
 
 async function main() {

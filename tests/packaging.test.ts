@@ -56,6 +56,19 @@ describe('packaging', () => {
     }
   });
 
+  it('never lets electron-builder publish on its own', () => {
+    // electron-builder publishes to GitHub Releases when the npm lifecycle
+    // event is named "release", which every release script is. Without a
+    // GH_TOKEN that fails *after* packaging succeeds, so the artifacts are
+    // finished in dist/ while the command reports failure.
+    const releaseDriver = fs.readFileSync(fromAppRoot('scripts', 'release.js'), 'utf8');
+
+    expect(
+      releaseDriver.includes("'--publish', 'never'"),
+      'scripts/release.js must pass --publish never, or a release without GH_TOKEN fails after building'
+    ).toBe(true);
+  });
+
   it('compiles before packaging in every path that packages', () => {
     // out/ is gitignored, so a fresh checkout has none of it. Any script that
     // reaches electron-builder without compiling first packages an asar with
