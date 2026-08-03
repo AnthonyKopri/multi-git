@@ -1,0 +1,28 @@
+# Dependabot is used here for security updates only.
+#
+# Without this file, GitHub opens one security PR per advisory. Because almost
+# every dependency in this project is transitive through electron-builder, a
+# single upstream release closes ten advisories at once, and the ungrouped
+# behaviour produced four PRs that all bumped the same package and conflicted
+# with one another in package-lock.json. The group below collapses them into
+# one PR that can be reviewed and merged as a unit.
+#
+# open-pull-requests-limit: 0 disables scheduled version-update PRs. Routine
+# upgrades stay a deliberate act (`npm outdated`, then a considered bump);
+# only advisories open a PR on their own. Grouping still applies to those,
+# because groups are evaluated independently of the version-update limit.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    commit-message:
+      prefix: build(deps)
+      prefix-development: build(deps-dev)
