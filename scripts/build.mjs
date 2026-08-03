@@ -13,10 +13,30 @@
 //
 // Entry points that do not exist yet are skipped, so this runs cleanly while
 // the migration is still in progress.
-import { build } from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+/**
+ * Loads esbuild, explaining itself when it is missing.
+ *
+ * A static import fails at module load with a raw ERR_MODULE_NOT_FOUND stack,
+ * which does not say what to do about it. Anyone whose node_modules predates
+ * the TypeScript migration hits exactly this, and the answer is always
+ * `npm install`. scripts/release.js guards electron-builder the same way.
+ */
+async function loadEsbuild() {
+  try {
+    return (await import('esbuild')).build;
+  } catch (error) {
+    if (error?.code === 'ERR_MODULE_NOT_FOUND') {
+      throw new Error(
+        'esbuild is not installed. Run "npm install" (with dev dependencies) before building.'
+      );
+    }
+    throw error;
+  }
+}
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'out');
@@ -40,7 +60,7 @@ function exists(relativePath) {
   return fs.existsSync(path.join(ROOT, relativePath));
 }
 
-async function buildEntry(entry, options) {
+async function buildEntry(build, entry, options) {
   if (!exists(entry.in)) {
     return { skipped: entry.in };
   }
@@ -87,13 +107,15 @@ function copyStaticAssets() {
 }
 
 async function run() {
+  const build = await loadEsbuild();
+
   fs.mkdirSync(OUT, { recursive: true });
 
   const results = [];
 
   for (const entry of nodeEntries) {
     results.push(
-      await buildEntry(entry, {
+      await buildEntry(build, entry, {
         platform: 'node',
         format: 'cjs',
         target: NODE_TARGET,
@@ -104,7 +126,7 @@ async function run() {
 
   for (const entry of webEntries) {
     results.push(
-      await buildEntry(entry, {
+      await buildEntry(build, entry, {
         platform: 'browser',
         format: 'iife',
         target: WEB_TARGET,
@@ -127,6 +149,8 @@ async function run() {
 }
 
 run().catch((error) => {
-  console.error(error);
+  // A missing dependency has a message worth reading on its own; a compile
+  // failure has a stack worth keeping.
+  console.error(error?.code === 'ERR_MODULE_NOT_FOUND' ? error : (error.message ?? error));
   process.exit(1);
 });

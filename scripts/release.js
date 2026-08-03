@@ -244,13 +244,8 @@ async function main() {
     return;
   }
 
-  if (version !== current) {
-    const written = applyVersion(version);
-    console.log(`\nVersion ${current} -> ${version} (updated ${written.join(', ')})`);
-  } else {
-    console.log(`\nVersion stays at ${current}`);
-  }
-
+  // Check what can be checked before touching any file, so a missing tool
+  // fails without having renamed the project first.
   const builderEntry = resolveElectronBuilder();
   if (!builderEntry) {
     throw new Error(
@@ -258,12 +253,30 @@ async function main() {
     );
   }
 
-  // Compile before packaging: electron-builder only copies what already
-  // exists on disk.
-  await runCompile();
+  if (version !== current) {
+    const written = applyVersion(version);
+    console.log(`\nVersion ${current} -> ${version} (updated ${written.join(', ')})`);
+  } else {
+    console.log(`\nVersion stays at ${current}`);
+  }
 
-  console.log(`Building: ${target.label}\n`);
-  await runBuild(builderEntry, target.args);
+  // The version has to be written before packaging, because electron-builder
+  // reads it to name the artifact. That means a failure from here on leaves a
+  // bump behind for a release that never happened, so it is rolled back.
+  try {
+    // Compile before packaging: electron-builder only copies what already
+    // exists on disk.
+    await runCompile();
+
+    console.log(`Building: ${target.label}\n`);
+    await runBuild(builderEntry, target.args);
+  } catch (error) {
+    if (version !== current) {
+      applyVersion(current);
+      console.error(`\nBuild failed. Version rolled back to ${current}.`);
+    }
+    throw error;
+  }
 
   console.log(`\nDone. Artifacts for ${version} are in dist/.`);
   if (version !== current) {
