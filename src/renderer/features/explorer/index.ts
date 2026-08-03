@@ -79,7 +79,9 @@ export async function openExplorerFile(filePath: string, isUntracked = false): P
   update({ selectedExplorerFile: filePath, blameActive: false });
   setBlameButtonLabel('Show Blame');
 
+  // The heading truncates, so the full path lives in the tooltip.
   ui.explorerFileTitle.textContent = filePath;
+  ui.explorerFileTitle.title = filePath;
   renderPaneMessage(ui.explorerFileBody, 'Loading file content...', false, 'file-empty-state');
 
   try {

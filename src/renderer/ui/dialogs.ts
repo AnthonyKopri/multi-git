@@ -5,6 +5,7 @@
 // loop and cannot carry the "don't ask again" checkbox the discard flow needs.
 import { asInput, type Elements } from '../dom/elements';
 import { setHidden } from '../dom/create';
+import { attachPasswordReveal, maskPasswordField } from './password-reveal';
 
 export interface ConfirmOptions {
   title?: string;
@@ -58,6 +59,8 @@ export function initDialogs(resolved: Elements): void {
       settleConfirm(false);
     }
   });
+
+  attachPasswordReveal(resolved.promptInput, resolved.btnPromptReveal);
 
   promptForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -122,7 +125,15 @@ export function promptDialog(options: PromptOptions = {}): Promise<string | null
     ui.promptLabel.textContent = options.label ?? 'Value';
 
     const input = asInput(ui.promptInput);
-    input.type = options.type ?? 'password';
+    const isPassword = (options.type ?? 'password') === 'password';
+
+    // Always reopen masked: the eye is a deliberate act, not a setting, and a
+    // passphrase revealed once should not still be on screen next time.
+    maskPasswordField(ui.promptInput, ui.btnPromptReveal);
+    setHidden(ui.btnPromptReveal, !isPassword);
+    if (!isPassword) {
+      input.type = 'text';
+    }
     input.value = '';
 
     setHidden(ui.promptModal, false);
