@@ -121,6 +121,17 @@
               <button id="btn-edit-identity" class="btn btn-text btn-sm" title="Edit commit name/email for this repo">Edit</button>
             </div>
             <div class="dropdown-divider"></div>
+            <div class="dropdown-divider"></div>
+            <div class="agent-row">
+              <span id="agent-status-chip" class="agent-chip" title="Native SSH agent status">Agent: —</span>
+              <button id="btn-repair-agent" class="btn btn-secondary btn-sm hidden" title="Enable and start the OpenSSH Authentication Agent service">
+                Repair and start
+              </button>
+              <button id="btn-unload-key" class="btn btn-text btn-sm hidden" title="Remove this key from the SSH agent">
+                Unload key
+              </button>
+            </div>
+            <div id="agent-diagnostic" class="agent-diagnostic hidden"></div>
             <div class="dropdown-footer">
               <span id="dropdown-vault-status" class="vault-chip">Vault: —</span>
               <button id="btn-dropdown-vault" class="btn btn-secondary btn-sm">Unlock</button>
@@ -150,6 +161,9 @@
         <button id="btn-push" class="btn btn-icon" title="Push" aria-label="Push">
           <span class="material-symbols-outlined" aria-hidden="true">upload</span>
           <span id="push-count-badge" class="count-badge count-ahead hidden"></span>
+        </button>
+        <button id="btn-create-pr" class="btn btn-icon" title="Create pull request" aria-label="Create pull request">
+          <span class="material-symbols-outlined" aria-hidden="true">call_merge</span>
         </button>
         <button id="btn-open-logs" class="btn btn-icon" title="Open terminal log window" aria-label="Open terminal log window">
           <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
@@ -975,6 +989,92 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- PULL REQUEST CREATOR -->
+  <!--
+    A large window rather than a narrow popover: this form carries a Markdown
+    body, two branch selectors, a commit summary and a warning list, and a
+    cramped one would make people write worse pull requests.
+  -->
+  <div id="pr-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-card-wide">
+      <div class="modal-header">
+        <h2>Create Pull Request</h2>
+        <button id="btn-close-pr-modal" class="btn-close" aria-label="Close">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="pr-loading" class="modal-desc">Checking the repository…</div>
+        <div id="pr-feedback" class="inline-feedback hidden" role="status" aria-live="polite"></div>
+        <ul id="pr-warnings" class="pr-warnings hidden"></ul>
+
+        <form id="pr-form" class="modal-form hidden">
+          <div class="pr-branch-row">
+            <div class="form-group">
+              <label for="pr-base-branch">Base branch</label>
+              <select id="pr-base-branch"></select>
+            </div>
+            <span class="pr-branch-arrow material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <div class="form-group">
+              <label for="pr-head-branch">Compare branch</label>
+              <select id="pr-head-branch"></select>
+            </div>
+          </div>
+
+          <p id="pr-target-summary" class="modal-desc"></p>
+
+          <div class="form-group">
+            <label for="pr-title">Title</label>
+            <input type="text" id="pr-title" required autocomplete="off" maxlength="256">
+          </div>
+
+          <div class="form-group">
+            <label for="pr-body">Description <span class="form-hint">Markdown</span></label>
+            <textarea id="pr-body" rows="10" spellcheck="true"></textarea>
+          </div>
+
+          <details id="pr-advanced" class="pr-advanced">
+            <summary>Reviewers, assignees and labels</summary>
+            <div class="form-group">
+              <label for="pr-reviewers">Reviewers <span class="form-hint">comma separated</span></label>
+              <input type="text" id="pr-reviewers" placeholder="octocat, hubot" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="pr-assignees">Assignees <span class="form-hint">comma separated</span></label>
+              <input type="text" id="pr-assignees" placeholder="octocat" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="pr-labels">Labels <span class="form-hint">comma separated</span></label>
+              <input type="text" id="pr-labels" placeholder="bug, documentation" autocomplete="off">
+            </div>
+          </details>
+
+          <div class="pr-options">
+            <label class="checkbox-row" for="pr-draft">
+              <input type="checkbox" id="pr-draft">
+              <span>Create as a draft</span>
+            </label>
+          </div>
+
+          <div id="pr-commit-summary" class="pr-commit-summary"></div>
+
+          <div class="modal-actions">
+            <button type="button" id="btn-pr-cancel" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-pr-create" class="btn btn-primary">Create pull request</button>
+          </div>
+        </form>
+
+        <div id="pr-success" class="pr-success hidden">
+          <p id="pr-success-text" class="modal-desc"></p>
+          <div class="modal-actions">
+            <button type="button" id="btn-pr-copy-link" class="btn btn-secondary">Copy link</button>
+            <button type="button" id="btn-pr-open" class="btn btn-primary">Open in browser</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -225,6 +225,37 @@ export const ELEMENT_MAP = {
   btnCancelClone: 'btn-cancel-clone',
   btnStartClone: 'btn-start-clone',
 
+  // Native SSH agent
+  agentStatusChip: 'agent-status-chip',
+  btnRepairAgent: 'btn-repair-agent',
+  btnUnloadKey: 'btn-unload-key',
+  agentDiagnostic: 'agent-diagnostic',
+
+  // Pull Request Creator
+  btnCreatePr: 'btn-create-pr',
+  prModal: 'pr-modal',
+  btnClosePrModal: 'btn-close-pr-modal',
+  prLoading: 'pr-loading',
+  prFeedback: 'pr-feedback',
+  prWarnings: 'pr-warnings',
+  prForm: 'pr-form',
+  prBaseBranch: 'pr-base-branch',
+  prHeadBranch: 'pr-head-branch',
+  prTargetSummary: 'pr-target-summary',
+  prTitle: 'pr-title',
+  prBody: 'pr-body',
+  prReviewers: 'pr-reviewers',
+  prAssignees: 'pr-assignees',
+  prLabels: 'pr-labels',
+  prDraft: 'pr-draft',
+  prCommitSummary: 'pr-commit-summary',
+  btnPrCancel: 'btn-pr-cancel',
+  btnPrCreate: 'btn-pr-create',
+  prSuccess: 'pr-success',
+  prSuccessText: 'pr-success-text',
+  btnPrCopyLink: 'btn-pr-copy-link',
+  btnPrOpen: 'btn-pr-open',
+
   // New Repository Modal
   newRepoModal: 'new-repo-modal',
   btnCloseNewRepoModal: 'btn-close-new-repo-modal',
