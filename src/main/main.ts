@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { BrowserWindow, app, ipcMain } from 'electron';
 
 import { startServer } from '../server/index';
+import { repairSshAgentElevated } from './ssh-agent-elevation';
 import { IPC_CHANNELS } from '../shared/desktop-api';
 import {
   createLogWindow,
@@ -52,6 +53,9 @@ async function startApp(): Promise<void> {
   ipcMain.handle(IPC_CHANNELS.openLogWindow, () => {
     openLogWindow();
   });
+  // Deliberately ignores every argument the renderer sends. The command it
+  // runs is a constant; see src/main/ssh-agent-elevation.ts.
+  ipcMain.handle(IPC_CHANNELS.repairSshAgent, () => repairSshAgentElevated());
 
   try {
     // Port 0 asks the OS for a free port, so a busy 3000, or a second

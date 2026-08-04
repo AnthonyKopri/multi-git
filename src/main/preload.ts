@@ -10,7 +10,12 @@ import type { DesktopApi } from '../shared/desktop-api';
 
 const desktopApi: DesktopApi = {
   selectFolder: () => ipcRenderer.invoke(IPC_CHANNELS.selectFolder) as Promise<string>,
-  openLogWindow: () => ipcRenderer.invoke(IPC_CHANNELS.openLogWindow) as Promise<void>
+  openLogWindow: () => ipcRenderer.invoke(IPC_CHANNELS.openLogWindow) as Promise<void>,
+  // No arguments are forwarded. Whatever the page passes is dropped here, so
+  // the elevated command in the main process cannot be influenced from a
+  // renderer that a crafted repository managed to get script into.
+  repairSshAgent: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.repairSshAgent) as ReturnType<DesktopApi['repairSshAgent']>
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);
