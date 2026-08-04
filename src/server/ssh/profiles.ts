@@ -1,7 +1,8 @@
 // Applies an SSH profile to a network Git operation.
 import path from 'node:path';
 
-import { GitResult, buildSshCommand, runGitCommand, tryGitCommand } from '../git/run';
+import { buildSshCommand, runGitCommand, tryGitCommand } from '../git/run';
+import type { GitResult } from '../git/run';
 import { isLikelyHttpRemote, parseRemoteUrl } from '../git/remote';
 import { readConfig } from '../config/store';
 import { createAskpassBridge } from './askpass';

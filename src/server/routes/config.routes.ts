@@ -3,6 +3,7 @@ import path from 'node:path';
 import { Router } from 'express';
 
 import { MAX_RECENT_REPOS, readConfig, writeConfig } from '../config/store';
+import { canonicalRepoKey } from '../config/repo-identity';
 import { sanitizeConfigForClient } from '../config/sanitize';
 import { removeManagedBlock } from '../ssh/config-block';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
@@ -72,7 +73,16 @@ configRouter.post(
     ].slice(0, MAX_RECENT_REPOS);
 
     writeConfig(config);
-    res.json({ success: true, repoPath: resolvedPath, config: sanitizeConfigForClient(config) });
+    // repoKey is what repoSettings is indexed by. The renderer holds the
+    // resolved path for display and the key for lookups, because folding the
+    // two together would either break the lookup or show the user a
+    // lower-cased path they never typed.
+    res.json({
+      success: true,
+      repoPath: resolvedPath,
+      repoKey: canonicalRepoKey(resolvedPath),
+      config: sanitizeConfigForClient(config)
+    });
   })
 );
 
@@ -84,10 +94,11 @@ configRouter.post(
       warnBeforeDelete?: unknown;
     };
     const resolvedPath = requireExistingRepo(repoPath);
+    const repoKey = canonicalRepoKey(resolvedPath);
 
     const config = readConfig();
-    config.repoSettings[resolvedPath] = {
-      ...(config.repoSettings[resolvedPath] ?? {}),
+    config.repoSettings[repoKey] = {
+      ...(config.repoSettings[repoKey] ?? {}),
       warnBeforeDelete: warnBeforeDelete !== false
     };
     writeConfig(config);
@@ -95,7 +106,8 @@ configRouter.post(
     res.json({
       success: true,
       repoPath: resolvedPath,
-      repoSettings: config.repoSettings[resolvedPath]
+      repoKey,
+      repoSettings: config.repoSettings[repoKey]
     });
   })
 );

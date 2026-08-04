@@ -36,14 +36,27 @@ export interface AppSettings {
 }
 
 export interface AppConfig {
+  /**
+   * Schema version of the file on disk. 0 is any file written before
+   * versioning existed; see src/server/config/migrations.ts.
+   */
+  configVersion: number;
   recentRepos: string[];
   sshProfiles: SshProfile[];
   accountRules: AccountRule[];
-  /** Keyed by resolved repository path. */
+  /**
+   * Keyed by canonical repository identity, not by the path the user typed.
+   * See src/server/config/repo-identity.ts.
+   */
   repoSettings: Record<string, RepoSettings>;
   settings?: Partial<AppSettings>;
   /** Host to key path, the source of truth the ~/.ssh/config block is rendered from. */
   sshConfigHosts?: Record<string, string>;
+  /**
+   * Sections written by a newer build than this one. Preserved untouched so a
+   * downgrade does not discard them.
+   */
+  [unknownSection: string]: unknown;
 }
 
 export interface VaultStatus {

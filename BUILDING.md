@@ -21,7 +21,7 @@ For what the app does see [README.md](README.md).
 
 | Tool | Version | Notes |
 | --- | --- | --- |
-| Node.js | 18 or newer | `node --version` |
+| Node.js | 22.12 or newer | `node --version`; also the floor in `package.json` `engines` |
 | npm | ships with Node | `npm --version` |
 | Git | any recent release | must be on `PATH`; the app shells out to it |
 | OpenSSH | `ssh` and `ssh-keygen` on `PATH` | needed at runtime, not to build |
@@ -40,8 +40,21 @@ npm install
 ```
 
 This installs Express (the only runtime dependency) plus Electron and
-Electron Builder as dev dependencies. The Electron download is large, so the
-first install takes noticeably longer than later ones.
+Electron Builder as dev dependencies.
+
+`npm install` does **not** unpack the Electron runtime. The `electron` package
+has no postinstall script; it exposes the download as an explicit
+`install-electron` bin instead. `npm run desktop` detects the missing runtime
+and fetches it (a large download, so the first run takes noticeably longer),
+and you can also run it yourself:
+
+```bash
+npx install-electron
+```
+
+Packaging does not need it. Electron Builder downloads its own runtime through
+its own cache, so `npm run build-win` and `npm run release` work on a checkout
+that has never run `install-electron`.
 
 ## Running from source
 
@@ -89,6 +102,16 @@ Run it before every release. Vitest reports every failure rather than stopping
 at the first one.
 
 To type-check without running the suite, use `npm run typecheck`.
+
+`npm run lint:links` checks that every relative link and heading anchor in the
+project's Markdown resolves. External URLs are not fetched, so it never fails
+because a third-party site was briefly down.
+
+CI runs both, plus a packaging smoke test, on every pull request. See
+[.github/workflows/ci.yml](.github/workflows/ci.yml). The matrix covers Windows
+and Linux on Node 22.12 and Node 24 — Windows because the published artifacts
+are Windows-only and because process-tree termination, case-folded repository
+paths, and file replacement all behave differently there.
 
 Beyond that, verification is manual. The paths worth walking before a release:
 

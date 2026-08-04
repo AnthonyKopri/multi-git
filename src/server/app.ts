@@ -16,6 +16,7 @@ import { localhostOnly, securityHeaders } from './middleware/security';
 import { errorHandler } from './middleware/error-handler';
 
 import { logsRouter } from './routes/logs.routes';
+import { operationsRouter } from './routes/operations.routes';
 import { configRouter } from './routes/config.routes';
 import { sshRouter } from './routes/ssh.routes';
 import { statusRouter } from './routes/status.routes';
@@ -55,6 +56,7 @@ export function createApp(): Express {
   // Routes that do not target an existing repository come first, so their
   // paths are not caught by a router that requires the x-repo-path header.
   app.use(logsRouter);
+  app.use(operationsRouter);
   app.use(configRouter);
   app.use(sshRouter);
   app.use(newRepoRouter);

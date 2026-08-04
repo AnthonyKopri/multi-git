@@ -146,8 +146,11 @@ async function disableDeleteWarning(): Promise<void> {
   }
 
   try {
-    const { repoSettings } = await api.saveRepoSettings(repo, false);
-    update({ repoSettings: { ...getState().repoSettings, [repo]: repoSettings } });
+    // Indexed by the key the server reports, not by the path shown in the
+    // header: the two differ whenever a link or a casing difference is
+    // involved, and only the key matches what was stored.
+    const { repoKey, repoSettings } = await api.saveRepoSettings(repo, false);
+    update({ repoSettings: { ...getState().repoSettings, [repoKey]: repoSettings } });
   } catch {
     // Failing to remember the preference is not worth interrupting for.
   }
