@@ -19,6 +19,7 @@ import { logsRouter } from './routes/logs.routes';
 import { operationsRouter } from './routes/operations.routes';
 import { configRouter } from './routes/config.routes';
 import { sshRouter } from './routes/ssh.routes';
+import { sshAgentRouter } from './routes/ssh-agent.routes';
 import { statusRouter } from './routes/status.routes';
 import { stagingRouter } from './routes/staging.routes';
 import { branchesRouter } from './routes/branches.routes';
@@ -59,6 +60,7 @@ export function createApp(): Express {
   app.use(operationsRouter);
   app.use(configRouter);
   app.use(sshRouter);
+  app.use(sshAgentRouter);
   app.use(newRepoRouter);
   app.use(folderRouter);
   app.use(cloneRouter);

@@ -28,6 +28,14 @@ export interface AccountRule {
 export interface RepoSettings {
   /** Whether discarding a file asks for confirmation first. Defaults to true. */
   warnBeforeDelete?: boolean;
+  /**
+   * SSH profile this repository authenticates with. '' is the System profile.
+   *
+   * Server-side and per repository, unlike the older localStorage key, so a
+   * second window or a fresh install of the app agrees about which account a
+   * repository belongs to.
+   */
+  sshProfileId?: string;
 }
 
 export interface AppSettings {
