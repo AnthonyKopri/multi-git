@@ -68,6 +68,7 @@ multi-git-trash/
 # Tool, assistant, and editor-local configuration
 .agents/
 .claude/
+/docs/roadmap/
 .vscode/
 .idea/
 .vs/
