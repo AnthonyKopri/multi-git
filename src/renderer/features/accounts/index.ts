@@ -11,6 +11,7 @@ import { applyProfileIdentity, maybeOfferIdentity } from './identity';
 import { renderAccountRules, renderProfileUI } from './profile-ui';
 import { renderProfileTable } from './profile-table';
 import { renderOverlaySshStatus, renderVaultStatus } from './vault-ui';
+import { initAgentPanel, loadSelectedKey, refreshAgent } from './agent';
 import type { ClientConfig, ClientSshProfile } from '../../../shared/config-types';
 
 let ui: Elements;
@@ -22,6 +23,10 @@ function storageKey(repoPath: string): string {
 
 export function initAccounts(elements: Elements): void {
   ui = elements;
+  initAgentPanel(elements);
+  // Read once at startup, so the dropdown says something true before the user
+  // touches anything.
+  void refreshAgent();
 }
 
 /** Redraws every account-related surface from current state. */
@@ -105,6 +110,10 @@ export async function setActiveProfile(
 
   renderAccounts();
   await applySshConfigForActiveProfile();
+
+  // Get the key into the native agent, so terminals and external coding
+  // agents in this repository authenticate as the same account.
+  await loadSelectedKey(id);
 
   if (!options.silent) {
     const profile = activeProfile();

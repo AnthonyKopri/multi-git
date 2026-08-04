@@ -25,6 +25,7 @@ import * as diff from './features/diff';
 import * as explorer from './features/explorer';
 import * as history from './features/history';
 import * as newRepo from './features/new-repo';
+import * as pullRequest from './features/pull-request';
 import * as repo from './features/repo';
 import * as shelf from './features/shelf';
 import * as ssh from './features/ssh-manager';
@@ -613,6 +614,7 @@ async function start(): Promise<void> {
   explorer.initExplorer(ui, { showCommitDetails: history.showCommitDetails });
   history.initHistory(ui, { refreshAll, showDiffTab: () => workspace.switchViewTab('diff') });
   ssh.initSshManager(ui);
+  pullRequest.initPullRequests(ui);
   workspace.initWorkspace(ui, { refreshStatus });
 
   wireHeader();
