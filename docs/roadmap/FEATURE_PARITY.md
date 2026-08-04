@@ -103,6 +103,33 @@ standalone follow-up PR before Phase 1 branches widen the blast radius.
   previously undocumented.
 - **esbuild target moved from `node18` to `node22.12`.**
 
+### Pre-existing defect found during Phase 0 verification, not fixed here
+
+**A repository path containing characters outside Latin-1 cannot be opened.**
+`x-repo-path` carries the repository path as an HTTP header, and header values
+are byte strings that Node's parser decodes as Latin-1. `café` survives, because
+every code point is under U+0100. `中文` and emoji do not: the renderer's `fetch`
+truncates each UTF-16 code unit to its low byte on the way out, and the server
+resolves a path that does not exist.
+
+Reproduced against a real repository on both this branch and the pre-upgrade
+baseline, so it is not a regression from the toolchain move:
+
+| Path | JSON body (`/api/config/repo`) | `x-repo-path` header |
+| --- | --- | --- |
+| `…/mg probe café …` | works | works |
+| `…/mg probe 中文 …` | works | **fails** |
+| `…/mg probe 🔑 …` | works | **fails** |
+
+The JSON body path is unaffected, which is why opening a repository through the
+picker appears to succeed before every subsequent request fails.
+
+Left out of Phase 0 deliberately: the fix is to percent-encode the header in
+`src/renderer/api/client.ts` and decode it in
+`src/server/middleware/repo-path.ts`, both of which are shared hotspots the
+execution contract asks to be claimed, and it is unrelated to the toolchain and
+foundation work this phase delivers. Worth a small standalone PR.
+
 ### Defect found and fixed during Phase 0 verification
 
 Launching the packaged app showed it listening on **two** ports. `src/server/index.ts`
