@@ -30,6 +30,7 @@ import { stashRouter } from './routes/stash.routes';
 import { tagsRouter } from './routes/tags.routes';
 import { filesRouter, folderRouter } from './routes/files.routes';
 import { safetyNetRouter } from './routes/safety-net.routes';
+import { pullRequestsRouter } from './routes/pull-requests.routes';
 import { newRepoRouter } from './routes/new-repo.routes';
 
 /**
@@ -76,6 +77,7 @@ export function createApp(): Express {
   app.use(tagsRouter);
   app.use(filesRouter);
   app.use(safetyNetRouter);
+  app.use(pullRequestsRouter);
 
   app.use(errorHandler);
 
