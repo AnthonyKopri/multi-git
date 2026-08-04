@@ -3,6 +3,7 @@
 // app does.
 import { applyManagedBlock } from './config-block';
 import { isSshConfigManagementEnabled, readConfig, writeConfig } from '../config/store';
+import { isValidSshConfigHost } from '../config/validate';
 
 export interface SshConfigSyncResult {
   /** Set when the user turned config management off. */
@@ -20,6 +21,15 @@ export interface SshConfigSyncResult {
  * it every time rather than being edited in place.
  */
 export function syncSshConfigForHost(host: string, keyPath: string | null): SshConfigSyncResult {
+  // The host is derived from the repository's origin URL, and a repository is
+  // not trusted input — cloning someone else's is this app's normal workflow.
+  // It is written verbatim into ~/.ssh/config, so a value carrying a newline
+  // would append directives to the file that decides which key authenticates
+  // where.
+  if (!isValidSshConfigHost(host)) {
+    return { error: `Refusing to write an unusable host name to ~/.ssh/config: ${host}` };
+  }
+
   const config = readConfig();
 
   if (!isSshConfigManagementEnabled(config)) {

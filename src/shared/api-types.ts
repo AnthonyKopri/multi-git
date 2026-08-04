@@ -153,6 +153,8 @@ export interface VaultStatusResponse extends Ok, VaultStatus {}
 
 export interface RepoSettingsResponse extends Ok {
   repoPath: string;
+  /** Canonical identity this repository's settings are stored under. */
+  repoKey: string;
   repoSettings: RepoSettings;
 }
 

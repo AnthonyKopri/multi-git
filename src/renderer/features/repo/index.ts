@@ -78,13 +78,13 @@ export async function openRepository(repoPath: string): Promise<void> {
   logToTerminal(`Opening repository: ${repoPath}...`);
 
   try {
-    const { repoPath: resolved } = await api.rememberRepo(repoPath);
+    const { repoPath: resolved, repoKey } = await api.rememberRepo(repoPath);
     const opened = resolved || repoPath;
 
     // Point the API client at the new repository before anything queries it,
     // so responses for the previous one are abandoned rather than applied.
     setActiveRepo(opened);
-    update({ activeRepo: opened });
+    update({ activeRepo: opened, activeRepoKey: repoKey || opened });
 
     ui.appContainer.classList.remove('disabled-view');
     setHidden(ui.noRepoOverlay, true);

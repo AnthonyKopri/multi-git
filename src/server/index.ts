@@ -1,4 +1,13 @@
-// Server entry point.
+// The server as a library: create the app, start it on a port, hand back the
+// http.Server. Starting it from a command line is src/server/cli.ts.
+//
+// The split is not cosmetic. This module is imported by src/main/main.ts, and
+// esbuild inlines it into out/node/main/main.js. Anything that ran at the top
+// level here would therefore also run inside Electron — and a
+// `require.main === module` guard does not help, because in that bundle
+// main.js *is* the process entry, so the guard reads as true. That is exactly
+// what used to happen: every desktop launch started the intended server on a
+// free port and a second, unasked-for one on port 3000.
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 
@@ -44,12 +53,5 @@ export function startServer(options: StartServerOptions = {}): Promise<Server> {
     });
 
     server.on('error', reject);
-  });
-}
-
-if (require.main === module) {
-  startServer().catch((error: Error) => {
-    console.error('Failed to start server:', error.message);
-    process.exit(1);
   });
 }

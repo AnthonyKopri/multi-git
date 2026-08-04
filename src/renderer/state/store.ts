@@ -29,7 +29,16 @@ export interface ActiveDiffFile {
 
 export interface AppState {
   // Repository
+  /** The resolved path, as shown to the user and sent as x-repo-path. */
   activeRepo: string | null;
+  /**
+   * Canonical identity of the active repository, supplied by the server.
+   *
+   * Separate from `activeRepo` because `repoSettings` is keyed by identity
+   * while the header shows the path: on Windows those differ in case, and
+   * anywhere they differ whenever a symlink or junction is involved.
+   */
+  activeRepoKey: string | null;
   recentRepos: string[];
   repoSettings: Record<string, RepoSettings>;
 
@@ -69,6 +78,7 @@ export interface AppState {
 function initialState(): AppState {
   return {
     activeRepo: null,
+    activeRepoKey: null,
     recentRepos: [],
     repoSettings: {},
 
@@ -175,13 +185,18 @@ export function isConflicted(): boolean {
   );
 }
 
-/** Whether discarding in this repository should ask for confirmation. */
+/**
+ * Whether discarding in this repository should ask for confirmation.
+ *
+ * Defaults to warning: an unknown repository is one whose preference has not
+ * been recorded, and the safe reading of "unknown" is to ask.
+ */
 export function shouldWarnBeforeDelete(): boolean {
-  const repo = state.activeRepo;
-  if (!repo) {
+  const key = state.activeRepoKey;
+  if (!key) {
     return true;
   }
-  return state.repoSettings[repo]?.warnBeforeDelete !== false;
+  return state.repoSettings[key]?.warnBeforeDelete !== false;
 }
 
 /** The profile an auto-select rule picks for the current origin URL. */

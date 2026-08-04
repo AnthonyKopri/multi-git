@@ -1,7 +1,7 @@
 // Builds the TypeScript sources with esbuild.
 //
 //   src/main/*.ts     -> out/node/main/*.js     CommonJS, Electron externals
-//   src/server/*.ts   -> out/node/server/*.js   CommonJS, node_modules external
+//   src/server/cli.ts -> out/node/server/cli.js CommonJS, node_modules external
 //   src/renderer/*.ts -> out/web/app.js         IIFE, self-contained
 //   public/*          -> out/web/               copied verbatim
 //
@@ -43,15 +43,22 @@ const OUT = path.join(ROOT, 'out');
 
 const watch = process.argv.includes('--watch');
 
-/** Node 18 is the documented minimum in README.md. */
-const NODE_TARGET = 'node18';
-/** Electron 42 ships a very recent Chromium; the browser bundle can be modern. */
+/**
+ * Node 22.12 is the documented minimum in README.md and the floor Electron 43
+ * declares in its own `engines`. Electron 43 itself embeds Node 24, so this is
+ * the lower of the two environments the server bundle has to run in.
+ */
+const NODE_TARGET = 'node22.12';
+/** Electron 43 ships a very recent Chromium; the browser bundle can be modern. */
 const WEB_TARGET = 'es2022';
 
 const nodeEntries = [
   { in: 'src/main/main.ts', out: 'out/node/main/main.js', external: ['electron'] },
   { in: 'src/main/preload.ts', out: 'out/node/main/preload.js', external: ['electron'] },
-  { in: 'src/server/index.ts', out: 'out/node/server/index.js', external: ['express'] }
+  // cli.ts, not index.ts: index.ts is a library that the Electron bundle also
+  // inlines, so it must have no top-level side effects. Bundling the CLI entry
+  // is what keeps that distinction from being purely conventional.
+  { in: 'src/server/cli.ts', out: 'out/node/server/cli.js', external: ['express'] }
 ];
 
 const webEntries = [{ in: 'src/renderer/main.ts', out: 'out/web/app.js' }];

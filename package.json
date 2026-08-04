@@ -4,12 +4,13 @@
   "description": "A lightweight Git GUI client with dynamic SSH key switching",
   "main": "out/node/main/main.js",
   "scripts": {
-    "start": "npm run compile && node out/node/server/index.js",
-    "dev": "npm run compile && node out/node/server/index.js",
-    "desktop": "npm run compile && electron .",
+    "start": "npm run compile && node out/node/server/cli.js",
+    "dev": "npm run compile && node out/node/server/cli.js",
+    "desktop": "npm run compile && node scripts/ensure-electron.mjs && electron .",
     "compile": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json && tsc -p tsconfig.test.json",
+    "lint:links": "node scripts/check-links.mjs",
     "test": "npm run typecheck && vitest run",
     "build": "npm run compile && electron-builder",
     "build-win": "npm run compile && electron-builder --win nsis portable",
@@ -17,6 +18,9 @@
     "release": "node scripts/release.js",
     "release:installer": "node scripts/release.js --target installer",
     "release:portable": "node scripts/release.js --target portable"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   },
   "keywords": [
     "git",
@@ -32,15 +36,15 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
-    "@types/node": "^18.19.0",
-    "@types/supertest": "^6.0.2",
-    "electron": "^42.3.2",
+    "@types/node": "^24.13.3",
+    "@types/supertest": "^7.2.1",
+    "electron": "^43.3.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
     "rcedit": "^5.0.2",
     "supertest": "^7.0.0",
-    "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "build": {
     "appId": "com.multigit.client",

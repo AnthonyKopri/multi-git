@@ -1,28 +1,80 @@
-# Dependabot is used here for security updates only.
+# Dependabot configuration.
 #
-# Without this file, GitHub opens one security PR per advisory. Because almost
-# every dependency in this project is transitive through electron-builder, a
-# single upstream release closes ten advisories at once, and the ungrouped
-# behaviour produced four PRs that all bumped the same package and conflicted
-# with one another in package-lock.json. The group below collapses them into
-# one PR that can be reviewed and merged as a unit.
+# Grouping is the load-bearing part. Almost every dependency in this project is
+# transitive through electron-builder, so a single upstream release closes ten
+# advisories at once; ungrouped, that produced four PRs that all bumped the
+# same package and conflicted with one another in package-lock.json.
 #
-# open-pull-requests-limit: 0 disables scheduled version-update PRs. Routine
-# upgrades stay a deliberate act (`npm outdated`, then a considered bump);
-# only advisories open a PR on their own. Grouping still applies to those,
-# because groups are evaluated independently of the version-update limit.
+# Security advisories are ungated and grouped into one PR. Routine version
+# updates are now enabled too, but deliberately shaped:
+#
+#   * Minor and patch updates are grouped by area and land monthly, so the
+#     toolchain does not drift a year behind between release trains again.
+#
+#   * Majors are excluded from every group. Electron, TypeScript, and Vitest
+#     majors each need a migration pass — Electron 43 changed how the runtime
+#     is installed, TypeScript 7 dropped the legacy module resolver — and that
+#     belongs in a PR of its own with a human reading the migration guide.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 0
+      interval: monthly
+    # Enough for the groups below plus a major or two, without burying the
+    # pull request list.
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build(deps)
+      prefix-development: build(deps-dev)
     groups:
       npm-security:
         applies-to: security-updates
         patterns:
           - "*"
-    commit-message:
-      prefix: build(deps)
-      prefix-development: build(deps-dev)
+
+      electron-toolchain:
+        applies-to: version-updates
+        patterns:
+          - electron
+          - electron-builder
+          - "@electron/*"
+          - rcedit
+        update-types:
+          - minor
+          - patch
+
+      typescript-toolchain:
+        applies-to: version-updates
+        patterns:
+          - typescript
+          - esbuild
+          - "@types/*"
+        update-types:
+          - minor
+          - patch
+
+      test-toolchain:
+        applies-to: version-updates
+        patterns:
+          - vitest
+          - vite
+          - supertest
+        update-types:
+          - minor
+          - patch
+
+      runtime:
+        applies-to: version-updates
+        patterns:
+          - express
+        update-types:
+          - minor
+          - patch
+
+    ignore:
+      # @types/node tracks the Node major that Electron embeds, not the newest
+      # published. Electron 43 embeds Node 24, so 25 and 26 would describe
+      # APIs the runtime does not have. Raise this with the Electron major.
+      - dependency-name: "@types/node"
+        versions: [">=25"]
