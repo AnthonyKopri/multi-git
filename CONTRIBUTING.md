@@ -58,6 +58,7 @@ Then open `http://localhost:3000`.
 | `src/renderer/` | UI: state store, typed API client, DOM helpers, and one folder per feature. |
 | `templates/` | Template bodies, kept as verbatim copies of their upstream sources. |
 | `tests/` | Vitest suite: unit tests, API integration tests, and the pre-release checks. |
+| `docs/roadmap/` | Feature roadmap: the parity inventory and one self-contained handoff per implementation phase. |
 | `scripts/` | The esbuild build, the release driver, and the packaging after-pack step. |
 | `public/index.html` | Application structure and dialogs. |
 | `public/style.css` | Application styling. |
