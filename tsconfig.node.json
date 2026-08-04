@@ -1,8 +1,7 @@
 {
-  "// ": "Server, Electron main/preload, and the test suite. Runs on Node, so CommonJS and no DOM.",
+  "// ": "Server and Electron main/preload. Runs on Node, so no DOM. esbuild emits the CommonJS these files are loaded as; the module settings inherited from the base config describe resolution only.",
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
     "lib": ["ES2022"],
     "types": ["node"]
   },

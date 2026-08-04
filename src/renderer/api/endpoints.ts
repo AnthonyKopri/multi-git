@@ -24,10 +24,10 @@ export const lockVault = () =>
   api.post<Api.VaultStatusResponse>('/api/secrets/lock', global);
 
 export const rememberRepo = (repoPath: string) =>
-  api.post<Api.ConfigMutationResponse & { repoPath: string }>('/api/config/repo', {
-    ...global,
-    body: { repoPath }
-  });
+  api.post<Api.ConfigMutationResponse & { repoPath: string; repoKey: string }>(
+    '/api/config/repo',
+    { ...global, body: { repoPath } }
+  );
 
 export const forgetRepo = (repoPath: string) =>
   api.delete<Api.ConfigMutationResponse>('/api/config/repo', { ...global, body: { repoPath } });

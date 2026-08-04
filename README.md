@@ -41,7 +41,7 @@ The Windows packages are not currently code-signed, so Windows may show a SmartS
 
 ### Run from source
 
-Running from source requires [Node.js 18 or newer](https://nodejs.org/), npm, Git, and OpenSSH (`ssh` and `ssh-keygen`).
+Running from source requires [Node.js 22.12 or newer](https://nodejs.org/), npm, Git, and OpenSSH (`ssh` and `ssh-keygen`).
 
 ```bash
 git clone https://github.com/AnthonyKopri/multi-git.git
@@ -49,6 +49,8 @@ cd multi-git
 npm install
 npm run desktop
 ```
+
+`npm install` does not download the Electron runtime on its own — Electron ships that as an explicit `install-electron` step rather than an install script. `npm run desktop` runs it for you when the binary is missing; `npm start` never needs it.
 
 For browser-based development, run:
 

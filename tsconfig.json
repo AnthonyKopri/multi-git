@@ -1,9 +1,12 @@
 {
-  "// ": "Strict base shared by tsconfig.node.json and tsconfig.web.json. Never compiled directly.",
+  "// ": "Strict base shared by tsconfig.node.json, tsconfig.web.json and tsconfig.test.json. Never compiled directly.",
+  "// module": "Every bundle is produced by esbuild, never by tsc, so the module settings here exist only to describe how imports resolve. TypeScript 7 dropped the legacy `node` (node10) resolver; `bundler` is the mode that matches what esbuild actually does, and `ESNext` keeps import syntax untransformed so `verbatimModuleSyntax` can hold every file to explicit `import type`.",
   "compilerOptions": {
     "target": "ES2022",
+    "module": "ESNext",
     "moduleDetection": "force",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,

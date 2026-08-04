@@ -1,0 +1,156 @@
+# Continuous integration.
+#
+# Windows is not an afterthought here, it is the primary target: the published
+# artifacts are Windows-only, and three of the behaviours this project depends
+# on differ there in ways a Linux-only run would never show — killing a process
+# tree has no signal-based equivalent, the filesystem folds case when deciding
+# what a repository path means, and replacing a file that another handle has
+# open behaves differently on NTFS.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push supersedes an in-flight run for the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        # The floor declared in package.json engines, and the version Electron
+        # 43 actually embeds. A break in either is a break for real users.
+        node: ['22.12', '24']
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck and test
+        # No SSH agent: unit tests must not reach for developer credentials.
+        env:
+          SSH_AUTH_SOCK: ''
+        run: npm test
+
+      - name: Compile
+        run: npm run compile
+
+  no-host-tooling:
+    name: test without gh or an ssh agent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Remove the GitHub CLI from PATH
+        # Runners ship gh pre-installed and authenticated against the workflow
+        # token. A user's machine usually has neither, and every code path that
+        # asks about gh has to behave when the answer is "not installed".
+        run: |
+          if command -v gh >/dev/null 2>&1; then
+            sudo mv "$(command -v gh)" /tmp/gh-disabled
+          fi
+          ! command -v gh
+
+      - name: Typecheck and test
+        env:
+          SSH_AUTH_SOCK: ''
+          GH_TOKEN: ''
+          GITHUB_TOKEN: ''
+        run: npm test
+
+  docs:
+    name: docs and whitespace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Needed so the whitespace check below can find a merge base.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Check Markdown links
+        run: npm run lint:links
+
+      - name: Check for whitespace errors introduced by this change
+        # Scoped to the merge base rather than the whole tree. public/index.html
+        # and public/style.css carry pre-existing trailing whitespace; failing
+        # every run on it would just train people to ignore this job, and
+        # reformatting two shared files is not this check's job to force.
+        run: |
+          base="origin/${{ github.base_ref || github.event.repository.default_branch }}"
+          if git rev-parse --verify --quiet "$base" >/dev/null; then
+            git diff --check "$(git merge-base "$base" HEAD)" HEAD
+          else
+            echo "No base ref to compare against; checking the working tree only."
+            git diff --check
+          fi
+
+  package:
+    name: packaging smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Package (unpacked)
+        # --dir stops before building the NSIS installer, which is the slow
+        # half and not what this is checking. What it does check is the part
+        # that actually breaks: whether build.files still covers everything the
+        # app loads at runtime.
+        run: npx electron-builder --win --dir --publish never
+
+      - name: Verify the packaged app has its entry point
+        shell: pwsh
+        run: |
+          $asar = Get-ChildItem -Path dist -Recurse -Filter app.asar | Select-Object -First 1
+          if (-not $asar) { throw 'electron-builder produced no app.asar' }
+
+          $listing = npx --yes @electron/asar list $asar.FullName
+          if (-not ($listing | Select-String -Pattern 'main\.js' -SimpleMatch:$false -Quiet)) {
+            throw 'app.asar does not contain out/node/main/main.js'
+          }
+
+          Write-Output "Packaged $($asar.FullName)"

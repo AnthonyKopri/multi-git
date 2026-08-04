@@ -7,6 +7,7 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
 import { GitError } from '../git/run';
 import { InvalidGitArgumentError } from '../git/args';
+import { CommandFailedError, CommandSpawnError } from '../process/runner';
 import { RepoPathError } from './repo-path';
 
 /** An error carrying the HTTP status it should produce. */
@@ -42,10 +43,17 @@ function classify(error: unknown, fallbackMessage: string): ErrorShape {
     return { statusCode: error.statusCode, message: error.displayMessage || fallbackMessage };
   }
 
+  if (error instanceof CommandFailedError) {
+    // Already redacted by the runner, so this cannot leak a passphrase or a
+    // token into a response body.
+    return { statusCode: error.statusCode, message: error.displayMessage || fallbackMessage };
+  }
+
   if (
     error instanceof InvalidGitArgumentError ||
     error instanceof RepoPathError ||
-    error instanceof HttpError
+    error instanceof HttpError ||
+    error instanceof CommandSpawnError
   ) {
     return { statusCode: error.statusCode, message: error.message };
   }
