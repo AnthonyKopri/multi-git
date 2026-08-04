@@ -2904,3 +2904,172 @@ body.pane-resizing-y * {
   font-style: italic;
   white-space: nowrap;
 }
+
+/* ==========================================================================
+   PULL REQUEST CREATOR
+   A wide window, because this form carries a Markdown body, two branch
+   selectors, a commit summary and a warning list at the same time.
+   ========================================================================== */
+
+.modal-card-wide {
+  width: min(880px, 96vw);
+}
+
+.pr-branch-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 12px;
+}
+
+.pr-branch-row .form-group {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.pr-branch-arrow {
+  padding-bottom: 10px;
+  color: var(--text-muted);
+  font-size: 20px;
+}
+
+.pr-warnings {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background-color: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.pr-warnings li + li {
+  margin-top: 6px;
+}
+
+.pr-warnings li::before {
+  content: '•';
+  margin-right: 8px;
+  color: var(--color-warning);
+}
+
+#pr-body {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  /* A Markdown body is read as code as often as it is read as prose. */
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.pr-advanced {
+  margin-bottom: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+}
+
+.pr-advanced summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.pr-advanced[open] summary {
+  margin-bottom: 12px;
+  color: var(--text-main);
+}
+
+.pr-options {
+  margin-bottom: 16px;
+}
+
+.pr-commit-summary {
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pr-commit-heading {
+  margin: 0 0 6px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.pr-commit-summary ul {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.pr-commit-summary li {
+  /* Commit subjects are repository data and can be arbitrarily long. */
+  overflow-wrap: anywhere;
+  margin-bottom: 2px;
+}
+
+.pr-success {
+  padding-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .pr-branch-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pr-branch-arrow {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   NATIVE SSH AGENT STATUS
+   ========================================================================== */
+
+.agent-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 0;
+  flex-wrap: wrap;
+}
+
+.agent-chip {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.agent-chip.agent-ok {
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+  background-color: var(--color-success-bg);
+}
+
+.agent-chip.agent-warn {
+  color: var(--color-warning);
+  border-color: var(--color-warning-border);
+  background-color: var(--color-warning-bg);
+}
+
+.agent-chip.agent-off {
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+  background-color: var(--color-danger-bg);
+}
+
+.agent-diagnostic {
+  padding: 6px 12px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}

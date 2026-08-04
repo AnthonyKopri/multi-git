@@ -6,6 +6,15 @@
 // instead of producing undefined at runtime.
 import { api } from './client';
 import type * as Api from '../../shared/api-types';
+import type {
+  SshAgentLoadResponse,
+  SshAgentStatusResponse
+} from '../../shared/ssh-agent-types';
+import type {
+  PullRequestCreateInput,
+  PullRequestCreateResponse,
+  PullRequestPreflightResponse
+} from '../../shared/pull-request-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -333,3 +342,33 @@ export const selectFolderViaServer = () =>
 
 export const postLog = (text: string, type: string) =>
   api.post<Api.Ok>('/api/logs', { ...global, body: { text, type } });
+
+// ---------- ssh agent ----------
+
+export const getSshAgentStatus = (repoPath?: string, profileId?: string) =>
+  api.get<SshAgentStatusResponse>('/api/ssh/agent/status', {
+    ...global,
+    query: { repoPath, profileId }
+  });
+
+export const loadSshAgentKey = (repoPath: string | null, profileId: string) =>
+  api.post<SshAgentLoadResponse & { routingChanged: boolean }>('/api/ssh/agent/load', {
+    ...global,
+    body: { repoPath, profileId }
+  });
+
+export const unloadSshAgentKey = (profileId: string, force = false) =>
+  api.post<SshAgentLoadResponse>('/api/ssh/agent/unload', {
+    ...global,
+    body: { profileId, force }
+  });
+
+// ---------- pull requests ----------
+
+export const preflightPullRequest = (headBranch?: string, baseBranch?: string) =>
+  api.get<PullRequestPreflightResponse>('/api/pull-requests/preflight', {
+    query: { headBranch, baseBranch }
+  });
+
+export const createPullRequest = (input: PullRequestCreateInput & { pushFirst?: boolean }) =>
+  api.post<PullRequestCreateResponse>('/api/pull-requests', { body: input });
