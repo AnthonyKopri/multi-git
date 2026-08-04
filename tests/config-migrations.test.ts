@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -159,6 +159,104 @@ describe('a file from a newer build', () => {
     const { config } = prepareConfig(future);
 
     expect(config['somethingFromTheFuture']).toEqual({ enabled: true });
+  });
+});
+
+describe('upgrading a real user-data file', () => {
+  /**
+   * Loads the config store against a throwaway home directory.
+   *
+   * CONFIG_FILE is derived from os.homedir() when the module first loads, and
+   * os.homedir() reads USERPROFILE on Windows and HOME elsewhere. Resetting
+   * the module registry between cases is what makes each one see its own
+   * home rather than the first one's.
+   */
+  async function storeWithHome(home: string) {
+    vi.resetModules();
+    vi.stubEnv('USERPROFILE', home);
+    vi.stubEnv('HOME', home);
+
+    return import('../src/server/config/store');
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('keeps every record and rewrites the file at the current version', async () => {
+    // The end-to-end path a real launch takes: an unversioned file on disk,
+    // read through the cache, migrated, and written back.
+    const home = fs.mkdtempSync(path.join(workspace, 'home-'));
+    const fixture = version0Fixture(workspace);
+    const configFile = path.join(home, '.multi-git-client-config.json');
+    fs.writeFileSync(configFile, JSON.stringify(fixture, null, 2));
+
+    const store = await storeWithHome(home);
+    const config = store.readConfig();
+
+    expect(config.recentRepos).toEqual(fixture.recentRepos);
+    expect(config.sshProfiles).toEqual(fixture.sshProfiles);
+    expect(config.accountRules).toEqual(fixture.accountRules);
+    expect(config.sshConfigHosts).toEqual(fixture.sshConfigHosts);
+    expect(config.repoSettings[canonicalRepoKey(workspace)]).toEqual({
+      warnBeforeDelete: false
+    });
+
+    const onDisk = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+    expect(onDisk.configVersion).toBe(CURRENT_CONFIG_VERSION);
+    expect(onDisk.sshProfiles).toEqual(fixture.sshProfiles);
+
+    // Written through a temp file and renamed, so an interrupted write cannot
+    // leave a truncated config behind.
+    expect(fs.readdirSync(home)).toEqual(['.multi-git-client-config.json']);
+  });
+
+  it('does not migrate the same file twice', async () => {
+    const home = fs.mkdtempSync(path.join(workspace, 'home-'));
+    const configFile = path.join(home, '.multi-git-client-config.json');
+    fs.writeFileSync(configFile, JSON.stringify(version0Fixture(workspace)));
+
+    const store = await storeWithHome(home);
+    store.readConfig();
+    const afterFirst = fs.readFileSync(configFile, 'utf8');
+
+    store.invalidateConfigCache();
+    store.readConfig();
+
+    expect(fs.readFileSync(configFile, 'utf8')).toBe(afterFirst);
+  });
+
+  it('starts empty rather than crashing on an unparseable file', async () => {
+    const home = fs.mkdtempSync(path.join(workspace, 'home-'));
+    const configFile = path.join(home, '.multi-git-client-config.json');
+    fs.writeFileSync(configFile, '{ this is not json');
+
+    const store = await storeWithHome(home);
+    const config = store.readConfig();
+
+    expect(config.sshProfiles).toEqual([]);
+    // Deliberately left alone: the user's profiles are still in that file and
+    // overwriting it would destroy the only copy.
+    expect(fs.readFileSync(configFile, 'utf8')).toBe('{ this is not json');
+  });
+
+  it('round-trips a write without losing a section it does not understand', async () => {
+    const home = fs.mkdtempSync(path.join(workspace, 'home-'));
+    const configFile = path.join(home, '.multi-git-client-config.json');
+    fs.writeFileSync(
+      configFile,
+      JSON.stringify({ ...version0Fixture(workspace), futureSection: { keep: 'me' } })
+    );
+
+    const store = await storeWithHome(home);
+    const config = store.readConfig();
+    config.recentRepos = ['/somewhere/else'];
+    expect(store.writeConfig(config)).toBe(true);
+
+    const onDisk = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+    expect(onDisk.futureSection).toEqual({ keep: 'me' });
+    expect(onDisk.recentRepos).toEqual(['/somewhere/else']);
   });
 });
 
