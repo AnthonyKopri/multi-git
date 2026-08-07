@@ -20,6 +20,7 @@ import {
 } from '../src/server/ssh/agent';
 import { parseScField, parseServiceQuery, repairNeedsElevation, AGENT_REPAIR_COMMAND } from '../src/server/ssh/agent-service';
 import { buildRepoSshCommand, isMultiGitSshCommand } from '../src/server/ssh/repo-routing';
+import { normalizeSshPath } from '../src/server/ssh/keys';
 import { FakeRunner, command } from './helpers/fake-runner';
 
 const FINGERPRINT = 'SHA256:VGhpc0lzQVRlc3RGaW5nZXJwcmludFZhbHVlMDE=';
@@ -385,6 +386,37 @@ describe('unloadKeyFromAgent', () => {
     await unloadKeyFromAgent({ privateKeyPath: keyPath, runner });
 
     expect(runner.calls.some((call) => call.args.includes('-D'))).toBe(false);
+  });
+});
+
+describe('normalizeSshPath', () => {
+  it('expands a leading tilde', () => {
+    expect(normalizeSshPath('~/.ssh/id_ed25519')).toBe(
+      path.resolve(path.join(os.homedir(), '.ssh', 'id_ed25519'))
+    );
+    expect(normalizeSshPath('~')).toBe(path.resolve(os.homedir()));
+  });
+
+  it('leaves a tilde inside the path alone', () => {
+    // Windows 8.3 short names contain one — C:\Users\RUNNER~1, C:\PROGRA~1 —
+    // and rewriting it produced a path that does not exist, reported as "the
+    // private key file was not found".
+    const shortName = path.join(workspace, 'RUNNER~1', 'keys', 'id_ed25519');
+
+    expect(normalizeSshPath(shortName)).toBe(path.resolve(shortName));
+    expect(normalizeSshPath(shortName)).toContain('RUNNER~1');
+  });
+
+  it('does not treat ~user as a home directory', () => {
+    const literal = path.join(workspace, '~someone', 'key');
+
+    expect(normalizeSshPath(literal)).toContain('~someone');
+  });
+
+  it('returns an empty string for nothing usable', () => {
+    expect(normalizeSshPath('')).toBe('');
+    expect(normalizeSshPath(null)).toBe('');
+    expect(normalizeSshPath(undefined)).toBe('');
   });
 });
 
