@@ -29,7 +29,14 @@ function signedInGh(): FakeRunner {
     .on(command('gh', '--version'), { stdout: 'gh version 2.60.0' })
     .on(command('gh', 'auth', 'status'), { stdout: 'Logged in to github.com account octocat' })
     .on(command('gh', 'pr', 'list'), { stdout: '' })
-    .on(command('gh', 'repo', 'view'), { stdout: 'main' })
+    .on(command('gh', 'repo', 'view', 'defaultBranchRef'), { stdout: 'main' })
+    // Ownership defaults to "this repository, and I can push to it".
+    .on(
+      (executable, args) =>
+        executable.endsWith('gh') && args.includes('nameWithOwner,isFork,parent,viewerPermission'),
+      { stdout: ['octocat/demo', 'false', '', 'WRITE'].join('') }
+    )
+    .on(command('gh', 'api', 'user'), { stdout: 'octocat' })
     .on(command('gh', 'pr', 'create'), {
       stdout: 'https://github.com/octocat/demo/pull/42\n'
     });
@@ -262,6 +269,126 @@ describe('preflight', () => {
     });
 
     expect(preflight.warnings.join(' ')).toContain('same');
+  });
+});
+
+/** The unit separator readOwnership uses to join its jq fields. */
+const US = '\u001f';
+
+/** gh reporting this checkout as a fork of `parent`. */
+function forkOf(runner: FakeRunner, origin: string, parent: string, permission = 'WRITE'): FakeRunner {
+  return runner
+    .on(
+      (executable, args) => executable.endsWith('gh') && args.includes('nameWithOwner,isFork,parent,viewerPermission'),
+      { stdout: [origin, 'true', parent, permission].join(US) }
+    )
+    .on(command('gh', 'api', 'user'), { stdout: 'contributor' });
+}
+
+/** gh reporting this checkout as the repository itself, not a fork. */
+function notAFork(runner: FakeRunner, origin: string, permission = 'WRITE'): FakeRunner {
+  return runner
+    .on(
+      (executable, args) => executable.endsWith('gh') && args.includes('nameWithOwner,isFork,parent,viewerPermission'),
+      { stdout: [origin, 'false', '', permission].join(US) }
+    )
+    .on(command('gh', 'api', 'user'), { stdout: 'octocat' });
+}
+
+describe('forks', () => {
+  it('reports the parent as the target and names the fork owner', async () => {
+    git(repo, 'checkout', '-q', '-b', 'feat/contribution');
+    const runner = forkOf(signedInGh(), 'contributor/demo', 'octocat/demo');
+
+    const preflight = await preflightPullRequest({ repoPath: repo, runner });
+
+    expect(preflight.targetRepo).toBe('octocat/demo');
+    expect(preflight.forkOwner).toBe('contributor');
+    expect(preflight.warnings.join(' ')).toContain('contributor/demo to octocat/demo');
+  });
+
+  it('creates with owner:branch and an explicit target repository', async () => {
+    // Without both, gh looks for the branch in the target repository, does not
+    // find it, and reports "no commits between" — the most confusing failure
+    // in the whole flow.
+    git(repo, 'branch', '-f', 'feat/thing');
+    git(repo, 'update-ref', 'refs/remotes/origin/feat/thing', 'HEAD');
+    const runner = forkOf(signedInGh(), 'contributor/demo', 'octocat/demo');
+
+    await createPullRequest({
+      repoPath: repo,
+      baseBranch: 'main',
+      headBranch: 'feat/thing',
+      title: 'feat: contribute',
+      body: '',
+      draft: false,
+      maintainerCanModify: true,
+      runner
+    });
+
+    const create = runner.callsTo('gh').find((call) => call.args.includes('create'));
+    expect(create?.args).toEqual(expect.arrayContaining(['--head', 'contributor:feat/thing']));
+    expect(create?.args).toEqual(expect.arrayContaining(['--repo', 'octocat/demo']));
+  });
+
+  it('uses a plain branch name when the repository is not a fork', async () => {
+    git(repo, 'branch', '-f', 'feat/thing');
+    git(repo, 'update-ref', 'refs/remotes/origin/feat/thing', 'HEAD');
+    const runner = notAFork(signedInGh(), 'octocat/demo');
+
+    await createPullRequest({
+      repoPath: repo,
+      baseBranch: 'main',
+      headBranch: 'feat/thing',
+      title: 'feat: direct',
+      body: '',
+      draft: false,
+      maintainerCanModify: true,
+      runner
+    });
+
+    const create = runner.callsTo('gh').find((call) => call.args.includes('create'));
+    expect(create?.args).toEqual(expect.arrayContaining(['--head', 'feat/thing']));
+    expect(create?.args).not.toContain('--repo');
+  });
+
+  it('explains a missing push permission instead of failing later', async () => {
+    git(repo, 'checkout', '-q', '-b', 'feat/no-access');
+    const runner = notAFork(signedInGh(), 'octocat/demo', 'READ');
+
+    const preflight = await preflightPullRequest({ repoPath: repo, runner });
+
+    expect(preflight.warnings.join(' ')).toContain('do not have push access');
+    expect(preflight.warnings.join(' ')).toContain('Fork it first');
+  });
+
+  it('ignores ownership output that is not owner/repo', async () => {
+    // A gh version whose --jq behaves differently, or an error banner on
+    // stdout, must not become a push target.
+    git(repo, 'checkout', '-q', '-b', 'feat/garbled');
+    const runner = signedInGh().on(
+      (executable, args) =>
+        executable.endsWith('gh') && args.includes('nameWithOwner,isFork,parent,viewerPermission'),
+      { stdout: 'main' }
+    );
+
+    const preflight = await preflightPullRequest({ repoPath: repo, runner });
+
+    expect(preflight.targetRepo).toBe('octocat/demo');
+    expect(preflight.forkOwner).toBeUndefined();
+  });
+
+  it('survives gh being unable to answer the ownership question', async () => {
+    git(repo, 'checkout', '-q', '-b', 'feat/unknown');
+    const runner = signedInGh().on(
+      (executable, args) => executable.endsWith('gh') && args.includes('nameWithOwner,isFork,parent,viewerPermission'),
+      { exitCode: 1, stderr: 'could not resolve' }
+    );
+
+    const preflight = await preflightPullRequest({ repoPath: repo, runner });
+
+    // Falls back to the remote URL rather than losing the target entirely.
+    expect(preflight.targetRepo).toBe('octocat/demo');
   });
 });
 
@@ -503,5 +630,50 @@ describe('createPullRequest', () => {
     // interprets it, because no shell is involved anywhere in the runner.
     expect(create?.args).toContain('$(touch /tmp/pwned) && echo hi');
     expect(create?.options.input).toContain('rm -rf ~');
+  });
+});
+
+describe('maintainer edits', () => {
+  it('leaves gh at its default when edits are allowed', async () => {
+    // gh creates with maintainer edits enabled and offers only the negative
+    // flag, so "allowed" means passing nothing.
+    const repoWithHead = repo;
+    git(repoWithHead, 'branch', '-f', 'feat/thing');
+    git(repoWithHead, 'update-ref', 'refs/remotes/origin/feat/thing', 'HEAD');
+    const runner = signedInGh();
+
+    await createPullRequest({
+      repoPath: repoWithHead,
+      baseBranch: 'main',
+      headBranch: 'feat/thing',
+      title: 'feat: x',
+      body: '',
+      draft: false,
+      maintainerCanModify: true,
+      runner
+    });
+
+    const create = runner.callsTo('gh').find((call) => call.args.includes('create'));
+    expect(create?.args).not.toContain('--no-maintainer-edit');
+  });
+
+  it('passes --no-maintainer-edit when the user turns it off', async () => {
+    git(repo, 'branch', '-f', 'feat/thing');
+    git(repo, 'update-ref', 'refs/remotes/origin/feat/thing', 'HEAD');
+    const runner = signedInGh();
+
+    await createPullRequest({
+      repoPath: repo,
+      baseBranch: 'main',
+      headBranch: 'feat/thing',
+      title: 'feat: x',
+      body: '',
+      draft: false,
+      maintainerCanModify: false,
+      runner
+    });
+
+    const create = runner.callsTo('gh').find((call) => call.args.includes('create'));
+    expect(create?.args).toContain('--no-maintainer-edit');
   });
 });

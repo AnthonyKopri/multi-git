@@ -8,6 +8,7 @@ import { sanitizeConfigForClient } from '../config/sanitize';
 import { removeManagedBlock } from '../ssh/config-block';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 import { getVaultStatus, lockVault, unlockVault } from '../vault/vault';
+import { unloadSessionKeys } from '../ssh/agent-session';
 
 export const configRouter: Router = Router();
 
@@ -55,10 +56,24 @@ configRouter.post('/api/secrets/unlock', (req, res) => {
   res.json({ success: true, ...getVaultStatus() });
 });
 
-configRouter.post('/api/secrets/lock', (_req, res) => {
-  lockVault();
-  res.json({ success: true, ...getVaultStatus() });
-});
+configRouter.post(
+  '/api/secrets/lock',
+  asyncRoute(async (_req, res) => {
+    lockVault();
+
+    // The passphrases that authorised these identities are gone, so the
+    // identities go with them. Only the ones this process loaded: a key another
+    // application put in the agent is not ours to remove.
+    const { removed, failed } = await unloadSessionKeys();
+
+    res.json({
+      success: true,
+      ...getVaultStatus(),
+      unloadedKeys: removed,
+      ...(failed.length > 0 ? { unloadFailures: failed } : {})
+    });
+  })
+);
 
 configRouter.post(
   '/api/config/repo',

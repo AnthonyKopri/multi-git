@@ -103,6 +103,15 @@ at the first one.
 
 To type-check without running the suite, use `npm run typecheck`.
 
+Renderer tests run against the real `public/index.html` in a `happy-dom`
+environment, declared per file with a `// @vitest-environment happy-dom`
+comment. A renamed element id therefore fails the suite rather than only
+failing in the app. Everything else runs in the default Node environment.
+
+Nothing in the suite needs a GitHub account, an SSH agent, a loaded key, or a
+network connection: `gh`, `ssh-add` and `ssh-keygen` are all reached through the
+injectable runner in `src/server/process/runner.ts`, and the tests script them.
+
 `npm run lint:links` checks that every relative link and heading anchor in the
 project's Markdown resolves. External URLs are not fetched, so it never fails
 because a third-party site was briefly down.

@@ -57,7 +57,7 @@ Then open `http://localhost:3000`.
 | `src/server/` | Local API, Git execution, configuration, vault, Safety Net, and the managed `~/.ssh/config` block. `index.ts` is the library; `cli.ts` is the only entry point that starts a server. |
 | `src/renderer/` | UI: state store, typed API client, DOM helpers, and one folder per feature. |
 | `templates/` | Template bodies, kept as verbatim copies of their upstream sources. |
-| `tests/` | Vitest suite: unit tests, API integration tests, and the pre-release checks. |
+| `tests/` | Vitest suite: unit tests, API integration tests, renderer DOM tests, and the pre-release checks. |
 | `docs/roadmap/` | Feature roadmap: the parity inventory and one self-contained handoff per implementation phase. |
 | `scripts/` | The esbuild build, the release driver, and the packaging after-pack step. |
 | `public/index.html` | Application structure and dialogs. |
@@ -76,6 +76,8 @@ Please follow the existing structure and naming patterns unless the contribution
 - Keep filesystem access restricted to the selected repository where applicable.
 - Pass Git arguments as arrays. Do not build shell command strings from user input. New callers of external programs should use the `ExecutableRunner` in `src/server/process/runner.ts`, which keeps the executable and its arguments separate, supports cancellation, and redacts secrets from what it returns.
 - Register anything long-running with the operation registry in `src/server/operations/registry.ts` so it can be shown and cancelled, rather than hiding behind a global busy flag.
+- Never run `ssh-add -D`. It removes every identity in the agent, including ones other applications loaded. Remove a single key with `ssh-add -d <public key>`, and only one this process loaded.
+- Anything that needs administrator rights must be a compile-time constant in the Electron main process, invoked through an IPC handler that takes no parameters. A privileged handler accepting a command from the renderer is arbitrary code execution behind a prompt users are trained to approve.
 - Changing the persisted configuration shape means adding a migration in `src/server/config/migrations.ts` and a fixture for the version it upgrades from. Migrations must be idempotent and must never discard a section they do not recognise.
 - Validate repository paths, refs, hashes, filenames, and request input at trust boundaries.
 - Preserve the localhost-only backend restrictions.

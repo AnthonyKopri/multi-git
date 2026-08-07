@@ -9,6 +9,7 @@ import {
   PullRequestError
 } from '../providers/github-pull-requests';
 import { operations } from '../operations/registry';
+import { ensureAgentForRepo } from '../ssh/agent-session';
 
 export const pullRequestsRouter: Router = Router();
 
@@ -79,6 +80,13 @@ pullRequestsRouter.post(
     handle.start();
 
     try {
+      if (body['pushFirst'] === true) {
+        // The push is about to authenticate over SSH. Getting the repository's
+        // key into the agent first is what stops it failing on a machine where
+        // the agent was stopped since the window opened.
+        await ensureAgentForRepo(repoPath, optionalString(body['profileId']));
+      }
+
       const pullRequest = await createPullRequest({
         repoPath,
         baseBranch,
