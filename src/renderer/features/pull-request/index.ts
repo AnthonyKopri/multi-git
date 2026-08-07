@@ -25,14 +25,21 @@ import type {
 
 let ui: Elements;
 
+/** Refreshes repository status after a pull request is created. */
+let onCreated: () => Promise<void> = async () => {};
+
 /** The last preflight, so submit knows whether a push is needed. */
 let preflight: PullRequestPreflight | null = null;
 /** Fields the user has typed in. Never overwritten by a later preflight. */
 const touched = new Set<'title' | 'body'>();
 let created: PullRequestCreateResult | null = null;
 
-export function initPullRequests(elements: Elements): void {
+export function initPullRequests(
+  elements: Elements,
+  hooks: { refreshStatus: () => Promise<void> }
+): void {
   ui = elements;
+  onCreated = hooks.refreshStatus;
 
   ui.btnCreatePr.addEventListener('click', () => void openCreator());
   ui.btnClosePrModal.addEventListener('click', close);
@@ -254,7 +261,7 @@ async function submit(): Promise<void> {
         title,
         body: asTextArea(ui.prBody).value,
         draft: (asInput(ui.prDraft) as HTMLInputElement).checked,
-        maintainerCanModify: true,
+        maintainerCanModify: (asInput(ui.prMaintainerEdit) as HTMLInputElement).checked,
         reviewers: nameList(ui.prReviewers),
         assignees: nameList(ui.prAssignees),
         labels: nameList(ui.prLabels),
@@ -282,6 +289,11 @@ async function submit(): Promise<void> {
       created = response.pullRequest;
       logToTerminal(`Created pull request #${created.number}: ${created.url}`, 'success');
       showToast(`Pull request #${created.number} created.`, 'success');
+
+      // The branch may have been pushed as part of this, so ahead/behind
+      // counts and the push badge are stale. Refreshing status only re-reads
+      // git; it does not touch the working tree or any unrelated edits.
+      void onCreated();
 
       setHidden(ui.prForm, true);
       setFeedback('');

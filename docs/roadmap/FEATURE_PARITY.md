@@ -1,7 +1,7 @@
 ---
 title: Feature parity and request inventory
 status: living-document
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-07
 ---
 
 # Feature Parity and Request Inventory
@@ -12,9 +12,9 @@ Status values: **Current** means materially available today; **Planned** has an 
 
 | Capability | Multi-Git today | Competitive evidence / request signal | Target | Status |
 | --- | --- | --- | --- | --- |
-| Create pull requests | No in-app creator | [GitHub Desktop PR flow](https://docs.github.com/en/desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request-from-github-desktop), [GitKraken PRs](https://help.gitkraken.com/gitkraken-desktop/pull-requests/) | Phase 1 | Planned |
+| Create pull requests | Large in-app creator with preflight, drafts and forks (Phase 1) | [GitHub Desktop PR flow](https://docs.github.com/en/desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request-from-github-desktop), [GitKraken PRs](https://help.gitkraken.com/gitkraken-desktop/pull-requests/) | Phase 1 | Done |
 | PR review, checks and provider dashboards | No unified dashboard | GitKraken PRs and [SmartGit features](https://www.smartgit.dev/features/) | Phase 5 | Planned |
-| Native SSH-agent lifecycle and key loading | Per-command `GIT_SSH_COMMAND`; no agent start/load | [Microsoft OpenSSH key management](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement), [`ssh-add` behavior](https://man.openbsd.org/OpenBSD-7.7/ssh-add.1) | Phase 1 | Planned |
+| Native SSH-agent lifecycle and key loading | Native agent status, repair, key load/unload and per-repository `core.sshCommand` (Phase 1) | [Microsoft OpenSSH key management](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement), [`ssh-add` behavior](https://man.openbsd.org/OpenBSD-7.7/ssh-add.1) | Phase 1 | Done |
 | Line/hunk staging and discard | File-level workflow | [Sourcetree](https://www.sourcetreeapp.com/), [Sublime Merge guide](https://www.sublimemerge.com/docs/getting_started) | Phase 2 | Planned |
 | Side-by-side, word and image diff | Basic text diff | [Tower features](https://www.git-tower.com/features/all-features), [TortoiseGit manual](https://tortoisegit.org/docs/tortoisegit/) | Phase 2 | Planned |
 | Selective and multiple stashes | Basic stash support | [Selective stash request](https://github.com/desktop/desktop/issues/11531), [multiple stashes request](https://github.com/desktop/desktop/issues/12699) | Phase 2 | Planned |
@@ -52,6 +52,88 @@ Status values: **Current** means materially available today; **Planned** has an 
 | Built-in cloud AI generation | Deferred | External agent launch provides a vendor-neutral path without sending repository content to a new service. |
 | Proprietary live agent hooks/session telemetry | Rejected | Launch configured tools, but do not require their private protocols or monitor sessions. |
 | Remote SSH execution | Deferred | Requires a hardened filesystem/execution boundary after local and WSL abstractions are proven. |
+
+## Phase 1 record (2026-08-07)
+
+### Elevation
+
+Exactly one action in this application requests administrator rights: enabling
+and starting the Windows `ssh-agent` service. A Disabled service cannot be
+started by any unprivileged caller, however the request is phrased, so the
+start type has to change first.
+
+The command is a compile-time constant, `AGENT_REPAIR_COMMAND` in
+`src/server/ssh/agent-service.ts`:
+
+```text
+powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command
+  Set-Service -Name 'ssh-agent' -StartupType Automatic; Start-Service -Name 'ssh-agent'
+```
+
+Three things keep it that way. The IPC handler takes no parameters; the preload
+bridge forwards none; and the handler lives in the Electron main process, so the
+loopback HTTP server cannot reach it. `GET /api/ssh/agent/repair-command`
+returns the same constant for display, because a user about to approve a UAC
+prompt should be able to read what it will run. Declining the prompt is reported
+as `cancelled`, not as a failure.
+
+### Files and configuration written outside the repository
+
+| Path | When | Notes |
+| --- | --- | --- |
+| `~/.multi-git-client-config.json` | Profile selection | Adds `repoSettings[<canonical repo>].sshProfileId`. |
+| `~/.ssh/config` | Unchanged from before | Managed block only, delimited and written atomically. |
+| Windows `ssh-agent` service | Repair action only | Start type set to Automatic, then started. |
+| The agent's own key store | Key load | `ssh-add <key>`. Keys deliberately survive app exit. |
+| `<repo>/.git/config` | Profile selection | `core.sshCommand`, that repository only. |
+| `%TEMP%/multi-git-askpass-*/` | Key load with a stored passphrase | See below. |
+
+### AskPass cleanup
+
+Supplying a passphrase to `ssh-add` non-interactively requires a helper script
+on disk, and that script necessarily contains the passphrase in plaintext. It is
+created inside a `mkdtemp` directory, opened with `wx` and an explicit mode so
+it is never briefly world-readable, removed in a `finally` block, and swept by a
+process-exit hook if anything crashes in between. The passphrase never appears
+in argv, on stdin, in a log line, or in an API error — asserted by test.
+
+### Exact `gh` command forms
+
+```text
+gh --version
+gh auth status
+gh api user --jq .login
+gh repo view --json nameWithOwner,isFork,parent,viewerPermission --jq <join>
+gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+gh pr list --head <ref> --state open --json url --jq .[0].url
+gh pr create --base <base> --head <ref> --title <title> --body-file -
+             [--repo <owner/repo>] [--draft] [--no-maintainer-edit]
+             [--reviewer <r>]... [--assignee <a>]... [--label <l>]...
+```
+
+Every one is an argument vector through the shared runner, with no shell. The
+pull-request body always arrives on stdin: Markdown carries newlines, quotes and
+backticks, and there is no quoting of that into a command line worth trusting.
+Branch names pass through `refArg` first, so a branch called `--upload-pack=…`
+cannot be read as a flag.
+
+### Manual scenarios executed
+
+- Read agent state on a machine whose service had been Disabled with no
+  `SSH_AUTH_SOCK`, and again after it was enabled: correctly reported
+  `disabled` then `ready`, and classified an externally loaded key as
+  `pre-existing` rather than session-owned.
+- Pull-request preflight against this repository with a real authenticated `gh`:
+  detected the GitHub remote and `AnthonyKopri/multi-git`, counted commits ahead
+  and changed files, saw the branch as unpushed, and seeded the body from the
+  repository's own `.github/PULL_REQUEST_TEMPLATE.md`.
+- Rendered the creator window and the agent panel in a running app: correct chip
+  text and colour, repair button correctly hidden on a healthy agent, no console
+  errors.
+
+Not executed by hand: creating a real pull request, and the fork workflow. Both
+are covered by tests against a scripted `gh`, but neither has been run against
+GitHub, because doing so would create a real pull request on a real repository.
 
 ## Toolchain baseline after Phase 0 (2026-08-05)
 

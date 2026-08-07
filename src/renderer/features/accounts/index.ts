@@ -131,9 +131,14 @@ export async function setActiveProfile(
  * what makes work and personal accounts switch by themselves.
  */
 export async function restoreProfileForRepo(repoPath: string): Promise<void> {
-  const { sshProfiles, accountRules } = getState();
+  const { sshProfiles, accountRules, repoSettings, activeRepoKey } = getState();
 
-  const cached = localStorage.getItem(storageKey(repoPath));
+  // Repository settings first: they are stored server-side, keyed by canonical
+  // repository identity, so a second window and a reinstalled app agree about
+  // which account this repository belongs to. localStorage is the fallback for
+  // choices made before that existed.
+  const stored = activeRepoKey ? repoSettings[activeRepoKey]?.sshProfileId : undefined;
+  const cached = stored ?? localStorage.getItem(storageKey(repoPath));
   let profileId = '';
 
   if (cached) {
@@ -190,6 +195,15 @@ export async function unlockVault(): Promise<boolean> {
     const status = await api.unlockVault(masterKey);
     update({ vaultStatus: { hasVault: status.hasVault, unlocked: status.unlocked } });
     renderAccounts();
+
+    // A stored passphrase may now be usable for the selected profile.
+    const { activeProfileId } = getState();
+    if (activeProfileId) {
+      await loadSelectedKey(activeProfileId);
+    } else {
+      await refreshAgent();
+    }
+
     showToast('Vault unlocked for this session.', 'success');
     return true;
   } catch (error) {
@@ -203,7 +217,18 @@ export async function lockVault(): Promise<void> {
     const status = await api.lockVault();
     update({ vaultStatus: { hasVault: status.hasVault, unlocked: status.unlocked } });
     renderAccounts();
-    showToast('Vault locked.', 'info');
+
+    // Locking removes the identities this session loaded, so the agent panel
+    // is stale the moment the request returns.
+    await refreshAgent();
+
+    const unloaded = status.unloadedKeys ?? [];
+    showToast(
+      unloaded.length > 0
+        ? `Vault locked. Removed ${unloaded.length} key(s) from the SSH agent.`
+        : 'Vault locked.',
+      'info'
+    );
   } catch (error) {
     showToast(errorMessage(error, 'Failed to lock the vault.'), 'error');
   }

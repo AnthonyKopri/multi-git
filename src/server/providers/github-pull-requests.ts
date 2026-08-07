@@ -161,6 +161,95 @@ export function titleFromBranchName(branch: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+export interface RepositoryOwnership {
+  /** owner/repo of the remote this checkout points at. */
+  origin: string | null;
+  /** owner/repo the pull request should target. Differs for a fork. */
+  upstream: string | null;
+  isFork: boolean;
+  /** Whether the signed-in user can push to `origin`. */
+  canPush: boolean;
+  /** The account gh is signed in as. */
+  viewer: string | null;
+}
+
+/**
+ * Who owns this repository, and can the signed-in user push to it.
+ *
+ * The fork case is not exotic: contributing to someone else's project means
+ * origin is your fork and the pull request targets theirs. Getting this wrong
+ * produces the most confusing failure in the whole flow — gh reports "no
+ * commits between" because it compared the wrong two repositories.
+ */
+export async function readOwnership(
+  repoPath: string,
+  runner?: ExecutableRunner
+): Promise<RepositoryOwnership> {
+  const result = await runGh(
+    [
+      'repo',
+      'view',
+      '--json',
+      'nameWithOwner,isFork,parent,viewerPermission',
+      '--jq',
+      // A single line, so one parse handles every field.
+      '[.nameWithOwner, (.isFork|tostring), (.parent.nameWithOwner // ""), (.viewerPermission // "")] | join("\\u001f")'
+    ],
+    { cwd: repoPath, ...(runner ? { runner } : {}) }
+  );
+
+  const empty: RepositoryOwnership = {
+    origin: null,
+    upstream: null,
+    isFork: false,
+    canPush: false,
+    viewer: null
+  };
+
+  if (!result.ok) {
+    return empty;
+  }
+
+  // The unit separator, spelled out rather than pasted: it cannot occur in a
+  // repository name or a permission string, so it is a safe field delimiter.
+  const [origin, isFork, parent, permission] = result.stdout.trim().split('\u001f');
+  // `owner/repo` or nothing. gh returning anything else — an error banner, a
+  // partial response, output from a version whose --jq behaves differently —
+  // must not be mistaken for a repository name and then used as a push target.
+  if (!origin || !/^[^/\s]+\/[^/\s]+$/.test(origin)) {
+    return empty;
+  }
+
+  const who = await runGh(['api', 'user', '--jq', '.login'], {
+    cwd: repoPath,
+    ...(runner ? { runner } : {})
+  });
+
+  return {
+    origin,
+    // A fork's pull request targets the parent; everything else targets itself.
+    upstream: isFork === 'true' && parent ? parent : origin,
+    isFork: isFork === 'true',
+    canPush: permission === 'WRITE' || permission === 'ADMIN' || permission === 'MAINTAIN',
+    viewer: who.ok ? who.stdout.trim() || null : null
+  };
+}
+
+/**
+ * The `--head` value gh needs.
+ *
+ * Cross-repository pull requests must name the owner, `owner:branch`, or
+ * GitHub looks for the branch in the target repository and does not find it.
+ */
+export function headRefFor(branch: string, ownership: RepositoryOwnership): string {
+  if (!ownership.isFork || !ownership.origin || ownership.origin === ownership.upstream) {
+    return branch;
+  }
+
+  const owner = ownership.origin.split('/')[0];
+  return owner ? `${owner}:${branch}` : branch;
+}
+
 /** An existing open PR for this head branch, if there is one. */
 async function existingPullRequest(
   repoPath: string,
@@ -279,7 +368,36 @@ export async function preflightPullRequest(
   }
 
   if (authenticated) {
-    const existing = await existingPullRequest(repoPath, headBranch, runner);
+    const ownership = await readOwnership(repoPath, runner);
+
+    if (ownership.upstream) {
+      // The pull request targets the parent for a fork, so this is the
+      // repository the user is actually contributing to.
+      preflight.targetRepo = ownership.upstream;
+    }
+
+    if (ownership.isFork && ownership.origin) {
+      const owner = ownership.origin.split('/')[0];
+      if (owner) {
+        preflight.forkOwner = owner;
+      }
+      warnings.push(
+        `This is a fork. The pull request will go from ${ownership.origin} to ${ownership.upstream}.`
+      );
+    }
+
+    if (!ownership.canPush && ownership.origin && !ownership.isFork) {
+      // The case that otherwise fails confusingly at push time.
+      warnings.push(
+        `You do not have push access to ${ownership.origin}. Fork it first, then push the branch to your fork and open the pull request from there.`
+      );
+    }
+
+    const existing = await existingPullRequest(
+      repoPath,
+      headRefFor(headBranch, ownership),
+      runner
+    );
     if (existing) {
       preflight.existingPullRequestUrl = existing;
       warnings.push('An open pull request already exists for this branch.');
@@ -407,7 +525,16 @@ export async function createPullRequest(
     );
   }
 
-  const args = ['pr', 'create', '--base', base, '--head', head, '--title', title];
+  // A fork's pull request goes to the parent, and gh needs both the target
+  // repository and an `owner:branch` head to find the branch at all.
+  const ownership = await readOwnership(repoPath, runner);
+  const headRef = headRefFor(head, ownership);
+
+  const args = ['pr', 'create', '--base', base, '--head', headRef, '--title', title];
+
+  if (ownership.isFork && ownership.upstream) {
+    args.push('--repo', ownership.upstream);
+  }
 
   // The body goes over stdin. A Markdown body contains newlines, quotes and
   // backticks, and there is no quoting of it into a command line that is worth
@@ -416,6 +543,11 @@ export async function createPullRequest(
 
   if (options.draft) {
     args.push('--draft');
+  }
+  if (!options.maintainerCanModify) {
+    // gh creates with maintainer edits enabled and has no flag to turn it on,
+    // only this one to turn it off.
+    args.push('--no-maintainer-edit');
   }
   for (const reviewer of options.reviewers ?? []) {
     args.push('--reviewer', reviewer);
@@ -463,9 +595,19 @@ export async function createPullRequest(
 }
 
 /**
- * `maintainerCanModify` is accepted by the API but not settable through
- * `gh pr create`, which always creates with it enabled. Reported rather than
- * silently ignored.
+ * Exact `gh` forms this module produces, for the handoff record:
+ *
+ *   gh --version
+ *   gh auth status
+ *   gh api user --jq .login
+ *   gh repo view --json nameWithOwner,isFork,parent,viewerPermission --jq …
+ *   gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+ *   gh pr list --head <ref> --state open --json url --jq .[0].url
+ *   gh pr create --base <b> --head <ref> --title <t> --body-file -
+ *                [--repo <owner/repo>] [--draft] [--no-maintainer-edit]
+ *                [--reviewer <r>]... [--assignee <a>]... [--label <l>]...
+ *
+ * Every one is an argument vector through the shared runner. No shell, and the
+ * body always arrives on stdin.
  */
-export const MAINTAINER_MODIFY_NOTE =
-  'GitHub CLI always allows maintainer edits on a new pull request; this setting cannot be changed here yet.';
+export const GH_COMMAND_FORMS = 'see the comment above this constant';

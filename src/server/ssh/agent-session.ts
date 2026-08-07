@@ -7,7 +7,13 @@
 import { readConfig, writeConfig } from '../config/store';
 import { canonicalRepoKey } from '../config/repo-identity';
 import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/vault';
-import { loadKeyIntoAgent, readAgentState, unloadKeyFromAgent } from './agent';
+import {
+  loadKeyIntoAgent,
+  readAgentState,
+  readKeyFingerprint,
+  sessionOwnedFingerprints,
+  unloadKeyFromAgent
+} from './agent';
 import { clearRepoSshCommand, isMultiGitSshCommand, readRepoSshCommand, setRepoSshCommand } from './repo-routing';
 import type { ExecutableRunner } from '../process/runner';
 import type { SshProfile } from '../../shared/config-types';
@@ -208,6 +214,77 @@ export async function unloadProfileKey(
   }
 
   return { success: true, agent };
+}
+
+/**
+ * Removes the identities this session loaded, one at a time.
+ *
+ * Called when the vault locks. The passphrases that authorised those keys are
+ * no longer available, so leaving the keys usable would outlive the consent
+ * that put them there.
+ *
+ * Everything about this is deliberately narrow: only fingerprints this process
+ * recorded, removed individually with `ssh-add -d`. There is no path here to
+ * `ssh-add -D`, which would delete every identity in the agent including ones
+ * another application loaded and depends on.
+ */
+export async function unloadSessionKeys(
+  options: { runner?: ExecutableRunner | undefined } = {}
+): Promise<{ removed: string[]; failed: string[] }> {
+  const owned = new Set(sessionOwnedFingerprints());
+  const removed: string[] = [];
+  const failed: string[] = [];
+
+  if (owned.size === 0) {
+    return { removed, failed };
+  }
+
+  // Matched back to profiles because `ssh-add -d` takes a public key path
+  // rather than a fingerprint.
+  for (const profile of readConfig().sshProfiles) {
+    const fingerprint = await readKeyFingerprint(profile.privateKeyPath, options.runner);
+    if (!fingerprint || !owned.has(fingerprint)) {
+      continue;
+    }
+
+    const outcome = await unloadKeyFromAgent({
+      privateKeyPath: profile.privateKeyPath,
+      fingerprint,
+      ...(options.runner ? { runner: options.runner } : {})
+    });
+
+    (outcome.unloaded ? removed : failed).push(profile.label);
+  }
+
+  return { removed, failed };
+}
+
+/**
+ * Makes sure the repository's profile is in the agent before a network call.
+ *
+ * Best effort by design. A push must not be blocked because the agent could
+ * not be repaired — the per-command `GIT_SSH_COMMAND` fallback still
+ * authenticates in-app operations, so a degraded agent degrades external
+ * tooling, not this one.
+ */
+export async function ensureAgentForRepo(
+  repoPath: string,
+  profileId?: string
+): Promise<void> {
+  const selected = profileId ?? profileForRepo(repoPath);
+
+  if (!selected || selected === SYSTEM_PROFILE_ID) {
+    return;
+  }
+
+  try {
+    const state = await agentStatus({ profileId: selected });
+    if (state.availability === 'ready' && !state.selectedKeyLoaded) {
+      await applyProfile({ repoPath, profileId: selected });
+    }
+  } catch {
+    // Nothing here is worth failing a push over.
+  }
 }
 
 /** Remembers which profile a repository uses, keyed by canonical identity. */

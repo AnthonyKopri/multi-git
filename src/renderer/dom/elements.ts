@@ -248,6 +248,7 @@ export const ELEMENT_MAP = {
   prAssignees: 'pr-assignees',
   prLabels: 'pr-labels',
   prDraft: 'pr-draft',
+  prMaintainerEdit: 'pr-maintainer-edit',
   prCommitSummary: 'pr-commit-summary',
   btnPrCancel: 'btn-pr-cancel',
   btnPrCreate: 'btn-pr-create',
