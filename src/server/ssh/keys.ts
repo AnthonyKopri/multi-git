@@ -88,13 +88,31 @@ export async function generateSshKeyPair(
   return { stdout: result.stdout, stderr: result.stderr };
 }
 
-/** Expands `~` and resolves to an absolute path. */
+/**
+ * Expands a leading `~` and resolves to an absolute path.
+ *
+ * Only a *leading* tilde. This previously replaced every `~` anywhere in the
+ * string, which corrupts any path that legitimately contains one — and on
+ * Windows that is not exotic: 8.3 short names look like `C:\Users\RUNNER~1\…`
+ * or `C:\PROGRA~1\…`, and a key stored under one had its path rewritten into
+ * nonsense before it ever reached ssh. The failure then surfaced as "the
+ * private key file was not found", which points at the wrong thing entirely.
+ *
+ * A tilde anywhere else is an ordinary filename character, which is exactly
+ * how a shell treats it.
+ */
 export function normalizeSshPath(targetPath: string | null | undefined): string {
   if (!targetPath || typeof targetPath !== 'string') {
     return '';
   }
 
-  return path.resolve(targetPath.replace(/~/g, os.homedir()));
+  // `~`, `~/…` or `~\…` — but not `~user`, which this does not support and
+  // must not mangle either.
+  const expanded = /^~(?=$|[\\/])/.test(targetPath)
+    ? path.join(os.homedir(), targetPath.slice(1))
+    : targetPath;
+
+  return path.resolve(expanded);
 }
 
 export function sshDirectory(): string {
