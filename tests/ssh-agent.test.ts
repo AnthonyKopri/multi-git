@@ -390,12 +390,27 @@ describe('unloadKeyFromAgent', () => {
 
 describe('repository routing', () => {
   it('quotes the key path and pins the identity', () => {
-    const value = buildRepoSshCommand('C:\\Users\\Jane Doe\\.ssh\\id_ed25519');
+    // Built from the platform's own temp root rather than a hardcoded
+    // `C:\...`: buildRepoSshCommand resolves the path, and a Windows-shaped
+    // string is a *relative* path on Linux, so a literal would only pass on
+    // one of the two runners.
+    const key = path.join(workspace, 'Jane Doe', '.ssh', 'id_ed25519');
 
-    expect(value).toContain('ssh -i "C:/Users/Jane Doe/.ssh/id_ed25519"');
+    const value = buildRepoSshCommand(key);
+
+    // Quoted because git hands this to a shell, and separators normalised
+    // because a POSIX-style shell would eat backslashes.
+    expect(value).toContain(`ssh -i "${key.replace(/\\/g, '/')}"`);
+    expect(value).toContain(' ');
     // Without this, ssh offers every agent identity in turn and GitHub
     // authenticates as whichever matches first.
     expect(value).toContain('IdentitiesOnly=yes');
+  });
+
+  it('normalises Windows separators when it is given them', () => {
+    // The transformation itself, without depending on how the running
+    // platform resolves a path.
+    expect(buildRepoSshCommand(keyPath)).not.toContain('\\');
   });
 
   it('recognises its own value and leaves a hand-written one alone', () => {
