@@ -12,6 +12,7 @@ import { createAskpassBridge } from '../ssh/askpass';
 import { readConfig } from '../config/store';
 import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/vault';
 import { requireRepoPath } from '../middleware/repo-path';
+import { ensureAgentForRepo } from '../ssh/agent-session';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 
 /** Routes that operate on an existing repository. */
@@ -21,6 +22,18 @@ export const syncRouter: Router = Router();
 export const cloneRouter: Router = Router();
 
 syncRouter.use(requireRepoPath);
+
+/**
+ * Gets the repository's key into the native agent before a network call.
+ *
+ * Best effort, and deliberately not awaited for its result: a push must not be
+ * blocked because the agent could not be repaired. The per-command
+ * GIT_SSH_COMMAND fallback still authenticates in-app operations, so a
+ * degraded agent degrades external tooling rather than this.
+ */
+async function preflightAgent(repoPath: string, profileId: string | undefined): Promise<void> {
+  await ensureAgentForRepo(repoPath, profileId);
+}
 
 async function currentBranch(repoPath: string): Promise<string> {
   const { stdout } = await runGitCommand(repoPath, ['branch', '--show-current']);
@@ -43,6 +56,8 @@ syncRouter.post(
     const { profileId, sshKeyPath } = profileArgs(req.body);
 
     const targetBranch = branch ? refArg(branch, 'Branch name') : await currentBranch(repoPath);
+
+    await preflightAgent(repoPath, profileId);
 
     const pushArgs = ['push', '-u'];
     if (force) {
@@ -69,6 +84,8 @@ syncRouter.post(
 
     const targetBranch = branch ? refArg(branch, 'Branch name') : await currentBranch(repoPath);
 
+    await preflightAgent(repoPath, profileId);
+
     const result = await withRepoLock(repoPath, () =>
       runSyncOperationWithProfile(repoPath, ['pull', 'origin', targetBranch], profileId, sshKeyPath)
     );
@@ -82,6 +99,8 @@ syncRouter.post(
   asyncRoute(async (req, res) => {
     const repoPath = req.repoPath as string;
     const { profileId, sshKeyPath } = profileArgs(req.body);
+
+    await preflightAgent(repoPath, profileId);
 
     // --prune drops remote-tracking refs whose branches were deleted upstream.
     const result = await runSyncOperationWithProfile(

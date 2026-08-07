@@ -32,13 +32,36 @@ let latest: SshAgentState | null = null;
  */
 let pending: Promise<void> | null = null;
 
+/** Ignore a focus re-check that lands within this of the previous one. */
+const RECHECK_INTERVAL_MS = 5_000;
+let lastCheckedAt = 0;
+
 export function initAgentPanel(elements: Elements): void {
   ui = elements;
 
   ui.btnRepairAgent.addEventListener('click', () => void repair());
   ui.btnUnloadKey.addEventListener('click', () => void unload());
 
+  // The agent is machine state, and the machine keeps running while this
+  // window is in the background: a service can be stopped, a key removed by
+  // `ssh-add -d` in a terminal, or the whole box suspended and resumed. Coming
+  // back to the window is the moment a stale panel would be believed.
+  window.addEventListener('focus', () => void recheck());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      void recheck();
+    }
+  });
+
   render(null);
+}
+
+/** A refresh that rate-limits itself, for triggers that can fire in bursts. */
+function recheck(): Promise<void> {
+  if (Date.now() - lastCheckedAt < RECHECK_INTERVAL_MS) {
+    return Promise.resolve();
+  }
+  return refreshAgent();
 }
 
 export function agentState(): SshAgentState | null {
@@ -63,6 +86,7 @@ export function refreshAgent(): Promise<void> {
         render(null);
       }
     } finally {
+      lastCheckedAt = Date.now();
       pending = null;
     }
   })();

@@ -614,7 +614,7 @@ async function start(): Promise<void> {
   explorer.initExplorer(ui, { showCommitDetails: history.showCommitDetails });
   history.initHistory(ui, { refreshAll, showDiffTab: () => workspace.switchViewTab('diff') });
   ssh.initSshManager(ui);
-  pullRequest.initPullRequests(ui);
+  pullRequest.initPullRequests(ui, { refreshStatus });
   workspace.initWorkspace(ui, { refreshStatus });
 
   wireHeader();

@@ -149,7 +149,12 @@ export interface IdentityResponse extends Ok {
 
 export interface ConfigResponse extends ClientConfig {}
 
-export interface VaultStatusResponse extends Ok, VaultStatus {}
+export interface VaultStatusResponse extends Ok, VaultStatus {
+  /** Profile labels whose identities were removed from the agent on lock. */
+  unloadedKeys?: string[];
+  /** Labels that could not be removed, so the UI can say so rather than lie. */
+  unloadFailures?: string[];
+}
 
 export interface RepoSettingsResponse extends Ok {
   repoPath: string;

@@ -1,7 +1,9 @@
 ---
 title: "Phase 1: SSH agent reliability and pull-request creator"
 phase: 1
-status: planned
+status: complete
+completed: 2026-08-07
+branch: claude/phase-1-ssh-agent-pr-creator
 depends_on: [phase-0]
 suggested_branch: codex/phase-1-ssh-agent-pr-creator
 parallelizable: true
