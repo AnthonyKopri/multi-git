@@ -15,6 +15,12 @@ import type {
   PullRequestCreateResponse,
   PullRequestPreflightResponse
 } from '../../shared/pull-request-types';
+import type {
+  ApplyPatchResponse,
+  DiffFile,
+  DiffSource,
+  PatchAction
+} from '../../shared/diff-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -163,6 +169,34 @@ export const getDiff = (path: string, staged: boolean, untracked: boolean) =>
   api.get<Api.DiffResponse>('/api/git/diff', {
     query: { path, staged: staged ? 'true' : 'false', untracked: untracked ? 'true' : 'false' }
   });
+
+// ---------- precision staging ----------
+
+export interface StructuredDiffPayload {
+  success: true;
+  file: DiffFile | null;
+  source: DiffSource;
+  untracked: boolean;
+  tooLarge: boolean;
+  sizeBytes: number;
+  limitBytes: number;
+}
+
+export const getStructuredDiff = (path: string, source: DiffSource, force = false) =>
+  api.get<StructuredDiffPayload>('/api/git/diff/structured', {
+    query: { path, source, force: force ? 'true' : undefined }
+  });
+
+export interface ApplySelectionInput {
+  action: PatchAction;
+  filePath: string;
+  /** Omit both lists to act on the whole file; an empty list is refused. */
+  hunkIds?: string[];
+  lineIds?: string[];
+}
+
+export const applyDiffSelection = (input: ApplySelectionInput) =>
+  api.post<ApplyPatchResponse>('/api/git/diff/apply-selection', { body: input });
 
 // ---------- branches ----------
 

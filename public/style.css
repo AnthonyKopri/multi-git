@@ -995,7 +995,9 @@ body.pane-resizing-y * {
 
 .diff-line {
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr);
+  /* The third column is empty on an ordinary line and collapses to nothing;
+     it holds the hunk buttons and the no-newline note where those exist. */
+  grid-template-columns: 86px minmax(0, 1fr) auto;
   border-radius: 3px;
   min-width: max-content;
 }
@@ -1041,6 +1043,78 @@ body.pane-resizing-y * {
 }
 .diff-line-deletion .diff-line-nums {
   border-right-color: var(--color-danger-border);
+}
+
+/* Precision staging: picking lines and acting on hunks.
+   A changed line is a target, so it says so on hover and stays visibly picked
+   once chosen. Hunk buttons only appear on hover or keyboard focus, because a
+   diff of a thousand hunks with a permanent toolbar on each is unreadable. */
+.diff-line-hunk {
+  align-items: center;
+}
+.diff-hunk-actions {
+  display: flex;
+  gap: 4px;
+  padding: 2px 8px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.diff-line-hunk:hover .diff-hunk-actions,
+.diff-hunk-actions:focus-within {
+  opacity: 1;
+}
+.diff-hunk-action {
+  padding: 2px 6px;
+  line-height: 1;
+}
+.diff-hunk-action .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.diff-line-selectable {
+  cursor: pointer;
+}
+.diff-line-selectable:hover {
+  outline: 1px solid var(--border-color);
+  outline-offset: -1px;
+}
+.diff-line-selectable:focus-visible {
+  outline: 2px solid var(--color-accent, #6366f1);
+  outline-offset: -2px;
+}
+.diff-line-selected {
+  box-shadow: inset 3px 0 0 0 #6366f1;
+  background-color: rgba(99, 102, 241, 0.16);
+}
+.diff-line-selected .diff-line-content {
+  font-weight: 600;
+}
+.diff-line-note {
+  padding: 1px 12px;
+  color: var(--text-dim);
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.diff-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  background-color: rgba(99, 102, 241, 0.1);
+  border-bottom: 1px solid var(--border-color);
+}
+.diff-selection-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.diff-selection-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 /* Commit Section

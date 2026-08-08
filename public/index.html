@@ -417,6 +417,26 @@
                   </button>
                 </div>
               </div>
+              <div id="diff-selection-bar" class="diff-selection-bar hidden" role="toolbar" aria-label="Selected line actions">
+                <span id="diff-selection-count" class="diff-selection-count">0 lines selected</span>
+                <div class="diff-selection-actions">
+                  <button id="btn-diff-stage-selection" class="btn btn-secondary btn-sm" title="Stage only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                    <span>Stage selection</span>
+                  </button>
+                  <button id="btn-diff-unstage-selection" class="btn btn-secondary btn-sm" title="Unstage only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">remove</span>
+                    <span>Unstage selection</span>
+                  </button>
+                  <button id="btn-diff-discard-selection" class="btn btn-secondary btn-sm btn-text-danger" title="Discard only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    <span>Discard selection</span>
+                  </button>
+                  <button id="btn-diff-clear-selection" class="btn btn-text btn-sm" title="Clear the selection">
+                    <span>Clear</span>
+                  </button>
+                </div>
+              </div>
               <div id="diff-content" class="diff-body">
                 <div class="diff-empty-state">
                   <span class="material-symbols-outlined">difference</span>
