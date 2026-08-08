@@ -417,6 +417,30 @@ describe('running a rebase', () => {
     await api(repo).post('/api/git/rebase/step').send({ step: 'abort' }).expect(200);
   });
 
+  it('reports a rebase git refused as a failure, not as one that finished', async () => {
+    const { repo, base } = repoWithFour();
+    const plan = await planFor(repo, base);
+    const before = git(repo, 'rev-parse', 'HEAD').trim();
+
+    // Git will not rebase over an unstaged change. Nothing runs, and the
+    // danger is that "no rebase in progress afterwards" looks exactly like a
+    // rebase that completed.
+    writeFile(repo, 'a.txt', 'a modified\n');
+
+    const { body } = await api(repo)
+      .post('/api/git/rebase/start')
+      .send({ plan: withActions(plan, { 'feat: second': 'drop' }) })
+      .expect(400);
+
+    expect(body.error).toMatch(/unstaged|cannot rebase/i);
+    expect(git(repo, 'rev-parse', 'HEAD').trim()).toBe(before);
+    expect(subjects(repo)).toHaveLength(4);
+
+    // And no session is left claiming a rebase that never began.
+    const status = await api(repo).get('/api/git/rebase/status').expect(200);
+    expect(status.body.status.inProgress).toBe(false);
+  });
+
   it('refuses a plan that no longer matches the commits that are there', async () => {
     const { repo, base } = repoWithFour();
     const plan = await planFor(repo, base);

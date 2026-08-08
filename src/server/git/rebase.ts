@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { commitish } from './args';
-import { runGitCommand, tryGitCommand } from './run';
+import { GitError, runGitCommand, tryGitCommand } from './run';
 import { writeJsonAtomic } from '../fs/atomic';
 import { createEditorBridge, removeEditorBridge, acceptEditorEnv, bridgeEnv } from './rebase-bridge';
 import type { EditorBridge } from './rebase-bridge';
@@ -48,17 +48,23 @@ interface RebaseSession {
  * the normal path rather than a failure — the status endpoint is what says
  * what happened. `tryGitCommand` would do, but it cannot carry an environment,
  * and without the environment git would try to open a real editor and hang.
+ *
+ * `ok` is kept because the two non-zero cases are not the same: a rebase that
+ * stopped is in progress afterwards, and a rebase git refused outright is not.
+ * Without this the second reads exactly like a rebase that finished, which is
+ * how a refusal over a dirty working tree came to be reported as a success.
  */
 async function tryGitWithEnv(
   repoPath: string,
   args: readonly string[],
   env: NodeJS.ProcessEnv
-): Promise<{ stdout: string; stderr: string }> {
+): Promise<{ ok: boolean; stdout: string; stderr: string }> {
   try {
-    return await runGitCommand(repoPath, args, null, { envOverrides: env });
+    const result = await runGitCommand(repoPath, args, null, { envOverrides: env });
+    return { ok: true, ...result };
   } catch (error) {
     const failure = error as { stdout?: string; stderr?: string };
-    return { stdout: failure.stdout ?? '', stderr: failure.stderr ?? '' };
+    return { ok: false, stdout: failure.stdout ?? '', stderr: failure.stderr ?? '' };
   }
 }
 
@@ -493,6 +499,17 @@ export async function startRebase(
       await clearSession(repoPath);
     }
 
+    // Git refused rather than started: no rebase is running and it exited
+    // non-zero. Its own message says why — an unstaged change, an unmerged
+    // path — and is far more useful than anything invented here.
+    if (!started.ok && !status.inProgress) {
+      throw new GitError('The rebase did not start.', {
+        stdout: started.stdout,
+        stderr: started.stderr,
+        statusCode: 400
+      });
+    }
+
     return {
       status,
       stopped: status.inProgress,
@@ -552,6 +569,16 @@ export async function stepRebase(
       await clearSession(repoPath);
     } else if (session && session.splitting) {
       await writeSession(repoPath, { ...session, splitting: false });
+    }
+
+    // Same distinction as starting: still stopped means git is waiting for
+    // something, but a refusal that left no rebase running is a failure.
+    if (!result.ok && !status.inProgress && step !== 'abort') {
+      throw new GitError(`The rebase could not ${step}.`, {
+        stdout: result.stdout,
+        stderr: result.stderr,
+        statusCode: 400
+      });
     }
 
     return { status, stdout, stderr };
