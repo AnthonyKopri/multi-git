@@ -23,6 +23,11 @@ import type {
 } from '../../shared/diff-types';
 import type { RecoveryResponse } from '../../shared/recovery-types';
 import type { Commit } from '../../shared/git-types';
+import type {
+  PublishedBranchWarning,
+  RebasePlan,
+  RebaseStatus
+} from '../../shared/rebase-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -386,6 +391,34 @@ export const pinBranch = (branch: string, pinned: boolean) =>
 
 export const pruneRemote = (remote: string, dryRun = false) =>
   api.post<Api.Ok & { pruned: string[] }>('/api/git/remote/prune', { body: { remote, dryRun } });
+
+// ---------- interactive rebase ----------
+
+export const getRebasePlan = (onto: string, autosquash: boolean) =>
+  api.get<Api.Ok & { plan: RebasePlan; warning: PublishedBranchWarning }>('/api/git/rebase/plan', {
+    query: { onto, autosquash: autosquash ? 'true' : 'false' }
+  });
+
+export const getRebaseStatus = () =>
+  api.get<
+    Api.Ok & {
+      status: RebaseStatus;
+      remainder: { staged: number; unstaged: number; clean: boolean } | null;
+    }
+  >('/api/git/rebase/status');
+
+export const startRebase = (plan: RebasePlan) =>
+  api.post<Api.Ok & { status: RebaseStatus; stopped: boolean }>('/api/git/rebase/start', {
+    body: { plan }
+  });
+
+export const stepRebase = (step: 'continue' | 'skip' | 'abort') =>
+  api.post<Api.Ok & { status: RebaseStatus }>('/api/git/rebase/step', { body: { step } });
+
+export const splitRebaseCommit = () =>
+  api.post<Api.Ok & { status: RebaseStatus; remainder: { staged: number; unstaged: number } }>(
+    '/api/git/rebase/split'
+  );
 
 export const deleteBranches = (branches: string[], force: boolean) =>
   api.post<

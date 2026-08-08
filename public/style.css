@@ -1251,6 +1251,18 @@ body.pane-resizing-y * {
   margin-right: 4px;
 }
 
+/* Rebase planner */
+.rebase-action {
+  flex-shrink: 0;
+  min-width: 88px;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+}
+.rebase-dropped .recovery-label {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
 .inline-warning {
   padding: 8px 12px;
   margin: 8px 0;

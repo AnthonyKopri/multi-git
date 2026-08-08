@@ -1223,6 +1223,48 @@
     </div>
   </div>
 
+  <!-- INTERACTIVE REBASE -->
+  <div id="rebase-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Interactive Rebase</h2>
+        <button id="btn-close-rebase-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="rebase-published-warning" class="inline-warning hidden"></div>
+        <div id="rebase-validation" class="inline-warning hidden"></div>
+
+        <div id="rebase-planner">
+          <div class="search-filters">
+            <input type="text" id="rebase-onto" placeholder="Base commit or ref" autocomplete="off" aria-label="Base commit">
+            <label class="checkbox-row"><input type="checkbox" id="rebase-autosquash"> Autosquash</label>
+            <button id="btn-rebase-reload" class="btn btn-secondary btn-sm">Load plan</button>
+          </div>
+          <p class="modal-desc">Commits run oldest first, the way git reads the todo. Reword applies your message automatically.</p>
+          <ul id="rebase-plan-list" class="recovery-list">
+            <li class="empty-state">Choose a base commit and load the plan</li>
+          </ul>
+          <div class="form-actions">
+            <button id="btn-rebase-start" class="btn btn-primary">Start rebase</button>
+          </div>
+        </div>
+
+        <div id="rebase-progress" class="hidden">
+          <p class="modal-desc" id="rebase-progress-summary"></p>
+          <ul id="rebase-conflict-list" class="recovery-list"></ul>
+          <div class="form-actions">
+            <button id="btn-rebase-split" class="btn btn-secondary btn-sm">Split this commit</button>
+            <button id="btn-rebase-continue" class="btn btn-primary btn-sm">Continue</button>
+            <button id="btn-rebase-skip" class="btn btn-secondary btn-sm">Skip</button>
+            <button id="btn-rebase-abort" class="btn btn-secondary btn-sm btn-text-danger">Abort</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- COMMAND PALETTE -->
   <div id="palette-modal" class="modal-overlay hidden">
     <div class="modal-card modal-small palette-card">
