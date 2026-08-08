@@ -16,7 +16,8 @@ Status values: **Current** means materially available today; **Planned** has an 
 | PR review, checks and provider dashboards | No unified dashboard | GitKraken PRs and [SmartGit features](https://www.smartgit.dev/features/) | Phase 5 | Planned |
 | Native SSH-agent lifecycle and key loading | Native agent status, repair, key load/unload and per-repository `core.sshCommand` (Phase 1) | [Microsoft OpenSSH key management](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement), [`ssh-add` behavior](https://man.openbsd.org/OpenBSD-7.7/ssh-add.1) | Phase 1 | Done |
 | Line/hunk staging and discard | Stage, unstage and discard by hunk or by line, with Safety Net capture and stale-selection refusal (Phase 2A) | [Sourcetree](https://www.sourcetreeapp.com/), [Sublime Merge guide](https://www.sublimemerge.com/docs/getting_started) | Phase 2 | Done |
-| Side-by-side, word and image diff | Unified and side-by-side, intra-line word highlights, whitespace toggle, before/after image comparison (Phase 2A) | [Tower features](https://www.git-tower.com/features/all-features), [TortoiseGit manual](https://tortoisegit.org/docs/tortoisegit/) | Phase 2 | Done — syntax-aware rendering deferred |
+| Side-by-side, word and image diff | Unified and side-by-side, intra-line word highlights, whitespace toggle, before/after image comparison (Phase 2A) | [Tower features](https://www.git-tower.com/features/all-features), [TortoiseGit manual](https://tortoisegit.org/docs/tortoisegit/) | Phase 2 | Done |
+| Syntax highlighting inside a diff | Not available, and declined | GitHub Desktop, Sublime Merge, [Tower features](https://www.git-tower.com/features/all-features) | — | Deferred — see below |
 | Selective and multiple stashes | Stash by file, hunk or line; inspect, apply with index, branch-from, drop (Phase 2B) | [Selective stash request](https://github.com/desktop/desktop/issues/11531), [multiple stashes request](https://github.com/desktop/desktop/issues/12699) | Phase 2 | Done |
 | Commit search and branch comparison | Search by message, author, path, ref and date range; compare any two refs (Phase 2B) | [GitHub Desktop search request](https://github.com/desktop/desktop/issues/7022), Sourcetree | Phase 2 | Done |
 | Interactive rebase, autosquash and commit splitting | Visual planner with reorder, reword, squash, fixup, drop, autosquash preview and splitting (Phase 2D) | [GitHub Desktop request](https://github.com/desktop/desktop/issues/12354), [GitKraken requests](https://feedback.gitkraken.com/) | Phase 2 | Done |
@@ -52,6 +53,7 @@ Status values: **Current** means materially available today; **Planned** has an 
 | Built-in cloud AI generation | Deferred | External agent launch provides a vendor-neutral path without sending repository content to a new service. |
 | Proprietary live agent hooks/session telemetry | Rejected | Launch configured tools, but do not require their private protocols or monitor sessions. |
 | Remote SSH execution | Deferred | Requires a hardened filesystem/execution boundary after local and WSL abstractions are proven. |
+| Syntax highlighting inside a diff | Deferred | Three reasons, decided 2026-08-08 after the rest of the diff pane was built. Most highlighters return an HTML string, and the renderer builds every node with `textContent` precisely because file contents are untrusted repository data — so the field narrows to token-emitting libraries before anything else is weighed. A diff shows fragments, so a hunk starting inside a block comment cannot be highlighted correctly without fetching and highlighting both complete file versions. And the pane already uses colour for added/removed lines and for intra-line word changes; a third system competing for the same pixels misleads when it guesses wrong. Revisit with a small token-emitting highlighter behind a toggle that defaults off. See [Phase 2](phase-2-review-history-recovery.md#syntax-aware-rendering-deliberately-not-done). |
 
 ## Open follow-ups
 
@@ -68,7 +70,6 @@ evidence.
 | The fork workflow | Untested by hand | Whoever next uses it | Same reason. Ownership detection *has* been run against real `gh` on a non-fork. |
 | `@types/node` held at 24.x | Intentional pin | Revisit with Electron | Electron 43 embeds Node 24; newer types would describe APIs the runtime lacks. Encoded as an `ignore` rule in `.github/dependabot.yml`. |
 | Trailing whitespace in `public/index.html` and `public/style.css` | Pre-existing | Whoever reformats them | Why the CI whitespace check is scoped to the merge base rather than the whole tree. |
-| Syntax-aware diff rendering | Deliberate scope split | Later | The one Phase 2A presentation item not done. Needs a highlighter dependency and a language map, which is a decision rather than a gap in the model. |
 
 ### Environment notes worth knowing
 
