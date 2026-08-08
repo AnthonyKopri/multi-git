@@ -1,13 +1,14 @@
 ---
 title: "Phase 2: Precision review, history editing, signing and recovery"
 phase: 2
-status: in-progress
+status: complete
+completed: 2026-08-08
 depends_on: [phase-0]
 soft_dependencies: [phase-1-ssh-for-signing]
 suggested_branch: claude/phase-2-review-history-recovery
 parallelizable: true
 lanes: [diff-staging, history-search, rebase-recovery, signing]
-lanes_complete: [diff-staging-core]
+lanes_complete: [diff-staging, history-search, rebase-recovery, signing]
 ---
 
 # Phase 2: Precision Review, History Editing, Signing and Recovery
@@ -36,11 +37,11 @@ Two conventions this phase inherits and must keep: repository data is rendered w
 
 ## Workstream A — structured diff and precision staging
 
-**Core landed on 2026-08-08.** Stage, unstage and discard now work at hunk and
-line level, end to end. What shipped and what is still open is recorded in
-[Workstream A status](#workstream-a-status) at the foot of this file; the
-presentation items — side-by-side view, word highlights, whitespace toggles,
-image comparison — are the remainder.
+**Landed 2026-08-08.** Stage, unstage and discard work at hunk and line level,
+end to end. What shipped and what is still open is in
+[Workstream A status](#workstream-a-status); the presentation items —
+side-by-side view, word highlights, whitespace toggles, image comparison — are
+the remainder.
 
 Create a parser/model independent of rendered patch text:
 
@@ -79,6 +80,8 @@ export interface PatchSelection {
 
 ## Workstream B — stash and history discovery
 
+**Landed 2026-08-08.** See [What shipped](#what-shipped).
+
 - Selective stash accepts chosen files/hunks, includes/unincludes untracked files, supports messages, and restores the prior index exactly.
 - Multiple-stash browser: inspect, search, rename-equivalent annotation if supported locally, apply, pop, branch-from, and drop with confirmation/Safety Net.
 - Full-text commit search across hash, subject/body, author, paths, branches/tags, and date range. Add branch/tag filters and cancellable pagination.
@@ -87,6 +90,8 @@ export interface PatchSelection {
 - Add a keyboard-first command palette indexing safe app actions and contextual Git actions. Destructive commands still require their normal confirmation.
 
 ## Workstream C — recovery before rewriting
+
+**Landed 2026-08-08.** See [What shipped](#what-shipped).
 
 Extend Safety Net from operation snapshots into a durable recovery journal linked to native Git recovery points.
 
@@ -117,6 +122,8 @@ export interface RecoveryPoint {
 
 ## Workstream D — interactive rebase and commit editing
 
+**Landed 2026-08-08.** See [What shipped](#what-shipped).
+
 ```ts
 export type RebaseAction = "pick" | "reword" | "edit" | "squash" | "fixup" | "drop";
 export interface RebaseTodoItem { oid: string; action: RebaseAction; subject: string; }
@@ -130,6 +137,8 @@ export interface RebasePlan { repoPath: string; onto: string; items: RebaseTodoI
 - Require recovery-point creation and show push consequences before rewriting a published branch. Force pushes use `--force-with-lease`, never unqualified `--force`.
 
 ## Workstream E — signing
+
+**Landed 2026-08-08.** See [What shipped](#what-shipped).
 
 ```ts
 export interface SignatureInfo {
@@ -170,9 +179,74 @@ Add typed endpoints/services for structured diffs, patch selection actions, stas
 
 Document patch-generation assumptions, diff size thresholds, recovery retention, rebase temp/editor protocol, Git-version requirements, and signing tool matrix. Include before/after recovery evidence for every destructive operation shipped.
 
-## Workstream A status
+## What shipped
 
-Landed 2026-08-08 on `claude/roadmap-version-display-e8d226`.
+All five workstreams landed on 2026-08-08, on
+`claude/roadmap-version-display-e8d226`, in five commits — one per
+workstream plus the window-title change that prompted the branch.
+
+| Workstream | Where |
+| --- | --- |
+| A — structured diff and precision staging | `src/shared/diff-types.ts`, `src/server/git/{structured-diff,patch-build,precision-staging}.ts`, `src/server/routes/diff.routes.ts`, `src/renderer/features/diff/` |
+| B — selective stash, search, compare, branch maintenance, palette | `src/server/git/selective-stash.ts`, `src/server/routes/{stash,search,branch-admin}.routes.ts`, `src/renderer/features/{palette,search,branch-admin}/` |
+| C — durable recovery journal and reflog | `src/shared/recovery-types.ts`, `src/server/git/reflog.ts`, `src/server/safety-net/recovery.ts`, `src/server/routes/recovery.routes.ts`, `src/renderer/features/recovery/` |
+| D — interactive rebase and commit splitting | `src/shared/rebase-types.ts`, `src/server/git/{rebase,rebase-bridge}.ts`, `src/server/routes/rebase.routes.ts`, `src/renderer/features/rebase/` |
+| E — signing | `src/shared/signing-types.ts`, `src/server/git/signing.ts`, `src/server/routes/signing.routes.ts`, `src/renderer/features/signing/` |
+
+Suite: 735 passed, 3 skipped, up from 521 at the start of the phase. The
+three skips are Phase 0's; the signing tests skip themselves where
+`ssh-keygen` cannot sign, rather than pretending to have run.
+
+### Decisions a later phase should not have to rediscover
+
+- **Patch direction inverts the rule for unselected lines.** Applying
+  forward, an unselected addition is dropped and an unselected deletion
+  becomes context; reversed, the other way round. The table at the top of
+  `patch-build.ts` is the reference. Selective stash needs *both* patches for
+  one selection, because its two applies go in opposite directions — building
+  one and reusing it is how the first version silently failed to apply.
+- **Staleness is structural.** A hunk id is a hash of its position and
+  content, and the server re-reads the diff before applying, so a hunk that
+  moved is simply not found. No token to keep in step.
+- **A partial selection out of a whole-file add or delete rewrites its own
+  header**, or git refuses with "new file … depends on old contents".
+- **The rebase editor bridge takes its mode as an argument, not from the
+  environment.** Git uses both editors during one rebase, and a bridge that
+  cannot tell them apart writes the todo list over a commit message.
+- **A rebase git refused looks exactly like one that finished** — no rebase in
+  progress, either way — unless the exit status is kept. It is.
+- **`%G?` says `N` for a signed commit that cannot be verified**, so an `N` is
+  checked against the commit object before anything is called unsigned.
+- **Recovery points live in the repository's git directory**, not in user
+  config: a point is meaningless without the objects it names, and deleting a
+  repository should take its points with it.
+- **Capture is routed through `captureCheckpoint`**, so a new destructive
+  operation cannot record a session undo and forget the durable point.
+
+### Still open
+
+Deliberately not done, and none of it blocks Phase 3 or 4:
+
+- **Diff presentation**: side-by-side view, intra-line word highlights,
+  whitespace toggles, syntax-aware rendering, before/after image comparison,
+  and richer binary metadata. The model supports all of it; only the rendering
+  is missing.
+- **Cancellation through the operations registry.** The 2 MB threshold covers
+  responsiveness for diffs, and the registry has no UI until Phase 4.
+- **Stash search** is by the list the browser shows, not a query across stash
+  contents.
+- **A non-UTF-8 file's diff** round-trips through a UTF-8 string, so text in
+  another encoding would be re-encoded on the way back into `git apply`. No
+  current code path produces one, and no test covers it.
+- **GPG signing is untested against a real keyring.** The suite signs with SSH,
+  which needs no agent; the GPG path is exercised only for configuration and
+  diagnostics.
+- **Windows MAX_PATH.** `git rebase -i` fails in a repository whose path is
+  long enough that git's internal range filename exceeds 260 characters. This
+  is git's own limit, reproducible without this application, and it surfaces as
+  git's message rather than as a silent no-op.
+
+## Workstream A status
 
 ### Shipped
 
