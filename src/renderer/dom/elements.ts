@@ -89,6 +89,14 @@ export const ELEMENT_MAP = {
   diffContent: 'diff-content',
   diffFilesList: 'diff-files-list',
 
+  // Precision staging
+  diffSelectionBar: 'diff-selection-bar',
+  diffSelectionCount: 'diff-selection-count',
+  btnDiffStageSelection: 'btn-diff-stage-selection',
+  btnDiffUnstageSelection: 'btn-diff-unstage-selection',
+  btnDiffDiscardSelection: 'btn-diff-discard-selection',
+  btnDiffClearSelection: 'btn-diff-clear-selection',
+
   // Explorer View DOM Elements
   fileTreeContainer: 'file-tree-container',
   btnRefreshTree: 'btn-refresh-tree',

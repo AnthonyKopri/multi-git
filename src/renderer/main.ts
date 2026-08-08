@@ -293,6 +293,52 @@ function wireStaging(): void {
       void diff.loadDiff(active.path, active.staged, active.statusChar === '?', active.statusChar);
     }
   });
+
+  wirePrecisionStaging();
+}
+
+/** Line and hunk level actions inside the diff pane. */
+function wirePrecisionStaging(): void {
+  // One listener for a pane that can hold tens of thousands of rows. A hunk
+  // button wins over the row it sits in, so clicking Stage does not also
+  // toggle a selection underneath it.
+  delegate(ui.diffContent, 'click', '[data-hunk-action], [data-line-id]', (target, event) => {
+    const button = (event.target as Element).closest<HTMLElement>('[data-hunk-action]');
+
+    if (button) {
+      event.stopPropagation();
+      diff.applyHunk(
+        button.dataset['hunkAction'] as 'stage' | 'unstage' | 'discard',
+        button.dataset['hunkId'] as string
+      );
+      return;
+    }
+
+    const lineId = target.dataset['lineId'];
+    if (lineId) {
+      diff.toggleLineSelection(lineId);
+    }
+  });
+
+  // Space and Enter on a focused line, so a selection can be built without a
+  // mouse. The rows carry role="checkbox", which is the behaviour that implies.
+  ui.diffContent.addEventListener('keydown', (event) => {
+    const key = event as KeyboardEvent;
+    if (key.key !== ' ' && key.key !== 'Enter') {
+      return;
+    }
+
+    const row = (event.target as Element).closest<HTMLElement>('[data-line-id]');
+    if (row?.dataset['lineId']) {
+      event.preventDefault();
+      diff.toggleLineSelection(row.dataset['lineId']);
+    }
+  });
+
+  ui.btnDiffStageSelection.addEventListener('click', () => diff.applySelectedLines('stage'));
+  ui.btnDiffUnstageSelection.addEventListener('click', () => diff.applySelectedLines('unstage'));
+  ui.btnDiffDiscardSelection.addEventListener('click', () => diff.applySelectedLines('discard'));
+  ui.btnDiffClearSelection.addEventListener('click', () => diff.clearLineSelection());
 }
 
 function wireCommitBox(): void {
@@ -626,7 +672,7 @@ async function start(): Promise<void> {
   branches.initBranches(ui, refreshAll);
   shelf.initShelf(ui, refreshAll);
   sync.initSync(ui, refreshAll);
-  diff.initDiff(ui);
+  diff.initDiff(ui, { refreshAll });
   staging.initStaging(ui, { refreshAll, refreshStatus, clearDiffView: diff.clearDiffView });
   conflicts.initConflicts(ui, refreshStatus);
   explorer.initExplorer(ui, { showCommitDetails: history.showCommitDetails });
