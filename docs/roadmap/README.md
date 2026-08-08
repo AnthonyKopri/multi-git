@@ -1,8 +1,11 @@
 ---
 title: Multi-Git feature roadmap
-status: planned
-last_reviewed: 2026-08-04
+status: in-progress
+last_reviewed: 2026-08-07
 owner: project maintainers
+phases_complete: [0, 1]
+next_phase: 2
+integration_branch: improvements
 ---
 
 # Multi-Git Feature Roadmap
@@ -23,10 +26,16 @@ This directory turns the competitive review into independently executable implem
 | --- | --- | --- | --- | --- |
 | [0](phase-0-toolchain-foundations.md) | Latest toolchain, cancellable process runner, schemas and CI foundations | None | Must land first | Complete (2026-08-05) |
 | [1](phase-1-ssh-agent-pr-creator.md) | Reliable SSH agent integration and GitHub PR creator | Phase 0 | SSH and PR lanes can split | Complete (2026-08-07) |
-| [2](phase-2-review-history-recovery.md) | Precision review, history rewriting, signing and recovery | Phase 0; signing follows Phase 1 SSH | Feature lanes can split | Planned |
-| [3](phase-3-worktrees-windows-agents.md) | Worktrees, multi-window workflows and external agent launch | Phase 1 | Can run beside Phase 4 | Planned |
-| [4](phase-4-repository-power-tools.md) | Remotes, submodules, LFS, patches, bisect, notes and external tools | Phase 2 recovery primitives | Can run beside Phase 3 | Planned |
-| [5](phase-5-collaboration-stacked-work-environments.md) | Multi-provider collaboration, stacked work, WSL and remote environments | Phases 1–4 | Split by provider/environment | Planned |
+| [2](phase-2-review-history-recovery.md) | Precision review, history rewriting, signing and recovery | Phase 0; signing follows Phase 1 SSH | Feature lanes can split | **Ready to start** |
+| [3](phase-3-worktrees-windows-agents.md) | Worktrees, multi-window workflows and external agent launch | Phase 1 | Can run beside Phase 2 or 4 | **Ready to start** |
+| [4](phase-4-repository-power-tools.md) | Remotes, submodules, LFS, patches, bisect, notes and external tools | Phase 2 recovery primitives | Can run beside Phase 3 | Blocked on Phase 2 |
+| [5](phase-5-collaboration-stacked-work-environments.md) | Multi-provider collaboration, stacked work, WSL and remote environments | Phases 1–4 | Split by provider/environment | Blocked on Phases 2–4 |
+
+Both prerequisites are merged, so **Phase 2 and Phase 3 are independently
+startable and can run in parallel** — 2 needs only Phase 0, and 3 needs only
+Phase 1. They touch different areas: Phase 2 is diff, history and signing;
+Phase 3 is worktrees, windows and agent launch. The shared hotspots to claim
+before either begins are listed in the execution contract below.
 
 ```mermaid
 flowchart LR
@@ -40,10 +49,57 @@ flowchart LR
   P4 --> P5
 ```
 
+## Current state
+
+Phases 0 and 1 are merged into `improvements`, which is the integration branch
+for this programme. `main` is untouched since the work began; a single
+`improvements` → `main` pull request closes it out once every phase has landed.
+
+| | |
+| --- | --- |
+| Integration branch | `improvements` |
+| Merged | [#14](https://github.com/AnthonyKopri/multi-git/pull/14) (Phase 0), [#15](https://github.com/AnthonyKopri/multi-git/pull/15) (Phase 1) |
+| Suite | 521 passed, 3 skipped |
+| Toolchain | Electron 43.3.0, TypeScript 7.0.2, Vitest 4.1.10, Node ≥ 22.12 |
+| CI | 7 jobs — Windows and Linux on Node 22.12 and 24, a leg with no `gh` and no SSH agent, docs, packaging smoke |
+| `npm audit` | 0 vulnerabilities |
+
+### Foundations later phases should build on, not rebuild
+
+Phase 0 and 1 exist so that Phases 2–5 do not each invent these. Reach for them
+before writing anything similar.
+
+| Need | Use | Notes |
+| --- | --- | --- |
+| Run any external program | `src/server/process/runner.ts` | Injectable, argv-only, no shell. Cancellation kills the whole process tree. Redacts secrets from stdout, stderr *and* the recorded argv. |
+| Show or cancel long work | `src/server/operations/registry.ts` | States, SSE stream, cancel endpoint. **No UI yet** — that is Phase 4. |
+| Change persisted config | `src/server/config/migrations.ts` | Versioned, idempotent, atomic. Needs a fixture for the version it upgrades from. |
+| Identify a repository | `src/server/config/repo-identity.ts` | Canonical key: resolves links, trailing separators, Unicode form, and case where the filesystem folds it. Never use a display path as a key. |
+| Add a code host | `src/shared/provider-types.ts`, `src/server/providers/` | `HostingProvider` contract with GitHub as the only implementation. |
+| SSH identity for an operation | `src/server/ssh/agent-session.ts` | `ensureAgentForRepo` before any network call. Signing (Phase 2) should reuse this state model rather than its own. |
+| Test something that shells out | `tests/helpers/fake-runner.ts` | Scripted responses plus argv/stdin/env assertions. No `gh`, agent, key or network anywhere in the suite. |
+| Test renderer behaviour | `// @vitest-environment happy-dom` | Mount the real `public/index.html`, so a renamed element id fails the suite. See `tests/pull-request-window.test.ts`. |
+
+### Open follow-ups carried forward
+
+None of these block Phase 2. They are listed so they are not rediscovered as
+surprises. Details and evidence are in
+[FEATURE_PARITY.md](FEATURE_PARITY.md#open-follow-ups).
+
+1. **Express 5** — the one dependency not at latest. Nothing blocks it; it was
+   left out of Phase 0 as a runtime-framework major touching every route file.
+2. **Repository paths outside Latin-1 cannot be opened** — a pre-existing
+   defect in how `x-repo-path` is transported. `café` works, `中文` and emoji
+   do not.
+3. **Operation progress has no UI** — the server side landed in Phase 0; the
+   panel is Phase 4's.
+4. **Never manually exercised** — creating a real pull request, and the fork
+   workflow. Both are covered against a scripted `gh`.
+
 ## Agent execution contract
 
 1. Read this file, [FEATURE_PARITY.md](FEATURE_PARITY.md), and the assigned phase completely.
-2. Work from an up-to-date prerequisite branch in a dedicated Git worktree. Suggested branches use `codex/phase-<n>-<slug>`.
+2. Branch from `improvements` in a dedicated Git worktree, and target the pull request at `improvements`. Branch names used so far are `claude/phase-<n>-<slug>`.
 3. Run `npm test` and `npm run compile` before editing. Record any pre-existing failure instead of masking it.
 4. Claim shared hotspots before changing them: `package*.json`, TypeScript/Vitest configs, shared API/config types, server app wiring, renderer endpoint/store modules, `public/index.html`, and `public/styles.css`.
 5. Add migrations for persisted schema changes. Do not silently discard existing settings, repositories, SSH profiles, or Safety Net records.
@@ -63,7 +119,10 @@ Manual verification:
 Known risks and follow-ups:
 ```
 
-## Baseline captured on 2026-08-03
+## Historical baseline, captured on 2026-08-03
+
+Kept as the record of what the project looked like before Phase 0. For the
+current numbers see [Current state](#current-state).
 
 - Repository tests: 283 passed, 3 skipped.
 - TypeScript compilation passed under the existing configuration.

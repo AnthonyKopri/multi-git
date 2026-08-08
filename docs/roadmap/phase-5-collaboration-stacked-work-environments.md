@@ -3,12 +3,18 @@ title: "Phase 5: Collaboration, stacked work and environments"
 phase: 5
 status: planned
 depends_on: [phase-1, phase-2, phase-3, phase-4]
-suggested_branch: codex/phase-5-collaboration-stacked-work-environments
+suggested_branch: claude/phase-5-collaboration-stacked-work-environments
 parallelizable: true
 lanes: [providers, pr-dashboard, stacked-work, wsl, remote-ssh-discovery]
 ---
 
 # Phase 5: Collaboration, Stacked Work and Environments
+
+> **Blocked.** This phase depends on Phases 2, 3 and 4. Phase 1 delivered
+> the `HostingProvider` contract (`src/shared/provider-types.ts`) with
+> GitHub as the only implementation, which is the seam the additional
+> providers plug into — see `src/server/providers/github.ts` for the shape
+> an implementation takes.
 
 ## Outcome
 

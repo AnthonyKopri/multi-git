@@ -5,7 +5,7 @@ status: complete
 completed: 2026-08-05
 branch: claude/phase-0-implementation-f94f8a
 depends_on: []
-suggested_branch: codex/phase-0-toolchain-foundations
+suggested_branch: claude/phase-0-toolchain-foundations
 parallelizable: false
 ---
 

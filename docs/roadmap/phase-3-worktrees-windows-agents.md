@@ -4,12 +4,30 @@ phase: 3
 status: planned
 depends_on: [phase-1]
 recommended_dependencies: [phase-2-recovery]
-suggested_branch: codex/phase-3-worktrees-windows-agents
+suggested_branch: claude/phase-3-worktrees-windows-agents
 parallelizable: true
 lanes: [worktrees, multi-window, agent-launch]
 ---
 
 # Phase 3: Worktrees, Windows and External Coding Agents
+
+> **Prerequisite merged.** Phase 1 is in `improvements` as of 2026-08-07, so
+> this phase is startable now and can run in parallel with Phase 2.
+>
+> Two Phase 0/1 pieces matter here more than anywhere else. Launching an
+> external coding agent must go through the `ExecutableRunner` in
+> `src/server/process/runner.ts` — argv-only, no shell, cancellable, with
+> process-tree termination, which is what a long-lived agent process needs.
+> And the reason a launched agent authenticates correctly at all is the
+> per-repository `core.sshCommand` that Phase 1 writes
+> (`src/server/ssh/repo-routing.ts`): the identity travels with the folder
+> rather than with Multi-Git's child-process environment. **A worktree is a
+> separate folder, so each one needs that pin applied when it is created** —
+> otherwise an agent launched in a worktree authenticates as whichever key ssh
+> offers first, which is the account mix-up Phase 1 exists to prevent.
+>
+> The full list of foundations is in
+> [README.md](README.md#current-state).
 
 ## Outcome
 

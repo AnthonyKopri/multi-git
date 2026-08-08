@@ -3,12 +3,19 @@ title: "Phase 4: Repository power tools"
 phase: 4
 status: planned
 depends_on: [phase-2]
-suggested_branch: codex/phase-4-repository-power-tools
+suggested_branch: claude/phase-4-repository-power-tools
 parallelizable: true
 lanes: [remotes-submodules, lfs, patch-bisect-notes, external-tools-progress]
 ---
 
 # Phase 4: Repository Power Tools
+
+> **Blocked.** This phase depends on the recovery primitives from Phase 2,
+> which has not started. Phases 0 and 1 are merged into `improvements`.
+> Note that Workstream "external-tools-progress" includes the operation
+> progress UI: the server side already exists from Phase 0
+> (`src/server/operations/registry.ts`, an SSE stream and a cancel
+> endpoint), so that lane is a renderer job, not a new subsystem.
 
 ## Outcome
 
