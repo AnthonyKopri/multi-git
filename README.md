@@ -15,7 +15,7 @@ Its defining feature is account-aware SSH: each repository can use its own key a
 
 - **Work across repositories quickly:** open, create, clone, remember, switch, and remove repositories from the recent list.
 - **Set up a new repository in one dialog:** choose visibility, pick a license template and fill in its placeholders, and add a `.gitignore` from a stack template, a general one, or your own.
-- **Stage and commit with confidence:** click files to stage or unstage, inspect line-by-line diffs, discard safely, amend commits, and use Conventional Commit shortcuts.
+- **Stage and commit with confidence:** click files to stage or unstage, stage or discard a single hunk or a handful of lines, inspect line-by-line diffs, amend commits, and use Conventional Commit shortcuts.
 - **See the shape of the project:** browse an all-branches commit graph, inspect commits and changed files, follow file history, and view Git blame.
 - **Sync without the command line:** fetch, pull, push, see ahead/behind counts, switch a compatible origin between HTTPS and SSH, and retry rejected pushes with `--force-with-lease`.
 - **Keep work and personal accounts separate:** assign an SSH key and Git identity to each profile, auto-select profiles from origin URLs, and catch account or identity mismatches before commit or push.
@@ -159,6 +159,36 @@ Every file the dialog writes, and anything it decided to keep, is reported in th
 | **History → Undo** | Soft-resets the last commit so its content remains staged. |
 
 The dedicated **File Diff** tab lists every modified, untracked, staged, and conflicted file. From the diff header you can stage, unstage, or discard the selected working-tree file. Diffs opened from commit history are read-only.
+
+#### Staging part of a file
+
+A commit rarely matches a working session exactly, so the diff can be acted on
+below file level.
+
+| Action | Result |
+| --- | --- |
+| Click any added or removed line | Selects it. Click again to deselect; Space or Enter does the same from the keyboard. |
+| **Stage selection** / **Unstage selection** / **Discard selection** | Applies to exactly the selected lines, and to nothing else in the file. |
+| Hover a `@@` hunk header | Reveals buttons that stage, unstage, or discard that whole hunk. |
+| **Clear** | Drops the selection without changing anything. |
+
+Which buttons appear follows the diff you are looking at: an unstaged diff
+offers stage and discard, a staged one offers unstage, and an untracked file
+offers stage only — discarding part of a file Git has never seen has nothing
+to fall back to.
+
+Notes on how this behaves:
+
+- Selecting only the added half of a changed line stages the addition and
+  leaves the removal behind, which is the same result `git add --patch` gives
+  for the same choice.
+- Discarding selected lines snapshots the whole file to Safety Net first, and
+  confirms unless the warning was turned off for that repository.
+- If the file changes on disk between opening the diff and acting on it, the
+  action is refused rather than applied to the wrong lines, and the diff
+  reloads so the choice can be made again.
+- Diffs over 2 MB are not rendered line by line until you ask for them with
+  **Load anyway**.
 
 The commit box supports free-form messages and optional Conventional Commit helpers:
 
@@ -351,6 +381,9 @@ Several further protections apply, on the principle that a repository's contents
 
 See [GitHub Releases](https://github.com/AnthonyKopri/multi-git/releases) for installers, portable builds, and release notes.
 
+The running version is in the window title — `Multi-Git Client v2.3.0` — and in
+the browser tab in browser mode, so a bug report can name it without digging.
+
 - **v1.0.4:** streamlined SSH key and vault setup, UI fixes, and executable icon fixes.
 - **v1.0.3:** redesigned UI/UX, pop-out Terminal Log, SSH/HTTPS origin switch, SSH config synchronization, commit history graph, and assorted UI fixes.
 - **v1.0.2:** simplified Remote Sync controls.
@@ -416,7 +449,7 @@ The UI talks to a localhost JSON API. Repository-scoped requests carry the selec
 
 `npm start` and `npm run desktop` compile first, so the TypeScript sources are always current; every `build` and `release` script does the same. Express serves the compiled bundle and the static assets from `out/web`.
 
-`npm test` type-checks every source under `strict` and runs the Vitest suite: the Git output parsers, path containment, argument guards, vault encryption, and the commit-graph layout, plus integration tests that drive the real API against throwaway repositories. The renderer's rendering is not covered by tests, so exercise UI changes against a disposable repository as well.
+`npm test` type-checks every source under `strict` and runs the Vitest suite: the Git output parsers, patch generation, path containment, argument guards, vault encryption, and the commit-graph layout, plus integration tests that drive the real API against throwaway repositories. Parts of the renderer are covered too — the pull-request creator and the diff pane are mounted from the real `public/index.html` under happy-dom, so a renamed element id fails the suite. Everything else in the UI is still unverified by tests, so exercise visual changes against a disposable repository as well.
 
 See [BUILDING.md](BUILDING.md) for the full build, check, and release procedure, including both Windows artifacts and how to bump the version.
 
@@ -440,6 +473,19 @@ curl -X POST http://localhost:3000/api/git/commit \
   -H "Content-Type: application/json" \
   -H "x-repo-path: /path/to/repository" \
   -d '{"message":"docs: improve README"}'
+
+# Read one file's diff as hunks and lines, each with an id
+curl -H "x-repo-path: /path/to/repository" \
+  "http://localhost:3000/api/git/diff/structured?path=README.md&source=working-tree"
+
+# Stage only the lines whose ids came from that read
+curl -X POST http://localhost:3000/api/git/diff/apply-selection \
+  -H "Content-Type: application/json" \
+  -H "x-repo-path: /path/to/repository" \
+  -d '{"action":"stage","filePath":"README.md","lineIds":["<hunk id>:3"]}'
+
+# Which version is running
+curl http://localhost:3000/api/app-info
 ```
 
 The API is an internal application interface rather than a versioned public contract and may change between releases.
