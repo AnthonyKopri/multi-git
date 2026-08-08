@@ -74,6 +74,26 @@ export const ELEMENT_MAP = {
   trashList: 'trash-list',
   tagList: 'tag-list',
 
+  // Signing
+  commitSignRow: 'commit-sign-row',
+  commitSignCheckbox: 'commit-sign-checkbox',
+  btnSigningSettings: 'btn-signing-settings',
+  signingModal: 'signing-modal',
+  btnCloseSigningModal: 'btn-close-signing-modal',
+  signingForm: 'signing-form',
+  signingMode: 'signing-mode',
+  signingKeyGroup: 'signing-key-group',
+  signingKey: 'signing-key',
+  signingKeyPicker: 'signing-key-picker',
+  signingAllowedGroup: 'signing-allowed-group',
+  signingAllowedSigners: 'signing-allowed-signers',
+  signingDefaultCommits: 'signing-default-commits',
+  signingDefaultTags: 'signing-default-tags',
+  signingDiagnostics: 'signing-diagnostics',
+  btnCancelSigning: 'btn-cancel-signing',
+  btnSaveSigning: 'btn-save-signing',
+  drawerSignature: 'drawer-signature',
+
   // Interactive rebase
   rebaseModal: 'rebase-modal',
   btnCloseRebaseModal: 'btn-close-rebase-modal',

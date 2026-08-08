@@ -5,7 +5,8 @@ import { Router } from 'express';
 
 import { pathArg, pathArgs } from '../git/args';
 import { withRepoLock } from '../git/lock';
-import { runGitCommand, tryGitCommand } from '../git/run';
+import { GitError, runGitCommand, tryGitCommand } from '../git/run';
+import { explainSigningFailure } from '../git/signing';
 import { parseGitDiffText } from '../git/diff';
 import { unquoteGitPath } from '../git/status';
 import { resolveInsideRepo } from '../fs/paths';
@@ -196,7 +197,11 @@ stagingRouter.post(
   '/api/git/commit',
   asyncRoute(async (req, res) => {
     const repoPath = req.repoPath as string;
-    const { message, amend } = (req.body ?? {}) as { message?: unknown; amend?: unknown };
+    const { message, amend, sign } = (req.body ?? {}) as {
+      message?: unknown;
+      amend?: unknown;
+      sign?: unknown;
+    };
 
     if (typeof message !== 'string' || message === '') {
       throw new HttpError('Commit message is required', 400);
@@ -211,8 +216,27 @@ stagingRouter.post(
       await captureCheckpoint(repoPath, 'Amend the last commit', { operation: 'amend' });
     }
 
-    const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
-    res.json({ success: true, stdout, stderr });
+    // Explicit true signs, explicit false overrides commit.gpgsign for this
+    // one commit, and undefined leaves the repository's setting in charge.
+    if (sign === true) {
+      args.push('-S');
+    } else if (sign === false) {
+      args.push('--no-gpg-sign');
+    }
+
+    try {
+      const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
+      res.json({ success: true, stdout, stderr });
+    } catch (error) {
+      // A refused signature leaves the changes staged, which is worth saying:
+      // git's own message is one line about a subprocess.
+      const explained =
+        error instanceof GitError ? explainSigningFailure(error.stderr) : null;
+      if (explained === null) {
+        throw error;
+      }
+      throw new HttpError(explained, 400);
+    }
   })
 );
 

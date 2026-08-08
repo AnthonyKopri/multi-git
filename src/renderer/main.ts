@@ -31,6 +31,7 @@ import * as palette from './features/palette';
 import * as rebase from './features/rebase';
 import * as recovery from './features/recovery';
 import * as search from './features/search';
+import * as signing from './features/signing';
 import * as repo from './features/repo';
 import * as shelf from './features/shelf';
 import * as ssh from './features/ssh-manager';
@@ -95,7 +96,8 @@ async function refreshAll(): Promise<void> {
       shelf.refreshStashList(),
       shelf.refreshSafetyNet(),
       shelf.refreshTagList(),
-      recovery.refreshRecovery()
+      recovery.refreshRecovery(),
+      signing.refreshCommitSignControl()
     ]);
   } catch (error) {
     if (!isStale(error)) {
@@ -115,6 +117,7 @@ function closeTopmostLayer(): void {
 
   const modals = [
     ui.paletteModal,
+    ui.signingModal,
     ui.rebaseModal,
     ui.searchModal,
     ui.branchAdminModal,
@@ -679,6 +682,7 @@ function wireDiscovery(): void {
   palette.attachPaletteInput();
   search.wireSearch();
   rebase.wireRebase();
+  signing.wireSigning();
   branchAdmin.wireBranchAdmin({ compareWith: search.openCompareWith });
 
   palette.setCommands(buildCommands());
@@ -696,6 +700,7 @@ function buildCommands(): palette.Command[] {
     { id: 'search', group: 'Find', title: 'Search commits', keywords: 'log grep history', run: () => search.openSearch('commits') },
     { id: 'compare', group: 'Find', title: 'Compare two refs', keywords: 'diff ahead behind', run: () => search.openSearch('compare') },
     { id: 'compare-upstream', group: 'Find', title: 'Compare this branch with its upstream', keywords: 'ahead behind', run: () => search.openCompareWith(`origin/${branch()}`, branch()) },
+    { id: 'signing', group: 'Accounts', title: 'Commit signing settings', keywords: 'gpg ssh sign verify', run: () => void signing.openSigningSettings() },
     { id: 'rebase', group: 'History', title: 'Interactive rebase', keywords: 'squash reword reorder drop fixup split', run: () => void rebase.openRebase() },
     { id: 'branches', group: 'Branch', title: 'Branch maintenance', keywords: 'prune stale merged rename pin delete', run: () => branchAdmin.openBranchAdmin() },
     { id: 'recovery', group: 'Safety Net', title: 'Recovery points and reflog', keywords: 'undo restore reflog', run: () => recovery.openRecoveryBrowser() },
@@ -766,6 +771,7 @@ async function start(): Promise<void> {
   search.initSearch(ui, { showCommit: (hash) => void history.showCommitDetails(hash) });
   branchAdmin.initBranchAdmin(ui, refreshAll);
   rebase.initRebase(ui, refreshAll);
+  signing.initSigning(ui);
   sync.initSync(ui, refreshAll);
   diff.initDiff(ui, { refreshAll });
   staging.initStaging(ui, { refreshAll, refreshStatus, clearDiffView: diff.clearDiffView });
