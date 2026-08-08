@@ -36,6 +36,8 @@ export interface RepoSettings {
    * repository belongs to.
    */
   sshProfileId?: string;
+  /** Branches the user pinned to the top of the list, in the order they chose. */
+  pinnedBranches?: string[];
 }
 
 export interface AppSettings {

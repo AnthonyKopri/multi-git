@@ -26,7 +26,10 @@ import * as explorer from './features/explorer';
 import * as history from './features/history';
 import * as newRepo from './features/new-repo';
 import * as pullRequest from './features/pull-request';
+import * as branchAdmin from './features/branch-admin';
+import * as palette from './features/palette';
 import * as recovery from './features/recovery';
+import * as search from './features/search';
 import * as repo from './features/repo';
 import * as shelf from './features/shelf';
 import * as ssh from './features/ssh-manager';
@@ -110,6 +113,9 @@ function closeTopmostLayer(): void {
   }
 
   const modals = [
+    ui.paletteModal,
+    ui.searchModal,
+    ui.branchAdminModal,
     ui.recoveryModal,
     ui.vaultSetupModal,
     ui.newRepoModal,
@@ -411,11 +417,24 @@ function wireShelves(): void {
       return;
     }
 
-    const action = target.dataset['action'];
-    if (action === 'drop') {
-      void shelf.dropStash(ref);
-    } else {
-      void shelf.applyStash(ref, action === 'pop');
+    switch (target.dataset['action']) {
+      case 'drop':
+        void shelf.dropStash(ref);
+        return;
+      case 'inspect':
+        void shelf.inspectStash(ref);
+        return;
+      case 'branch':
+        void shelf.branchFromStash(ref);
+        return;
+      case 'apply-index':
+        void shelf.applyStash(ref, false, true);
+        return;
+      case 'pop':
+        void shelf.applyStash(ref, true);
+        return;
+      default:
+        void shelf.applyStash(ref, false);
     }
   });
 
@@ -648,8 +667,67 @@ function wireSshManager(): void {
   });
 }
 
+/**
+ * The command palette and the two screens it is the fastest way to reach.
+ *
+ * The palette's command set is rebuilt on open rather than held: what is worth
+ * offering depends on whether a repository is open and which branch it is on.
+ */
+function wireDiscovery(): void {
+  palette.attachPaletteInput();
+  search.wireSearch();
+  branchAdmin.wireBranchAdmin({ compareWith: search.openCompareWith });
+
+  palette.setCommands(buildCommands());
+
+  delegate(ui.paletteList, 'click', '[data-command-id]', (target) => {
+    palette.runCommandById(target.dataset['commandId'] as string);
+  });
+}
+
+/** Everything the palette can start. Destructive entries still confirm. */
+function buildCommands(): palette.Command[] {
+  const branch = (): string => getState().status?.branch ?? 'HEAD';
+
+  return [
+    { id: 'search', group: 'Find', title: 'Search commits', keywords: 'log grep history', run: () => search.openSearch('commits') },
+    { id: 'compare', group: 'Find', title: 'Compare two refs', keywords: 'diff ahead behind', run: () => search.openSearch('compare') },
+    { id: 'compare-upstream', group: 'Find', title: 'Compare this branch with its upstream', keywords: 'ahead behind', run: () => search.openCompareWith(`origin/${branch()}`, branch()) },
+    { id: 'branches', group: 'Branch', title: 'Branch maintenance', keywords: 'prune stale merged rename pin delete', run: () => branchAdmin.openBranchAdmin() },
+    { id: 'recovery', group: 'Safety Net', title: 'Recovery points and reflog', keywords: 'undo restore reflog', run: () => recovery.openRecoveryBrowser() },
+    { id: 'refresh', group: 'Repository', title: 'Refresh everything', keywords: 'reload', run: () => void refreshAll() },
+    { id: 'open-repo', group: 'Repository', title: 'Open a repository', keywords: 'folder', run: () => void repo.browseAndOpen() },
+    { id: 'clone', group: 'Repository', title: 'Clone a repository', run: () => repo.openCloneModal() },
+    { id: 'new-repo', group: 'Repository', title: 'Create a repository', run: () => void newRepo.openNewRepoModal() },
+    { id: 'stage-all', group: 'Staging', title: 'Stage everything', run: () => void staging.stageFiles(['.']) },
+    { id: 'unstage-all', group: 'Staging', title: 'Unstage everything', run: () => void staging.unstageFiles(['.']) },
+    { id: 'discard-all', group: 'Staging', title: 'Discard all changes', keywords: 'revert reset working tree', run: () => void staging.discardAllChanges() },
+    { id: 'stash', group: 'Stash', title: 'Stash changes', run: () => void shelf.stashChanges() },
+    { id: 'fetch', group: 'Sync', title: 'Fetch', run: () => void sync.performSync('fetch') },
+    { id: 'pull', group: 'Sync', title: 'Pull', run: () => void sync.performSync('pull') },
+    { id: 'push', group: 'Sync', title: 'Push', run: () => void sync.performSync('push') },
+    { id: 'pull-request', group: 'Sync', title: 'Create a pull request', keywords: 'pr github', run: () => void pullRequest.openCreator() },
+    { id: 'diff-tab', group: 'View', title: 'Go to the File Diff tab', run: () => workspace.switchViewTab('diff') },
+    { id: 'staging-tab', group: 'View', title: 'Go to the Staging Area', run: () => workspace.switchViewTab('staging') },
+    { id: 'explorer-tab', group: 'View', title: 'Go to the Explorer', run: () => workspace.switchViewTab('explorer') },
+    { id: 'ssh', group: 'Accounts', title: 'Manage SSH profiles', keywords: 'keys accounts', run: () => ssh.openSshModal() },
+    { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() }
+  ];
+}
+
 function wireGlobal(): void {
   document.addEventListener('keydown', (event) => {
+    const key = event as KeyboardEvent;
+
+    // Ctrl+K / Cmd+K, the convention every palette uses. Ctrl+Shift+P too,
+    // for anyone whose muscle memory came from an editor.
+    if ((key.ctrlKey || key.metaKey) && (key.key === 'k' || (key.shiftKey && key.key === 'P'))) {
+      event.preventDefault();
+      palette.setCommands(buildCommands());
+      palette.openPalette();
+      return;
+    }
+
     if (event.key === 'Escape') {
       closeTopmostLayer();
     }
@@ -680,6 +758,9 @@ async function start(): Promise<void> {
   branches.initBranches(ui, refreshAll);
   shelf.initShelf(ui, refreshAll);
   recovery.initRecovery(ui, refreshAll);
+  palette.initPalette(ui);
+  search.initSearch(ui, { showCommit: (hash) => void history.showCommitDetails(hash) });
+  branchAdmin.initBranchAdmin(ui, refreshAll);
   sync.initSync(ui, refreshAll);
   diff.initDiff(ui, { refreshAll });
   staging.initStaging(ui, { refreshAll, refreshStatus, clearDiffView: diff.clearDiffView });
@@ -700,6 +781,7 @@ async function start(): Promise<void> {
   wireExplorer();
   wireModals();
   wireSshManager();
+  wireDiscovery();
   wireGlobal();
 
   repo.renderRepoHeader();

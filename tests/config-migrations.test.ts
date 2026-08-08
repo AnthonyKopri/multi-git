@@ -339,6 +339,50 @@ describe('validateAppConfig', () => {
 
     expect(config.recentRepos).toEqual(['/a', '/b']);
   });
+
+  it('keeps the SSH profile a repository is bound to', () => {
+    // This used to be dropped. The binding is written when a repository is
+    // pointed at an account, so losing it here reverted every repository to
+    // the System profile the next time the file was read from disk.
+    const { config } = validateAppConfig({
+      repoSettings: { '/repo': { sshProfileId: 'work', warnBeforeDelete: false } }
+    });
+
+    expect(config.repoSettings[canonicalRepoKey('/repo')]).toEqual({
+      sshProfileId: 'work',
+      warnBeforeDelete: false
+    });
+  });
+
+  it('keeps pinned branches and de-duplicates them', () => {
+    const { config } = validateAppConfig({
+      repoSettings: { '/repo': { pinnedBranches: ['main', 'main', 'release', ''] } }
+    });
+
+    expect(config.repoSettings[canonicalRepoKey('/repo')]?.pinnedBranches).toEqual([
+      'main',
+      'release'
+    ]);
+  });
+
+  it('ignores a pinned-branches value that is not a list', () => {
+    const { config } = validateAppConfig({
+      repoSettings: { '/repo': { pinnedBranches: 'main' } }
+    });
+
+    expect(config.repoSettings[canonicalRepoKey('/repo')]?.pinnedBranches).toBeUndefined();
+  });
+
+  it('accepts a whole number of retention days and rejects anything else', () => {
+    expect(validateAppConfig({ settings: { recoveryRetentionDays: 30 } }).config.settings).toEqual({
+      recoveryRetentionDays: 30
+    });
+    expect(validateAppConfig({ settings: { recoveryRetentionDays: 0 } }).config.settings).toEqual({
+      recoveryRetentionDays: 0
+    });
+    expect(validateAppConfig({ settings: { recoveryRetentionDays: -5 } }).config.settings).toEqual({});
+    expect(validateAppConfig({ settings: { recoveryRetentionDays: 1.5 } }).config.settings).toEqual({});
+  });
 });
 
 describe('isValidSshConfigHost', () => {

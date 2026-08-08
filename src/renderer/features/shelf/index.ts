@@ -76,7 +76,10 @@ export async function refreshStashList(): Promise<void> {
           `${stash.ref} — ${stash.date}`,
           { ref: stash.ref },
           [
+            { action: 'inspect', glyph: 'visibility', title: 'See what this stash holds' },
             { action: 'apply', glyph: 'download', title: 'Apply and keep the stash' },
+            { action: 'apply-index', glyph: 'playlist_add_check', title: 'Apply, restoring what was staged' },
+            { action: 'branch', glyph: 'alt_route', title: 'Start a branch from this stash' },
             { action: 'pop', glyph: 'unarchive', title: 'Apply and remove the stash' },
             { action: 'drop', glyph: 'delete', title: 'Delete this stash', danger: true }
           ]
@@ -87,6 +90,60 @@ export async function refreshStashList(): Promise<void> {
   } catch (error) {
     if (!isStale(error)) {
       logToTerminal(`Failed to load stashes: ${errorMessage(error)}`, 'error');
+    }
+  }
+}
+
+/** Shows what a stash contains without applying it. */
+export async function inspectStash(ref: string): Promise<void> {
+  try {
+    const { files, diff } = await api.showStash(ref);
+
+    const changed = files.map((file) => `${file.status}  ${file.path}`).join('\n');
+    const totals = diff.reduce(
+      (running, file) => ({
+        additions: running.additions + file.additions,
+        deletions: running.deletions + file.deletions
+      }),
+      { additions: 0, deletions: 0 }
+    );
+
+    logToTerminal(`git stash show -p ${ref}`, 'cmd');
+
+    await confirmDialog(
+      `${ref} holds ${files.length} ${files.length === 1 ? 'file' : 'files'}, +${totals.additions} -${totals.deletions}:
+
+${changed}`,
+      { title: 'Stash contents', confirmLabel: 'Close' }
+    );
+  } catch (error) {
+    if (!isStale(error)) {
+      showToast(errorMessage(error, 'Could not read the stash.'), 'error');
+    }
+  }
+}
+
+/** Checks the stash out onto a new branch, where it always applies. */
+export async function branchFromStash(ref: string): Promise<void> {
+  const name = await promptDialog({
+    title: `Branch from ${ref}`,
+    label: 'New branch name',
+    type: 'text'
+  });
+  if (name === null || name.trim() === '') {
+    return;
+  }
+
+  try {
+    await api.branchFromStash(ref, name.trim());
+    logToTerminal(`git stash branch ${name.trim()} ${ref}`, 'cmd');
+    showToast(`Checked out ${name.trim()} with the stash applied.`, 'success');
+    await refreshAll();
+  } catch (error) {
+    if (!isStale(error)) {
+      const text = errorMessage(error, 'Could not branch from the stash.');
+      logToTerminal(text, 'error');
+      showToast(text, 'error', 7000);
     }
   }
 }
@@ -106,7 +163,7 @@ export async function stashChanges(): Promise<void> {
 
   await withButtonBusy(ui.btnStashSave, async () => {
     try {
-      await api.pushStash(message, true);
+      await api.pushStash({ message, includeUntracked: true });
       showToast('Changes stashed.', 'success');
       await refreshAll();
     } catch (error) {
@@ -119,11 +176,11 @@ export async function stashChanges(): Promise<void> {
   });
 }
 
-export async function applyStash(ref: string, pop: boolean): Promise<void> {
-  logToTerminal(`git stash ${pop ? 'pop' : 'apply'} ${ref}`, 'cmd');
+export async function applyStash(ref: string, pop: boolean, restoreIndex = false): Promise<void> {
+  logToTerminal(`git stash ${pop ? 'pop' : 'apply'}${restoreIndex ? ' --index' : ''} ${ref}`, 'cmd');
 
   try {
-    await api.applyStash(ref, pop);
+    await api.applyStash(ref, pop, restoreIndex);
     showToast(pop ? 'Stash popped.' : 'Stash applied.', 'success');
     await refreshAll();
   } catch (error) {

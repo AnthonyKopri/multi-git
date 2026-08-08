@@ -28,6 +28,14 @@ export interface RunOptions {
   env?: NodeJS.ProcessEnv | undefined;
   timeoutMs?: number | undefined;
   maxOutputBytes?: number | undefined;
+  /**
+   * Written to the child's stdin, which is then closed.
+   *
+   * This is how a patch reaches `git apply`. Passing one as an argument would
+   * mean building a command line out of file contents, which is exactly what
+   * this module exists to make impossible.
+   */
+  input?: string | Buffer | undefined;
 }
 
 export interface RunResult {
@@ -140,5 +148,15 @@ export function runProcess(
 
     child.on('error', (error: Error) => settle(null, error));
     child.on('close', (code) => settle(code, null));
+
+    if (child.stdin) {
+      if (options.input !== undefined) {
+        // EPIPE here means the child exited before reading it all, which its
+        // exit code already describes better than a write error would.
+        child.stdin.on('error', () => {});
+        child.stdin.write(options.input);
+      }
+      child.stdin.end();
+    }
   });
 }

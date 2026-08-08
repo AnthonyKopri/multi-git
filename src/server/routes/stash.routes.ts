@@ -1,7 +1,12 @@
 import { Router } from 'express';
 
+import { refArg } from '../git/args';
 import { withRepoLock } from '../git/lock';
 import { runGitCommand, tryGitCommand } from '../git/run';
+import { unquoteGitPath } from '../git/status';
+import { parseStructuredDiff } from '../git/structured-diff';
+import { createStash } from '../git/selective-stash';
+import type { FileSelection } from '../git/selective-stash';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
@@ -18,6 +23,45 @@ function stashRef(value: unknown): string {
   return value;
 }
 
+function stringList(value: unknown, label: string): string[] | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string')) {
+    throw new HttpError(`${label} must be an array of strings.`, 400);
+  }
+  return value as string[];
+}
+
+/** Validates the hunk and line selections a partial stash carries. */
+function parseSelections(value: unknown): FileSelection[] | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new HttpError('selections must be an array.', 400);
+  }
+
+  return value.map((entry) => {
+    const record = (entry ?? {}) as Record<string, unknown>;
+    if (typeof record['filePath'] !== 'string' || record['filePath'] === '') {
+      throw new HttpError('Every selection needs a filePath.', 400);
+    }
+
+    const selection: FileSelection = { filePath: record['filePath'] };
+    const hunkIds = stringList(record['hunkIds'], 'hunkIds');
+    if (hunkIds) {
+      selection.hunkIds = hunkIds;
+    }
+    const lineIds = stringList(record['lineIds'], 'lineIds');
+    if (lineIds) {
+      selection.lineIds = lineIds;
+    }
+
+    return selection;
+  });
+}
+
 stashRouter.get(
   '/api/git/stash',
   asyncRoute(async (req, res) => {
@@ -27,7 +71,7 @@ stashRouter.get(
     const result = await tryGitCommand(repoPath, [
       'stash',
       'list',
-      '--format=%gd\x1f%s\x1f%cr'
+      '--format=%gd\x1f%s\x1f%cr\x1f%H\x1f%cI'
     ]);
 
     const stashes = (result?.stdout ?? '')
@@ -35,8 +79,14 @@ stashRouter.get(
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        const [ref, message, date] = line.split('\x1f');
-        return { ref: ref ?? '', message: message ?? '', date: date ?? '' };
+        const [ref, message, date, oid, isoDate] = line.split('\x1f');
+        return {
+          ref: ref ?? '',
+          message: message ?? '',
+          date: date ?? '',
+          oid: oid ?? '',
+          isoDate: isoDate ?? ''
+        };
       });
 
     res.json({ success: true, stashes });
@@ -47,22 +97,78 @@ stashRouter.post(
   '/api/git/stash',
   asyncRoute(async (req, res) => {
     const repoPath = req.repoPath as string;
-    const { message, includeUntracked } = (req.body ?? {}) as {
+    const body = (req.body ?? {}) as {
       message?: unknown;
       includeUntracked?: unknown;
+      keepIndex?: unknown;
+      files?: unknown;
+      selections?: unknown;
     };
 
-    const args = ['stash', 'push'];
-    if (includeUntracked) {
-      args.push('-u');
+    const input: Parameters<typeof createStash>[1] = {
+      includeUntracked: body.includeUntracked === true,
+      keepIndex: body.keepIndex === true
+    };
+
+    if (typeof body.message === 'string') {
+      input.message = body.message;
     }
-    if (typeof message === 'string' && message !== '') {
-      // -m takes the message as a value, so it is never read as an option.
-      args.push('-m', message);
+    const files = stringList(body.files, 'files');
+    if (files) {
+      input.files = files;
+    }
+    const selections = parseSelections(body.selections);
+    if (selections && selections.length > 0) {
+      input.selections = selections;
     }
 
-    const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
-    res.json({ success: true, stdout, stderr });
+    const result = await withRepoLock(repoPath, () => createStash(repoPath, input));
+    res.json({ success: true, ...result });
+  })
+);
+
+/**
+ * What a stash holds, without applying it.
+ *
+ * `stash@{n}^!` limits the diff to the stash commit against its first parent,
+ * which is the working-tree change the stash was made from.
+ */
+stashRouter.get(
+  '/api/git/stash/show',
+  asyncRoute(async (req, res) => {
+    const repoPath = req.repoPath as string;
+    const safeRef = stashRef(req.query['ref']);
+
+    const nameStatus = await runGitCommand(repoPath, [
+      'stash',
+      'show',
+      '--name-status',
+      '--format=',
+      safeRef
+    ]);
+
+    const files = nameStatus.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split('\t');
+        return {
+          status: (parts[0] ?? '')[0] ?? 'M',
+          path: unquoteGitPath(parts.length > 2 ? (parts[2] ?? '') : (parts[1] ?? ''))
+        };
+      });
+
+    const patch = await runGitCommand(repoPath, [
+      'stash',
+      'show',
+      '-p',
+      '--no-color',
+      '--no-ext-diff',
+      safeRef
+    ]);
+
+    res.json({ success: true, ref: safeRef, files, diff: parseStructuredDiff(patch.stdout) });
   })
 );
 
@@ -70,14 +176,47 @@ stashRouter.post(
   '/api/git/stash/apply',
   asyncRoute(async (req, res) => {
     const repoPath = req.repoPath as string;
-    const { ref, pop } = (req.body ?? {}) as { ref?: unknown; pop?: unknown };
+    const { ref, pop, restoreIndex } = (req.body ?? {}) as {
+      ref?: unknown;
+      pop?: unknown;
+      restoreIndex?: unknown;
+    };
 
     const safeRef = stashRef(ref);
+    const args = ['stash', pop ? 'pop' : 'apply'];
+
+    // --index puts back what was staged when the stash was made, rather than
+    // dropping the whole thing into the working tree unstaged.
+    if (restoreIndex) {
+      args.push('--index');
+    }
+    args.push(safeRef);
+
+    const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
+    res.json({ success: true, stdout, stderr });
+  })
+);
+
+/**
+ * Starts a branch at the commit the stash was made from and applies it there.
+ *
+ * The way out when a stash no longer applies to the current branch: git checks
+ * it out where it was made, where it always applies.
+ */
+stashRouter.post(
+  '/api/git/stash/branch',
+  asyncRoute(async (req, res) => {
+    const repoPath = req.repoPath as string;
+    const { ref, branchName } = (req.body ?? {}) as { ref?: unknown; branchName?: unknown };
+
+    const safeRef = stashRef(ref);
+    const safeBranch = refArg(branchName, 'Branch name');
+
     const { stdout, stderr } = await withRepoLock(repoPath, () =>
-      runGitCommand(repoPath, ['stash', pop ? 'pop' : 'apply', safeRef])
+      runGitCommand(repoPath, ['stash', 'branch', safeBranch, safeRef])
     );
 
-    res.json({ success: true, stdout, stderr });
+    res.json({ success: true, branch: safeBranch, stdout, stderr });
   })
 );
 

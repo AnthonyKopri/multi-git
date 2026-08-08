@@ -22,6 +22,7 @@ import type {
   PatchAction
 } from '../../shared/diff-types';
 import type { RecoveryResponse } from '../../shared/recovery-types';
+import type { Commit } from '../../shared/git-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -287,14 +288,109 @@ export const reset = (hash: string, mode: 'soft' | 'mixed' | 'hard') =>
 
 export const getStashes = () => api.get<Api.StashListResponse>('/api/git/stash');
 
-export const pushStash = (message: string, includeUntracked = true) =>
-  api.post<Api.GitOutput>('/api/git/stash', { body: { message, includeUntracked } });
+export interface StashPushInput {
+  message?: string;
+  includeUntracked?: boolean;
+  keepIndex?: boolean;
+  files?: string[];
+  selections?: { filePath: string; hunkIds?: string[]; lineIds?: string[] }[];
+}
 
-export const applyStash = (ref: string, pop: boolean) =>
-  api.post<Api.GitOutput>('/api/git/stash/apply', { body: { ref, pop } });
+export const pushStash = (input: StashPushInput) =>
+  api.post<Api.GitOutput & { partial: boolean; filesStashed: number }>('/api/git/stash', {
+    body: input
+  });
+
+export const showStash = (ref: string) =>
+  api.get<Api.Ok & { ref: string; files: { status: string; path: string }[]; diff: DiffFile[] }>(
+    '/api/git/stash/show',
+    { query: { ref } }
+  );
+
+export const applyStash = (ref: string, pop: boolean, restoreIndex = false) =>
+  api.post<Api.GitOutput>('/api/git/stash/apply', { body: { ref, pop, restoreIndex } });
+
+export const branchFromStash = (ref: string, branchName: string) =>
+  api.post<Api.GitOutput & { branch: string }>('/api/git/stash/branch', {
+    body: { ref, branchName }
+  });
 
 export const dropStash = (ref: string) =>
   api.post<Api.GitOutput>('/api/git/stash/drop', { body: { ref } });
+
+// ---------- search, compare and branch maintenance ----------
+
+export interface CommitSearchInput {
+  query?: string;
+  author?: string;
+  paths?: string;
+  since?: string;
+  until?: string;
+  refs?: string;
+  limit?: number;
+  skip?: number;
+}
+
+export const searchCommits = (input: CommitSearchInput) =>
+  api.get<Api.Ok & { commits: Commit[]; hasMore: boolean; skip: number; limit: number }>(
+    '/api/git/search/commits',
+    { query: { ...input } }
+  );
+
+export interface CompareResult extends Api.Ok {
+  base: string;
+  head: string;
+  ahead: number;
+  behind: number;
+  mergeBase: string | null;
+  aheadCommits: Commit[];
+  behindCommits: Commit[];
+  files: { status: string; path: string }[];
+}
+
+export const compareRefs = (base: string, head: string) =>
+  api.get<CompareResult>('/api/git/compare', { query: { base, head } });
+
+export interface BranchDetail {
+  name: string;
+  upstream: string | null;
+  ahead: number;
+  behind: number;
+  upstreamGone: boolean;
+  oid: string;
+  date: string;
+  subject: string;
+  isCurrent: boolean;
+  merged: boolean;
+  pinned: boolean;
+  stale: boolean;
+}
+
+export const getBranchDetails = () =>
+  api.get<Api.Ok & { branches: BranchDetail[]; staleAfterDays: number }>(
+    '/api/git/branches/details'
+  );
+
+export const renameBranch = (from: string, to: string) =>
+  api.post<Api.Ok & { from: string; to: string }>('/api/git/branch/rename', { body: { from, to } });
+
+export const setBranchUpstream = (branch: string, upstream: string | null) =>
+  api.post<Api.Ok & { upstream: string | null }>('/api/git/branch/upstream', {
+    body: { branch, upstream }
+  });
+
+export const pinBranch = (branch: string, pinned: boolean) =>
+  api.post<Api.Ok & { pinnedBranches: string[] }>('/api/git/branch/pin', {
+    body: { branch, pinned }
+  });
+
+export const pruneRemote = (remote: string, dryRun = false) =>
+  api.post<Api.Ok & { pruned: string[] }>('/api/git/remote/prune', { body: { remote, dryRun } });
+
+export const deleteBranches = (branches: string[], force: boolean) =>
+  api.post<
+    Api.Ok & { deleted: number; results: { branch: string; deleted: boolean; error?: string }[] }
+  >('/api/git/branches/delete-many', { body: { branches, force } });
 
 export const getTags = () => api.get<Api.TagListResponse>('/api/git/tags');
 
