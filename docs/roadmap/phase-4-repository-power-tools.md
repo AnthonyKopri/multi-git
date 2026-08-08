@@ -3,6 +3,7 @@ title: "Phase 4: Repository power tools"
 phase: 4
 status: planned
 depends_on: [phase-2]
+dependencies_met: true
 suggested_branch: claude/phase-4-repository-power-tools
 parallelizable: true
 lanes: [remotes-submodules, lfs, patch-bisect-notes, external-tools-progress]
@@ -10,18 +11,32 @@ lanes: [remotes-submodules, lfs, patch-bisect-notes, external-tools-progress]
 
 # Phase 4: Repository Power Tools
 
-> **Blocked.** This phase depends on the recovery primitives from Phase 2,
-> which has not started. Phases 0 and 1 are merged into `improvements`.
-> Note that Workstream "external-tools-progress" includes the operation
-> progress UI: the server side already exists from Phase 0
-> (`src/server/operations/registry.ts`, an SSE stream and a cancel
-> endpoint), so that lane is a renderer job, not a new subsystem.
+> **Ready to start.** The dependency was Phase 2's recovery primitives, and
+> Phase 2 completed on 2026-08-08. This phase can run in parallel with
+> Phase 3.
+>
+> What Phase 2 leaves for this phase to build on:
+>
+> - **Recovery capture** — `captureCheckpoint` in
+>   `src/server/safety-net/checkpoints.ts` writes the session undo *and* the
+>   durable recovery point. Every destructive remote, submodule, LFS or patch
+>   action goes through it with an `operation`; never write to one store alone.
+> - **The operation registry now has callers.** Phase 2 registers diff reads
+>   and searches through `src/server/operations/registry.ts`, and the git
+>   runner takes an `AbortSignal`, so the work to cancel is already tracked.
+>   The "external-tools-progress" lane is the renderer panel that shows and
+>   cancels it — a UI job, not a new subsystem.
+> - **Patch create/apply** should reuse `src/server/git/patch-build.ts` and
+>   `src/server/git/precision-staging.ts` rather than a second implementation,
+>   and anything that builds a patch must go through
+>   `src/server/git/encoding.ts` — a diff is bytes, and decoding it as UTF-8
+>   corrupts any file that is not.
 
 ## Outcome
 
 Cover advanced repository maintenance expected from major Git clients: remote management, submodules, LFS and locks, patches, bisect, Git Notes, external tools, shell integration, and trustworthy long-operation progress/cancellation.
 
-Phase 2 recovery points are required before destructive remote/submodule/LFS/patch actions. This phase can run in parallel with Phase 3 after shared endpoint and operation-registry ownership is agreed.
+Recovery points are required before destructive remote/submodule/LFS/patch actions; Phase 2 shipped them and `captureCheckpoint` is the single call that records one. This phase can run in parallel with Phase 3 after shared endpoint and operation-registry ownership is agreed.
 
 ## Workstream A — remotes and submodules
 

@@ -3,6 +3,7 @@ title: "Phase 5: Collaboration, stacked work and environments"
 phase: 5
 status: planned
 depends_on: [phase-1, phase-2, phase-3, phase-4]
+blocked_on: [phase-3, phase-4]
 suggested_branch: claude/phase-5-collaboration-stacked-work-environments
 parallelizable: true
 lanes: [providers, pr-dashboard, stacked-work, wsl, remote-ssh-discovery]
@@ -10,11 +11,20 @@ lanes: [providers, pr-dashboard, stacked-work, wsl, remote-ssh-discovery]
 
 # Phase 5: Collaboration, Stacked Work and Environments
 
-> **Blocked.** This phase depends on Phases 2, 3 and 4. Phase 1 delivered
-> the `HostingProvider` contract (`src/shared/provider-types.ts`) with
-> GitHub as the only implementation, which is the seam the additional
-> providers plug into — see `src/server/providers/github.ts` for the shape
-> an implementation takes.
+> **Blocked on Phases 3 and 4.** Phase 2 completed on 2026-08-08, so of the
+> four prerequisites only worktrees (Phase 3) and the power tools (Phase 4)
+> are outstanding.
+>
+> Phase 1 delivered the `HostingProvider` contract
+> (`src/shared/provider-types.ts`) with GitHub as the only implementation,
+> which is the seam the additional providers plug into — see
+> `src/server/providers/github.ts` for the shape an implementation takes.
+>
+> Stacked work depends on Phase 2 rather than waiting for it: restacking is a
+> history rewrite, so it should drive `src/server/git/rebase.ts` and record a
+> recovery point through `captureCheckpoint` rather than shelling out to
+> `git rebase` on its own. The editor bridge that answers git's prompts
+> (`src/server/git/rebase-bridge.ts`) already exists and should be reused.
 
 ## Outcome
 
@@ -95,7 +105,7 @@ export interface BranchStack {
 
 - Create/adopt a stack from an existing linear branch chain; validate ancestry and show ambiguous/merge-commit cases instead of guessing.
 - Visualize trunk → branch dependencies, commits and linked PRs. Actions: add branch, reorder when safe, restack onto updated parent/trunk, submit/update PRs, navigate worktrees, and merge down/up.
-- Before restack, create Phase 2 recovery points. Publish rewritten branches with `--force-with-lease` after an explicit impact preview.
+- Before restack, create a recovery point through `captureCheckpoint`. Publish rewritten branches with `--force-with-lease` after an explicit impact preview — Phase 2's rebase planner already shows how many of the commits being rewritten are on the upstream, and stacked work needs the same warning per branch.
 - PR bases follow stack parents; after a lower PR merges, offer to retarget/rebase remaining branches and preserve provider metadata.
 - Store minimal stack metadata in the repository's Git config or a documented local metadata file that is safe to ignore/share. Provide inspect/export/remove and never make branches unusable without the metadata.
 

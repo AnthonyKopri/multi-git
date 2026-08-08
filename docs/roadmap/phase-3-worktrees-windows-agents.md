@@ -4,6 +4,7 @@ phase: 3
 status: planned
 depends_on: [phase-1]
 recommended_dependencies: [phase-2-recovery]
+dependencies_met: true
 suggested_branch: claude/phase-3-worktrees-windows-agents
 parallelizable: true
 lanes: [worktrees, multi-window, agent-launch]
@@ -11,8 +12,15 @@ lanes: [worktrees, multi-window, agent-launch]
 
 # Phase 3: Worktrees, Windows and External Coding Agents
 
-> **Prerequisite merged.** Phase 1 is in `improvements` as of 2026-08-07, so
-> this phase is startable now and can run in parallel with Phase 2.
+> **Ready to start.** Phase 1 is in `improvements`, and Phase 2 completed on
+> 2026-08-08, so nothing this phase needs is outstanding. It can run in
+> parallel with Phase 4, which shares no code with it beyond the hotspots
+> listed in the execution contract.
+>
+> Phase 2 landed the recovery journal
+> (`src/server/safety-net/recovery.ts`), which is what a forced worktree
+> removal should capture through — see Workstream A below. It is now
+> available rather than merely recommended.
 >
 > Two Phase 0/1 pieces matter here more than anywhere else. Launching an
 > external coding agent must go through the `ExecutableRunner` in
@@ -67,7 +75,7 @@ export interface CreateWorktreeInput {
 - List worktrees under one common Git directory and show branch, HEAD, lock/prunable state, dirty summary, ahead/behind, PR link when known, and last activity.
 - Create from existing/new branch or detached ref with collision checks for paths and already-checked-out branches. Suggest a configurable parent directory but always preview the absolute path.
 - Actions: open, reveal, fetch, pull, lock/unlock, move, remove, repair, and prune preview. Never remove a dirty/locked worktree by default.
-- A forced removal requires Phase 2 recovery capture, explicit typed confirmation, and exact resolved target validation. Never recursively remove a computed path outside the allowed worktree root.
+- A forced removal requires recovery capture, explicit typed confirmation, and exact resolved target validation. Never recursively remove a computed path outside the allowed worktree root. Capture goes through `captureCheckpoint` in `src/server/safety-net/checkpoints.ts`, which writes both the session undo and the durable recovery point; pass an `operation` so the journal says what happened.
 - Treat all worktrees as one repository family for remotes/config/history, but keep worktree/index/WIP state separate. Avoid duplicate watchers and refresh storms.
 
 ## Workstream B — multi-window and repository groups
