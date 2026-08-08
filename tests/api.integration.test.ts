@@ -84,6 +84,20 @@ describe('the localhost guard', () => {
   });
 });
 
+describe('application identity', () => {
+  it('serves the running version so the page title can show it', async () => {
+    const { body } = await api().get('/api/app-info').expect(200);
+
+    expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(body.title).toBe(`${body.name} v${body.version}`);
+  });
+
+  it('needs no repository, so the title is right before one is opened', async () => {
+    // No x-repo-path header at all.
+    await api().get('/api/app-info').expect(200);
+  });
+});
+
 describe('the x-repo-path guard', () => {
   it('rejects a missing header', async () => {
     await api().get('/api/git/status').expect(400);

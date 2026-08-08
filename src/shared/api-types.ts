@@ -206,6 +206,15 @@ export interface GenerateKeyResponse extends Ok {
   config: ClientConfig;
 }
 
+export interface AppInfoResponse extends Ok {
+  /** Product name without the version, e.g. "Multi-Git Client". */
+  name: string;
+  /** From package.json. Empty only if the manifest carries no version. */
+  version: string;
+  /** Name and version together, ready to use as a window or tab title. */
+  title: string;
+}
+
 export interface TemplateCatalogueResponse extends Ok {
   licenses: LicenseSummary[];
   gitignores: GitignoreSummary[];

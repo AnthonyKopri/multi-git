@@ -18,19 +18,24 @@ import path from 'node:path';
 
 const PACKAGE_NAME = 'multi-git';
 
-function isAppRoot(directory: string): boolean {
+/** Product name shown in window titles, before the version. */
+export const APP_DISPLAY_NAME = 'Multi-Git Client';
+
+function readManifest(directory: string): Record<string, unknown> | null {
   const manifest = path.join(directory, 'package.json');
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(manifest, 'utf8'));
-    return (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      (parsed as { name?: unknown }).name === PACKAGE_NAME
-    );
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
     // Missing, unreadable, or malformed: this is not the directory we want.
-    return false;
+    return null;
   }
+}
+
+function isAppRoot(directory: string): boolean {
+  return readManifest(directory)?.['name'] === PACKAGE_NAME;
 }
 
 /**
@@ -77,6 +82,32 @@ export function appRoot(): string {
 /** Resolves a path relative to the application root. */
 export function fromAppRoot(...segments: string[]): string {
   return path.join(appRoot(), ...segments);
+}
+
+let cachedVersion: string | null = null;
+
+/**
+ * The version from the application's own package.json.
+ *
+ * package.json is already packaged (electron-builder needs it), and it is the
+ * single source the installer, the About text and the window title all agree
+ * on. Returns an empty string only if the manifest somehow has no version, so
+ * a title falls back to the bare product name rather than showing "undefined".
+ */
+export function appVersion(): string {
+  if (cachedVersion === null) {
+    const version = readManifest(appRoot())?.['version'];
+    cachedVersion = typeof version === 'string' ? version : '';
+  }
+
+  return cachedVersion;
+}
+
+/** Product name with the version appended, e.g. `Multi-Git Client v2.3.0`. */
+export function appTitle(suffix?: string): string {
+  const version = appVersion();
+  const name = version === '' ? APP_DISPLAY_NAME : `${APP_DISPLAY_NAME} v${version}`;
+  return suffix === undefined ? name : `${name} - ${suffix}`;
 }
 
 /** Directory holding the license and .gitignore template bodies. */
