@@ -1,9 +1,23 @@
 // Window creation for the desktop app.
 import { BrowserWindow, dialog } from 'electron';
 
-import { fromAppRoot } from '../server/app-root';
+import { appTitle, fromAppRoot } from '../server/app-root';
 
 const ICON = (): string => fromAppRoot('Multi Git Logo.ico');
+
+/**
+ * Stops the loaded page from replacing the window title.
+ *
+ * Electron mirrors the document's `<title>` onto the window, so the title
+ * given to the constructor survives only until the page loads. The version
+ * belongs in the title of every window, and the page has no way of knowing it,
+ * so the main process keeps ownership of it.
+ */
+function pinTitle(window: BrowserWindow): void {
+  window.on('page-title-updated', (event) => {
+    event.preventDefault();
+  });
+}
 
 /**
  * Web preferences applied to every window.
@@ -22,7 +36,7 @@ export function createMainWindow(serverUrl: string): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 850,
-    title: 'Multi-Git Client',
+    title: appTitle(),
     icon: ICON(),
     webPreferences: {
       ...SECURE_WEB_PREFERENCES,
@@ -30,6 +44,7 @@ export function createMainWindow(serverUrl: string): BrowserWindow {
     }
   });
 
+  pinTitle(window);
   window.loadURL(serverUrl);
   window.setMenuBarVisibility(false);
 
@@ -40,12 +55,13 @@ export function createLogWindow(serverUrl: string): BrowserWindow {
   const window = new BrowserWindow({
     width: 720,
     height: 520,
-    title: 'Multi-Git - Terminal Log',
+    title: appTitle('Terminal Log'),
     icon: ICON(),
     // The log window is read-only and needs no bridge.
     webPreferences: SECURE_WEB_PREFERENCES
   });
 
+  pinTitle(window);
   window.setMenuBarVisibility(false);
   window.loadURL(`${serverUrl}/logs.html`);
 
@@ -60,10 +76,12 @@ export function createStartupFailureWindow(error: unknown): BrowserWindow {
   const window = new BrowserWindow({
     width: 700,
     height: 450,
-    title: 'Multi-Git Client - Startup Error',
+    title: appTitle('Startup Error'),
     icon: ICON(),
     webPreferences: SECURE_WEB_PREFERENCES
   });
+
+  pinTitle(window);
 
   const message =
     error instanceof Error ? error.message : String(error ?? 'Unknown error');
