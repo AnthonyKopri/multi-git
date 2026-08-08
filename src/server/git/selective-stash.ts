@@ -20,6 +20,7 @@
 // safe, so a failure while tidying up costs the user nothing.
 import { pathArgs } from './args';
 import { runGitCommand, tryGitCommand } from './run';
+import { transportToBytes } from './encoding';
 import { buildSelectedPatch, PatchSelectionError } from './patch-build';
 import { readFileDiff } from './precision-staging';
 import type { PatchSelection } from '../../shared/diff-types';
@@ -163,7 +164,7 @@ async function stashSelection(
   try {
     await runGitCommand(repoPath, ['read-tree', 'HEAD']);
     await runGitCommand(repoPath, ['apply', '--cached', '--whitespace=nowarn'], null, {
-      input: forward
+      input: transportToBytes(forward)
     });
     selectedTree = (await runGitCommand(repoPath, ['write-tree'])).stdout.trim();
   } catch (error) {
@@ -199,7 +200,7 @@ async function stashSelection(
 
   await runGitCommand(repoPath, ['read-tree', originalIndex]);
   const removal = await runGitCommand(repoPath, ['apply', '--reverse', '--whitespace=nowarn'], null, {
-    input: reverse
+    input: transportToBytes(reverse)
   });
 
   return {

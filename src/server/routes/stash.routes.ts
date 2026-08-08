@@ -5,6 +5,7 @@ import { withRepoLock } from '../git/lock';
 import { runGitCommand, tryGitCommand } from '../git/run';
 import { unquoteGitPath } from '../git/status';
 import { parseStructuredDiff } from '../git/structured-diff';
+import { bytesToTransport, toDisplayDiffFiles } from '../git/encoding';
 import { createStash } from '../git/selective-stash';
 import type { FileSelection } from '../git/selective-stash';
 import { captureCheckpoint } from '../safety-net/checkpoints';
@@ -222,16 +223,16 @@ stashRouter.get(
         };
       });
 
-    const patch = await runGitCommand(repoPath, [
-      'stash',
-      'show',
-      '-p',
-      '--no-color',
-      '--no-ext-diff',
-      safeRef
-    ]);
+    const patch = await runGitCommand(
+      repoPath,
+      ['stash', 'show', '-p', '--no-color', '--no-ext-diff', safeRef],
+      null,
+      { binaryStdout: true }
+    );
 
-    res.json({ success: true, ref: safeRef, files, diff: parseStructuredDiff(patch.stdout) });
+    const parsed = parseStructuredDiff(bytesToTransport(patch.stdoutBuffer ?? Buffer.alloc(0)));
+
+    res.json({ success: true, ref: safeRef, files, diff: toDisplayDiffFiles(parsed) });
   })
 );
 
