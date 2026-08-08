@@ -4,6 +4,7 @@ import { refArg } from '../git/args';
 import { withRepoLock } from '../git/lock';
 import { GitError, runGitCommand, tryGitCommand } from '../git/run';
 import { captureCheckpoint } from '../safety-net/checkpoints';
+import type { RecoveryOperation } from '../../shared/recovery-types';
 import { requireRepoPath } from '../middleware/repo-path';
 import { asyncRoute } from '../middleware/error-handler';
 
@@ -106,6 +107,14 @@ branchesRouter.post(
 
     const safeBranch = refArg(branch, 'Branch name');
 
+    // The branch's own tip is recorded, not just HEAD: deleting a branch you
+    // are not standing on moves nothing else, so without this the journal
+    // would have no way back to it.
+    await captureCheckpoint(repoPath, `Delete branch ${safeBranch}`, {
+      operation: 'branch-delete',
+      refs: [`refs/heads/${safeBranch}`]
+    });
+
     try {
       const { stdout, stderr } = await withRepoLock(repoPath, () =>
         runGitCommand(repoPath, ['branch', force ? '-D' : '-d', safeBranch])
@@ -130,9 +139,10 @@ async function runIntegration(
   repoPath: string,
   args: readonly string[],
   label: string,
-  conflictMessage: string
+  conflictMessage: string,
+  operation: RecoveryOperation
 ): Promise<{ success: boolean; conflict?: boolean; error?: string; stdout?: string; stderr?: string }> {
-  await captureCheckpoint(repoPath, label);
+  await captureCheckpoint(repoPath, label, { operation });
 
   try {
     const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
@@ -159,7 +169,8 @@ branchesRouter.post(
         repoPath,
         ['merge', safeBranch],
         `Merge ${safeBranch}`,
-        'Merge conflict occurred'
+        'Merge conflict occurred',
+        'merge'
       )
     );
   })
@@ -176,7 +187,8 @@ branchesRouter.post(
         repoPath,
         ['rebase', safeBranch],
         `Rebase onto ${safeBranch}`,
-        'Rebase conflict occurred'
+        'Rebase conflict occurred',
+        'rebase'
       )
     );
   })

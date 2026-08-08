@@ -21,6 +21,7 @@ import type {
   DiffSource,
   PatchAction
 } from '../../shared/diff-types';
+import type { RecoveryResponse } from '../../shared/recovery-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -329,6 +330,21 @@ export const undoOperation = (checkpointId: string) =>
   api.post<Api.UndoOperationResponse>('/api/git/undo-operation', { body: { checkpointId } });
 
 export const getTrash = () => api.get<Api.TrashResponse>('/api/git/trash');
+
+export const getRecovery = () => api.get<RecoveryResponse>('/api/git/recovery');
+
+export const recoveryBranch = (oid: string, branchName: string) =>
+  api.post<Api.Ok & { branch: string; oid: string }>('/api/git/recovery/branch', {
+    body: { oid, branchName }
+  });
+
+export const recoveryRestore = (pointId: string, ref: string) =>
+  api.post<Api.Ok & { ref: string; oid: string; shortOid: string }>('/api/git/recovery/restore', {
+    body: { pointId, ref }
+  });
+
+export const forgetRecoveryPoint = (id: string) =>
+  api.delete<Api.Ok>('/api/git/recovery', { body: { id } });
 
 export const restoreFromTrash = (id: string) =>
   api.post<Api.TrashRestoreResponse>('/api/git/trash/restore', { body: { id } });

@@ -55,3 +55,39 @@ export function repoBaseName(repoPath: string | null): string {
 export function countBadge(count: number, arrow: string): string {
   return count > 0 ? `${arrow}${count}` : '';
 }
+
+const TIME_UNITS: readonly { limitMs: number; ms: number; name: string }[] = [
+  { limitMs: 60_000, ms: 1_000, name: 'second' },
+  { limitMs: 3_600_000, ms: 60_000, name: 'minute' },
+  { limitMs: 86_400_000, ms: 3_600_000, name: 'hour' },
+  { limitMs: 2_592_000_000, ms: 86_400_000, name: 'day' },
+  { limitMs: 31_536_000_000, ms: 2_592_000_000, name: 'month' },
+  { limitMs: Number.POSITIVE_INFINITY, ms: 31_536_000_000, name: 'year' }
+];
+
+/**
+ * "3 hours ago", "in 12 days".
+ *
+ * Git's own relative dates are used where git produced the value, so this is
+ * for timestamps the app recorded itself — a recovery point's creation and
+ * expiry. Returns an empty string for a value that is not a real time, so a
+ * corrupt journal entry renders as missing rather than as "NaN years ago".
+ */
+export function formatRelativeTime(timestampMs: number, now = Date.now()): string {
+  if (!Number.isFinite(timestampMs)) {
+    return '';
+  }
+
+  const delta = timestampMs - now;
+  const magnitude = Math.abs(delta);
+
+  if (magnitude < 5_000) {
+    return 'just now';
+  }
+
+  const unit = TIME_UNITS.find((candidate) => magnitude < candidate.limitMs) ?? TIME_UNITS[5];
+  const count = Math.round(magnitude / (unit as { ms: number }).ms);
+  const name = `${(unit as { name: string }).name}${count === 1 ? '' : 's'}`;
+
+  return delta < 0 ? `${count} ${name} ago` : `in ${count} ${name}`;
+}
