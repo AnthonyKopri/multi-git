@@ -28,6 +28,11 @@ import type {
   RebasePlan,
   RebaseStatus
 } from '../../shared/rebase-types';
+import type {
+  SignatureInfo,
+  SigningMode,
+  SigningStatusResponse
+} from '../../shared/signing-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -164,8 +169,8 @@ export const discard = (filePath: string, isUntracked: boolean) =>
 export const discardAll = (deleteUntracked: boolean) =>
   api.post<Api.Ok>('/api/git/discard-all', { body: { deleteUntracked } });
 
-export const commit = (message: string, amend = false) =>
-  api.post<Api.GitOutput>('/api/git/commit', { body: { message, amend } });
+export const commit = (message: string, amend = false, sign?: boolean) =>
+  api.post<Api.GitOutput>('/api/git/commit', { body: { message, amend, sign } });
 
 export const getLastCommitMessage = () =>
   api.get<Api.LastCommitMessageResponse>('/api/git/last-commit-message');
@@ -392,6 +397,28 @@ export const pinBranch = (branch: string, pinned: boolean) =>
 export const pruneRemote = (remote: string, dryRun = false) =>
   api.post<Api.Ok & { pruned: string[] }>('/api/git/remote/prune', { body: { remote, dryRun } });
 
+// ---------- signing ----------
+
+export const getSigningStatus = () =>
+  api.get<SigningStatusResponse>('/api/git/signing/status');
+
+export interface SigningConfigInput {
+  mode: SigningMode;
+  signingKey?: string | null;
+  allowedSignersFile?: string | null;
+  signCommitsByDefault?: boolean;
+  signTagsByDefault?: boolean;
+}
+
+export const saveSigningConfig = (input: SigningConfigInput) =>
+  api.post<SigningStatusResponse>('/api/git/signing/config', { body: input });
+
+export const getCommitSignature = (hash: string) =>
+  api.get<Api.Ok & { signature: SignatureInfo }>('/api/git/signature/commit', { query: { hash } });
+
+export const getTagSignature = (tag: string) =>
+  api.get<Api.Ok & { signature: SignatureInfo }>('/api/git/signature/tag', { query: { tag } });
+
 // ---------- interactive rebase ----------
 
 export const getRebasePlan = (onto: string, autosquash: boolean) =>
@@ -427,8 +454,8 @@ export const deleteBranches = (branches: string[], force: boolean) =>
 
 export const getTags = () => api.get<Api.TagListResponse>('/api/git/tags');
 
-export const createTag = (name: string, hash?: string, message?: string) =>
-  api.post<Api.GitOutput>('/api/git/tag', { body: { name, hash, message } });
+export const createTag = (name: string, hash?: string, message?: string, sign?: boolean) =>
+  api.post<Api.GitOutput>('/api/git/tag', { body: { name, hash, message, sign } });
 
 export const deleteTag = (name: string) =>
   api.delete<Api.GitOutput>('/api/git/tag', { body: { name } });

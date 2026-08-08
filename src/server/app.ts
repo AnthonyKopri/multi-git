@@ -28,6 +28,7 @@ import { diffRouter } from './routes/diff.routes';
 import { searchRouter } from './routes/search.routes';
 import { branchAdminRouter } from './routes/branch-admin.routes';
 import { rebaseRouter } from './routes/rebase.routes';
+import { signingRouter } from './routes/signing.routes';
 import { conflictsRouter } from './routes/conflicts.routes';
 import { cloneRouter, syncRouter } from './routes/sync.routes';
 import { historyRouter } from './routes/history.routes';
@@ -81,6 +82,7 @@ export function createApp(): Express {
   app.use(branchAdminRouter);
   app.use(searchRouter);
   app.use(rebaseRouter);
+  app.use(signingRouter);
   app.use(conflictsRouter);
   app.use(syncRouter);
   app.use(historyRouter);

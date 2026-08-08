@@ -12,6 +12,7 @@ import { applyCommitType, COMMIT_TYPES, chipTitle, shouldShowFormatHint } from '
 import type { CommitType } from '../commit/conventional';
 import { buildDiffPickerRow, buildFileRow, diffEntriesFor, findDiffEntry, renderRows } from './file-list';
 import { applyProfileIdentity, getAccountMismatch } from '../accounts/identity';
+import * as signing from '../signing';
 import { el } from '../../dom/create';
 
 let ui: Elements;
@@ -361,7 +362,9 @@ export async function commitChanges(): Promise<void> {
   (ui.btnCommit as HTMLButtonElement).disabled = true;
 
   try {
-    const data = await api.commit(message, amend);
+    // Only sent when it differs from what the repository would do anyway, so
+    // an explicit flag always means the user asked for something different.
+    const data = await api.commit(message, amend, signing.commitSignPreference());
     logToTerminal(data.stdout || 'Changes committed successfully.', 'success');
     showToast(amend ? 'Last commit amended.' : 'Changes committed.', 'success');
 

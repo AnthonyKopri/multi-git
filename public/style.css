@@ -1251,6 +1251,28 @@ body.pane-resizing-y * {
   margin-right: 4px;
 }
 
+/* Signature badges. Colour follows the claim, not the presence of a signature:
+   only a verified one is green. */
+.signature-badge {
+  margin-left: 8px;
+  font-size: 0.6875rem;
+}
+.signature-good {
+  background-color: var(--color-success-bg);
+  color: #34d399;
+}
+.signature-bad {
+  background-color: var(--color-danger-bg);
+  color: #f87171;
+}
+.signature-unknown {
+  background-color: var(--color-warning-bg, rgba(234, 179, 8, 0.12));
+  color: #eab308;
+}
+.signature-unsigned {
+  color: var(--text-dim);
+}
+
 /* Rebase planner */
 .rebase-action {
   flex-shrink: 0;

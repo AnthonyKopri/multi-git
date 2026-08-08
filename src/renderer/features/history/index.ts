@@ -6,6 +6,7 @@ import type { Elements } from '../../dom/elements';
 import { el, fragment, icon, setHidden } from '../../dom/create';
 import { getState, update } from '../../state/store';
 import { statusLabel } from '../../ui/format';
+import * as signing from '../signing';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
@@ -166,6 +167,10 @@ export async function showCommitDetails(commitHash: string): Promise<void> {
     ui.drawerAuthor.textContent = data.commit.author;
     ui.drawerDate.textContent = data.commit.date;
     ui.drawerFilesHeading.textContent = 'Files Changed';
+
+    // Fire and forget: verifying a signature can shell out to gpg, and the
+    // rest of the drawer should not wait behind it.
+    void signing.showCommitSignature(data.commit.hash);
 
     ui.drawerFilesList.replaceChildren(
       fragment(
