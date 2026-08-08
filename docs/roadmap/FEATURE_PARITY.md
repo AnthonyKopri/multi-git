@@ -68,8 +68,6 @@ evidence.
 | The fork workflow | Untested by hand | Whoever next uses it | Same reason. Ownership detection *has* been run against real `gh` on a non-fork. |
 | `@types/node` held at 24.x | Intentional pin | Revisit with Electron | Electron 43 embeds Node 24; newer types would describe APIs the runtime lacks. Encoded as an `ignore` rule in `.github/dependabot.yml`. |
 | Trailing whitespace in `public/index.html` and `public/style.css` | Pre-existing | Whoever reformats them | Why the CI whitespace check is scoped to the merge base rather than the whole tree. |
-| GPG signing untested against a real keyring | Untested by hand | Whoever has a keyring | Phase 2's suite signs with SSH, which needs neither an agent nor a keyring. The GPG path is covered for configuration and diagnostics only. |
-| `git rebase -i` and Windows MAX_PATH | Environment limit | Not fixable here | In a repository whose path is long enough that git's internal `<sha>...<sha>` filename exceeds 260 characters, `git rebase -i` fails with "Filename too long". Reproducible with plain git; Multi-Git surfaces git's message rather than reporting a rebase that did nothing. |
 | Syntax-aware diff rendering | Deliberate scope split | Later | The one Phase 2A presentation item not done. Needs a highlighter dependency and a language map, which is a decision rather than a gap in the model. |
 
 ### Environment notes worth knowing
