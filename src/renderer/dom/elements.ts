@@ -74,6 +74,25 @@ export const ELEMENT_MAP = {
   trashList: 'trash-list',
   tagList: 'tag-list',
 
+  // Interactive rebase
+  rebaseModal: 'rebase-modal',
+  btnCloseRebaseModal: 'btn-close-rebase-modal',
+  rebasePublishedWarning: 'rebase-published-warning',
+  rebaseValidation: 'rebase-validation',
+  rebasePlanner: 'rebase-planner',
+  rebaseOnto: 'rebase-onto',
+  rebaseAutosquash: 'rebase-autosquash',
+  btnRebaseReload: 'btn-rebase-reload',
+  rebasePlanList: 'rebase-plan-list',
+  btnRebaseStart: 'btn-rebase-start',
+  rebaseProgress: 'rebase-progress',
+  rebaseProgressSummary: 'rebase-progress-summary',
+  rebaseConflictList: 'rebase-conflict-list',
+  btnRebaseSplit: 'btn-rebase-split',
+  btnRebaseContinue: 'btn-rebase-continue',
+  btnRebaseSkip: 'btn-rebase-skip',
+  btnRebaseAbort: 'btn-rebase-abort',
+
   // Command palette
   paletteModal: 'palette-modal',
   paletteInput: 'palette-input',
