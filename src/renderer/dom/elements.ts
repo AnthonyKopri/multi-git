@@ -70,6 +70,7 @@ export const ELEMENT_MAP = {
   btnRebase: 'btn-rebase',
   btnStashSave: 'btn-stash-save',
   stashList: 'stash-list',
+  stashSearch: 'stash-search',
   checkpointList: 'checkpoint-list',
   trashList: 'trash-list',
   tagList: 'tag-list',
@@ -177,6 +178,11 @@ export const ELEMENT_MAP = {
   diffFileType: 'diff-file-type',
   diffContent: 'diff-content',
   diffFilesList: 'diff-files-list',
+
+  // Diff presentation
+  btnDiffLayout: 'btn-diff-layout',
+  btnDiffLayoutLabel: 'btn-diff-layout-label',
+  diffWhitespace: 'diff-whitespace',
 
   // Precision staging
   diffSelectionBar: 'diff-selection-bar',

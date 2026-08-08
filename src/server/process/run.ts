@@ -36,14 +36,32 @@ export interface RunOptions {
    * this module exists to make impossible.
    */
   input?: string | Buffer | undefined;
+  /**
+   * Kills the child when it fires.
+   *
+   * What makes a long read — a diff of a very large file, a search across a
+   * long history — something the user can stop rather than wait out.
+   */
+  signal?: AbortSignal | undefined;
+  /**
+   * Collects stdout as raw bytes instead of decoding it.
+   *
+   * Needed for `git cat-file blob`: an image decoded as UTF-8 comes back with
+   * every invalid sequence replaced, which is not the file any more.
+   */
+  binaryStdout?: boolean | undefined;
 }
 
 export interface RunResult {
   stdout: string;
+  /** Populated instead of `stdout` when `binaryStdout` was set. */
+  stdoutBuffer: Buffer | null;
   stderr: string;
   code: number | null;
   /** Set when the process was killed for exceeding `timeoutMs`. */
   timedOut: boolean;
+  /** Set when the caller's AbortSignal ended it. Not a failure. */
+  cancelled: boolean;
   /** Set when either stream exceeded `maxOutputBytes` and was truncated. */
   truncated: boolean;
   /** Spawn-level failure, such as the executable not being on PATH. */
@@ -118,7 +136,10 @@ export function runProcess(
 
     const out = new OutputCollector(maxOutputBytes);
     const err = new OutputCollector(maxOutputBytes);
+    const rawChunks: Buffer[] = [];
+    let rawBytes = 0;
     let timedOut = false;
+    let cancelled = false;
     let settled = false;
 
     const timer = setTimeout(() => {
@@ -126,24 +147,51 @@ export function runProcess(
       child.kill();
     }, timeoutMs);
 
+    const onAbort = (): void => {
+      cancelled = true;
+      child.kill();
+    };
+
+    if (options.signal) {
+      if (options.signal.aborted) {
+        // Already cancelled before the process was spawned. Kill it rather
+        // than letting the work run to completion unwatched.
+        queueMicrotask(onAbort);
+      } else {
+        options.signal.addEventListener('abort', onAbort, { once: true });
+      }
+    }
+
     const settle = (code: number | null, spawnError: Error | null): void => {
       if (settled) {
         return;
       }
       settled = true;
       clearTimeout(timer);
+      options.signal?.removeEventListener('abort', onAbort);
 
       resolve({
-        stdout: out.finish(),
+        stdout: options.binaryStdout === true ? '' : out.finish(),
+        stdoutBuffer: options.binaryStdout === true ? Buffer.concat(rawChunks) : null,
         stderr: err.finish(),
         code,
         timedOut,
-        truncated: out.truncated || err.truncated,
+        cancelled,
+        truncated: out.truncated || err.truncated || rawBytes > maxOutputBytes,
         spawnError
       });
     };
 
-    child.stdout?.on('data', (chunk: Buffer) => out.push(chunk));
+    child.stdout?.on('data', (chunk: Buffer) => {
+      if (options.binaryStdout === true) {
+        rawBytes += chunk.length;
+        if (rawBytes <= maxOutputBytes) {
+          rawChunks.push(chunk);
+        }
+        return;
+      }
+      out.push(chunk);
+    });
     child.stderr?.on('data', (chunk: Buffer) => err.push(chunk));
 
     child.on('error', (error: Error) => settle(null, error));

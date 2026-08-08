@@ -194,10 +194,43 @@ export interface StructuredDiffPayload {
   limitBytes: number;
 }
 
-export const getStructuredDiff = (path: string, source: DiffSource, force = false) =>
+export type WhitespaceMode = 'show' | 'ignore-change' | 'ignore-all';
+
+export const getStructuredDiff = (
+  path: string,
+  source: DiffSource,
+  force = false,
+  whitespace: WhitespaceMode = 'show'
+) =>
   api.get<StructuredDiffPayload>('/api/git/diff/structured', {
-    query: { path, source, force: force ? 'true' : undefined }
+    query: { path, source, force: force ? 'true' : undefined, whitespace }
   });
+
+export interface BlobSideResult {
+  dataUri: string | null;
+  sizeBytes: number;
+  mimeType: string | null;
+  exists: boolean;
+}
+
+export const getDiffBlobs = (path: string, source: DiffSource) =>
+  api.get<
+    Api.Ok & {
+      filePath: string;
+      isImage: boolean;
+      old: BlobSideResult;
+      new: BlobSideResult;
+      sizeDelta: number;
+    }
+  >('/api/git/diff/blobs', { query: { path, source } });
+
+export const searchStashes = (query: string) =>
+  api.get<
+    Api.Ok & {
+      query: string;
+      stashes: { ref: string; message: string; date: string; matchedFiles: string[] }[];
+    }
+  >('/api/git/stash/search', { query: { query } });
 
 export interface ApplySelectionInput {
   action: PatchAction;

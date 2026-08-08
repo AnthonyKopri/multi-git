@@ -188,7 +188,7 @@ describe('rendering a structured diff', () => {
     );
 
     expect(new Set(actions)).toEqual(new Set(['unstage']));
-    expect(endpoints.getStructuredDiff).toHaveBeenCalledWith('lines.txt', 'index', false);
+    expect(endpoints.getStructuredDiff).toHaveBeenCalledWith('lines.txt', 'index', false, 'show');
   });
 
   it('does not offer discard on an untracked file', async () => {
@@ -230,7 +230,12 @@ describe('rendering a structured diff', () => {
 
     button.click();
     await vi.waitFor(() =>
-      expect(endpoints.getStructuredDiff).toHaveBeenLastCalledWith('huge.txt', 'working-tree', true)
+      expect(endpoints.getStructuredDiff).toHaveBeenLastCalledWith(
+        'huge.txt',
+        'working-tree',
+        true,
+        'show'
+      )
     );
   });
 });
@@ -367,5 +372,72 @@ describe('acting on a selection', () => {
     feature.applySelectedLines('stage');
 
     await vi.waitFor(() => expect(endpoints.getStructuredDiff).toHaveBeenCalled());
+  });
+});
+
+describe('how the diff is presented', () => {
+  it('highlights only the words that changed within a line', async () => {
+    const file = twoHunkDiff();
+    // A removal and the addition that replaced it, differing by one word.
+    (file.hunks[0]?.lines[1] as { content: string }).content = 'const total = price * quantity;';
+    (file.hunks[0]?.lines[2] as { content: string }).content = 'const total = price * amount;';
+    endpoints.getStructuredDiff.mockResolvedValue(structuredResponse({ file }));
+
+    const { feature } = await mount();
+    await feature.loadDiff('lines.txt', false, false, 'M');
+
+    const highlighted = [...rowFor('hunk-a:2').querySelectorAll('.diff-word-changed')].map(
+      (node) => node.textContent
+    );
+    expect(highlighted).toEqual(['amount']);
+  });
+
+  it('leaves a whole added line unhighlighted, having nothing to compare it to', async () => {
+    const { feature } = await mount();
+    await feature.loadDiff('lines.txt', false, false, 'M');
+
+    // The fixture's lines differ entirely, so every token changes and the
+    // renderer emits plain text rather than a span per word.
+    expect(rowFor('hunk-b:1').textContent).toContain('line 21');
+  });
+
+  it('switches to side by side and back', async () => {
+    const { feature } = await mount();
+    await feature.loadDiff('lines.txt', false, false, 'M');
+    expect($('diff-content').classList.contains('diff-split')).toBe(false);
+
+    feature.toggleLayout();
+    await vi.waitFor(() => expect($('diff-content').classList.contains('diff-split')).toBe(true));
+    expect($('btn-diff-layout-label').textContent).toBe('Unified');
+
+    feature.toggleLayout();
+    await vi.waitFor(() => expect($('diff-content').classList.contains('diff-split')).toBe(false));
+  });
+
+  it('puts each side of a split view in its own column', async () => {
+    const { feature } = await mount();
+    await feature.loadDiff('lines.txt', false, false, 'M');
+    feature.toggleLayout();
+
+    await vi.waitFor(() =>
+      expect(rowFor('hunk-a:1').classList.contains('diff-side-old')).toBe(true)
+    );
+    expect(rowFor('hunk-a:2').classList.contains('diff-side-new')).toBe(true);
+  });
+
+  it('reloads with the whitespace mode the user chose', async () => {
+    const { feature } = await mount();
+    await feature.loadDiff('lines.txt', false, false, 'M');
+
+    feature.setWhitespaceMode('ignore-all');
+
+    await vi.waitFor(() =>
+      expect(endpoints.getStructuredDiff).toHaveBeenLastCalledWith(
+        'lines.txt',
+        'working-tree',
+        false,
+        'ignore-all'
+      )
+    );
   });
 });

@@ -7,6 +7,9 @@ import { Router } from 'express';
 
 import { withRepoLock } from '../git/lock';
 import { applySelection, readFileDiff, LARGE_DIFF_BYTES } from '../git/precision-staging';
+import type { WhitespaceMode } from '../git/precision-staging';
+import { compareBlobs } from '../git/blob';
+import { operations } from '../operations/registry';
 import { saveToTrash } from '../safety-net/trash';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
@@ -37,6 +40,18 @@ function requireAction(value: unknown): PatchAction {
   return value as PatchAction;
 }
 
+const WHITESPACE_MODES: readonly WhitespaceMode[] = ['show', 'ignore-change', 'ignore-all'];
+
+function requireWhitespace(value: unknown): WhitespaceMode {
+  if (value === undefined || value === '') {
+    return 'show';
+  }
+  if (!WHITESPACE_MODES.includes(value as WhitespaceMode)) {
+    throw new HttpError(`Whitespace must be one of: ${WHITESPACE_MODES.join(', ')}`, 400);
+  }
+  return value as WhitespaceMode;
+}
+
 /** Ids are opaque strings from a previous read; nothing else is accepted. */
 function requireIdList(value: unknown, label: string): string[] | undefined {
   if (value === undefined || value === null) {
@@ -54,9 +69,18 @@ diffRouter.get(
     const repoPath = req.repoPath as string;
     const source = requireSource(req.query['source']);
 
-    const result = await readFileDiff(repoPath, req.query['path'], source, {
-      force: req.query['force'] === 'true'
-    });
+    // Tracked so a diff of something enormous can be cancelled rather than
+    // waited out. The panel that shows this is Phase 4's; the operation is
+    // registered now so it has something to show.
+    const result = await operations.run(
+      { kind: 'diff', repoPath, message: `Reading the diff of ${String(req.query['path'] ?? '')}` },
+      (handle) =>
+        readFileDiff(repoPath, req.query['path'], source, {
+          force: req.query['force'] === 'true',
+          whitespace: requireWhitespace(req.query['whitespace']),
+          signal: handle.signal
+        })
+    );
 
     if (result.tooLarge) {
       // Not an error: the client offers "load anyway", which comes back with
@@ -82,6 +106,23 @@ diffRouter.get(
       sizeBytes: result.sizeBytes,
       limitBytes: LARGE_DIFF_BYTES
     });
+  })
+);
+
+/**
+ * Both versions of a file that a unified diff cannot show as text.
+ *
+ * An image comes back as a data URI for each side; anything else comes back as
+ * sizes, which is the only thing worth saying about a binary that changed.
+ */
+diffRouter.get(
+  '/api/git/diff/blobs',
+  asyncRoute(async (req, res) => {
+    const repoPath = req.repoPath as string;
+    const source = requireSource(req.query['source']);
+
+    const comparison = await compareBlobs(repoPath, req.query['path'], source);
+    res.json({ success: true, ...comparison });
   })
 );
 

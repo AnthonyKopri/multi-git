@@ -63,9 +63,34 @@ function renderList(list: Element, rows: HTMLElement[], emptyMessage: string): v
 
 // ---------- stashes ----------
 
+/**
+ * Files a search matched inside a stash.
+ *
+ * The plain list and the search results share a row shape but not a type: only
+ * the search knows which files matched, so this reads the field where it
+ * exists and answers nothing where it does not.
+ */
+function matchedFilesOf(stash: object): string[] {
+  const matched = (stash as { matchedFiles?: unknown }).matchedFiles;
+  return Array.isArray(matched) ? (matched as string[]) : [];
+}
+
+/** The current filter. Empty means show everything. */
+let stashQuery = '';
+
+export function setStashQuery(query: string): void {
+  stashQuery = query.trim();
+  void refreshStashList();
+}
+
 export async function refreshStashList(): Promise<void> {
   try {
-    const { stashes } = await api.getStashes();
+    // A query goes through the search endpoint, which also looks inside each
+    // stash: "where did I put that change to config.ts" is the question worth
+    // answering, and the message rarely says.
+    const { stashes } = stashQuery === ''
+      ? await api.getStashes()
+      : await api.searchStashes(stashQuery);
 
     renderList(
       ui.stashList,
@@ -73,7 +98,9 @@ export async function refreshStashList(): Promise<void> {
         buildShelfRow(
           'inventory_2',
           stash.message,
-          `${stash.ref} — ${stash.date}`,
+          matchedFilesOf(stash).length > 0
+            ? `${stash.ref} - ${stash.date} - matches ${matchedFilesOf(stash).join(', ')}`
+            : `${stash.ref} - ${stash.date}`,
           { ref: stash.ref },
           [
             { action: 'inspect', glyph: 'visibility', title: 'See what this stash holds' },
@@ -85,7 +112,7 @@ export async function refreshStashList(): Promise<void> {
           ]
         )
       ),
-      'No stashes'
+      stashQuery === '' ? 'No stashes' : `No stashes match "${stashQuery}"`
     );
   } catch (error) {
     if (!isStale(error)) {

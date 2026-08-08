@@ -1251,6 +1251,116 @@ body.pane-resizing-y * {
   margin-right: 4px;
 }
 
+/* Word-level highlighting inside a changed line. The line already carries the
+   add/remove colour; this picks out what within it actually differs. */
+.diff-word-changed {
+  border-radius: 2px;
+  padding: 0 1px;
+  background-color: rgba(99, 102, 241, 0.28);
+  font-weight: 600;
+}
+.diff-line-addition .diff-word-changed {
+  background-color: rgba(52, 211, 153, 0.3);
+}
+.diff-line-deletion .diff-word-changed {
+  background-color: rgba(248, 113, 113, 0.3);
+}
+
+/* Side by side. Two columns of one grid rather than two scrollers, so the
+   sides cannot drift apart as you scroll. */
+.diff-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: start;
+}
+.diff-split .diff-line {
+  grid-template-columns: 56px minmax(0, 1fr);
+  min-width: 0;
+}
+.diff-split .diff-line-nums {
+  width: 56px;
+}
+.diff-split .diff-line-nums span:first-child {
+  display: none;
+}
+.diff-split .diff-line-hunk {
+  grid-column: 1 / -1;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+}
+.diff-split .diff-side-old {
+  grid-column: 1;
+}
+.diff-split .diff-side-new {
+  grid-column: 2;
+}
+.diff-split .diff-side-both {
+  grid-column: 1 / -1;
+}
+.diff-split .diff-line-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff-view-options {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 8px;
+}
+#diff-whitespace {
+  padding: 2px 6px;
+  font-size: 0.75rem;
+}
+
+/* Before and after, for the diff a patch cannot express. */
+.image-diff {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  align-items: flex-start;
+}
+.image-diff-side {
+  margin: 0;
+  flex: 1 1 240px;
+  min-width: 0;
+  text-align: center;
+}
+.image-diff-img {
+  max-width: 100%;
+  max-height: 420px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  /* A checker background, so a transparent PNG is visibly transparent rather
+     than looking like whatever the theme happens to be. */
+  background-image: linear-gradient(45deg, rgba(128, 128, 128, 0.2) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(128, 128, 128, 0.2) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(128, 128, 128, 0.2) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(128, 128, 128, 0.2) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+.image-diff-missing {
+  padding: 40px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 4px;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+}
+.image-diff figcaption {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.stash-search {
+  width: 100%;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+}
+
 /* Signature badges. Colour follows the claim, not the presence of a signature:
    only a verified one is green. */
 .signature-badge {

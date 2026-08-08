@@ -93,6 +93,69 @@ stashRouter.get(
   })
 );
 
+/**
+ * Finds stashes by message or by a path they touch.
+ *
+ * The message is the cheap half. The path half needs each stash's file list,
+ * which is one `stash show` per stash — bounded by how many stashes there are,
+ * and only paid for when a query is given.
+ */
+stashRouter.get(
+  '/api/git/stash/search',
+  asyncRoute(async (req, res) => {
+    const repoPath = req.repoPath as string;
+    const query = typeof req.query['query'] === 'string' ? req.query['query'].trim() : '';
+
+    const listed = await tryGitCommand(repoPath, [
+      'stash',
+      'list',
+      '--format=%gd\x1f%s\x1f%cr\x1f%H'
+    ]);
+
+    const all = (listed?.stdout ?? '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [ref, message, date, oid] = line.split('\x1f');
+        return { ref: ref ?? '', message: message ?? '', date: date ?? '', oid: oid ?? '' };
+      });
+
+    if (query === '') {
+      res.json({
+        success: true,
+        query,
+        stashes: all.map((stash) => ({ ...stash, matchedFiles: [] }))
+      });
+      return;
+    }
+
+    const needle = query.toLowerCase();
+    const matches: ((typeof all)[number] & { matchedFiles: string[] })[] = [];
+
+    for (const stash of all) {
+      const files = await tryGitCommand(repoPath, [
+        'stash',
+        'show',
+        '--name-only',
+        '--format=',
+        stash.ref
+      ]);
+
+      const matchedFiles = (files?.stdout ?? '')
+        .split('\n')
+        .map((line) => unquoteGitPath(line))
+        .filter((file) => file !== '' && file.toLowerCase().includes(needle));
+
+      if (stash.message.toLowerCase().includes(needle) || matchedFiles.length > 0) {
+        matches.push({ ...stash, matchedFiles });
+      }
+    }
+
+    res.json({ success: true, query, stashes: matches });
+  })
+);
+
 stashRouter.post(
   '/api/git/stash',
   asyncRoute(async (req, res) => {

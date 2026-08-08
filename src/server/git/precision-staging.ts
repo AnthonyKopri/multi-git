@@ -52,7 +52,19 @@ function quoteGitPath(value: string): string {
   return `"${value.replace(/([\\"])/g, '\\$1')}"`;
 }
 
-function diffArgs(filePath: string, source: DiffSource): string[] {
+export type WhitespaceMode = 'show' | 'ignore-change' | 'ignore-all';
+
+const WHITESPACE_FLAG: Record<WhitespaceMode, string | null> = {
+  show: null,
+  'ignore-change': '--ignore-space-change',
+  'ignore-all': '--ignore-all-space'
+};
+
+function diffArgs(
+  filePath: string,
+  source: DiffSource,
+  whitespace: WhitespaceMode
+): string[] {
   const args = [
     // A configured external diff driver or textconv filter would return
     // something that is not a patch, and this output has to round-trip.
@@ -62,6 +74,11 @@ function diffArgs(filePath: string, source: DiffSource): string[] {
     '--no-textconv',
     `-U${CONTEXT_LINES}`
   ];
+
+  const flag = WHITESPACE_FLAG[whitespace];
+  if (flag !== null) {
+    args.push(flag);
+  }
 
   if (source === 'index') {
     args.push('--cached');
@@ -166,6 +183,15 @@ function synthesiseAddedFileDiff(fullPath: string, relativePath: string): DiffFi
 export interface ReadDiffOptions {
   /** Reads a diff past LARGE_DIFF_BYTES instead of reporting it as too large. */
   force?: boolean;
+  /**
+   * Whether whitespace-only changes are shown.
+   *
+   * Only ever applied to a diff being *read*. A patch built from an
+   * whitespace-ignoring diff would silently drop the whitespace changes it hid,
+   * so an apply always re-reads with `show`.
+   */
+  whitespace?: WhitespaceMode;
+  signal?: AbortSignal;
 }
 
 /** Reads one file's diff against the working tree or the index. */
@@ -196,7 +222,12 @@ export async function readFileDiff(
     };
   }
 
-  const result = await runGitCommand(repoPath, diffArgs(filePath, source));
+  const result = await runGitCommand(
+    repoPath,
+    diffArgs(filePath, source, options.whitespace ?? 'show'),
+    null,
+    { signal: options.signal }
+  );
   const sizeBytes = Buffer.byteLength(result.stdout, 'utf8');
 
   if (sizeBytes > LARGE_DIFF_BYTES && options.force !== true) {
@@ -246,7 +277,13 @@ export async function applySelection(
   }
 
   const filePath = pathArg(input.filePath);
-  const { file, untracked } = await readFileDiff(repoPath, filePath, plan.source, { force: true });
+  // Always read with whitespace shown, whatever the pane is displaying: a
+  // patch built from a diff that hid whitespace changes would silently discard
+  // them from the file.
+  const { file, untracked } = await readFileDiff(repoPath, filePath, plan.source, {
+    force: true,
+    whitespace: 'show'
+  });
 
   if (!file) {
     throw new PatchSelectionError(
