@@ -60,7 +60,7 @@ for this programme. `main` is untouched since the work began; a single
 | Integration branch | `improvements` |
 | Merged | [#14](https://github.com/AnthonyKopri/multi-git/pull/14) (Phase 0), [#15](https://github.com/AnthonyKopri/multi-git/pull/15) (Phase 1) |
 | Awaiting review | Phase 2, on `claude/roadmap-version-display-e8d226` |
-| Suite | 769 passed, 3 skipped |
+| Suite | 792 passed, 3 skipped |
 | Toolchain | Electron 43.3.0, TypeScript 7.0.2, Vitest 4.1.10, Node ≥ 22.12 |
 | CI | 7 jobs — Windows and Linux on Node 22.12 and 24, a leg with no `gh` and no SSH agent, docs, packaging smoke |
 | `npm audit` | 0 vulnerabilities |
@@ -82,6 +82,7 @@ before writing anything similar.
 | Apply part of a diff | `src/server/git/patch-build.ts`, `src/server/git/precision-staging.ts` | Selection → patch → `git apply` over stdin. Commit splitting (Workstream D) is this plus a reset. |
 | Diff two lines by word | `src/renderer/features/diff/word-diff.ts` | Token LCS plus removal/addition pairing. Pure and testable; reuse it for any other side-by-side view. |
 | Read a file's bytes at a revision | `src/server/git/blob.ts` | Raw bytes, not decoded text. Image comparison and binary sizes both come from here. |
+| Keep a diff's bytes exact | `src/server/git/encoding.ts` | A diff is bytes from git to `git apply`; decode to UTF-8 only at the route that serialises it. Anything new that builds a patch must go through this. |
 | Show the version | `appVersion()` / `appTitle()` in `src/server/app-root.ts` | Reads the packaged package.json once. Window titles use it directly; the browser tab gets it from `GET /api/app-info`. |
 | Record a destructive operation | `captureCheckpoint` in `src/server/safety-net/checkpoints.ts` | Writes the session undo *and* the durable recovery point. Pass an `operation`; never write to one store alone. |
 | Read git's own recovery record | `src/server/git/reflog.ts` | Newest first, with each entry's previous position resolved. |
@@ -107,14 +108,7 @@ rediscovered as surprises. Details and evidence are in
    cancel is Phase 4's.
 4. **Never manually exercised** — creating a real pull request, and the fork
    workflow. Both are covered against a scripted `gh`.
-5. **GPG signing is untested against a real keyring.** Phase 2's suite signs
-   with SSH, which needs neither an agent nor a keyring; the GPG path is
-   covered only for configuration and diagnostics.
-6. **`git rebase -i` hits Windows MAX_PATH** in a repository whose path is long
-   enough that git's internal range filename exceeds 260 characters. Git's own
-   limit, reproducible without this application, and it now surfaces as git's
-   message rather than as a rebase that appears to have done nothing.
-7. **Syntax-aware diff rendering** is the one Phase 2 presentation item not
+5. **Syntax-aware diff rendering** is the one Phase 2 presentation item not
    done. It needs a highlighter dependency and a language map, which is a
    decision rather than a gap in the diff model.
 

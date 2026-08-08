@@ -192,7 +192,7 @@ workstream plus the window-title change that prompted the branch.
 | D — interactive rebase and commit splitting | `src/shared/rebase-types.ts`, `src/server/git/{rebase,rebase-bridge}.ts`, `src/server/routes/rebase.routes.ts`, `src/renderer/features/rebase/` |
 | E — signing | `src/shared/signing-types.ts`, `src/server/git/signing.ts`, `src/server/routes/signing.routes.ts`, `src/renderer/features/signing/` |
 
-Suite: 769 passed, 3 skipped, up from 521 at the start of the phase. The
+Suite: 792 passed, 3 skipped, up from 521 at the start of the phase. The
 three skips are Phase 0's; the signing tests skip themselves where
 `ssh-keygen` cannot sign, rather than pretending to have run.
 
@@ -227,6 +227,9 @@ three skips are Phase 0's; the signing tests skip themselves where
 - **Blobs are read as bytes.** Decoding a blob as UTF-8 replaces every invalid
   sequence, so an image round-tripped through the text path is not the image
   any more. `binaryStdout` on the runner exists for this.
+- **So are text diffs.** The same replacement happens to a Latin-1 source file,
+  and there it corrupts the user's own lines rather than an image. The whole
+  patch pipeline is byte-faithful; see `src/server/git/encoding.ts`.
 
 ### Still open
 
@@ -241,17 +244,60 @@ hiding. None of it blocks Phase 3 or 4.
   cancellable operations, and the runner takes an AbortSignal, but the panel
   that would let a user press cancel is Phase 4's. Phase 2 reports through the
   registry without rendering it, exactly as the phase brief asked.
-- **A non-UTF-8 file's text diff** round-trips through a UTF-8 string, so text
-  in another encoding would be re-encoded on the way back into `git apply`.
-  Binary and image paths read raw bytes and are unaffected. No current code
-  path produces a non-UTF-8 text diff, and no test covers it.
-- **GPG signing is untested against a real keyring.** The suite signs with SSH,
-  which needs neither an agent nor a keyring; the GPG path is exercised for
-  configuration and diagnostics only.
-- **Windows MAX_PATH.** `git rebase -i` fails in a repository whose path is
-  long enough that git's internal range filename exceeds 260 characters. Git's
-  own limit, reproducible without this application, and it surfaces as git's
-  message rather than as a rebase that appears to have done nothing.
+
+Three limitations recorded here when the phase landed have since been fixed;
+see [Follow-up fixes](#follow-up-fixes).
+
+## Follow-up fixes
+
+Landed 2026-08-08, after the phase merged. Each closes something the phase
+shipped with, recorded above at the time as a limitation.
+
+### Non-UTF-8 files were corrupted by precision staging
+
+**What happened.** The patch pipeline decoded git's output as UTF-8. A file in
+Latin-1, Windows-1252 or any other encoding contains bytes that are not valid
+UTF-8, and the decoder replaced each one with U+FFFD; encoding that back
+produced different bytes from the ones that went in.
+
+Two symptoms, depending on where the byte sat. In a context line, the mangled
+text no longer matched the file and the apply failed with git's
+"patch does not apply" — confusing, but harmless. In a changed line with ASCII
+context, git had nothing to catch it on: staging reported success and silently
+rewrote `Café` as `Caf<U+FFFD>` in the index.
+
+**The fix.** `src/server/git/encoding.ts`. A diff is bytes from git to
+`git apply`, carried as a `latin1` string — the one decoding where every byte
+maps to exactly one code unit and back. Everything the parser reads is ASCII,
+which means the same in both, so parsing is unchanged. Decoding to UTF-8
+happens once, at the route that serialises for the renderer.
+
+Ids are hashed over the transport form and the renderer only echoes them back,
+so a selection still resolves against a fresh read. Display is unchanged and
+cannot be better: nothing tells the application what encoding a file is in.
+
+### Interactive rebase failed in long repository paths on Windows
+
+**What happened.** `git rebase -i` names one of its internal files after the
+commit range — two 40-character object names and three dots. In a repository
+whose own path is long, that crosses Windows' 260-character limit and the
+rebase fails before it starts.
+
+**The fix.** `rebaseGitArgs` in `src/server/git/rebase.ts` passes
+`-c core.longpaths=true` on every rebase-family invocation, on Windows only.
+Per invocation rather than written to the user's configuration, and scoped to
+rebase rather than applied to every command — where it would also let git
+create working-tree paths that other Windows tools cannot open.
+
+### GPG signing had no test against a real keyring
+
+`tests/signing-gpg.test.ts` generates an unprotected key in a `GNUPGHOME` of
+its own and covers signing a commit, an amend and a tag, sign-by-default and
+opting out of it, a tampered commit reading as `bad`, and a signature this
+repository has no key for reading as `unknown` rather than `unsigned`. It
+skips where gpg cannot produce a key, rather than pretending to have run.
+
+No defect was found in the GPG paths; they were simply unverified.
 
 ## Workstream A status
 
