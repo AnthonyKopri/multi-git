@@ -1223,6 +1223,96 @@
     </div>
   </div>
 
+  <!-- COMMAND PALETTE -->
+  <div id="palette-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small palette-card">
+      <div class="palette-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="text" id="palette-input" placeholder="Type a command…" autocomplete="off" aria-label="Command palette" aria-controls="palette-list" role="combobox" aria-expanded="true">
+      </div>
+      <ul id="palette-list" class="palette-list" role="listbox" aria-label="Commands"></ul>
+      <div class="palette-footer">
+        <span>↑↓ to move · Enter to run · Esc to close</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH AND COMPARE -->
+  <div id="search-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Search and Compare</h2>
+        <button id="btn-close-search-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="search-tabs">
+          <button id="tab-search-commits" class="tab-btn active">Find commits</button>
+          <button id="tab-search-compare" class="tab-btn">Compare refs</button>
+        </div>
+
+        <div id="search-commits-pane">
+          <div class="search-filters">
+            <input type="text" id="search-query" placeholder="Message or object name" autocomplete="off" aria-label="Message or object name">
+            <input type="text" id="search-author" placeholder="Author" autocomplete="off" aria-label="Author">
+            <input type="text" id="search-paths" placeholder="Paths, comma separated" autocomplete="off" aria-label="Paths">
+            <input type="text" id="search-since" placeholder="Since (e.g. 2 weeks ago)" autocomplete="off" aria-label="Since">
+            <input type="text" id="search-until" placeholder="Until" autocomplete="off" aria-label="Until">
+            <button id="btn-run-search" class="btn btn-primary btn-sm">Search</button>
+          </div>
+          <p class="modal-desc" id="search-summary">Every filter is optional, and they combine.</p>
+          <ul id="search-results" class="recovery-list">
+            <li class="empty-state">No search run yet</li>
+          </ul>
+          <div class="form-actions">
+            <button id="btn-search-more" class="btn btn-secondary btn-sm hidden">Load more</button>
+          </div>
+        </div>
+
+        <div id="search-compare-pane" class="hidden">
+          <div class="search-filters">
+            <input type="text" id="compare-base" placeholder="Base ref" autocomplete="off" aria-label="Base ref">
+            <input type="text" id="compare-head" placeholder="Head ref" autocomplete="off" aria-label="Head ref">
+            <button id="btn-run-compare" class="btn btn-primary btn-sm">Compare</button>
+          </div>
+          <p class="modal-desc" id="compare-summary">Counted from the merge base, so ahead and behind mean what they say.</p>
+          <h4>Only on head</h4>
+          <ul id="compare-ahead" class="recovery-list"><li class="empty-state">Nothing yet</li></ul>
+          <h4 class="mt-4">Only on base</h4>
+          <ul id="compare-behind" class="recovery-list"><li class="empty-state">Nothing yet</li></ul>
+          <h4 class="mt-4">Changed files</h4>
+          <ul id="compare-files" class="recovery-list"><li class="empty-state">Nothing yet</li></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BRANCH MAINTENANCE -->
+  <div id="branch-admin-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Branch Maintenance</h2>
+        <button id="btn-close-branch-admin" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc" id="branch-admin-summary">Pinned branches sort first. A branch is stale when nothing has landed on it recently.</p>
+        <div class="search-filters">
+          <label class="checkbox-row"><input type="checkbox" id="branch-filter-merged"> Merged only</label>
+          <label class="checkbox-row"><input type="checkbox" id="branch-filter-stale"> Stale only</label>
+          <label class="checkbox-row"><input type="checkbox" id="branch-filter-gone"> Upstream gone</label>
+          <button id="btn-prune-remote" class="btn btn-secondary btn-sm">Prune remote</button>
+          <button id="btn-delete-selected-branches" class="btn btn-secondary btn-sm btn-text-danger">Delete selected</button>
+        </div>
+        <ul id="branch-admin-list" class="recovery-list">
+          <li class="empty-state">No branches</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- RECOVERY BROWSER -->
   <div id="recovery-modal" class="modal-overlay hidden">
     <div class="modal-card">

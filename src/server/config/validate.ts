@@ -148,6 +148,18 @@ function validateRepoSettings(
       entry.warnBeforeDelete = record['warnBeforeDelete'];
     }
 
+    // Written by the SSH agent session when a repository is bound to an
+    // account. It used to be dropped here, which meant the binding survived
+    // until the config file was next re-read and then quietly reverted to the
+    // System profile.
+    if (typeof record['sshProfileId'] === 'string') {
+      entry.sshProfileId = record['sshProfileId'];
+    }
+
+    if (Array.isArray(record['pinnedBranches'])) {
+      entry.pinnedBranches = [...new Set(record['pinnedBranches'].filter(isNonEmptyString))];
+    }
+
     // A later key wins, which is the same rule `Object.assign` would apply if
     // two spellings of one repository collapse onto the same canonical key.
     settings[canonical] = { ...settings[canonical], ...entry };
