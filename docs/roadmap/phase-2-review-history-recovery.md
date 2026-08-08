@@ -38,10 +38,9 @@ Two conventions this phase inherits and must keep: repository data is rendered w
 ## Workstream A — structured diff and precision staging
 
 **Landed 2026-08-08.** Stage, unstage and discard work at hunk and line level,
-end to end. What shipped and what is still open is in
-[Workstream A status](#workstream-a-status); the presentation items —
-side-by-side view, word highlights, whitespace toggles, image comparison — are
-the remainder.
+end to end, and the review side is complete: side-by-side, intra-line word
+highlights, a whitespace toggle, image comparison and binary metadata. Details
+in [Workstream A status](#workstream-a-status).
 
 Create a parser/model independent of rendered patch text:
 
@@ -193,7 +192,7 @@ workstream plus the window-title change that prompted the branch.
 | D — interactive rebase and commit splitting | `src/shared/rebase-types.ts`, `src/server/git/{rebase,rebase-bridge}.ts`, `src/server/routes/rebase.routes.ts`, `src/renderer/features/rebase/` |
 | E — signing | `src/shared/signing-types.ts`, `src/server/git/signing.ts`, `src/server/routes/signing.routes.ts`, `src/renderer/features/signing/` |
 
-Suite: 735 passed, 3 skipped, up from 521 at the start of the phase. The
+Suite: 769 passed, 3 skipped, up from 521 at the start of the phase. The
 three skips are Phase 0's; the signing tests skip themselves where
 `ssh-keygen` cannot sign, rather than pretending to have run.
 
@@ -222,29 +221,37 @@ three skips are Phase 0's; the signing tests skip themselves where
   repository should take its points with it.
 - **Capture is routed through `captureCheckpoint`**, so a new destructive
   operation cannot record a session undo and forget the durable point.
+- **The whitespace toggle is a reading setting, never an applying one.** A
+  patch built from a diff that hid whitespace changes would silently discard
+  them, so an apply always re-reads with whitespace shown.
+- **Blobs are read as bytes.** Decoding a blob as UTF-8 replaces every invalid
+  sequence, so an image round-tripped through the text path is not the image
+  any more. `binaryStdout` on the runner exists for this.
 
 ### Still open
 
-Deliberately not done, and none of it blocks Phase 3 or 4:
+Every clause of the definition of done is met. What remains was either scoped
+to a later phase from the start, or is a limitation worth naming rather than
+hiding. None of it blocks Phase 3 or 4.
 
-- **Diff presentation**: side-by-side view, intra-line word highlights,
-  whitespace toggles, syntax-aware rendering, before/after image comparison,
-  and richer binary metadata. The model supports all of it; only the rendering
-  is missing.
-- **Cancellation through the operations registry.** The 2 MB threshold covers
-  responsiveness for diffs, and the registry has no UI until Phase 4.
-- **Stash search** is by the list the browser shows, not a query across stash
-  contents.
-- **A non-UTF-8 file's diff** round-trips through a UTF-8 string, so text in
-  another encoding would be re-encoded on the way back into `git apply`. No
-  current code path produces one, and no test covers it.
+- **Syntax-aware diff rendering.** The one presentation item not done. It needs
+  a highlighter and a language map, which is a dependency decision rather than
+  a gap in this phase's model.
+- **Operation progress has no UI.** Diff reads and searches are registered as
+  cancellable operations, and the runner takes an AbortSignal, but the panel
+  that would let a user press cancel is Phase 4's. Phase 2 reports through the
+  registry without rendering it, exactly as the phase brief asked.
+- **A non-UTF-8 file's text diff** round-trips through a UTF-8 string, so text
+  in another encoding would be re-encoded on the way back into `git apply`.
+  Binary and image paths read raw bytes and are unaffected. No current code
+  path produces a non-UTF-8 text diff, and no test covers it.
 - **GPG signing is untested against a real keyring.** The suite signs with SSH,
-  which needs no agent; the GPG path is exercised only for configuration and
-  diagnostics.
+  which needs neither an agent nor a keyring; the GPG path is exercised for
+  configuration and diagnostics only.
 - **Windows MAX_PATH.** `git rebase -i` fails in a repository whose path is
-  long enough that git's internal range filename exceeds 260 characters. This
-  is git's own limit, reproducible without this application, and it surfaces as
-  git's message rather than as a silent no-op.
+  long enough that git's internal range filename exceeds 260 characters. Git's
+  own limit, reproducible without this application, and it surfaces as git's
+  message rather than as a rebase that appears to have done nothing.
 
 ## Workstream A status
 
@@ -292,14 +299,14 @@ working tree, and asks for confirmation unless the repository opted out.
 - **Diffs over 2 MB are not read** unless the request passes `force=true`,
   which is what the pane's "Load anyway" button sends.
 
-### Still open in this workstream
+### Presentation, added 2026-08-08
 
-- Side-by-side view, intra-line word highlights, whitespace toggles, and
-  syntax-aware rendering.
-- Before/after image comparison and richer binary metadata.
-- Cancellation of a diff read through the operations registry; the size
-  threshold covers the responsiveness case for now, and the registry has no UI
-  until Phase 4.
-- A non-UTF-8 file's diff round-trips through a UTF-8 string. Text in another
-  encoding would be re-encoded on the way back into `git apply`. No test
-  covers it because no current code path produces one.
+| Piece | Where |
+| --- | --- |
+| Token-level line diffing and removal/addition pairing | `src/renderer/features/diff/word-diff.ts` |
+| Side-by-side layout and word highlighting | `src/renderer/features/diff/structured-view.ts` |
+| Whitespace modes on the read | `src/server/git/precision-staging.ts` |
+| Image and binary comparison | `src/server/git/blob.ts`, `GET /api/git/diff/blobs` |
+
+Only syntax-aware rendering is left, and it is a dependency decision rather
+than a gap in the model.
