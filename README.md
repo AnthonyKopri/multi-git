@@ -20,8 +20,12 @@ Its defining feature is account-aware SSH: each repository can use its own key a
 - **Sync without the command line:** fetch, pull, push, see ahead/behind counts, switch a compatible origin between HTTPS and SSH, and retry rejected pushes with `--force-with-lease`.
 - **Keep work and personal accounts separate:** assign an SSH key and Git identity to each profile, auto-select profiles from origin URLs, and catch account or identity mismatches before commit or push.
 - **Handle advanced Git workflows:** create and switch branches, track remote branches, merge, rebase, cherry-pick, revert, reset, stash, and manage tags.
+- **Rewrite history deliberately:** plan an interactive rebase visually — reorder, reword, squash, fixup, drop, autosquash — and split a commit into several without leaving the app.
+- **Find things:** search commits by message, author, path, ref or date range; compare any two refs; and reach every action from a Ctrl+K command palette.
+- **Keep branches tidy:** see which are merged, stale or tracking a branch that no longer exists, then pin, rename, re-point or delete them in bulk.
+- **Sign your work:** configure SSH or GPG signing per repository, and see what a commit's signature actually proves.
 - **Resolve conflicts visually:** choose the current or incoming version, edit the result, stage it, and continue or abort the operation.
-- **Recover from mistakes:** restore recently discarded files and undo checkpointed merge, rebase, cherry-pick, revert, and reset operations.
+- **Recover from mistakes:** restore recently discarded files, undo checkpointed operations, and browse a durable recovery journal beside Git's own reflog.
 - **See what the app did:** open the live Terminal Log for the Git commands, output, warnings, and errors behind each action.
 
 ## Install And Start
@@ -160,6 +164,17 @@ Every file the dialog writes, and anything it decided to keep, is reported in th
 
 The dedicated **File Diff** tab lists every modified, untracked, staged, and conflicted file. From the diff header you can stage, unstage, or discard the selected working-tree file. Diffs opened from commit history are read-only.
 
+#### Stashing part of a file
+
+The same selection works for stashing: chosen lines or hunks go into a stash of
+their own and everything else stays exactly as it was, staged files included.
+A stash can be inspected without applying it, applied with `--index` so the
+staged/unstaged split comes back as it went in, or checked out onto a new
+branch when it no longer applies where you are.
+
+Only tracked files can be stashed piece by piece. An untracked file has no
+previous version to leave behind, so it goes in whole or not at all.
+
 #### Staging part of a file
 
 A commit rarely matches a working session exactly, so the diff can be acted on
@@ -199,6 +214,91 @@ docs: update portable installation steps
 ```
 
 Enter an optional scope, then click one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, or `perf`. The helper inserts or replaces the prefix; it never blocks a non-conventional message.
+
+### Interactive rebase
+
+Open it from the command palette (`Ctrl+K` → "Interactive rebase"). Choose the
+commit everything should sit on top of, and the commits above it are listed
+oldest first — the order Git reads them.
+
+| Action | What it does |
+| --- | --- |
+| **pick** | Keep the commit as it is |
+| **reword** | Keep the changes, replace the message |
+| **edit** | Stop there so the commit can be amended or split |
+| **squash** | Fold into the commit above, keeping both messages |
+| **fixup** | Fold into the commit above, discarding this message |
+| **drop** | Remove the commit entirely |
+
+Arrows reorder. **Autosquash** previews where your `fixup!` and `squash!`
+commits would land before anything runs. If any of the commits are already on
+the branch's upstream, the planner says how many, because rewriting those means
+anyone who has pulled will have to reconcile — and the push afterwards uses
+`--force-with-lease`.
+
+When the rebase stops — for a conflict, or at an `edit` — the same window shows
+which step it is on, what is conflicted, and offers Continue, Skip, Abort and
+**Split this commit**. Splitting undoes the commit into your working tree with
+nothing staged; stage and commit each part in turn using the line-level tools
+above, then continue. The rebase survives closing the window or restarting the
+app: reopening picks up exactly where it was.
+
+A recovery point is recorded before the rebase starts, so the whole thing is
+one click from being undone.
+
+### Searching and comparing
+
+`Ctrl+K` → "Search commits" finds commits by message or body, author, paths,
+refs, and a date range. The filters are all optional and combine, so an empty
+query with a path is "what touched this file" and an empty query with a date
+range is "what happened last week". A search term that looks like an object
+name is resolved directly, so a commit is findable by its hash even though
+nothing in its message mentions it.
+
+"Compare refs" counts both directions from the merge base, lists what is unique
+to each side, and shows the changed files.
+
+### Branch maintenance
+
+`Ctrl+K` → "Branch maintenance" lists every local branch with what you need to
+decide its fate: where it tracks and how far it has diverged, whether it is
+already merged, whether anything has landed on it in the last 60 days, and
+whether its upstream has been deleted. Filter to just the merged, stale or
+orphaned ones, then pin, rename, re-point or select several and delete them at
+once. Pinned and current branches are never selectable for deletion, a pin
+follows its branch through a rename, and a bulk delete reports each branch's
+outcome rather than stopping at the first one Git refuses.
+
+**Prune remote** shows what it would remove before removing it.
+
+### Commit signing
+
+The **Sign** box beside the commit button signs a single commit; **Settings**
+beside it configures the repository.
+
+Choose **System** to leave it to your global Git configuration, **an SSH key**,
+**a GPG key**, or **Nothing** to make sure this repository never signs whatever
+the global configuration says. SSH mode offers the keys from your registered
+SSH profiles. Settings are written to the repository's own Git configuration,
+so a terminal in the same folder behaves identically.
+
+Signature status appears on a commit when you open it. The wording is
+deliberately careful:
+
+| Badge | What it means |
+| --- | --- |
+| **Verified** | Git checked the signature against a key this repository trusts |
+| **Unverified** | There is a signature and its trustworthiness cannot be established here — an untrusted or expired key, or no allowed-signers file |
+| **Bad signature** | Git checked it and it does not match |
+| *(no badge)* | The commit carries no signature |
+
+That distinction matters more than it looks. Git reports a *signed* commit as
+having no signature at all when it has no allowed-signers file to check it
+against, which is the default state for anyone who has just turned SSH signing
+on. Multi-Git checks the commit itself before saying anything is unsigned.
+
+If signing fails, no commit is made and your changes stay staged — and the
+message says so, along with what to check.
 
 ### Visual history and commit actions
 
@@ -260,6 +360,20 @@ In Git terminology, “ours” and “theirs” depend on the operation, especia
 Safety Net adds a recovery layer around actions that are easy to regret.
 
 **Undoable Operations** keeps up to 10 in-memory checkpoints per repository for merge, rebase, cherry-pick, revert, and reset. Clicking undo hard-resets the branch to the saved pre-operation `HEAD`. Checkpoints disappear when the backend/app restarts.
+
+**Recovery Points** are the durable half. Before every reset, rebase, merge,
+cherry-pick, revert, amend, undo, branch delete, stash drop and bulk discard,
+Multi-Git records where every ref that could move was pointing — to a file
+inside the repository's own `.git`, so it survives restarting the app. The
+recovery browser shows those points beside Git's own reflog, which covers
+everything that happened outside Multi-Git too.
+
+From either list you can create a branch at a recorded position, which recovers
+work without moving anything you are standing on; reset a ref back to it, which
+is a hard reset and says so; or copy the equivalent Git command. Restoring
+records a recovery point of its own, so undoing an undo works. Points expire
+after 14 days by default, and expiry is frozen entirely while a merge or rebase
+is unfinished.
 
 **Recently Discarded** stores a copy of file contents before per-file or bulk discard. Copies:
 
@@ -486,6 +600,15 @@ curl -X POST http://localhost:3000/api/git/diff/apply-selection \
 
 # Which version is running
 curl http://localhost:3000/api/app-info
+
+# Recovery points and the reflog side by side
+curl -H "x-repo-path: /path/to/repository"   http://localhost:3000/api/git/recovery
+
+# Search commits
+curl -H "x-repo-path: /path/to/repository"   "http://localhost:3000/api/git/search/commits?query=fix&author=jane&limit=20"
+
+# The plan an interactive rebase onto a commit would start from
+curl -H "x-repo-path: /path/to/repository"   "http://localhost:3000/api/git/rebase/plan?onto=<commit>&autosquash=true"
 ```
 
 The API is an internal application interface rather than a versioned public contract and may change between releases.
