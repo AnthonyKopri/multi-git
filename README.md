@@ -15,7 +15,8 @@ Its defining feature is account-aware SSH: each repository can use its own key a
 
 - **Work across repositories quickly:** open, create, clone, remember, switch, and remove repositories from the recent list.
 - **Set up a new repository in one dialog:** choose visibility, pick a license template and fill in its placeholders, and add a `.gitignore` from a stack template, a general one, or your own.
-- **Stage and commit with confidence:** click files to stage or unstage, stage or discard a single hunk or a handful of lines, inspect line-by-line diffs, amend commits, and use Conventional Commit shortcuts.
+- **Stage and commit with confidence:** click files to stage or unstage, stage or discard a single hunk or a handful of lines, amend commits, and use Conventional Commit shortcuts.
+- **Read a change properly:** unified or side-by-side, with the words that actually changed picked out, whitespace-only changes hidden on request, and before/after previews for images.
 - **See the shape of the project:** browse an all-branches commit graph, inspect commits and changed files, follow file history, and view Git blame.
 - **Sync without the command line:** fetch, pull, push, see ahead/behind counts, switch a compatible origin between HTTPS and SSH, and retry rejected pushes with `--force-with-lease`.
 - **Keep work and personal accounts separate:** assign an SSH key and Git identity to each profile, auto-select profiles from origin URLs, and catch account or identity mismatches before commit or push.
@@ -164,6 +165,26 @@ Every file the dialog writes, and anything it decided to keep, is reported in th
 
 The dedicated **File Diff** tab lists every modified, untracked, staged, and conflicted file. From the diff header you can stage, unstage, or discard the selected working-tree file. Diffs opened from commit history are read-only.
 
+#### Reading the diff
+
+| Control | What it does |
+| --- | --- |
+| **Split** / **Unified** | Side by side, or one column. Remembered as you move between files. |
+| **Whitespace** | Show everything, ignore whitespace *changes*, or ignore whitespace entirely. |
+
+Within a changed line, the words that actually differ are highlighted, so a
+renamed variable stands out instead of the whole line looking new. Indentation
+is treated as a change of its own, so re-indenting reads as re-indenting.
+
+The whitespace setting only affects what you are shown. Staging, unstaging and
+discarding always work from the full diff, so a hunk you stage while whitespace
+is hidden still carries its whitespace changes rather than quietly dropping
+them from the file.
+
+**Images** are shown before and after, side by side, on a checkerboard so a
+transparent PNG reads as transparent. Any other binary file reports its old and
+new size, which is all Git knows about it.
+
 #### Stashing part of a file
 
 The same selection works for stashing: chosen lines or hunks go into a stash of
@@ -171,6 +192,10 @@ their own and everything else stays exactly as it was, staged files included.
 A stash can be inspected without applying it, applied with `--index` so the
 staged/unstaged split comes back as it went in, or checked out onto a new
 branch when it no longer applies where you are.
+
+The box above the stash list filters it. It searches the stash messages *and*
+the files inside each stash, so "where did I put that change to config.ts" is
+a question you can actually ask.
 
 Only tracked files can be stashed piece by piece. An untracked file has no
 previous version to leave behind, so it goes in whole or not at all.
@@ -602,13 +627,24 @@ curl -X POST http://localhost:3000/api/git/diff/apply-selection \
 curl http://localhost:3000/api/app-info
 
 # Recovery points and the reflog side by side
-curl -H "x-repo-path: /path/to/repository"   http://localhost:3000/api/git/recovery
+curl -H "x-repo-path: /path/to/repository" \
+  http://localhost:3000/api/git/recovery
 
 # Search commits
-curl -H "x-repo-path: /path/to/repository"   "http://localhost:3000/api/git/search/commits?query=fix&author=jane&limit=20"
+curl -H "x-repo-path: /path/to/repository" \
+  "http://localhost:3000/api/git/search/commits?query=fix&author=jane&limit=20"
 
 # The plan an interactive rebase onto a commit would start from
-curl -H "x-repo-path: /path/to/repository"   "http://localhost:3000/api/git/rebase/plan?onto=<commit>&autosquash=true"
+curl -H "x-repo-path: /path/to/repository" \
+  "http://localhost:3000/api/git/rebase/plan?onto=<commit>&autosquash=true"
+
+# A diff with whitespace-only changes hidden
+curl -H "x-repo-path: /path/to/repository" \
+  "http://localhost:3000/api/git/diff/structured?path=src/app.ts&whitespace=ignore-all"
+
+# Both versions of an image, as data URIs
+curl -H "x-repo-path: /path/to/repository" \
+  "http://localhost:3000/api/git/diff/blobs?path=logo.png&source=working-tree"
 ```
 
 The API is an internal application interface rather than a versioned public contract and may change between releases.
