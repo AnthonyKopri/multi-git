@@ -75,7 +75,11 @@ function slugify(heading) {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .trim()
     .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-');
+    // One hyphen per space, not one per run. GitHub does it per character, so
+    // a heading whose punctuation was just stripped — "Current state — read
+    // this first" — leaves two adjacent spaces and therefore two hyphens. This
+    // collapsed them and reported a working anchor as broken.
+    .replace(/ /g, '-');
 }
 
 const anchorCache = new Map();

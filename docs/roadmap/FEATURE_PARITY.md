@@ -53,6 +53,32 @@ Status values: **Current** means materially available today; **Planned** has an 
 | Proprietary live agent hooks/session telemetry | Rejected | Launch configured tools, but do not require their private protocols or monitor sessions. |
 | Remote SSH execution | Deferred | Requires a hardened filesystem/execution boundary after local and WSL abstractions are proven. |
 
+## Open follow-ups
+
+Everything known to be outstanding after Phases 0 and 1, in one place. None of
+it blocks Phase 2. Each row links to the section holding the evidence.
+
+| Item | Kind | Owner | Detail |
+| --- | --- | --- | --- |
+| Express 4 → 5 | Dependency | Standalone PR | The only dependency not at latest. Nothing blocks it — the server declares no parametric or wildcard routes, and every handler already reads `req.body ?? {}`. Left out of Phase 0 as a runtime-framework major touching `app.ts` and every route file. See [Justified pins and deferrals](#justified-pins-and-deferrals). |
+| Repository paths outside Latin-1 cannot be opened | Pre-existing defect | Standalone PR | `x-repo-path` carries the path as an HTTP header; header values are byte strings and `fetch` truncates each UTF-16 code unit to its low byte. `café` survives, `中文` and emoji do not. Reproduced on the pre-upgrade baseline too. See [Pre-existing defect found during Phase 0 verification](#pre-existing-defect-found-during-phase-0-verification-not-fixed-here). |
+| Operation progress has no UI | Deliberate scope split | Phase 4 | Registry, SSE stream and cancel endpoint landed in Phase 0. The panel is Phase 4's. |
+| Creating a real pull request | Untested by hand | Whoever next uses it | Covered against a scripted `gh`. Running it for real would open a pull request on a real repository. |
+| The fork workflow | Untested by hand | Whoever next uses it | Same reason. Ownership detection *has* been run against real `gh` on a non-fork. |
+| `@types/node` held at 24.x | Intentional pin | Revisit with Electron | Electron 43 embeds Node 24; newer types would describe APIs the runtime lacks. Encoded as an `ignore` rule in `.github/dependabot.yml`. |
+| Trailing whitespace in `public/index.html` and `public/style.css` | Pre-existing | Whoever reformats them | Why the CI whitespace check is scoped to the merge base rather than the whole tree. |
+
+### Environment notes worth knowing
+
+- **Git Bash cannot see the Windows SSH agent.** It ships its own `ssh` that
+  uses a Unix socket, while the native agent uses a named pipe. Pushing over
+  SSH from Git Bash fails even with a key loaded. PowerShell works, and so does
+  any repository that Multi-Git has pinned with `core.sshCommand`, because that
+  points at `C:\WINDOWS\System32\OpenSSH\ssh.exe`.
+- **Windows Application Control can block a freshly built, unsigned `.exe`.**
+  Packaging succeeds and the artifact is valid; launching it may not be
+  permitted until the policy is satisfied.
+
 ## Phase 1 record (2026-08-07)
 
 ### Elevation

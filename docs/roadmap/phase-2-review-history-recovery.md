@@ -4,7 +4,7 @@ phase: 2
 status: planned
 depends_on: [phase-0]
 soft_dependencies: [phase-1-ssh-for-signing]
-suggested_branch: codex/phase-2-review-history-recovery
+suggested_branch: claude/phase-2-review-history-recovery
 parallelizable: true
 lanes: [diff-staging, history-search, rebase-recovery, signing]
 ---
@@ -18,6 +18,20 @@ Bring daily review and local history workflows to parity with mature clients: li
 ## Dependency and sequencing
 
 Phase 0 is required. Diff/staging and history-search lanes can start independently. Signing should reuse the Phase 1 SSH-agent state model. Persistent recovery primitives must land before exposing destructive rebase, reset, amend, or branch-cleanup actions.
+
+**Both prerequisites are merged.** Phase 0 and Phase 1 are in `improvements` as of 2026-08-07. Branch from there.
+
+## What already exists — do not rebuild it
+
+The foundations table in [README.md](README.md#current-state) is the full list. The parts this phase will reach for most:
+
+- **Running git, `gpg`, `ssh-keygen` or anything else**: `src/server/process/runner.ts`. Injectable, argv-only, no shell, cancellable, and it redacts secrets from stdout, stderr and the recorded argv. An interactive rebase or a signing operation must not invent its own `spawn`.
+- **Long-running or cancellable work**: `src/server/operations/registry.ts`. An interactive rebase is exactly the kind of operation this exists for. The registry is server-side only; the UI panel is Phase 4, so this phase reports through it without rendering it.
+- **Signing identity**: `src/server/ssh/agent-session.ts` already models agent availability, key loading, fingerprint verification and per-repository identity. SSH signing should read that state rather than re-deriving which key is active. `ensureAgentForRepo` is the call to make before an operation that needs the key.
+- **Anything persisted**: `src/server/config/migrations.ts`, with a fixture for the version being upgraded from. Repository-scoped settings key off `canonicalRepoKey`, never a display path.
+- **Tests that shell out**: `tests/helpers/fake-runner.ts`. **Renderer tests**: `// @vitest-environment happy-dom` against the real `public/index.html` — see `tests/pull-request-window.test.ts` for the pattern, including how it asserts on preserved user input and accessible labels.
+
+Two conventions this phase inherits and must keep: repository data is rendered with `textContent`, never `innerHTML`, because a repository is not trusted input; and anything that could destroy work goes through Safety Net before it is offered.
 
 ## Workstream A — structured diff and precision staging
 

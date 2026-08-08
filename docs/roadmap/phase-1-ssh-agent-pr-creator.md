@@ -5,7 +5,7 @@ status: complete
 completed: 2026-08-07
 branch: claude/phase-1-ssh-agent-pr-creator
 depends_on: [phase-0]
-suggested_branch: codex/phase-1-ssh-agent-pr-creator
+suggested_branch: claude/phase-1-ssh-agent-pr-creator
 parallelizable: true
 lanes: [ssh-agent, pull-request-creator]
 ---
