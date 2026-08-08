@@ -24,6 +24,7 @@ import { sshAgentRouter } from './routes/ssh-agent.routes';
 import { statusRouter } from './routes/status.routes';
 import { stagingRouter } from './routes/staging.routes';
 import { branchesRouter } from './routes/branches.routes';
+import { diffRouter } from './routes/diff.routes';
 import { conflictsRouter } from './routes/conflicts.routes';
 import { cloneRouter, syncRouter } from './routes/sync.routes';
 import { historyRouter } from './routes/history.routes';
@@ -71,6 +72,7 @@ export function createApp(): Express {
   // Repository-scoped routers.
   app.use(statusRouter);
   app.use(stagingRouter);
+  app.use(diffRouter);
   app.use(branchesRouter);
   app.use(conflictsRouter);
   app.use(syncRouter);
