@@ -267,6 +267,15 @@
             <ul id="trash-list" class="stash-list-ul">
               <li class="empty-state">Nothing discarded recently</li>
             </ul>
+            <div class="section-header mt-4">
+              <h4>Recovery Points</h4>
+              <button id="btn-recovery-open" class="btn btn-text btn-sm" title="Browse recovery points and the reflog">
+                <span>Browse</span>
+              </button>
+            </div>
+            <ul id="recovery-list" class="stash-list-ul">
+              <li class="empty-state">No recovery points</li>
+            </ul>
           </div>
         </div>
       </aside>
@@ -1210,6 +1219,35 @@
             <button type="submit" id="btn-save-identity" class="btn btn-primary">Save</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECOVERY BROWSER -->
+  <div id="recovery-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Recovery</h2>
+        <button id="btn-close-recovery-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc" id="recovery-retention-note">Recovery points record where every ref stood before a risky operation.</p>
+        <div id="recovery-operation-warning" class="inline-warning hidden">
+          An operation is unfinished, so nothing is being expired until it completes.
+        </div>
+
+        <h4>Recovery points</h4>
+        <ul id="recovery-points-list" class="recovery-list">
+          <li class="empty-state">No recovery points recorded yet</li>
+        </ul>
+
+        <h4 class="mt-4">Reflog (HEAD)</h4>
+        <p class="modal-desc">Git's own record. Every position HEAD has held, whether Multi-Git put it there or not.</p>
+        <ul id="recovery-reflog-list" class="recovery-list">
+          <li class="empty-state">No reflog entries</li>
+        </ul>
       </div>
     </div>
   </div>

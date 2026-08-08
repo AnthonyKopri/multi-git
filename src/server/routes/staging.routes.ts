@@ -150,6 +150,13 @@ stagingRouter.post(
     const repoPath = req.repoPath as string;
     const { deleteUntracked } = (req.body ?? {}) as { deleteUntracked?: unknown };
 
+    // The file contents go to the trash below, which is what actually brings
+    // a bulk discard back. The recovery point is the journal entry that says
+    // it happened, and where HEAD was when it did.
+    await captureCheckpoint(repoPath, 'Discard all working-tree changes', {
+      operation: 'discard-all'
+    });
+
     // Snapshot every file about to be touched into the recoverable trash.
     // Failing to snapshot must not block the discard the user asked for.
     const listing = await tryGitCommand(repoPath, [
@@ -199,6 +206,9 @@ stagingRouter.post(
     const args = ['commit', '-m', message];
     if (amend) {
       args.push('--amend');
+      // Amending replaces the commit; the one being replaced is only findable
+      // afterwards through the reflog or this point.
+      await captureCheckpoint(repoPath, 'Amend the last commit', { operation: 'amend' });
     }
 
     const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
@@ -230,7 +240,7 @@ stagingRouter.post(
 
     const result = await withRepoLock(repoPath, async () => {
       if (hasParent) {
-        await captureCheckpoint(repoPath, 'Undo last commit');
+        await captureCheckpoint(repoPath, 'Undo last commit', { operation: 'undo-commit' });
         return runGitCommand(repoPath, ['reset', '--soft', 'HEAD~1']);
       }
 

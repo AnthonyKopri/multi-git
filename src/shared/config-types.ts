@@ -41,6 +41,11 @@ export interface RepoSettings {
 export interface AppSettings {
   /** Whether Multi-Git maintains its managed block in ~/.ssh/config. */
   manageSshConfig: boolean;
+  /**
+   * How long a Safety Net recovery point is kept, in days. 0 keeps them until
+   * they are removed by hand. Absent means the built-in default.
+   */
+  recoveryRetentionDays?: number;
 }
 
 export interface AppConfig {

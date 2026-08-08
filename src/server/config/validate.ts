@@ -196,9 +196,20 @@ function validateSettings(raw: unknown): Partial<AppSettings> | undefined {
   }
 
   const source = asRecord(raw);
-  return typeof source['manageSshConfig'] === 'boolean'
-    ? { manageSshConfig: source['manageSshConfig'] }
-    : {};
+  const settings: Partial<AppSettings> = {};
+
+  if (typeof source['manageSshConfig'] === 'boolean') {
+    settings.manageSshConfig = source['manageSshConfig'];
+  }
+
+  // A negative or fractional retention would produce expiry times nobody
+  // asked for, so only a whole number of days counts.
+  const retention = source['recoveryRetentionDays'];
+  if (typeof retention === 'number' && Number.isInteger(retention) && retention >= 0) {
+    settings.recoveryRetentionDays = retention;
+  }
+
+  return settings;
 }
 
 /** Top-level keys this build knows about. Anything else is passed through. */

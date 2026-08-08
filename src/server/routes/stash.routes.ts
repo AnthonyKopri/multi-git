@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { withRepoLock } from '../git/lock';
 import { runGitCommand, tryGitCommand } from '../git/run';
+import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 
@@ -86,10 +87,21 @@ stashRouter.post(
     const repoPath = req.repoPath as string;
     const safeRef = stashRef((req.body as { ref?: unknown })?.ref);
 
+    // A dropped stash leaves no reflog trail of its own, so its commit is the
+    // one thing worth recording: `git stash store` or `git branch` can bring
+    // it back for as long as git keeps unreachable objects.
+    const resolved = await tryGitCommand(repoPath, ['rev-parse', safeRef]);
+    const stashOid = resolved?.stdout.trim();
+
+    await captureCheckpoint(repoPath, `Drop ${safeRef}`, {
+      operation: 'stash-drop',
+      ...(stashOid ? { stashRef: stashOid } : {})
+    });
+
     const { stdout, stderr } = await withRepoLock(repoPath, () =>
       runGitCommand(repoPath, ['stash', 'drop', safeRef])
     );
 
-    res.json({ success: true, stdout, stderr });
+    res.json({ success: true, stdout, stderr, droppedCommit: stashOid ?? null });
   })
 );
