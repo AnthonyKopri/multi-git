@@ -383,6 +383,11 @@
                   <input type="checkbox" id="commit-amend-checkbox">
                   <span>Amend last commit</span>
                 </label>
+                <label class="amend-row" id="commit-sign-row" title="Sign this commit">
+                  <input type="checkbox" id="commit-sign-checkbox">
+                  <span>Sign</span>
+                  <button id="btn-signing-settings" type="button" class="btn btn-text btn-sm" title="Signing settings">Settings</button>
+                </label>
               </div>
             </div>
           </div>
@@ -530,6 +535,7 @@
                 <span>Back</span>
               </button>
               <h4 id="drawer-hash" class="badge">hash</h4>
+              <span id="drawer-signature" class="badge signature-badge hidden" title="Signature status"></span>
             </div>
             <div class="drawer-body">
               <div class="commit-meta-block">
@@ -1217,6 +1223,48 @@
           <div class="form-actions">
             <button type="button" id="btn-cancel-identity" class="btn btn-secondary">Cancel</button>
             <button type="submit" id="btn-save-identity" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNING -->
+  <div id="signing-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2>Commit Signing</h2>
+        <button id="btn-close-signing-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Applies to this repository only. System leaves it to your global Git configuration.</p>
+        <ul id="signing-diagnostics" class="recovery-list hidden"></ul>
+        <form id="signing-form" class="modal-form">
+          <div class="form-group">
+            <label for="signing-mode">Sign with</label>
+            <select id="signing-mode">
+              <option value="system">System (inherit global configuration)</option>
+              <option value="ssh">An SSH key</option>
+              <option value="gpg">A GPG key</option>
+              <option value="off">Nothing — never sign in this repository</option>
+            </select>
+          </div>
+          <div class="form-group" id="signing-key-group">
+            <label for="signing-key">Signing key</label>
+            <input type="text" id="signing-key" placeholder="Key id, or path to an SSH key" autocomplete="off">
+            <select id="signing-key-picker" aria-label="Use a registered SSH profile key"></select>
+          </div>
+          <div class="form-group" id="signing-allowed-group">
+            <label for="signing-allowed-signers">Allowed signers file</label>
+            <input type="text" id="signing-allowed-signers" placeholder="Needed to verify SSH signatures" autocomplete="off">
+          </div>
+          <label class="checkbox-row"><input type="checkbox" id="signing-default-commits"> Sign commits by default</label>
+          <label class="checkbox-row"><input type="checkbox" id="signing-default-tags"> Sign tags by default</label>
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-signing" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-save-signing" class="btn btn-primary">Save</button>
           </div>
         </form>
       </div>

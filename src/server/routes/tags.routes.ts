@@ -2,10 +2,11 @@ import { Router } from 'express';
 
 import { commitish, refArg } from '../git/args';
 import { withRepoLock } from '../git/lock';
-import { runGitCommand } from '../git/run';
+import { GitError, runGitCommand } from '../git/run';
+import { explainSigningFailure } from '../git/signing';
 import { runSyncOperationWithProfile } from '../ssh/profiles';
 import { requireRepoPath } from '../middleware/repo-path';
-import { asyncRoute } from '../middleware/error-handler';
+import { HttpError, asyncRoute } from '../middleware/error-handler';
 
 export const tagsRouter: Router = Router();
 
@@ -20,27 +21,47 @@ tagsRouter.post(
   '/api/git/tag',
   asyncRoute(async (req, res) => {
     const repoPath = req.repoPath as string;
-    const { name, hash, message } = (req.body ?? {}) as {
+    const { name, hash, message, sign } = (req.body ?? {}) as {
       name?: unknown;
       hash?: unknown;
       message?: unknown;
+      sign?: unknown;
     };
 
     const safeName = tagName(name);
     const args = ['tag'];
 
-    // A message makes it an annotated tag; without one it stays lightweight.
-    if (typeof message === 'string' && message !== '') {
-      args.push('-a', '-m', message);
+    // Only an annotated tag can carry a signature, so signing implies -a.
+    if (sign === true) {
+      args.push('-s');
+    } else if (typeof message === 'string' && message !== '') {
+      // A message makes it an annotated tag; without one it stays lightweight.
+      args.push('-a');
     }
+
+    if (typeof message === 'string' && message !== '') {
+      args.push('-m', message);
+    } else if (sign === true) {
+      // git refuses to sign a tag with no message and would open an editor.
+      args.push('-m', safeName);
+    }
+
     args.push(safeName);
 
     if (hash) {
       args.push(commitish(hash));
     }
 
-    const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
-    res.json({ success: true, stdout, stderr });
+    try {
+      const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
+      res.json({ success: true, stdout, stderr });
+    } catch (error) {
+      const explained = error instanceof GitError ? explainSigningFailure(error.stderr) : null;
+      if (explained === null) {
+        throw error;
+      }
+      throw new HttpError(explained, 400);
+    }
   })
 );
 
