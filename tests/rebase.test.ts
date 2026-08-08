@@ -4,6 +4,7 @@
 // happily hang forever waiting for an editor, so a test that only checked the
 // plan would prove nothing about the part most likely to be wrong.
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import request from 'supertest';
@@ -649,5 +650,120 @@ describe('the editor bridge', () => {
 
     await api(repo).post('/api/git/rebase/step').send({ step: 'abort' }).expect(200);
     expect(fs.existsSync(path.join(repo, '.git', 'multi-git', 'rebase-session.json'))).toBe(false);
+  });
+});
+
+describe('long repository paths on Windows', () => {
+  it('asks for core.longpaths only where it means something', async () => {
+    const { rebaseGitArgs } = await import('../src/server/git/rebase');
+    const args = rebaseGitArgs(['rebase', '-i', 'HEAD~3']);
+
+    if (process.platform === 'win32') {
+      // Per invocation, never written to the user's configuration.
+      expect(args.slice(0, 2)).toEqual(['-c', 'core.longpaths=true']);
+      expect(args.slice(2)).toEqual(['rebase', '-i', 'HEAD~3']);
+    } else {
+      expect(args).toEqual(['rebase', '-i', 'HEAD~3']);
+    }
+  });
+
+  it('does not mutate the arguments it was given', async () => {
+    const { rebaseGitArgs } = await import('../src/server/git/rebase');
+    const original = ['rebase', '--continue'];
+
+    rebaseGitArgs(original);
+    expect(original).toEqual(['rebase', '--continue']);
+  });
+
+  const onWindows = process.platform === 'win32' ? it : it.skip;
+
+  onWindows('rebases in a repository whose path is long enough to break git', async () => {
+    // Git names its rebase bookkeeping after the commit range: two 40-character
+    // object names and three dots, 83 characters before the directory holding
+    // them. The fixture aims for a repository path long enough that this
+    // crosses Windows' 260-character limit, but short enough that ordinary
+    // object writes still work -- otherwise the setup fails rather than the
+    // thing under test.
+    const os = require('node:os') as typeof import('node:os');
+
+    // Long enough that the repository path plus git's 83-character range
+    // filename crosses 260, short enough that `.git/objects/xx/<38>` -- 55
+    // characters -- still fits, so the fixture itself can be built.
+    const TARGET_LENGTH = 190;
+
+    const root = path.join(os.tmpdir(), 'mg-lp');
+    const padding = TARGET_LENGTH - root.length - 1;
+
+    // A single component is capped at 255 on Windows, and too little padding
+    // would not reproduce the failure at all.
+    if (padding < 40 || padding > 250) {
+      return;
+    }
+
+    const deep = path.join(root, 'd'.repeat(padding));
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.mkdirSync(deep, { recursive: true });
+
+    try {
+      git(deep, 'init', '--initial-branch=main');
+      git(deep, 'config', 'user.name', 'Test User');
+      git(deep, 'config', 'user.email', 'test@example.com');
+      git(deep, 'config', 'commit.gpgsign', 'false');
+      git(deep, 'config', 'core.autocrlf', 'false');
+
+      // A seed plus four, so the base is a commit outside the range being
+      // rewritten -- the same shape as every other fixture here.
+      for (const name of ['seed', 'one', 'two', 'three', 'four']) {
+        writeFile(deep, `${name}.txt`, `${name}` + String.fromCharCode(10));
+        git(deep, 'add', `${name}.txt`);
+        git(deep, 'commit', '-m', `feat: add ${name}`);
+      }
+
+      const base = git(deep, 'rev-parse', 'HEAD~4').trim();
+
+      // The premise: without the configuration, git refuses outright. If this
+      // ever stops being true the test below proves nothing, so it is asserted
+      // rather than assumed.
+      let refused = '';
+      try {
+        execFileSync('git', ['rebase', '-i', base], {
+          cwd: deep,
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: { ...process.env, GIT_SEQUENCE_EDITOR: 'true', GIT_EDITOR: 'true' }
+        });
+      } catch (error) {
+        refused = String((error as { stderr?: string }).stderr ?? '');
+      }
+      expect(refused).toMatch(/Filename too long/i);
+
+      clearRepoPathCache();
+      clearRebaseCache();
+
+      const planned = await api(deep).get('/api/git/rebase/plan').query({ onto: base }).expect(200);
+      const plan = planned.body.plan as RebasePlan;
+
+      const { body } = await api(deep)
+        .post('/api/git/rebase/start')
+        .send({
+          plan: {
+            ...plan,
+            items: plan.items.map((item) =>
+              item.subject === 'feat: add two' ? { ...item, action: 'drop' } : item
+            )
+          }
+        })
+        .expect(200);
+
+      expect(body.stopped).toBe(false);
+      expect(
+        git(deep, 'log', '--reverse', '--pretty=%s', `${base}..HEAD`)
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+      ).toEqual(['feat: add one', 'feat: add three', 'feat: add four']);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 3 });
+    }
   });
 });

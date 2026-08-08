@@ -68,6 +68,30 @@ async function tryGitWithEnv(
   }
 }
 
+/**
+ * Configuration every rebase invocation carries.
+ *
+ * `git rebase -i` keeps its bookkeeping in files inside the repository's git
+ * directory, and names one of them after the commit range: two 40-character
+ * object names and three dots, 83 characters before the directory it sits in.
+ * In a repository whose own path is already long, that name crosses Windows'
+ * 260-character limit and the rebase fails before it starts, with
+ * "fatal: failed to stat '<sha>...<sha>': Filename too long".
+ *
+ * `core.longpaths` is git's own remedy for exactly this. It is passed per
+ * invocation rather than written to the user's configuration, because it is
+ * this application's workaround and not a preference anyone expressed — and it
+ * is scoped to rebase, where the long name is git's own internal file, rather
+ * than applied to every command, where it would also let git create
+ * working-tree paths that other Windows tools cannot open.
+ *
+ * Ignored by git on every other platform, so it is only sent where it means
+ * something.
+ */
+export function rebaseGitArgs(args: readonly string[]): string[] {
+  return process.platform === 'win32' ? ['-c', 'core.longpaths=true', ...args] : [...args];
+}
+
 const gitDirCache = new Map<string, string>();
 
 async function gitDir(repoPath: string): Promise<string | null> {
@@ -413,15 +437,18 @@ async function advanceThroughRewords(
       return { stdout, stderr };
     }
 
-    const amended = await runGitCommand(repoPath, ['commit', '--amend', '-m', message], null, {
-      envOverrides: acceptEditorEnv(bridge)
-    });
+    const amended = await runGitCommand(
+      repoPath,
+      rebaseGitArgs(['commit', '--amend', '-m', message]),
+      null,
+      { envOverrides: acceptEditorEnv(bridge) }
+    );
     stdout += amended.stdout;
     stderr += amended.stderr;
 
     const continued = await tryGitWithEnv(
       repoPath,
-      ['rebase', '--continue'],
+      rebaseGitArgs(['rebase', '--continue']),
       acceptEditorEnv(bridge)
     );
     stdout += continued.stdout;
@@ -488,7 +515,7 @@ export async function startRebase(
     // prepared. Without this git would open a real editor and never return.
     const started = await tryGitWithEnv(
       repoPath,
-      ['rebase', '-i', plan.onto],
+      rebaseGitArgs(['rebase', '-i', plan.onto]),
       bridgeEnv(bridge, { todoPath: bridge.todoPath })
     );
 
@@ -551,7 +578,7 @@ export async function stepRebase(
     // --continue commits the resolution, which opens the message editor.
     const result = await tryGitWithEnv(
       repoPath,
-      ['rebase', `--${step}`],
+      rebaseGitArgs(['rebase', `--${step}`]),
       acceptEditorEnv(bridge)
     );
 
@@ -607,7 +634,7 @@ export async function startSplit(
     throw new Error('Resolve the conflicts before splitting this commit.');
   }
 
-  const result = await runGitCommand(repoPath, ['reset', 'HEAD^']);
+  const result = await runGitCommand(repoPath, rebaseGitArgs(['reset', 'HEAD^']));
 
   const session = await readSession(repoPath);
   if (session) {
