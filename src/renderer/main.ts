@@ -308,6 +308,12 @@ function wireStaging(): void {
     }
   });
 
+  ui.btnDiffLayout.addEventListener('click', () => diff.toggleLayout());
+  ui.diffWhitespace.addEventListener('change', (event) => {
+    const mode = (event.target as HTMLSelectElement).value;
+    diff.setWhitespaceMode(mode as 'show' | 'ignore-change' | 'ignore-all');
+  });
+
   wirePrecisionStaging();
 }
 
@@ -415,6 +421,17 @@ function wireBranchPanel(): void {
 
 function wireShelves(): void {
   ui.btnStashSave.addEventListener('click', () => void shelf.stashChanges());
+
+  let stashFilterTimer: ReturnType<typeof setTimeout> | null = null;
+  ui.stashSearch.addEventListener('input', (event) => {
+    // A search that looks inside every stash is one git call per stash, so it
+    // waits for the typing to stop rather than running per keystroke.
+    if (stashFilterTimer !== null) {
+      clearTimeout(stashFilterTimer);
+    }
+    const value = (event.target as HTMLInputElement).value;
+    stashFilterTimer = setTimeout(() => shelf.setStashQuery(value), 250);
+  });
 
   delegate(ui.stashList, 'click', '[data-action]', (target) => {
     const ref = target.closest<HTMLElement>('[data-ref]')?.dataset['ref'];
