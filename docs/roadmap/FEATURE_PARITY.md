@@ -1,7 +1,7 @@
 ---
 title: Feature parity and request inventory
 status: living-document
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 ---
 
 # Feature Parity and Request Inventory
@@ -15,8 +15,8 @@ Status values: **Current** means materially available today; **Planned** has an 
 | Create pull requests | Large in-app creator with preflight, drafts and forks (Phase 1) | [GitHub Desktop PR flow](https://docs.github.com/en/desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request-from-github-desktop), [GitKraken PRs](https://help.gitkraken.com/gitkraken-desktop/pull-requests/) | Phase 1 | Done |
 | PR review, checks and provider dashboards | No unified dashboard | GitKraken PRs and [SmartGit features](https://www.smartgit.dev/features/) | Phase 5 | Planned |
 | Native SSH-agent lifecycle and key loading | Native agent status, repair, key load/unload and per-repository `core.sshCommand` (Phase 1) | [Microsoft OpenSSH key management](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement), [`ssh-add` behavior](https://man.openbsd.org/OpenBSD-7.7/ssh-add.1) | Phase 1 | Done |
-| Line/hunk staging and discard | File-level workflow | [Sourcetree](https://www.sourcetreeapp.com/), [Sublime Merge guide](https://www.sublimemerge.com/docs/getting_started) | Phase 2 | Planned |
-| Side-by-side, word and image diff | Basic text diff | [Tower features](https://www.git-tower.com/features/all-features), [TortoiseGit manual](https://tortoisegit.org/docs/tortoisegit/) | Phase 2 | Planned |
+| Line/hunk staging and discard | Stage, unstage and discard by hunk or by line, with Safety Net capture and stale-selection refusal (Phase 2A) | [Sourcetree](https://www.sourcetreeapp.com/), [Sublime Merge guide](https://www.sublimemerge.com/docs/getting_started) | Phase 2 | Done |
+| Side-by-side, word and image diff | Unified text diff, now structured per hunk and line | [Tower features](https://www.git-tower.com/features/all-features), [TortoiseGit manual](https://tortoisegit.org/docs/tortoisegit/) | Phase 2 | Planned |
 | Selective and multiple stashes | Basic stash support | [Selective stash request](https://github.com/desktop/desktop/issues/11531), [multiple stashes request](https://github.com/desktop/desktop/issues/12699) | Phase 2 | Planned |
 | Commit search and branch comparison | History exists; limited discovery | [GitHub Desktop search request](https://github.com/desktop/desktop/issues/7022), Sourcetree | Phase 2 | Planned |
 | Interactive rebase, autosquash and commit splitting | Not available | [GitHub Desktop request](https://github.com/desktop/desktop/issues/12354), [GitKraken requests](https://feedback.gitkraken.com/) | Phase 2 | Planned |
