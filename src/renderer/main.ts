@@ -26,6 +26,7 @@ import * as explorer from './features/explorer';
 import * as history from './features/history';
 import * as newRepo from './features/new-repo';
 import * as pullRequest from './features/pull-request';
+import * as recovery from './features/recovery';
 import * as repo from './features/repo';
 import * as shelf from './features/shelf';
 import * as ssh from './features/ssh-manager';
@@ -89,7 +90,8 @@ async function refreshAll(): Promise<void> {
       repo.refreshOrigin(),
       shelf.refreshStashList(),
       shelf.refreshSafetyNet(),
-      shelf.refreshTagList()
+      shelf.refreshTagList(),
+      recovery.refreshRecovery()
     ]);
   } catch (error) {
     if (!isStale(error)) {
@@ -108,6 +110,7 @@ function closeTopmostLayer(): void {
   }
 
   const modals = [
+    ui.recoveryModal,
     ui.vaultSetupModal,
     ui.newRepoModal,
     ui.cloneModal,
@@ -440,6 +443,11 @@ function wireShelves(): void {
     }
   });
 
+  ui.btnRecoveryOpen.addEventListener('click', () => recovery.openRecoveryBrowser());
+  ui.btnCloseRecoveryModal.addEventListener('click', () => recovery.closeRecoveryBrowser());
+  delegate(ui.recoveryPointsList, 'click', '[data-action]', recovery.handleRecoveryAction);
+  delegate(ui.recoveryReflogList, 'click', '[data-action]', recovery.handleRecoveryAction);
+
   delegate(ui.trashList, 'click', '[data-action="restore"]', (target) => {
     const row = target.closest<HTMLElement>('[data-trash-id]');
     if (row?.dataset['trashId']) {
@@ -671,6 +679,7 @@ async function start(): Promise<void> {
   newRepo.initNewRepo(ui);
   branches.initBranches(ui, refreshAll);
   shelf.initShelf(ui, refreshAll);
+  recovery.initRecovery(ui, refreshAll);
   sync.initSync(ui, refreshAll);
   diff.initDiff(ui, { refreshAll });
   staging.initStaging(ui, { refreshAll, refreshStatus, clearDiffView: diff.clearDiffView });

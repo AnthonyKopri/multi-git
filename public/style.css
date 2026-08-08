@@ -1117,6 +1117,61 @@ body.pane-resizing-y * {
   flex-wrap: wrap;
 }
 
+/* Recovery browser */
+.recovery-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+.recovery-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.recovery-item:last-child {
+  border-bottom: none;
+}
+.recovery-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.recovery-label {
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recovery-meta {
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recovery-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.inline-warning {
+  padding: 8px 12px;
+  margin: 8px 0;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  background-color: var(--color-warning-bg, rgba(234, 179, 8, 0.12));
+  border: 1px solid var(--color-warning-border, rgba(234, 179, 8, 0.35));
+}
+
 /* Commit Section
    Height is the drag handle's value rather than the textarea's rows, so a long
    commit message can be given as much room as the staging lists can spare. */

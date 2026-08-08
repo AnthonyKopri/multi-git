@@ -74,6 +74,16 @@ export const ELEMENT_MAP = {
   trashList: 'trash-list',
   tagList: 'tag-list',
 
+  // Recovery
+  recoveryList: 'recovery-list',
+  btnRecoveryOpen: 'btn-recovery-open',
+  recoveryModal: 'recovery-modal',
+  btnCloseRecoveryModal: 'btn-close-recovery-modal',
+  recoveryRetentionNote: 'recovery-retention-note',
+  recoveryOperationWarning: 'recovery-operation-warning',
+  recoveryPointsList: 'recovery-points-list',
+  recoveryReflogList: 'recovery-reflog-list',
+
   // Staging & Diff
   conflictBanner: 'conflict-banner',
   btnContinueConflict: 'btn-continue-conflict',

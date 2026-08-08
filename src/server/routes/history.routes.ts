@@ -9,6 +9,7 @@ import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 import type { CommitFile } from '../../shared/git-types';
+import type { RecoveryOperation } from '../../shared/recovery-types';
 
 export const historyRouter: Router = Router();
 
@@ -112,9 +113,10 @@ async function runHistoryOperation(
   repoPath: string,
   args: readonly string[],
   label: string,
-  fallbackMessage: string
+  fallbackMessage: string,
+  operation: RecoveryOperation
 ): Promise<{ success: boolean; conflict?: boolean; error?: string; stdout?: string; stderr?: string }> {
-  await captureCheckpoint(repoPath, label);
+  await captureCheckpoint(repoPath, label, { operation });
 
   try {
     const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
@@ -139,7 +141,8 @@ historyRouter.post(
         repoPath,
         ['cherry-pick', hash],
         `Cherry-pick ${hash.substring(0, 8)}`,
-        'Cherry-pick failed'
+        'Cherry-pick failed',
+        'cherry-pick'
       )
     );
   })
@@ -157,7 +160,8 @@ historyRouter.post(
         // --no-edit stops git from opening an editor, which would hang.
         ['revert', '--no-edit', hash],
         `Revert ${hash.substring(0, 8)}`,
-        'Revert failed'
+        'Revert failed',
+        'revert'
       )
     );
   })
@@ -174,7 +178,9 @@ historyRouter.post(
       throw new HttpError('Reset mode must be soft, mixed, or hard', 400);
     }
 
-    await captureCheckpoint(repoPath, `Reset (${mode}) to ${safeHash.substring(0, 8)}`);
+    await captureCheckpoint(repoPath, `Reset (${mode}) to ${safeHash.substring(0, 8)}`, {
+      operation: 'reset'
+    });
     const { stdout, stderr } = await withRepoLock(repoPath, () =>
       runGitCommand(repoPath, ['reset', `--${mode}`, safeHash])
     );
