@@ -48,6 +48,8 @@ export interface GitCommandOptions {
   /** Replaces GIT_SSH_COMMAND entirely; wins over `sshKeyPath`. */
   customSshCommand?: string | undefined;
   timeoutMs?: number | undefined;
+  /** Written to git's stdin. How a patch reaches `git apply`. */
+  input?: string | Buffer | undefined;
 }
 
 /**
@@ -89,7 +91,12 @@ export async function runGitCommand(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const subcommand = args[0] ?? 'git';
 
-  const result = await runProcess('git', args, { cwd: repoPath, env, timeoutMs });
+  const result = await runProcess('git', args, {
+    cwd: repoPath,
+    env,
+    timeoutMs,
+    input: options.input
+  });
 
   if (result.spawnError) {
     // The overwhelmingly common cause is git not being installed or not on the

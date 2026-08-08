@@ -74,6 +74,46 @@ export const ELEMENT_MAP = {
   trashList: 'trash-list',
   tagList: 'tag-list',
 
+  // Command palette
+  paletteModal: 'palette-modal',
+  paletteInput: 'palette-input',
+  paletteList: 'palette-list',
+
+  // Search and compare
+  searchModal: 'search-modal',
+  btnCloseSearchModal: 'btn-close-search-modal',
+  tabSearchCommits: 'tab-search-commits',
+  tabSearchCompare: 'tab-search-compare',
+  searchCommitsPane: 'search-commits-pane',
+  searchComparePane: 'search-compare-pane',
+  searchQuery: 'search-query',
+  searchAuthor: 'search-author',
+  searchPaths: 'search-paths',
+  searchSince: 'search-since',
+  searchUntil: 'search-until',
+  btnRunSearch: 'btn-run-search',
+  searchSummary: 'search-summary',
+  searchResults: 'search-results',
+  btnSearchMore: 'btn-search-more',
+  compareBase: 'compare-base',
+  compareHead: 'compare-head',
+  btnRunCompare: 'btn-run-compare',
+  compareSummary: 'compare-summary',
+  compareAhead: 'compare-ahead',
+  compareBehind: 'compare-behind',
+  compareFiles: 'compare-files',
+
+  // Branch maintenance
+  branchAdminModal: 'branch-admin-modal',
+  btnCloseBranchAdmin: 'btn-close-branch-admin',
+  branchAdminSummary: 'branch-admin-summary',
+  branchAdminList: 'branch-admin-list',
+  branchFilterMerged: 'branch-filter-merged',
+  branchFilterStale: 'branch-filter-stale',
+  branchFilterGone: 'branch-filter-gone',
+  btnPruneRemote: 'btn-prune-remote',
+  btnDeleteSelectedBranches: 'btn-delete-selected-branches',
+
   // Recovery
   recoveryList: 'recovery-list',
   btnRecoveryOpen: 'btn-recovery-open',

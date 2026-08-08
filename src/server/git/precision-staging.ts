@@ -15,8 +15,7 @@ import path from 'node:path';
 import { pathArg } from './args';
 import { parseSingleFileDiff } from './structured-diff';
 import { buildSelectedPatch, PatchSelectionError } from './patch-build';
-import { executableRunner } from '../process/runner';
-import type { ExecutableRunner } from '../process/runner';
+import { runGitCommand } from './run';
 import { resolveInsideRepo } from '../fs/paths';
 import type {
   DiffFile,
@@ -72,16 +71,14 @@ function diffArgs(filePath: string, source: DiffSource): string[] {
   return args;
 }
 
-async function isUntracked(
-  repoPath: string,
-  filePath: string,
-  runner: ExecutableRunner
-): Promise<boolean> {
-  const result = await runner.run(
-    'git',
-    ['ls-files', '--others', '--exclude-standard', '--', filePath],
-    { cwd: repoPath }
-  );
+async function isUntracked(repoPath: string, filePath: string): Promise<boolean> {
+  const result = await runGitCommand(repoPath, [
+    'ls-files',
+    '--others',
+    '--exclude-standard',
+    '--',
+    filePath
+  ]);
   return result.stdout.trim() !== '';
 }
 
@@ -169,7 +166,6 @@ function synthesiseAddedFileDiff(fullPath: string, relativePath: string): DiffFi
 export interface ReadDiffOptions {
   /** Reads a diff past LARGE_DIFF_BYTES instead of reporting it as too large. */
   force?: boolean;
-  runner?: ExecutableRunner;
 }
 
 /** Reads one file's diff against the working tree or the index. */
@@ -179,10 +175,9 @@ export async function readFileDiff(
   source: DiffSource,
   options: ReadDiffOptions = {}
 ): Promise<ReadDiffResult> {
-  const runner = options.runner ?? executableRunner;
   const filePath = pathArg(rawPath);
 
-  if (source === 'working-tree' && (await isUntracked(repoPath, filePath, runner))) {
+  if (source === 'working-tree' && (await isUntracked(repoPath, filePath))) {
     const fullPath = resolveInsideRepo(repoPath, filePath);
     if (!fullPath || !fs.existsSync(fullPath)) {
       return { file: null, untracked: true, tooLarge: false, sizeBytes: 0 };
@@ -201,7 +196,7 @@ export async function readFileDiff(
     };
   }
 
-  const result = await runner.run('git', diffArgs(filePath, source), { cwd: repoPath });
+  const result = await runGitCommand(repoPath, diffArgs(filePath, source));
   const sizeBytes = Buffer.byteLength(result.stdout, 'utf8');
 
   if (sizeBytes > LARGE_DIFF_BYTES && options.force !== true) {
@@ -243,20 +238,15 @@ export interface ApplySelectionResult {
  */
 export async function applySelection(
   repoPath: string,
-  input: ApplySelectionInput,
-  options: { runner?: ExecutableRunner } = {}
+  input: ApplySelectionInput
 ): Promise<ApplySelectionResult> {
-  const runner = options.runner ?? executableRunner;
   const plan = ACTION_PLAN[input.action];
   if (!plan) {
     throw new PatchSelectionError(`Unknown action "${String(input.action)}".`);
   }
 
   const filePath = pathArg(input.filePath);
-  const { file, untracked } = await readFileDiff(repoPath, filePath, plan.source, {
-    force: true,
-    runner
-  });
+  const { file, untracked } = await readFileDiff(repoPath, filePath, plan.source, { force: true });
 
   if (!file) {
     throw new PatchSelectionError(
@@ -283,7 +273,7 @@ export async function applySelection(
 
   // No path argument: git apply reads the patch from standard input, so the
   // patch text is never an argument and never reaches a command line.
-  await runner.run('git', args, { cwd: repoPath, input: patch.text });
+  await runGitCommand(repoPath, args, null, { input: patch.text });
 
   return {
     filePath,

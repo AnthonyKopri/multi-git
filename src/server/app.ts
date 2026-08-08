@@ -25,6 +25,8 @@ import { statusRouter } from './routes/status.routes';
 import { stagingRouter } from './routes/staging.routes';
 import { branchesRouter } from './routes/branches.routes';
 import { diffRouter } from './routes/diff.routes';
+import { searchRouter } from './routes/search.routes';
+import { branchAdminRouter } from './routes/branch-admin.routes';
 import { conflictsRouter } from './routes/conflicts.routes';
 import { cloneRouter, syncRouter } from './routes/sync.routes';
 import { historyRouter } from './routes/history.routes';
@@ -75,6 +77,8 @@ export function createApp(): Express {
   app.use(stagingRouter);
   app.use(diffRouter);
   app.use(branchesRouter);
+  app.use(branchAdminRouter);
+  app.use(searchRouter);
   app.use(conflictsRouter);
   app.use(syncRouter);
   app.use(historyRouter);
