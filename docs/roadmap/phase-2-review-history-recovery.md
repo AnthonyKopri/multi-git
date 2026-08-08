@@ -1,12 +1,13 @@
 ---
 title: "Phase 2: Precision review, history editing, signing and recovery"
 phase: 2
-status: planned
+status: in-progress
 depends_on: [phase-0]
 soft_dependencies: [phase-1-ssh-for-signing]
 suggested_branch: claude/phase-2-review-history-recovery
 parallelizable: true
 lanes: [diff-staging, history-search, rebase-recovery, signing]
+lanes_complete: [diff-staging-core]
 ---
 
 # Phase 2: Precision Review, History Editing, Signing and Recovery
@@ -34,6 +35,12 @@ The foundations table in [README.md](README.md#current-state) is the full list. 
 Two conventions this phase inherits and must keep: repository data is rendered with `textContent`, never `innerHTML`, because a repository is not trusted input; and anything that could destroy work goes through Safety Net before it is offered.
 
 ## Workstream A — structured diff and precision staging
+
+**Core landed on 2026-08-08.** Stage, unstage and discard now work at hunk and
+line level, end to end. What shipped and what is still open is recorded in
+[Workstream A status](#workstream-a-status) at the foot of this file; the
+presentation items — side-by-side view, word highlights, whitespace toggles,
+image comparison — are the remainder.
 
 Create a parser/model independent of rendered patch text:
 
@@ -162,3 +169,63 @@ Add typed endpoints/services for structured diffs, patch selection actions, stas
 ## Handoff notes
 
 Document patch-generation assumptions, diff size thresholds, recovery retention, rebase temp/editor protocol, Git-version requirements, and signing tool matrix. Include before/after recovery evidence for every destructive operation shipped.
+
+## Workstream A status
+
+Landed 2026-08-08 on `claude/roadmap-version-display-e8d226`.
+
+### Shipped
+
+| Piece | Where |
+| --- | --- |
+| Structured diff model | `src/shared/diff-types.ts` |
+| Unified-diff parser keeping header lines and hunk identity | `src/server/git/structured-diff.ts` |
+| Reduce a diff to the selected changes, forward or reversed | `src/server/git/patch-build.ts` |
+| Read a diff, synthesise one for untracked files, apply a selection | `src/server/git/precision-staging.ts` |
+| `GET /api/git/diff/structured`, `POST /api/git/diff/apply-selection` | `src/server/routes/diff.routes.ts` |
+| Selectable line rows, per-hunk actions, selection toolbar | `src/renderer/features/diff/structured-view.ts`, `.../diff/index.ts` |
+
+Stage, unstage and discard each work on a whole file, a hunk, or an arbitrary
+set of lines. Discard captures a Safety Net snapshot before it touches the
+working tree, and asks for confirmation unless the repository opted out.
+
+### Decisions worth knowing before extending this
+
+- **Patch direction inverts the rule for unselected lines.** Applying forward,
+  an unselected addition is dropped and an unselected deletion becomes context;
+  reversed, it is the other way round. The table at the top of
+  `patch-build.ts` is the reference. A consequence the code relies on: the side
+  being consumed always survives intact, so its `@@` range is copied from the
+  original hunk and only the produced side is recounted and shifted.
+- **Staleness is structural, not a token.** A hunk id is a hash of its position
+  and content, so a hunk that moved or changed simply is not found in the fresh
+  read the server does before applying, and the request is refused with 409.
+  There is no separate version to keep in step.
+- **Header lines are replayed verbatim.** Path quoting, modes and rename
+  metadata come back out exactly as git wrote them, which is what makes hostile
+  and non-ASCII filenames work without a quoting implementation of our own.
+- **Omitting both id lists means the whole file; an empty list means nothing**
+  and is refused. A UI that lost its checkboxes must not stage everything.
+- **A partial selection out of a whole-file add or delete rewrites its own
+  header.** Keeping half of an added file means the patch no longer creates it,
+  and git rejects a `new file` patch whose old side has content
+  ("new file … depends on old contents"). So the create/delete markers and the
+  `index` line come off and the `/dev/null` side is pointed at the real path,
+  taken from the other side's header line so its quoting is already right.
+- **Untracked files get a synthesised added-file diff** so the same selection
+  path works on them. Partial *discard* is refused for them: reversing a patch
+  whose pre-image is `/dev/null` would delete the file.
+- **Diffs over 2 MB are not read** unless the request passes `force=true`,
+  which is what the pane's "Load anyway" button sends.
+
+### Still open in this workstream
+
+- Side-by-side view, intra-line word highlights, whitespace toggles, and
+  syntax-aware rendering.
+- Before/after image comparison and richer binary metadata.
+- Cancellation of a diff read through the operations registry; the size
+  threshold covers the responsiveness case for now, and the registry has no UI
+  until Phase 4.
+- A non-UTF-8 file's diff round-trips through a UTF-8 string. Text in another
+  encoding would be re-encoded on the way back into `git apply`. No test
+  covers it because no current code path produces one.
