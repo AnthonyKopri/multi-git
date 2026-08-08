@@ -95,7 +95,9 @@ before writing anything similar.
 
 None of these block Phase 3 or Phase 4. They are listed so they are not
 rediscovered as surprises. Details and evidence are in
-[FEATURE_PARITY.md](FEATURE_PARITY.md#open-follow-ups).
+[FEATURE_PARITY.md](FEATURE_PARITY.md#open-follow-ups); things decided against
+rather than merely outstanding are under
+[Explicitly deferred or rejected](FEATURE_PARITY.md#explicitly-deferred-or-rejected).
 
 1. **Express 5** — the one dependency not at latest. Nothing blocks it; it was
    left out of Phase 0 as a runtime-framework major touching every route file.
@@ -108,9 +110,6 @@ rediscovered as surprises. Details and evidence are in
    cancel is Phase 4's.
 4. **Never manually exercised** — creating a real pull request, and the fork
    workflow. Both are covered against a scripted `gh`.
-5. **Syntax-aware diff rendering** is the one Phase 2 presentation item not
-   done. It needs a highlighter dependency and a language map, which is a
-   decision rather than a gap in the diff model.
 
 ## Agent execution contract
 

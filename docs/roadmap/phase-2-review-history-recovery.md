@@ -233,13 +233,10 @@ three skips are Phase 0's; the signing tests skip themselves where
 
 ### Still open
 
-Every clause of the definition of done is met. What remains was either scoped
-to a later phase from the start, or is a limitation worth naming rather than
-hiding. None of it blocks Phase 3 or 4.
+Every clause of the definition of done is met. One item is deliberately not
+done — see [Syntax-aware rendering](#syntax-aware-rendering-deliberately-not-done)
+below — and one was scoped to a later phase from the start:
 
-- **Syntax-aware diff rendering.** The one presentation item not done. It needs
-  a highlighter and a language map, which is a dependency decision rather than
-  a gap in this phase's model.
 - **Operation progress has no UI.** Diff reads and searches are registered as
   cancellable operations, and the runner takes an AbortSignal, but the panel
   that would let a user press cancel is Phase 4's. Phase 2 reports through the
@@ -247,6 +244,44 @@ hiding. None of it blocks Phase 3 or 4.
 
 Three limitations recorded here when the phase landed have since been fixed;
 see [Follow-up fixes](#follow-up-fixes).
+
+### Syntax-aware rendering: deliberately not done
+
+The phase brief asked for "syntax-aware rendering **where safe**". Having built
+the rest of the diff pane, the answer to *where safe* turned out to be narrow
+enough that the feature was declined rather than deferred to a date. Decided
+2026-08-08.
+
+**It conflicts with the rule that makes the diff pane safe.** The renderer
+builds every node with `textContent` and never `innerHTML`, because file
+contents are repository data and a repository is not trusted input — the same
+reason `script-src 'self'` carries no `'unsafe-inline'`. Most highlighters
+return an HTML string. Using one means either calling `innerHTML` on untrusted
+file content or adding a sanitiser to defend against the library just chosen.
+A token-emitting highlighter avoids this, which narrows the field to a few
+candidates before anything else is weighed.
+
+**A diff cannot be highlighted accurately without the whole file.** Hunks are
+fragments with gaps between them. A hunk that begins inside a block comment or
+a template literal has no way to know it, so per-line highlighting is wrong at
+exactly the boundaries a reader is looking at. Getting it right means fetching
+both complete versions, highlighting each, and mapping lines back into the
+hunks — which is a great deal of work and memory for a hunk of a large file.
+
+**The pane is already using colour for two things.** Added and removed lines
+carry a background, and intra-line word highlighting marks what changed within
+a line. Syntax colour is a third system competing for the same pixels, and its
+failure mode — a comment fragment rendered as code — misleads rather than
+merely looking wrong.
+
+**What would change the decision.** A token-emitting highlighter small enough
+to bundle beside a 157 KB web bundle and one runtime dependency, plus a reason
+to accept per-line approximation — most likely shipping it as a toggle in the
+diff view options, defaulting off, so it never has to be right to be useful.
+The structured diff model supports it: `StructuredDiffLine.content` is the
+text, and `word-diff.ts` already segments a line, so syntax tokens would be a
+second segmentation merged at the union of both boundaries. That merge, not
+the library, is the work.
 
 ## Follow-up fixes
 
