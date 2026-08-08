@@ -338,6 +338,10 @@ export const initRepo = (repoPath: string) =>
 export const selectFolderViaServer = () =>
   api.get<Api.SelectFolderResponse>('/api/git/select-folder', global);
 
+// ---------- application identity ----------
+
+export const getAppInfo = () => api.get<Api.AppInfoResponse>('/api/app-info', global);
+
 // ---------- terminal log ----------
 
 export const postLog = (text: string, type: string) =>

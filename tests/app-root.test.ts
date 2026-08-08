@@ -102,3 +102,29 @@ describe('the real repository layout', () => {
     expect(fs.existsSync(path.join(templatesDir(), 'gitignore', 'node.gitignore'))).toBe(true);
   });
 });
+
+describe('window titles', () => {
+  it('reports the version the manifest declares', async () => {
+    const { appVersion, appRoot } = await import('../src/server/app-root');
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(appRoot(), 'package.json'), 'utf8')
+    ) as { version: string };
+
+    expect(appVersion()).toBe(manifest.version);
+  });
+
+  it('puts the version next to the product name', async () => {
+    const { APP_DISPLAY_NAME, appTitle, appVersion } = await import('../src/server/app-root');
+
+    // What the desktop window's caption reads, so a regression here is a
+    // regression the user sees.
+    expect(appTitle()).toBe(`${APP_DISPLAY_NAME} v${appVersion()}`);
+    expect(appTitle()).toMatch(/ v\d+\.\d+\.\d+/);
+  });
+
+  it('keeps the version ahead of a window-specific suffix', async () => {
+    const { appTitle } = await import('../src/server/app-root');
+
+    expect(appTitle('Terminal Log')).toBe(`${appTitle()} - Terminal Log`);
+  });
+});

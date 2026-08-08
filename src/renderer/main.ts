@@ -37,6 +37,24 @@ import type { CommitType } from './features/commit/conventional';
 
 let ui: Elements;
 
+/**
+ * Puts the running version in the page title.
+ *
+ * Only the browser tab needs this. The desktop window keeps the title the main
+ * process gave it, because that process can read package.json and the renderer
+ * cannot.
+ */
+async function applyAppTitle(): Promise<void> {
+  try {
+    const { title } = await api.getAppInfo();
+    if (title !== '') {
+      document.title = title;
+    }
+  } catch {
+    // Not knowing the version is not worth an error; the static title stands.
+  }
+}
+
 /** Refreshes everything that depends on the repository's current state. */
 async function refreshStatus(): Promise<void> {
   try {
@@ -637,8 +655,10 @@ async function start(): Promise<void> {
   await accounts.loadConfig();
   repo.renderRepoLists();
 
-  // Fire and forget: a slow key check must not delay the first paint.
+  // Fire and forget: neither a slow key check nor a title lookup should delay
+  // the first paint.
   void accounts.validateSshProfilesOnStartup();
+  void applyAppTitle();
 
   const { recentRepos } = getState();
   if (recentRepos.length > 0) {
