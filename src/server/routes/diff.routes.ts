@@ -9,6 +9,7 @@ import { withRepoLock } from '../git/lock';
 import { applySelection, readFileDiff, LARGE_DIFF_BYTES } from '../git/precision-staging';
 import type { WhitespaceMode } from '../git/precision-staging';
 import { compareBlobs } from '../git/blob';
+import { toDisplayDiffFile } from '../git/encoding';
 import { operations } from '../operations/registry';
 import { saveToTrash } from '../safety-net/trash';
 import { requireRepoPath } from '../middleware/repo-path';
@@ -99,7 +100,9 @@ diffRouter.get(
 
     res.json({
       success: true,
-      file: result.file,
+      // Decoded here and nowhere earlier: the model the patch is built from
+      // has to stay byte-faithful, and only a person needs the text.
+      file: result.file === null ? null : toDisplayDiffFile(result.file),
       source,
       untracked: result.untracked,
       tooLarge: false,

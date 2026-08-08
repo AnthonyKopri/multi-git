@@ -16,6 +16,7 @@ import { pathArg } from './args';
 import { parseSingleFileDiff } from './structured-diff';
 import { buildSelectedPatch, PatchSelectionError } from './patch-build';
 import { runGitCommand } from './run';
+import { bytesToTransport, transportToBytes } from './encoding';
 import { resolveInsideRepo } from '../fs/paths';
 import type {
   DiffFile,
@@ -135,7 +136,9 @@ function synthesiseAddedFileDiff(fullPath: string, relativePath: string): DiffFi
     };
   }
 
-  const text = contents.toString('utf8');
+  // Byte-faithful, like every other diff in this pipeline: an untracked file
+  // is no more likely to be UTF-8 than a tracked one.
+  const text = bytesToTransport(contents);
   const raw = text.split('\n');
   // A trailing newline leaves an empty final element; its absence means the
   // last line really is unterminated.
@@ -226,16 +229,18 @@ export async function readFileDiff(
     repoPath,
     diffArgs(filePath, source, options.whitespace ?? 'show'),
     null,
-    { signal: options.signal }
+    { signal: options.signal, binaryStdout: true }
   );
-  const sizeBytes = Buffer.byteLength(result.stdout, 'utf8');
+
+  const bytes = result.stdoutBuffer ?? Buffer.alloc(0);
+  const sizeBytes = bytes.length;
 
   if (sizeBytes > LARGE_DIFF_BYTES && options.force !== true) {
     return { file: null, untracked: false, tooLarge: true, sizeBytes };
   }
 
   return {
-    file: parseSingleFileDiff(result.stdout),
+    file: parseSingleFileDiff(bytesToTransport(bytes)),
     untracked: false,
     tooLarge: false,
     sizeBytes
@@ -309,8 +314,9 @@ export async function applySelection(
   }
 
   // No path argument: git apply reads the patch from standard input, so the
-  // patch text is never an argument and never reaches a command line.
-  await runGitCommand(repoPath, args, null, { input: patch.text });
+  // patch text is never an argument and never reaches a command line. It goes
+  // as bytes, not as a string, so a file in any encoding round-trips exactly.
+  await runGitCommand(repoPath, args, null, { input: transportToBytes(patch.text) });
 
   return {
     filePath,
