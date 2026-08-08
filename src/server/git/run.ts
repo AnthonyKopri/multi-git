@@ -3,6 +3,8 @@ import { DEFAULT_TIMEOUT_MS, runProcess } from '../process/run';
 
 export interface GitResult {
   stdout: string;
+  /** Set only when the caller asked for raw bytes. */
+  stdoutBuffer?: Buffer | null;
   stderr: string;
 }
 
@@ -50,6 +52,10 @@ export interface GitCommandOptions {
   timeoutMs?: number | undefined;
   /** Written to git's stdin. How a patch reaches `git apply`. */
   input?: string | Buffer | undefined;
+  /** Kills git when it fires, so a long read can be stopped. */
+  signal?: AbortSignal | undefined;
+  /** Collects stdout as bytes. For `cat-file blob` and nothing else so far. */
+  binaryStdout?: boolean | undefined;
 }
 
 /**
@@ -95,7 +101,9 @@ export async function runGitCommand(
     cwd: repoPath,
     env,
     timeoutMs,
-    input: options.input
+    input: options.input,
+    signal: options.signal,
+    binaryStdout: options.binaryStdout
   });
 
   if (result.spawnError) {
@@ -104,6 +112,16 @@ export async function runGitCommand(
     throw new GitError(`Failed to run git: ${result.spawnError.message}`, {
       stdout: result.stdout,
       stderr: result.stderr
+    });
+  }
+
+  if (result.cancelled) {
+    // The user asked for this. It is an outcome, not a fault, and it is
+    // distinguished from a timeout so the UI does not apologise for it.
+    throw new GitError('The operation was cancelled.', {
+      stdout: result.stdout,
+      stderr: result.stderr,
+      statusCode: 499
     });
   }
 
@@ -125,7 +143,7 @@ export async function runGitCommand(
     });
   }
 
-  return { stdout: result.stdout, stderr: result.stderr };
+  return { stdout: result.stdout, stdoutBuffer: result.stdoutBuffer, stderr: result.stderr };
 }
 
 /**

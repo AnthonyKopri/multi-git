@@ -15,7 +15,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { DiffRenderer } from './diff-view';
 import { StructuredDiffRenderer } from './structured-view';
-import type { HunkActions } from './structured-view';
+import type { DiffLayout, HunkActions } from './structured-view';
 import type { DiffSource, PatchAction } from '../../../shared/diff-types';
 
 let ui: Elements;
@@ -25,6 +25,10 @@ let refreshAfterApply: () => Promise<void> = async () => {};
 
 /** The diff currently on screen, or null when it is a read-only commit diff. */
 let current: { path: string; source: DiffSource; untracked: boolean } | null = null;
+
+/** Presentation choices, kept across files: they are about how you read. */
+let layout: DiffLayout = 'unified';
+let whitespace: api.WhitespaceMode = 'show';
 
 export function initDiff(elements: Elements, hooks: { refreshAll: () => Promise<void> }): void {
   ui = elements;
@@ -82,6 +86,78 @@ function renderSelectionBar(): void {
   setHidden(ui.btnDiffStageSelection, !actions.stage);
   setHidden(ui.btnDiffUnstageSelection, !actions.unstage);
   setHidden(ui.btnDiffDiscardSelection, !actions.discard);
+}
+
+/** Formats a byte count the way a person would say it. */
+function humanSize(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Shows both versions of something a unified diff cannot describe.
+ *
+ * Images go side by side, because comparing them is the whole point. Any other
+ * binary gets its sizes, which is all git knows and all there is to say.
+ */
+async function renderBinary(filePath: string, source: DiffSource): Promise<void> {
+  renderPaneMessage(ui.diffContent, 'Loading both versions...');
+
+  try {
+    const comparison = await api.getDiffBlobs(filePath, source);
+
+    if (!comparison.isImage) {
+      const delta = comparison.sizeDelta;
+      renderPaneMessage(
+        ui.diffContent,
+        `Binary file. ${humanSize(comparison.old.sizeBytes)} to ${humanSize(comparison.new.sizeBytes)}` +
+          (delta === 0 ? '' : ` (${delta > 0 ? '+' : '-'}${humanSize(Math.abs(delta))})`)
+      );
+      return;
+    }
+
+    const side = (label: string, blob: api.BlobSideResult): HTMLElement => {
+      let preview: HTMLElement;
+
+      if (blob.dataUri === null) {
+        preview = el('div', {
+          className: 'image-diff-missing',
+          text: blob.exists ? 'Too large to preview' : 'Not present'
+        });
+      } else {
+        const image = el('img', { className: 'image-diff-img' });
+        image.src = blob.dataUri;
+        image.alt = `${label} version of ${filePath}`;
+        preview = image;
+      }
+
+      return el('figure', {
+        className: 'image-diff-side',
+        children: [
+          preview,
+          el('figcaption', {
+            text: `${label} - ${blob.exists ? humanSize(blob.sizeBytes) : 'absent'}`
+          })
+        ]
+      });
+    };
+
+    ui.diffContent.replaceChildren(
+      el('div', {
+        className: 'image-diff',
+        children: [side('Before', comparison.old), side('After', comparison.new)]
+      })
+    );
+  } catch (error) {
+    if (!isStale(error)) {
+      renderPaneMessage(ui.diffContent, `Error loading the images: ${errorMessage(error)}`, true);
+    }
+  }
 }
 
 export function clearDiffView(): void {
@@ -144,7 +220,12 @@ export async function loadDiff(
   renderPaneMessage(ui.diffContent, 'Loading changes...');
 
   try {
-    const result = await api.getStructuredDiff(filePath, source, options.force === true);
+    const result = await api.getStructuredDiff(
+      filePath,
+      source,
+      options.force === true,
+      whitespace
+    );
 
     if (result.tooLarge) {
       renderTooLarge(result.sizeBytes, result.limitBytes, () => {
@@ -154,18 +235,26 @@ export async function loadDiff(
     }
 
     const file = result.file;
+
+    // A binary file has no lines to show, but it does have two versions --
+    // which for an image is exactly what the reader wants to see.
+    if (file?.binary === true) {
+      await renderBinary(filePath, source);
+      return;
+    }
+
     if (!file || file.hunks.length === 0) {
       renderPaneMessage(
         ui.diffContent,
-        file?.binary === true
-          ? 'This file is binary, so it has no line-by-line diff.'
-          : 'No line changes found (the file may be a rename or a mode change)'
+        whitespace === 'show'
+          ? 'No line changes found (the file may be a rename or a mode change)'
+          : 'No changes left once whitespace is ignored.'
       );
       return;
     }
 
     current = { path: filePath, source, untracked: result.untracked };
-    structured.render(file, actionsFor(source, result.untracked));
+    structured.render(file, actionsFor(source, result.untracked), layout);
   } catch (error) {
     if (!isStale(error)) {
       renderPaneMessage(ui.diffContent, `Error loading diff: ${errorMessage(error)}`, true);
@@ -265,6 +354,18 @@ export function toggleHunkSelection(hunkId: string): void {
 
 export function clearLineSelection(): void {
   structured.clearSelection();
+}
+
+/** Unified or side-by-side. Remembered across files: it is how you read. */
+export function toggleLayout(): void {
+  layout = layout === 'unified' ? 'split' : 'unified';
+  ui.btnDiffLayoutLabel.textContent = layout === 'unified' ? 'Split' : 'Unified';
+  void reloadCurrentDiff();
+}
+
+export function setWhitespaceMode(mode: api.WhitespaceMode): void {
+  whitespace = mode;
+  void reloadCurrentDiff();
 }
 
 /** A read-only diff for one file within a commit. */

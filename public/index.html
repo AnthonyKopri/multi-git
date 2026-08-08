@@ -237,6 +237,7 @@
               <span>Stash</span>
             </button>
           </div>
+          <input type="text" id="stash-search" class="stash-search" placeholder="Filter stashes by message or path" autocomplete="off" aria-label="Filter stashes">
           <ul id="stash-list" class="stash-list-ul">
             <li class="empty-state">No stashes</li>
           </ul>
@@ -419,6 +420,17 @@
                   </button>
                   <h3 id="diff-file-title">File Diff</h3>
                   <span id="diff-file-type" class="badge">Unselected</span>
+                </div>
+                <div class="diff-view-options">
+                  <button id="btn-diff-layout" class="btn btn-secondary btn-sm" title="Switch between unified and side-by-side">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">splitscreen</span>
+                    <span id="btn-diff-layout-label">Split</span>
+                  </button>
+                  <select id="diff-whitespace" class="btn btn-secondary btn-sm" aria-label="Whitespace handling" title="Whitespace handling">
+                    <option value="show">Show whitespace</option>
+                    <option value="ignore-change">Ignore whitespace changes</option>
+                    <option value="ignore-all">Ignore all whitespace</option>
+                  </select>
                 </div>
                 <div id="diff-actions" class="card-header-actions hidden">
                   <button id="btn-diff-toggle-stage" class="btn btn-secondary btn-sm">

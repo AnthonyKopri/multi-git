@@ -9,6 +9,8 @@
 // Rendering stays windowed for the same reason it is in DiffRenderer: a diff
 // is only as expensive as the part of it that has been scrolled to.
 import { el, fragment } from '../../dom/create';
+import { diffWords, pairChangedLines } from './word-diff';
+import type { WordSegment } from './word-diff';
 import type { DiffFile, DiffHunk, StructuredDiffLine } from '../../../shared/diff-types';
 
 /** Rows rendered before the reader scrolls. Comfortably more than one screen. */
@@ -38,7 +40,74 @@ export interface HunkActions {
   discard: boolean;
 }
 
+export type DiffLayout = 'unified' | 'split';
+
+/**
+ * Builds the content cell, highlighting the words that actually changed.
+ *
+ * Falls back to plain text when the line has no counterpart — a whole line
+ * added or removed has nothing to compare against, and marking all of it as
+ * changed would be true but say nothing.
+ */
+function contentCell(
+  line: StructuredDiffLine,
+  counterpart: StructuredDiffLine | undefined,
+  showPrefix: boolean
+): HTMLElement {
+  const prefix = showPrefix ? LINE_PREFIX[line.kind] : '';
+
+  if (!counterpart || line.kind === 'context') {
+    return el('div', { className: 'diff-line-content', text: prefix + line.content });
+  }
+
+  const diff = diffWords(
+    line.kind === 'deletion' ? line.content : counterpart.content,
+    line.kind === 'deletion' ? counterpart.content : line.content
+  );
+  const segments: WordSegment[] = line.kind === 'deletion' ? diff.oldSegments : diff.newSegments;
+
+  // Everything changed, or nothing did: a span per token would be noise.
+  if (segments.length <= 1) {
+    return el('div', { className: 'diff-line-content', text: prefix + line.content });
+  }
+
+  return el('div', {
+    className: 'diff-line-content',
+    children: [
+      prefix === '' ? null : document.createTextNode(prefix),
+      ...segments.map((segment) =>
+        segment.kind === 'same'
+          ? document.createTextNode(segment.text)
+          : el('span', { className: 'diff-word-changed', text: segment.text })
+      )
+    ]
+  });
+}
+
 type Row = { kind: 'hunk'; hunk: DiffHunk } | { kind: 'line'; hunkId: string; line: StructuredDiffLine };
+
+/** Line id to the line it replaced, or that replaced it, across the file. */
+function buildCounterparts(file: DiffFile): Map<string, StructuredDiffLine> {
+  const byId = new Map<string, StructuredDiffLine>();
+  const counterparts = new Map<string, StructuredDiffLine>();
+
+  for (const hunk of file.hunks) {
+    for (const line of hunk.lines) {
+      byId.set(line.id, line);
+    }
+  }
+
+  for (const hunk of file.hunks) {
+    for (const [id, partnerId] of pairChangedLines(hunk)) {
+      const partner = byId.get(partnerId);
+      if (partner) {
+        counterparts.set(id, partner);
+      }
+    }
+  }
+
+  return counterparts;
+}
 
 function flatten(file: DiffFile): Row[] {
   const rows: Row[] = [];
@@ -71,6 +140,9 @@ export class StructuredDiffRenderer {
   private readonly selected = new Set<string>();
   /** Line id to its row element, for the rows currently in the DOM. */
   private readonly renderedRows = new Map<string, HTMLElement>();
+  /** Line id to the line it replaced, or that replaced it. */
+  private counterparts = new Map<string, StructuredDiffLine>();
+  private layout: DiffLayout = 'unified';
   private actions: HunkActions = { stage: false, unstage: false, discard: false };
   private readonly onScroll: () => void;
   private disposed = false;
@@ -83,9 +155,12 @@ export class StructuredDiffRenderer {
     this.container.addEventListener('scroll', this.onScroll, { passive: true });
   }
 
-  render(file: DiffFile, actions: HunkActions): void {
+  render(file: DiffFile, actions: HunkActions, layout: DiffLayout = this.layout): void {
     this.rows = flatten(file);
     this.actions = actions;
+    this.layout = layout;
+    this.counterparts = buildCounterparts(file);
+    this.container.classList.toggle('diff-split', layout === 'split');
     this.rendered = 0;
     this.selected.clear();
     this.renderedRows.clear();
@@ -210,7 +285,10 @@ export class StructuredDiffRenderer {
 
   private buildLineRow(hunkId: string, line: StructuredDiffLine): HTMLElement {
     const selectable = line.kind !== 'context';
-    const className = LINE_CLASS[line.kind] + (selectable ? ' diff-line-selectable' : '');
+    const className =
+      LINE_CLASS[line.kind] +
+      (selectable ? ' diff-line-selectable' : '') +
+      (this.layout === 'split' ? ` diff-side-${line.kind === 'addition' ? 'new' : line.kind === 'deletion' ? 'old' : 'both'}` : '');
 
     const row = el('div', {
       className,
@@ -223,10 +301,7 @@ export class StructuredDiffRenderer {
             el('span', { text: line.newLine === null ? '' : String(line.newLine) })
           ]
         }),
-        el('div', {
-          className: 'diff-line-content',
-          text: LINE_PREFIX[line.kind] + line.content
-        }),
+        contentCell(line, this.counterparts.get(line.id), this.layout === 'unified'),
         line.noNewline
           ? el('div', {
               className: 'diff-line-note',
