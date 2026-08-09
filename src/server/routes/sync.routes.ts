@@ -14,6 +14,7 @@ import { readConfig } from '../config/store';
 import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/vault';
 import { requireRepoPath } from '../middleware/repo-path';
 import { ensureAgentForRepo } from '../ssh/agent-session';
+import { operations } from '../operations/registry';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 
 /** Routes that operate on an existing repository. */
@@ -49,6 +50,44 @@ function profileArgs(body: unknown): { profileId?: string; sshKeyPath?: string }
   };
 }
 
+/**
+ * Runs a network operation as a tracked, cancellable one.
+ *
+ * The app still blocks while these run — that did not change — but the
+ * operations bar can now show what is happening and end it. Before this, a
+ * fetch against an unreachable host was a spinner with no way out but the
+ * five-minute timeout.
+ *
+ * A cancelled operation says the remote may already have received part of it,
+ * because cancelling a push is not the same as undoing one. The objects may be
+ * on the server already, and reporting a clean stop would be a claim the user
+ * would then act on.
+ */
+async function asOperation<T>(
+  kind: string,
+  repoPath: string,
+  message: string,
+  run: (signal: AbortSignal) => Promise<T>
+): Promise<T> {
+  const operation = operations.begin({ kind, repoPath, message });
+  operation.start();
+
+  try {
+    const result = await run(operation.signal);
+    operation.succeed();
+    return result;
+  } catch (error) {
+    operation.fail(
+      operation.cancelled
+        ? 'Cancelled. The remote may already have received part of this.'
+        : error instanceof Error
+          ? error.message
+          : 'Failed'
+    );
+    throw error;
+  }
+}
+
 syncRouter.post(
   '/api/git/push',
   asyncRoute(async (req, res) => {
@@ -68,8 +107,10 @@ syncRouter.post(
     }
     pushArgs.push('origin', targetBranch);
 
-    const result = await withRepoLock(repoPath, () =>
-      runSyncOperationWithProfile(repoPath, pushArgs, profileId, sshKeyPath)
+    const result = await asOperation('git.push', repoPath, `Pushing ${targetBranch}`, (signal) =>
+      withRepoLock(repoPath, () =>
+        runSyncOperationWithProfile(repoPath, pushArgs, profileId, sshKeyPath, { signal })
+      )
     );
 
     res.json({ success: true, ...result });
@@ -87,8 +128,16 @@ syncRouter.post(
 
     await preflightAgent(repoPath, profileId);
 
-    const result = await withRepoLock(repoPath, () =>
-      runSyncOperationWithProfile(repoPath, ['pull', 'origin', targetBranch], profileId, sshKeyPath)
+    const result = await asOperation('git.pull', repoPath, `Pulling ${targetBranch}`, (signal) =>
+      withRepoLock(repoPath, () =>
+        runSyncOperationWithProfile(
+          repoPath,
+          ['pull', 'origin', targetBranch],
+          profileId,
+          sshKeyPath,
+          { signal }
+        )
+      )
     );
 
     res.json({ success: true, ...result });
@@ -104,11 +153,10 @@ syncRouter.post(
     await preflightAgent(repoPath, profileId);
 
     // --prune drops remote-tracking refs whose branches were deleted upstream.
-    const result = await runSyncOperationWithProfile(
-      repoPath,
-      ['fetch', '--prune', 'origin'],
-      profileId,
-      sshKeyPath
+    const result = await asOperation('git.fetch', repoPath, 'Fetching origin', (signal) =>
+      runSyncOperationWithProfile(repoPath, ['fetch', '--prune', 'origin'], profileId, sshKeyPath, {
+        signal
+      })
     );
 
     res.json({ success: true, ...result });

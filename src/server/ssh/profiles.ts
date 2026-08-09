@@ -75,7 +75,13 @@ export async function runSyncOperationWithProfile(
   repoPath: string,
   gitArgs: readonly string[],
   profileId: string | undefined,
-  sshKeyPath: string | undefined
+  sshKeyPath: string | undefined,
+  /**
+   * Ends the git process when it fires, which is what makes the Cancel button
+   * in the operations bar do something to a push that is already talking to a
+   * remote.
+   */
+  options: { signal?: AbortSignal } = {}
 ): Promise<SyncOutcome> {
   const config = readConfig();
   const requestedKeyPath = normalizeSshPath(sshKeyPath);
@@ -104,7 +110,9 @@ export async function runSyncOperationWithProfile(
     selectedProfile && isUnlocked() ? getStoredPassphrase(selectedProfile.id) : null;
 
   if (!storedPassphrase) {
-    const result = await runGitCommand(repoPath, gitArgs, effectiveKeyPath || null);
+    const result = await runGitCommand(repoPath, gitArgs, effectiveKeyPath || null, {
+      ...(options.signal ? { signal: options.signal } : {})
+    });
     return { ...result, usedAskpass: false, profileLabel, originRemoteUrl };
   }
 
@@ -116,7 +124,8 @@ export async function runSyncOperationWithProfile(
 
     const result = await runGitCommand(repoPath, gitArgs, null, {
       envOverrides: bridge.envOverrides,
-      customSshCommand
+      customSshCommand,
+      ...(options.signal ? { signal: options.signal } : {})
     });
 
     return { ...result, usedAskpass: true, profileLabel, originRemoteUrl };
