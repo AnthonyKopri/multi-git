@@ -3898,53 +3898,74 @@ body.pane-resizing-y * {
   }
 }
 
-/* ==========================================================================
+/* ===========================================================================
    COLLAPSING A SIDE PANEL, AND COLLAPSING A SECTION WITHIN ONE
    ========================================================================== */
 
 /*
- * A collapsed panel leaves a 24px strip behind rather than vanishing.
- *
- * Hiding it completely would give the commit graph the most room, but a panel
- * with nothing on screen to reopen it is a panel the user has to remember they
- * once had. The strip costs 24px and answers the question by being there, with
- * a chevron pointing back at the content it would bring in.
+ * Side-panel controls live at the boundary they affect. While expanded they
+ * are quiet, square buttons in the outer panel headers. When collapsed, the
+ * replacement control appears beside the centre tabs with an accent treatment
+ * and an "open panel" glyph, making its changed action clear at a glance.
  */
-.pane-reveal {
-  display: none;
-  flex: 0 0 24px;
-  align-self: stretch;
+.pane-toggle {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  background-color: var(--bg-panel);
-  border: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
   cursor: pointer;
-  z-index: 4;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.pane-reveal:hover {
-  background-color: var(--bg-card-hover);
+.pane-toggle-expanded {
+  background: transparent;
+}
+.pane-toggle-expanded:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-color-hover);
   color: var(--text-main);
 }
-.pane-reveal .material-symbols-outlined {
+.pane-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.pane-toggle .material-symbols-outlined {
   font-size: 18px;
 }
+
+.pane-toggle-reveal {
+  display: none;
+  align-self: center;
+  background: var(--color-primary-glow);
+  border-color: var(--color-primary);
+  color: #a5b4fc;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.12);
+}
+.pane-toggle-reveal:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
 .pane-reveal-left {
-  border-right: 1px solid var(--border-color);
+  margin-right: 2px;
 }
 .pane-reveal-right {
-  border-left: 1px solid var(--border-color);
+  margin-left: auto;
 }
 
-/* The panel, its drag handle and its header toggle all follow one class on the
-   body, so there is a single source of truth for whether a side is showing. */
+/* The panel, its drag handle and its centre-tab restore control all follow one
+   body class, so there is a single source of truth for each side's state. */
 body.sidebar-collapsed .sidebar,
 body.sidebar-collapsed .pane-resizer[data-pane='sidebar'] {
   display: none;
 }
-body.sidebar-collapsed .pane-reveal-left {
+body.sidebar-collapsed .pane-toggle-reveal.pane-reveal-left {
   display: flex;
 }
 
@@ -3952,8 +3973,14 @@ body.history-collapsed .sync-panel,
 body.history-collapsed .pane-resizer[data-pane='history'] {
   display: none;
 }
-body.history-collapsed .pane-reveal-right {
+body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   display: flex;
+}
+
+/* The history title consumes the flexible space between its edge control and
+   the existing Undo action. */
+.history-card .card-header > h3 {
+  flex: 1 1 auto;
 }
 
 /* --- Sections inside the sidebar ---------------------------------------- */

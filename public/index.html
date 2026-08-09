@@ -151,12 +151,6 @@
 
       <!-- Global Controls -->
       <div class="global-actions">
-        <button id="btn-toggle-sidebar" class="btn btn-icon" type="button" aria-expanded="true" aria-controls="main-content" title="Hide branches panel (Ctrl+B)" aria-label="Hide branches panel">
-          <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
-        </button>
-        <button id="btn-toggle-history" class="btn btn-icon" type="button" aria-expanded="true" aria-controls="main-content" title="Hide commit history (Ctrl+Shift+B)" aria-label="Hide commit history">
-          <span class="material-symbols-outlined" aria-hidden="true">right_panel_close</span>
-        </button>
         <button id="btn-remote-protocol" class="btn btn-chip hidden" type="button">
           <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
           <span id="remote-protocol-label">SSH</span>
@@ -189,19 +183,17 @@
 
     <!-- MAIN BODY -->
     <main id="main-content" class="main-body disabled-view">
-      
-      <!-- All that is left of the sidebar when it is collapsed, and the way back. -->
-      <button type="button" id="sidebar-reveal" class="pane-reveal pane-reveal-left" aria-expanded="false" aria-controls="main-content" title="Show branches panel (Ctrl+B)" aria-label="Show branches panel">
-        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
-      </button>
 
       <!-- SIDEBAR (BRANCHES & MERGING) -->
-      <aside class="sidebar">
+      <aside id="sidebar-panel" class="sidebar">
         <div class="sidebar-section" data-section="branches">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-branches">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
               <h3>Branches</h3>
+            </button>
+            <button id="btn-toggle-sidebar" class="pane-toggle pane-toggle-expanded" type="button" aria-expanded="true" aria-controls="sidebar-panel" title="Hide branches panel (Ctrl+B)" aria-label="Hide branches panel">
+              <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
             </button>
           </div>
 
@@ -421,6 +413,10 @@
         
         <!-- View Tabs -->
         <div class="view-tabs">
+          <!-- When the left panel is hidden, its control moves next to the first tab. -->
+          <button type="button" id="sidebar-reveal" class="pane-toggle pane-toggle-reveal pane-reveal-left" aria-expanded="false" aria-controls="sidebar-panel" title="Show branches panel (Ctrl+B)" aria-label="Show branches panel">
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_open</span>
+          </button>
           <button id="tab-staging" class="tab-btn active">
             <span class="material-symbols-outlined" style="font-size: 16px;">rule</span>
             <span>Staging Area</span>
@@ -432,6 +428,10 @@
           <button id="tab-explorer" class="tab-btn">
             <span class="material-symbols-outlined" style="font-size: 16px;">folder_zip</span>
             <span>Workspace Explorer</span>
+          </button>
+          <!-- The matching right-side restore control appears only when needed. -->
+          <button type="button" id="history-reveal" class="pane-toggle pane-toggle-reveal pane-reveal-right" aria-expanded="false" aria-controls="history-panel" title="Show commit history (Ctrl+Shift+B)" aria-label="Show commit history">
+            <span class="material-symbols-outlined" aria-hidden="true">right_panel_open</span>
           </button>
         </div>
         
@@ -657,7 +657,7 @@
       <div class="pane-resizer pane-resizer-col" data-pane="history" role="separator" aria-orientation="vertical" aria-label="Resize the history panel" title="Drag to resize · double-click to reset" tabindex="0"></div>
 
       <!-- COMMIT HISTORY PANEL (RIGHT COLUMN) -->
-      <section class="sync-panel">
+      <section id="history-panel" class="sync-panel">
 
         <!-- Commit History List -->
         <div class="history-card" style="position: relative; overflow: hidden;">
@@ -665,6 +665,9 @@
           <!-- History List Pane -->
           <div id="history-list-view" class="history-list-view" style="display: flex; flex-direction: column; height: 100%;">
             <div class="card-header">
+              <button id="btn-toggle-history" class="pane-toggle pane-toggle-expanded" type="button" aria-expanded="true" aria-controls="history-panel" title="Hide commit history (Ctrl+Shift+B)" aria-label="Hide commit history">
+                <span class="material-symbols-outlined" aria-hidden="true">right_panel_close</span>
+              </button>
               <h3>History</h3>
               <button id="btn-undo-commit" class="btn btn-text btn-sm" title="Undo the last commit (keeps its changes staged)">
                 <span class="material-symbols-outlined" style="font-size: 16px;">undo</span>
@@ -751,11 +754,6 @@
         </div>
 
       </section>
-
-      <!-- All that is left of the history panel when it is collapsed. -->
-      <button type="button" id="history-reveal" class="pane-reveal pane-reveal-right" aria-expanded="false" aria-controls="main-content" title="Show commit history (Ctrl+Shift+B)" aria-label="Show commit history">
-        <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
-      </button>
 
     </main>
 

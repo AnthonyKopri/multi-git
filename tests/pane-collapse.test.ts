@@ -3,10 +3,10 @@
 // Collapsing the two outer panels, against the real index.html.
 //
 // The behaviour worth pinning is not that a class gets toggled — it is that
-// after collapsing there is still something on screen that says how to get the
-// panel back, and that the state survives a reload. A panel that can be hidden
-// with no visible way to restore it is the failure mode this feature exists to
-// avoid, so the strip and its labels are asserted rather than assumed.
+// after collapsing there is still something beside the centre tabs that says
+// how to get the panel back, and that the state survives a reload. A panel that
+// can be hidden with no visible way to restore it is the failure mode this
+// feature exists to avoid, so the controls and their labels are asserted.
 import { beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 
@@ -31,16 +31,21 @@ beforeEach(() => {
 });
 
 describe('collapsing a side panel', () => {
-  it('starts with both panels showing and neither strip visible', async () => {
+  it('starts with both panels showing and neither restore control visible', async () => {
     await mount();
 
     expect(document.body.classList.contains('sidebar-collapsed')).toBe(false);
     expect(document.body.classList.contains('history-collapsed')).toBe(false);
     expect($('btn-toggle-sidebar').getAttribute('aria-expanded')).toBe('true');
     expect($('btn-toggle-history').getAttribute('aria-expanded')).toBe('true');
+
+    expect($('btn-toggle-sidebar').closest('.sidebar')?.id).toBe('sidebar-panel');
+    expect($('btn-toggle-history').closest('.sync-panel')?.id).toBe('history-panel');
+    expect($('sidebar-reveal').parentElement?.classList.contains('view-tabs')).toBe(true);
+    expect($('history-reveal').parentElement?.classList.contains('view-tabs')).toBe(true);
   });
 
-  it('collapses from the header button and leaves a strip that reopens it', async () => {
+  it('collapses from the panel header and leaves a tab-side control that reopens it', async () => {
     const panes = await mount();
 
     $('btn-toggle-sidebar').click();
@@ -48,11 +53,15 @@ describe('collapsing a side panel', () => {
     expect(panes.isSideCollapsed('sidebar')).toBe(true);
     expect(document.body.classList.contains('sidebar-collapsed')).toBe(true);
 
-    // The strip is the only affordance left, so it has to say what it does.
+    // The centre-tab button is the only affordance left, so it has to say what
+    // it does and look different from the expanded-state control.
     const reveal = $('sidebar-reveal');
     expect(reveal.getAttribute('aria-expanded')).toBe('false');
     expect(reveal.title).toContain('Show branches panel');
     expect(reveal.title).toContain('Ctrl+B');
+    expect(reveal.classList.contains('pane-toggle-reveal')).toBe(true);
+    expect(reveal.textContent).toContain('left_panel_open');
+    expect($('btn-toggle-sidebar').textContent).toContain('left_panel_close');
 
     reveal.click();
     expect(panes.isSideCollapsed('sidebar')).toBe(false);
