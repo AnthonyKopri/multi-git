@@ -217,21 +217,23 @@ async function togglePin(name: string): Promise<void> {
 
 async function pruneRemote(): Promise<void> {
   try {
-    const preview = await api.pruneRemote('origin', true);
-    if (preview.pruned.length === 0) {
+    // The same endpoints the Remotes tab uses. There used to be a second prune
+    // implementation behind this button, without a recovery point.
+    const { preview } = await api.previewRemotePrune('origin');
+    if (preview.staleRefs.length === 0) {
       showToast('Nothing to prune — every remote-tracking branch still exists.', 'info');
       return;
     }
 
     const { confirmed } = await confirmDialog(
-      `Remove ${preview.pruned.length} remote-tracking ${preview.pruned.length === 1 ? 'ref' : 'refs'} whose branches are gone from origin?\n\n${preview.pruned.join('\n')}\n\nLocal branches are not touched.`,
+      `Remove ${preview.staleRefs.length} remote-tracking ${preview.staleRefs.length === 1 ? 'ref' : 'refs'} whose branches are gone from origin?\n\n${preview.staleRefs.join('\n')}\n\nLocal branches are not touched.`,
       { title: 'Prune origin', confirmLabel: 'Prune' }
     );
     if (!confirmed) {
       return;
     }
 
-    const result = await api.pruneRemote('origin', false);
+    const result = await api.pruneRemote('origin');
     showToast(`Pruned ${result.pruned.length} remote-tracking refs.`, 'success');
     await refreshAll();
     await refreshBranchAdmin();

@@ -22,6 +22,20 @@ import type {
   PatchAction
 } from '../../shared/diff-types';
 import type { RecoveryResponse } from '../../shared/recovery-types';
+import type {
+  AddRemoteInput,
+  RemoteConnectivity,
+  RemoteInfo,
+  RemoteListResponse,
+  RemotePrunePreview,
+  UpdateRemoteInput
+} from '../../shared/remote-types';
+import type {
+  SubmoduleActionResponse,
+  SubmoduleInfo,
+  SubmoduleListResponse,
+  SubmoduleUpdateInput
+} from '../../shared/submodule-types';
 import type { Commit } from '../../shared/git-types';
 import type {
   PublishedBranchWarning,
@@ -442,9 +456,6 @@ export const pinBranch = (branch: string, pinned: boolean) =>
     body: { branch, pinned }
   });
 
-export const pruneRemote = (remote: string, dryRun = false) =>
-  api.post<Api.Ok & { pruned: string[] }>('/api/git/remote/prune', { body: { remote, dryRun } });
-
 // ---------- signing ----------
 
 export const getSigningStatus = () =>
@@ -730,3 +741,79 @@ export const saveAgent = (agent: Partial<ExternalAgentDefinition>) =>
 
 export const deleteAgent = (id: string) =>
   api.delete<Api.ConfigMutationResponse>('/api/agents', { ...global, body: { id } });
+
+// ---------- remotes ----------
+
+export const getRemotes = () => api.get<RemoteListResponse>('/api/remotes');
+
+export const addRemote = (input: AddRemoteInput) =>
+  api.post<{ success: true; remote: RemoteInfo; remotes: RemoteInfo[] }>('/api/remotes', {
+    body: input
+  });
+
+export const updateRemote = (input: UpdateRemoteInput) =>
+  api.post<{ success: true; remote: RemoteInfo; remotes: RemoteInfo[] }>('/api/remotes/update', {
+    body: input
+  });
+
+export const removeRemote = (name: string) =>
+  api.delete<{ success: true; removed: RemoteInfo; remotes: RemoteInfo[] }>('/api/remotes', {
+    body: { name }
+  });
+
+export const setDefaultPushRemote = (name: string | null) =>
+  api.post<{ success: true; remotes: RemoteInfo[] }>('/api/remotes/default-push', {
+    body: { name }
+  });
+
+export const previewRemotePrune = (name: string) =>
+  api.get<{ success: true; preview: RemotePrunePreview }>(
+    `/api/remotes/prune-preview?name=${encodeURIComponent(name)}`
+  );
+
+export const pruneRemote = (name: string) =>
+  api.post<{ success: true; pruned: string[] }>('/api/remotes/prune', { body: { name } });
+
+export const testRemote = (name: string) =>
+  api.post<{ success: true; result: RemoteConnectivity }>('/api/remotes/test', { body: { name } });
+
+export const fetchAllRemotes = (prune = false) =>
+  api.post<{ success: true; results: { remote: string; ok: boolean; message?: string }[]; cancelled: boolean }>(
+    '/api/remotes/fetch-all',
+    { body: { prune } }
+  );
+
+// ---------- submodules ----------
+
+export const getSubmodules = () => api.get<SubmoduleListResponse>('/api/submodules');
+
+export const initSubmodules = (paths?: string[]) =>
+  api.post<SubmoduleActionResponse & { submodules: SubmoduleInfo[] }>('/api/submodules/init', {
+    body: { paths }
+  });
+
+export const updateSubmodules = (input: SubmoduleUpdateInput) =>
+  api.post<SubmoduleActionResponse & { submodules: SubmoduleInfo[] }>('/api/submodules/update', {
+    body: input
+  });
+
+export const syncSubmodules = (paths?: string[], recursive = false) =>
+  api.post<SubmoduleActionResponse & { submodules: SubmoduleInfo[] }>('/api/submodules/sync', {
+    body: { paths, recursive }
+  });
+
+export const setSubmoduleBranch = (path: string, branch: string | null) =>
+  api.post<{ success: true; submodule: SubmoduleInfo; submodules: SubmoduleInfo[] }>(
+    '/api/submodules/set-branch',
+    { body: { path, branch } }
+  );
+
+export const deinitSubmodules = (paths: string[] | undefined, force: boolean) =>
+  api.post<SubmoduleActionResponse & { submodules: SubmoduleInfo[] }>('/api/submodules/deinit', {
+    body: { paths, force }
+  });
+
+export const getSubmoduleRepoPath = (path: string) =>
+  api.get<{ success: true; path: string }>(
+    `/api/submodules/repo-path?path=${encodeURIComponent(path)}`
+  );

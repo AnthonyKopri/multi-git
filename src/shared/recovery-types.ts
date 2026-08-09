@@ -20,7 +20,11 @@ export type RecoveryOperation =
   | 'stash-drop'
   | 'discard-all'
   | 'restore'
-  | 'worktree-remove';
+  | 'worktree-remove'
+  | 'remote-remove'
+  | 'remote-prune'
+  | 'submodule-deinit'
+  | 'patch-apply';
 
 export interface RecoveryPoint {
   id: string;
