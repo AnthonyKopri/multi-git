@@ -17,9 +17,22 @@
 // dropped and reported as an issue; everything valid around it survives,
 // because the alternative is a user losing every SSH profile to one bad
 // record.
-import type { AccountRule, AppConfig, AppSettings, RepoSettings, SshProfile } from '../../shared/config-types';
+import type {
+  AccountRule,
+  AgentLaunchRecord,
+  AppConfig,
+  AppSettings,
+  ExternalAgentDefinition,
+  RepoGroup,
+  RepoSettings,
+  SshProfile,
+  WindowState
+} from '../../shared/config-types';
 
 import { canonicalRepoKey } from './repo-identity';
+
+/** Launch history entries kept. Old enough to be useful, bounded enough to read. */
+export const MAX_AGENT_LAUNCHES = 50;
 
 export interface ConfigIssue {
   /** Dotted location, such as `sshProfiles[2].privateKeyPath`. */
@@ -221,7 +234,220 @@ function validateSettings(raw: unknown): Partial<AppSettings> | undefined {
     settings.recoveryRetentionDays = retention;
   }
 
+  if (typeof source['restoreWindowsOnStartup'] === 'boolean') {
+    settings.restoreWindowsOnStartup = source['restoreWindowsOnStartup'];
+  }
+
+  if (typeof source['storeAgentPrompts'] === 'boolean') {
+    settings.storeAgentPrompts = source['storeAgentPrompts'];
+  }
+
+  // Becomes the default folder a worktree is created in, so it must be a plain
+  // path: a newline or a null would be carried into a directory creation.
+  const parentDir = source['worktreeParentDir'];
+  if (isNonEmptyString(parentDir) && !/[\r\n\0]/.test(parentDir)) {
+    settings.worktreeParentDir = parentDir;
+  }
+
   return settings;
+}
+
+function validateRepoGroups(raw: unknown, issues: ConfigIssue[]): RepoGroup[] | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const groups: RepoGroup[] = [];
+  const seen = new Set<string>();
+
+  raw.forEach((entry, index) => {
+    const record = asRecord(entry);
+    const at = `repoGroups[${index}]`;
+
+    if (!isNonEmptyString(record['id']) || seen.has(record['id'])) {
+      issues.push({ path: at, message: 'dropped: missing or duplicate id' });
+      return;
+    }
+    seen.add(record['id']);
+
+    const group: RepoGroup = {
+      id: record['id'],
+      label: isNonEmptyString(record['label']) ? record['label'] : record['id'],
+      order: typeof record['order'] === 'number' && Number.isFinite(record['order']) ? record['order'] : groups.length,
+      // Re-keyed rather than trusted: a group written before a repository was
+      // opened from a different spelling would otherwise never match it.
+      repos: Array.isArray(record['repos'])
+        ? [...new Set(record['repos'].filter(isNonEmptyString).map(canonicalRepoKey))].filter(
+            (key) => key !== ''
+          )
+        : []
+    };
+
+    // Colour and icon are rendered into the DOM. Restricted to a shape that
+    // cannot carry a URL, a quote or a semicolon into an attribute.
+    if (isNonEmptyString(record['color']) && /^#[0-9a-fA-F]{6}$/.test(record['color'])) {
+      group.color = record['color'];
+    }
+    if (isNonEmptyString(record['icon']) && /^[a-z0-9_]{1,40}$/.test(record['icon'])) {
+      group.icon = record['icon'];
+    }
+
+    groups.push(group);
+  });
+
+  return groups.sort((left, right) => left.order - right.order);
+}
+
+/**
+ * Validates the definitions that decide what this application will spawn.
+ *
+ * The strictest validator in the file, and the reason is worth stating: every
+ * field here becomes an argument vector handed to a child process. An
+ * executable is a name or a path and never a command line, arguments stay
+ * separate strings, and a terminal mode outside the three known ones would
+ * reach a `switch` with no matching branch.
+ */
+function validateExternalAgents(
+  raw: unknown,
+  issues: ConfigIssue[]
+): ExternalAgentDefinition[] | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const agents: ExternalAgentDefinition[] = [];
+  const seen = new Set<string>();
+
+  raw.forEach((entry, index) => {
+    const record = asRecord(entry);
+    const at = `externalAgents[${index}]`;
+
+    if (!isNonEmptyString(record['id']) || seen.has(record['id'])) {
+      issues.push({ path: at, message: 'dropped: missing or duplicate id' });
+      return;
+    }
+    if (!isNonEmptyString(record['executable']) || record['executable'].includes('\0')) {
+      issues.push({ path: at, message: 'dropped: missing or unusable executable' });
+      return;
+    }
+
+    const terminal = record['terminal'];
+    if (terminal !== 'direct' && terminal !== 'windows-terminal' && terminal !== 'powershell') {
+      issues.push({ path: at, message: `dropped: unknown terminal mode ${String(terminal)}` });
+      return;
+    }
+
+    // One bad argument invalidates the vector: dropping it silently would run
+    // the tool with a different command than the user configured.
+    const rawArgs = Array.isArray(record['args']) ? record['args'] : [];
+    if (rawArgs.some((value) => typeof value !== 'string' || value.includes('\0'))) {
+      issues.push({ path: at, message: 'dropped: arguments must all be text without null bytes' });
+      return;
+    }
+
+    seen.add(record['id']);
+
+    const agent: ExternalAgentDefinition = {
+      id: record['id'],
+      label: isNonEmptyString(record['label']) ? record['label'] : record['id'],
+      executable: record['executable'],
+      args: rawArgs as string[],
+      terminal,
+      enabled: record['enabled'] !== false
+    };
+
+    if (record['promptMode'] === 'none' || record['promptMode'] === 'argument') {
+      agent.promptMode = record['promptMode'];
+    }
+
+    const env = sanitizeEnvOverrides(record['env']);
+    if (Object.keys(env).length > 0) {
+      agent.env = env as Record<string, string>;
+    }
+
+    agents.push(agent);
+  });
+
+  return agents;
+}
+
+function validateWindowState(raw: unknown): WindowState | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const source = asRecord(raw);
+  const windows = Array.isArray(source['windows']) ? source['windows'] : [];
+
+  return {
+    windows: windows.flatMap((entry) => {
+      const record = asRecord(entry);
+      if (!isNonEmptyString(record['repoPath'])) {
+        return [];
+      }
+
+      const window: WindowState['windows'][number] = { repoPath: record['repoPath'] };
+
+      const bounds = asRecord(record['bounds']);
+      const numbers = ['x', 'y', 'width', 'height'].map((key) => bounds[key]);
+      if (numbers.every((value) => typeof value === 'number' && Number.isFinite(value))) {
+        window.bounds = {
+          x: bounds['x'] as number,
+          y: bounds['y'] as number,
+          width: bounds['width'] as number,
+          height: bounds['height'] as number
+        };
+      }
+
+      if (record['maximized'] === true) {
+        window.maximized = true;
+      }
+
+      return [window];
+    })
+  };
+}
+
+function validateAgentLaunches(raw: unknown): AgentLaunchRecord[] | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .flatMap((entry) => {
+      const record = asRecord(entry);
+      if (!isNonEmptyString(record['at']) || !isNonEmptyString(record['worktreePath'])) {
+        return [];
+      }
+
+      const launch: AgentLaunchRecord = {
+        at: record['at'],
+        agentId: isNonEmptyString(record['agentId']) ? record['agentId'] : '',
+        agentLabel: isNonEmptyString(record['agentLabel']) ? record['agentLabel'] : '',
+        worktreePath: record['worktreePath'],
+        ok: record['ok'] === true,
+        commandPreview: isNonEmptyString(record['commandPreview']) ? record['commandPreview'] : ''
+      };
+
+      if (typeof record['pid'] === 'number' && Number.isInteger(record['pid'])) {
+        launch.pid = record['pid'];
+      }
+      if (isNonEmptyString(record['error'])) {
+        launch.error = record['error'];
+      }
+
+      return [launch];
+    })
+    .slice(0, MAX_AGENT_LAUNCHES);
 }
 
 /** Top-level keys this build knows about. Anything else is passed through. */
@@ -232,7 +458,11 @@ const KNOWN_KEYS = new Set([
   'accountRules',
   'repoSettings',
   'settings',
-  'sshConfigHosts'
+  'sshConfigHosts',
+  'repoGroups',
+  'externalAgents',
+  'windowState',
+  'agentLaunches'
 ]);
 
 /**
@@ -260,6 +490,10 @@ export function validateAppConfig(raw: unknown): ValidationResult {
   const sshProfiles = validateSshProfiles(source['sshProfiles'], issues);
   const sshConfigHosts = validateSshConfigHosts(source['sshConfigHosts'], issues);
   const settings = validateSettings(source['settings']);
+  const repoGroups = validateRepoGroups(source['repoGroups'], issues);
+  const externalAgents = validateExternalAgents(source['externalAgents'], issues);
+  const windowState = validateWindowState(source['windowState']);
+  const agentLaunches = validateAgentLaunches(source['agentLaunches']);
 
   const config: AppConfig = {
     ...passthrough,
@@ -272,7 +506,11 @@ export function validateAppConfig(raw: unknown): ValidationResult {
     accountRules: validateAccountRules(source['accountRules'], issues),
     repoSettings: validateRepoSettings(source['repoSettings'], issues),
     ...(settings ? { settings } : {}),
-    ...(sshConfigHosts ? { sshConfigHosts } : {})
+    ...(sshConfigHosts ? { sshConfigHosts } : {}),
+    ...(repoGroups ? { repoGroups } : {}),
+    ...(externalAgents ? { externalAgents } : {}),
+    ...(windowState ? { windowState } : {}),
+    ...(agentLaunches ? { agentLaunches } : {})
   };
 
   return { config, issues };

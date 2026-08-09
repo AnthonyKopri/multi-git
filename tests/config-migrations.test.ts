@@ -6,6 +6,7 @@ import path from 'node:path';
 import { CURRENT_CONFIG_VERSION, migrateConfig } from '../src/server/config/migrations';
 import { prepareConfig } from '../src/server/config/store';
 import {
+  MAX_AGENT_LAUNCHES,
   isValidSshConfigHost,
   sanitizeEnvOverrides,
   validateAppConfig
@@ -116,7 +117,62 @@ describe('migrating from version 0', () => {
   });
 });
 
+/**
+ * A configuration as version 1 wrote it: repository settings already keyed by
+ * canonical identity, and none of the Phase 3 sections.
+ */
+function version1Fixture(repoPath: string) {
+  return {
+    ...version0Fixture(repoPath),
+    configVersion: 1,
+    repoSettings: { [canonicalRepoKey(repoPath)]: { warnBeforeDelete: false } }
+  };
+}
+
 describe('migrating from version 1', () => {
+  it('adds the worktree, window, group and agent sections', () => {
+    const outcome = migrateConfig(version1Fixture(workspace));
+
+    expect(outcome.fromVersion).toBe(1);
+    expect(outcome.config['configVersion']).toBe(CURRENT_CONFIG_VERSION);
+    expect(outcome.config['repoGroups']).toEqual([]);
+    expect(outcome.config['externalAgents']).toEqual([]);
+    expect(outcome.config['agentLaunches']).toEqual([]);
+    expect(outcome.config['windowState']).toEqual({ windows: [] });
+  });
+
+  it('keeps every record version 1 held', () => {
+    const fixture = version1Fixture(workspace);
+    const { config } = prepareConfig(fixture);
+
+    expect(config.sshProfiles).toHaveLength(2);
+    expect(config.accountRules).toHaveLength(1);
+    expect(config.recentRepos).toEqual(fixture.recentRepos);
+    expect(config.repoSettings[canonicalRepoKey(workspace)]).toEqual({ warnBeforeDelete: false });
+  });
+
+  it('does not overwrite a section that is already there', () => {
+    // The downgrade-and-upgrade case: a newer build wrote these, this one must
+    // not empty them on the way back up.
+    const withSections = {
+      ...version1Fixture(workspace),
+      repoGroups: [{ id: 'g1', label: 'Work', order: 0, repos: [] }],
+      externalAgents: [
+        { id: 'a1', label: 'Claude', executable: 'claude', args: [], terminal: 'direct', enabled: true }
+      ]
+    };
+
+    const outcome = migrateConfig(withSections);
+
+    expect(outcome.config['repoGroups']).toHaveLength(1);
+    expect(outcome.config['externalAgents']).toHaveLength(1);
+  });
+
+  it('is idempotent', () => {
+    const once = migrateConfig(version1Fixture(workspace)).config;
+    expect(migrateConfig(once).config).toEqual(once);
+  });
+
   it('leaves an already-current file untouched and applies nothing', () => {
     const current = migrateConfig(version0Fixture(workspace)).config;
     const outcome = migrateConfig(current);
@@ -130,6 +186,175 @@ describe('migrating from version 1', () => {
     const current = migrateConfig(version0Fixture(workspace)).config;
 
     expect(prepareConfig(current).changed).toBe(false);
+  });
+});
+
+describe('validating the Phase 3 sections', () => {
+  function withAgents(agents: unknown[]) {
+    return validateAppConfig({ configVersion: 2, externalAgents: agents });
+  }
+
+  it('accepts a well-formed agent definition', () => {
+    const { config, issues } = withAgents([
+      {
+        id: 'a1',
+        label: 'Claude Code',
+        executable: 'claude',
+        args: ['--resume'],
+        terminal: 'direct',
+        enabled: true,
+        promptMode: 'argument'
+      }
+    ]);
+
+    expect(issues).toEqual([]);
+    expect(config.externalAgents).toHaveLength(1);
+  });
+
+  it('drops an agent with an unknown terminal mode', () => {
+    // It would reach a switch with no matching branch, so it is refused at the
+    // boundary rather than being run through a guessed default.
+    const { config, issues } = withAgents([
+      { id: 'a1', executable: 'claude', args: [], terminal: 'wsl', enabled: true }
+    ]);
+
+    expect(config.externalAgents).toEqual([]);
+    expect(issues[0]?.message).toMatch(/unknown terminal mode/i);
+  });
+
+  it('drops an agent whose arguments are not all text', () => {
+    // One bad argument invalidates the vector: silently dropping it would run
+    // a different command than the one that was configured.
+    const { config, issues } = withAgents([
+      { id: 'a1', executable: 'claude', args: ['ok', 42], terminal: 'direct', enabled: true }
+    ]);
+
+    expect(config.externalAgents).toEqual([]);
+    expect(issues[0]?.message).toMatch(/arguments/i);
+  });
+
+  it('drops an agent with no executable, and keeps the good ones around it', () => {
+    const { config } = withAgents([
+      { id: 'bad', args: [], terminal: 'direct', enabled: true },
+      { id: 'good', executable: 'codex', args: [], terminal: 'direct', enabled: true }
+    ]);
+
+    expect(config.externalAgents?.map((agent) => agent.id)).toEqual(['good']);
+  });
+
+  it('strips an agent environment override that would preload code', () => {
+    const { config } = withAgents([
+      {
+        id: 'a1',
+        executable: 'claude',
+        args: [],
+        terminal: 'direct',
+        enabled: true,
+        env: { LD_PRELOAD: '/tmp/evil.so', MY_FLAG: 'ok' }
+      }
+    ]);
+
+    expect(config.externalAgents?.[0]?.env).toEqual({ MY_FLAG: 'ok' });
+  });
+
+  it('re-keys group members to canonical identity', () => {
+    // A group written before a repository was reopened from a junction would
+    // otherwise never match it again.
+    const { config } = validateAppConfig({
+      configVersion: 2,
+      repoGroups: [{ id: 'g1', label: 'Work', order: 0, repos: [workspace, `${workspace}${path.sep}`] }]
+    });
+
+    expect(config.repoGroups?.[0]?.repos).toEqual([canonicalRepoKey(workspace)]);
+  });
+
+  it('refuses a group colour that is not a plain hex value', () => {
+    const { config } = validateAppConfig({
+      configVersion: 2,
+      repoGroups: [
+        { id: 'g1', label: 'Work', order: 0, repos: [], color: 'url(javascript:alert(1))' },
+        { id: 'g2', label: 'Home', order: 1, repos: [], color: '#ff8800' }
+      ]
+    });
+
+    expect(config.repoGroups?.[0]?.color).toBeUndefined();
+    expect(config.repoGroups?.[1]?.color).toBe('#ff8800');
+  });
+
+  it('drops a duplicate group id rather than keeping two', () => {
+    const { config, issues } = validateAppConfig({
+      configVersion: 2,
+      repoGroups: [
+        { id: 'g1', label: 'One', order: 0, repos: [] },
+        { id: 'g1', label: 'Two', order: 1, repos: [] }
+      ]
+    });
+
+    expect(config.repoGroups).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/duplicate/i);
+  });
+
+  it('keeps only window records that name a path', () => {
+    const { config } = validateAppConfig({
+      configVersion: 2,
+      windowState: {
+        windows: [
+          { repoPath: 'D:\\work\\app', bounds: { x: 1, y: 2, width: 3, height: 4 }, maximized: true },
+          { bounds: { x: 0, y: 0, width: 10, height: 10 } },
+          { repoPath: 'D:\\work\\other', bounds: { x: 'nope' } }
+        ]
+      }
+    });
+
+    expect(config.windowState?.windows).toHaveLength(2);
+    expect(config.windowState?.windows[0]).toEqual({
+      repoPath: 'D:\\work\\app',
+      bounds: { x: 1, y: 2, width: 3, height: 4 },
+      maximized: true
+    });
+    // Unusable bounds are dropped; the window itself still reopens.
+    expect(config.windowState?.windows[1]?.bounds).toBeUndefined();
+  });
+
+  it('caps the launch history so the file cannot grow without bound', () => {
+    const launches = Array.from({ length: 120 }, (_, index) => ({
+      at: new Date().toISOString(),
+      agentId: 'a1',
+      agentLabel: 'Claude',
+      worktreePath: `D:\\work\\wt-${index}`,
+      ok: true,
+      commandPreview: 'claude'
+    }));
+
+    const { config } = validateAppConfig({ configVersion: 2, agentLaunches: launches });
+
+    expect(config.agentLaunches).toHaveLength(MAX_AGENT_LAUNCHES);
+  });
+
+  it('accepts the new settings and ignores nonsense in them', () => {
+    const { config } = validateAppConfig({
+      configVersion: 2,
+      settings: {
+        manageSshConfig: true,
+        restoreWindowsOnStartup: false,
+        storeAgentPrompts: true,
+        worktreeParentDir: 'D:\\trees'
+      }
+    });
+
+    expect(config.settings).toMatchObject({
+      restoreWindowsOnStartup: false,
+      storeAgentPrompts: true,
+      worktreeParentDir: 'D:\\trees'
+    });
+
+    const { config: rejected } = validateAppConfig({
+      configVersion: 2,
+      settings: { worktreeParentDir: 'D:\\trees\nHost evil' }
+    });
+
+    // It becomes a folder that gets created, so a newline in it is refused.
+    expect(rejected.settings?.worktreeParentDir).toBeUndefined();
   });
 });
 

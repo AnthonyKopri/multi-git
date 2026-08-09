@@ -48,6 +48,87 @@ export interface AppSettings {
    * they are removed by hand. Absent means the built-in default.
    */
   recoveryRetentionDays?: number;
+  /**
+   * Whether the windows open at quit are reopened at the next launch.
+   * Defaults to true; with no recorded windows the app opens one, as before.
+   */
+  restoreWindowsOnStartup?: boolean;
+  /**
+   * Folder new worktrees are suggested in. Absent means a sibling of the
+   * repository named `<repo>.worktrees`.
+   */
+  worktreeParentDir?: string;
+  /**
+   * Whether the text of an initial agent prompt is kept in launch history.
+   * Defaults to false: a prompt is the most sensitive thing in a launch.
+   */
+  storeAgentPrompts?: boolean;
+}
+
+/** A user-defined set of repositories that are fetched and opened together. */
+export interface RepoGroup {
+  id: string;
+  label: string;
+  /** CSS colour for the group's dot. Validated against a small palette. */
+  color?: string;
+  /** Material symbol name shown beside the label. */
+  icon?: string;
+  /** Position in the sidebar, ascending. */
+  order: number;
+  /** Canonical repository identities. See src/server/config/repo-identity.ts. */
+  repos: string[];
+}
+
+/**
+ * An external tool Multi-Git can start in a worktree.
+ *
+ * Multi-Git launches it and records that the launch happened. It does not
+ * install hooks, read the tool's own session state, or report what it is doing:
+ * "launched" means the process started, and nothing more is claimed.
+ */
+export interface ExternalAgentDefinition {
+  id: string;
+  label: string;
+  /** Executable name or absolute path. Never a command line. */
+  executable: string;
+  /** Argument vector, kept as separate values all the way to spawn. */
+  args: string[];
+  terminal: 'direct' | 'windows-terminal' | 'powershell';
+  enabled: boolean;
+  /**
+   * How an initial prompt is handed over. `none` means the definition takes no
+   * prompt; `argument` appends it as one more argv element.
+   */
+  promptMode?: 'none' | 'argument';
+  /** Extra environment for the launched process, filtered before use. */
+  env?: Record<string, string>;
+}
+
+/** One window to reopen at the next launch. */
+export interface WindowRecord {
+  /** Path of the repository or worktree the window had open. */
+  repoPath: string;
+  bounds?: { x: number; y: number; width: number; height: number };
+  maximized?: boolean;
+}
+
+export interface WindowState {
+  windows: WindowRecord[];
+}
+
+/** One entry in the agent launch history. Prompt text is never included. */
+export interface AgentLaunchRecord {
+  /** ISO 8601. */
+  at: string;
+  agentId: string;
+  agentLabel: string;
+  worktreePath: string;
+  /** Whether the launch itself succeeded. Not whether the agent did anything. */
+  ok: boolean;
+  /** The command as it would read in the Terminal Log, already redacted. */
+  commandPreview: string;
+  pid?: number;
+  error?: string;
 }
 
 export interface AppConfig {
@@ -67,6 +148,11 @@ export interface AppConfig {
   settings?: Partial<AppSettings>;
   /** Host to key path, the source of truth the ~/.ssh/config block is rendered from. */
   sshConfigHosts?: Record<string, string>;
+  repoGroups?: RepoGroup[];
+  externalAgents?: ExternalAgentDefinition[];
+  windowState?: WindowState;
+  /** Newest first, capped. See MAX_AGENT_LAUNCHES. */
+  agentLaunches?: AgentLaunchRecord[];
   /**
    * Sections written by a newer build than this one. Preserved untouched so a
    * downgrade does not discard them.
@@ -87,4 +173,7 @@ export interface ClientConfig {
   repoSettings: Record<string, RepoSettings>;
   vaultStatus: VaultStatus;
   settings: AppSettings;
+  repoGroups: RepoGroup[];
+  externalAgents: ExternalAgentDefinition[];
+  agentLaunches: AgentLaunchRecord[];
 }

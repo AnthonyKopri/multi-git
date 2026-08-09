@@ -20,7 +20,7 @@
 import { canonicalRepoKey } from './repo-identity';
 
 /** Bump this, and add a migration, whenever the persisted shape changes. */
-export const CURRENT_CONFIG_VERSION = 1;
+export const CURRENT_CONFIG_VERSION = 2;
 
 /** A configuration document mid-migration, before it is validated. */
 type RawConfig = Record<string, unknown>;
@@ -60,6 +60,34 @@ export const MIGRATIONS: readonly ConfigMigration[] = [
       }
 
       return { ...config, repoSettings: rekeyed };
+    }
+  },
+  {
+    to: 2,
+    describe: 'add the worktree, window, group and external-agent sections',
+    migrate(config) {
+      // Purely additive. A section that is already present — because a newer
+      // build wrote it and the user downgraded, or because this ran once
+      // before — is left exactly as it was, which is what makes running the
+      // chain twice a no-op.
+      const seeded = { ...config };
+
+      if (!Array.isArray(seeded['repoGroups'])) {
+        seeded['repoGroups'] = [];
+      }
+      if (!Array.isArray(seeded['externalAgents'])) {
+        seeded['externalAgents'] = [];
+      }
+      if (!Array.isArray(seeded['agentLaunches'])) {
+        seeded['agentLaunches'] = [];
+      }
+
+      const windowState = asRecord(seeded['windowState']);
+      if (!Array.isArray(windowState['windows'])) {
+        seeded['windowState'] = { ...windowState, windows: [] };
+      }
+
+      return seeded;
     }
   }
 ];
