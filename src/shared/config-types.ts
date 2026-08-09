@@ -104,6 +104,80 @@ export interface ExternalAgentDefinition {
   env?: Record<string, string>;
 }
 
+/**
+ * What an external tool is for.
+ *
+ * Not decoration: the kind decides which placeholders a definition's arguments
+ * may use, and a merge tool's `{base}` is meaningless to a file manager.
+ */
+export type ExternalToolKind = 'diff' | 'merge' | 'editor' | 'terminal' | 'file-manager';
+
+export const EXTERNAL_TOOL_KINDS: readonly ExternalToolKind[] = [
+  'diff',
+  'merge',
+  'editor',
+  'terminal',
+  'file-manager'
+];
+
+/**
+ * A program Multi-Git will hand files or a folder to.
+ *
+ * Same discipline as {@link ExternalAgentDefinition}: an executable is a name
+ * or a path and never a command line, and arguments stay separate strings all
+ * the way to spawn. Placeholders are substituted per element, so a path with
+ * spaces stays one argument.
+ */
+export interface ExternalToolDefinition {
+  id: string;
+  kind: ExternalToolKind;
+  label: string;
+  /** Executable name or absolute path. Never a command line. */
+  executable: string;
+  /**
+   * Argument template. Each element may contain placeholders — `{local}`,
+   * `{remote}`, `{base}`, `{merged}`, `{path}`, `{line}`, `{cwd}` — which are
+   * replaced within the element rather than split on.
+   */
+  args: string[];
+  enabled: boolean;
+  /** True when this definition came from detection rather than the user. */
+  detected?: boolean;
+}
+
+/**
+ * A command a bisect run may execute to decide good or bad for each step.
+ *
+ * Stored rather than accepted per request: the HTTP surface takes an id, so
+ * nothing reachable over the loopback port can name a program to run.
+ */
+export interface BisectCommandDefinition {
+  id: string;
+  label: string;
+  executable: string;
+  args: string[];
+  /**
+   * Exit code meaning "skip this commit", which git itself defines as 125.
+   * Configurable because not every test runner can avoid using it.
+   */
+  skipExitCode?: number;
+}
+
+/** Whether the opt-in Windows Explorer entries are currently installed. */
+export interface ShellIntegrationState {
+  contextMenuInstalled: boolean;
+}
+
+export interface LfsSettings {
+  /**
+   * Whether previewing a file may download its LFS object.
+   *
+   * Defaults to false. An LFS object is large by definition, and opening a
+   * folder is not consent to pull a gigabyte over someone's connection.
+   */
+  autoDownloadPreviews?: boolean;
+}
+
 /** One window to reopen at the next launch. */
 export interface WindowRecord {
   /** Path of the repository or worktree the window had open. */
@@ -153,6 +227,19 @@ export interface AppConfig {
   windowState?: WindowState;
   /** Newest first, capped. See MAX_AGENT_LAUNCHES. */
   agentLaunches?: AgentLaunchRecord[];
+  externalTools?: ExternalToolDefinition[];
+  /**
+   * Tool kinds whose definition the user has confirmed.
+   *
+   * Detection fills in definitions from what is on the machine, which is a
+   * guess about both the program and its argument template. The first time a
+   * kind is actually used the guess is shown and confirmed; this records that
+   * it was, so it is asked once rather than every time.
+   */
+  toolsConfirmed?: Partial<Record<ExternalToolKind, boolean>>;
+  bisectCommands?: BisectCommandDefinition[];
+  shellIntegration?: ShellIntegrationState;
+  lfs?: LfsSettings;
   /**
    * Sections written by a newer build than this one. Preserved untouched so a
    * downgrade does not discard them.
@@ -176,4 +263,9 @@ export interface ClientConfig {
   repoGroups: RepoGroup[];
   externalAgents: ExternalAgentDefinition[];
   agentLaunches: AgentLaunchRecord[];
+  externalTools: ExternalToolDefinition[];
+  toolsConfirmed: Partial<Record<ExternalToolKind, boolean>>;
+  bisectCommands: BisectCommandDefinition[];
+  shellIntegration: ShellIntegrationState;
+  lfs: LfsSettings;
 }

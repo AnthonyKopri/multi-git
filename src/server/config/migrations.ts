@@ -20,7 +20,7 @@
 import { canonicalRepoKey } from './repo-identity';
 
 /** Bump this, and add a migration, whenever the persisted shape changes. */
-export const CURRENT_CONFIG_VERSION = 2;
+export const CURRENT_CONFIG_VERSION = 3;
 
 /** A configuration document mid-migration, before it is validated. */
 type RawConfig = Record<string, unknown>;
@@ -85,6 +85,42 @@ export const MIGRATIONS: readonly ConfigMigration[] = [
       const windowState = asRecord(seeded['windowState']);
       if (!Array.isArray(windowState['windows'])) {
         seeded['windowState'] = { ...windowState, windows: [] };
+      }
+
+      return seeded;
+    }
+  },
+  {
+    to: 3,
+    describe: 'add the external tool, bisect command, shell integration and LFS sections',
+    migrate(config) {
+      // Additive in the same way v2 was. Note what is *not* seeded here:
+      // `shellIntegration.contextMenuInstalled` starts false, and that is a
+      // claim about the user's registry. Seeding it true — or reading the
+      // registry from a migration — would let an upgrade decide it had already
+      // installed something it never installed.
+      const seeded = { ...config };
+
+      for (const section of ['externalTools', 'bisectCommands']) {
+        if (!Array.isArray(seeded[section])) {
+          seeded[section] = [];
+        }
+      }
+
+      // Detection has not run yet, so no kind is confirmed. An empty object
+      // rather than every kind set false: absent and false mean the same thing
+      // to the reader, and an empty object survives a new kind being added.
+      if (typeof seeded['toolsConfirmed'] !== 'object' || seeded['toolsConfirmed'] === null) {
+        seeded['toolsConfirmed'] = {};
+      }
+
+      const shell = asRecord(seeded['shellIntegration']);
+      if (typeof shell['contextMenuInstalled'] !== 'boolean') {
+        seeded['shellIntegration'] = { ...shell, contextMenuInstalled: false };
+      }
+
+      if (typeof seeded['lfs'] !== 'object' || seeded['lfs'] === null) {
+        seeded['lfs'] = {};
       }
 
       return seeded;

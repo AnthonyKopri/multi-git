@@ -22,12 +22,18 @@ import type {
   AgentLaunchRecord,
   AppConfig,
   AppSettings,
+  BisectCommandDefinition,
   ExternalAgentDefinition,
+  ExternalToolDefinition,
+  ExternalToolKind,
+  LfsSettings,
   RepoGroup,
   RepoSettings,
+  ShellIntegrationState,
   SshProfile,
   WindowState
 } from '../../shared/config-types';
+import { EXTERNAL_TOOL_KINDS } from '../../shared/config-types';
 
 import { canonicalRepoKey } from './repo-identity';
 
@@ -377,6 +383,205 @@ function validateExternalAgents(
   return agents;
 }
 
+/**
+ * Placeholders an argument template may contain.
+ *
+ * A closed set on purpose. An unrecognised `{...}` is not passed through as
+ * literal text: it means the definition was written against a grammar this
+ * build does not have, and running it would hand the tool a brace-wrapped word
+ * where a file path belonged.
+ */
+const TOOL_PLACEHOLDERS = new Set(['local', 'remote', 'base', 'merged', 'path', 'line', 'cwd']);
+
+const PLACEHOLDER_PATTERN = /\{([^}]*)\}/g;
+
+/** The placeholders in one template element that this build does not know. */
+export function unknownPlaceholders(value: string): string[] {
+  const unknown: string[] = [];
+
+  for (const match of value.matchAll(PLACEHOLDER_PATTERN)) {
+    const name = match[1] ?? '';
+    if (!TOOL_PLACEHOLDERS.has(name)) {
+      unknown.push(name);
+    }
+  }
+
+  return unknown;
+}
+
+function isToolKind(value: unknown): value is ExternalToolKind {
+  return EXTERNAL_TOOL_KINDS.includes(value as ExternalToolKind);
+}
+
+/**
+ * Validates the diff, merge, editor, terminal and file-manager definitions.
+ *
+ * Held to the same standard as {@link validateExternalAgents}, for the same
+ * reason: every field becomes an argument vector handed to a child process.
+ * The one addition is the placeholder grammar, checked here rather than at
+ * launch so a definition that could never expand correctly is rejected while
+ * the user is looking at the form.
+ */
+function validateExternalTools(
+  raw: unknown,
+  issues: ConfigIssue[]
+): ExternalToolDefinition[] | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const tools: ExternalToolDefinition[] = [];
+  const seen = new Set<string>();
+
+  raw.forEach((entry, index) => {
+    const record = asRecord(entry);
+    const at = `externalTools[${index}]`;
+
+    if (!isNonEmptyString(record['id']) || seen.has(record['id'])) {
+      issues.push({ path: at, message: 'dropped: missing or duplicate id' });
+      return;
+    }
+    if (!isToolKind(record['kind'])) {
+      issues.push({ path: at, message: `dropped: unknown tool kind ${String(record['kind'])}` });
+      return;
+    }
+    if (!isNonEmptyString(record['executable']) || record['executable'].includes('\0')) {
+      issues.push({ path: at, message: 'dropped: missing or unusable executable' });
+      return;
+    }
+
+    const rawArgs = Array.isArray(record['args']) ? record['args'] : [];
+    if (rawArgs.some((value) => typeof value !== 'string' || value.includes('\0'))) {
+      issues.push({ path: at, message: 'dropped: arguments must all be text without null bytes' });
+      return;
+    }
+
+    // One unusable element invalidates the whole vector. Keeping the rest would
+    // run the tool with a different command than the definition describes.
+    const unknown = (rawArgs as string[]).flatMap(unknownPlaceholders);
+    if (unknown.length > 0) {
+      issues.push({
+        path: at,
+        message: `dropped: unknown placeholder ${unknown.map((name) => `{${name}}`).join(', ')}`
+      });
+      return;
+    }
+
+    seen.add(record['id']);
+
+    tools.push({
+      id: record['id'],
+      kind: record['kind'],
+      label: isNonEmptyString(record['label']) ? record['label'] : record['id'],
+      executable: record['executable'],
+      args: rawArgs as string[],
+      enabled: record['enabled'] !== false,
+      ...(record['detected'] === true ? { detected: true } : {})
+    });
+  });
+
+  return tools;
+}
+
+/**
+ * Validates the commands a bisect run may execute.
+ *
+ * No placeholder grammar: a bisect command is run in the repository as-is, and
+ * git decides which commit is checked out before it runs. There is nothing to
+ * substitute, so accepting a substitution would only be a way to get a value
+ * into an argv.
+ */
+function validateBisectCommands(
+  raw: unknown,
+  issues: ConfigIssue[]
+): BisectCommandDefinition[] | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const commands: BisectCommandDefinition[] = [];
+  const seen = new Set<string>();
+
+  raw.forEach((entry, index) => {
+    const record = asRecord(entry);
+    const at = `bisectCommands[${index}]`;
+
+    if (!isNonEmptyString(record['id']) || seen.has(record['id'])) {
+      issues.push({ path: at, message: 'dropped: missing or duplicate id' });
+      return;
+    }
+    if (!isNonEmptyString(record['executable']) || record['executable'].includes('\0')) {
+      issues.push({ path: at, message: 'dropped: missing or unusable executable' });
+      return;
+    }
+
+    const rawArgs = Array.isArray(record['args']) ? record['args'] : [];
+    if (rawArgs.some((value) => typeof value !== 'string' || value.includes('\0'))) {
+      issues.push({ path: at, message: 'dropped: arguments must all be text without null bytes' });
+      return;
+    }
+
+    seen.add(record['id']);
+
+    const skip = record['skipExitCode'];
+    commands.push({
+      id: record['id'],
+      label: isNonEmptyString(record['label']) ? record['label'] : record['id'],
+      executable: record['executable'],
+      args: rawArgs as string[],
+      ...(typeof skip === 'number' && Number.isInteger(skip) && skip >= 0 && skip <= 255
+        ? { skipExitCode: skip }
+        : {})
+    });
+  });
+
+  return commands;
+}
+
+function validateToolsConfirmed(raw: unknown): Partial<Record<ExternalToolKind, boolean>> | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const source = asRecord(raw);
+  const confirmed: Partial<Record<ExternalToolKind, boolean>> = {};
+
+  for (const kind of EXTERNAL_TOOL_KINDS) {
+    // Only an explicit true counts. Anything else means "ask", which is the
+    // safe direction for a record of what the user has already agreed to.
+    if (source[kind] === true) {
+      confirmed[kind] = true;
+    }
+  }
+
+  return confirmed;
+}
+
+function validateShellIntegration(raw: unknown): ShellIntegrationState | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  // Only an explicit true. A corrupt value must not convince the app that
+  // registry entries exist — the uninstall path would then report success
+  // having deleted nothing.
+  return { contextMenuInstalled: asRecord(raw)['contextMenuInstalled'] === true };
+}
+
+function validateLfsSettings(raw: unknown): LfsSettings | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  return { autoDownloadPreviews: asRecord(raw)['autoDownloadPreviews'] === true };
+}
+
 function validateWindowState(raw: unknown): WindowState | undefined {
   if (raw === undefined) {
     return undefined;
@@ -462,7 +667,12 @@ const KNOWN_KEYS = new Set([
   'repoGroups',
   'externalAgents',
   'windowState',
-  'agentLaunches'
+  'agentLaunches',
+  'externalTools',
+  'toolsConfirmed',
+  'bisectCommands',
+  'shellIntegration',
+  'lfs'
 ]);
 
 /**
@@ -494,6 +704,11 @@ export function validateAppConfig(raw: unknown): ValidationResult {
   const externalAgents = validateExternalAgents(source['externalAgents'], issues);
   const windowState = validateWindowState(source['windowState']);
   const agentLaunches = validateAgentLaunches(source['agentLaunches']);
+  const externalTools = validateExternalTools(source['externalTools'], issues);
+  const toolsConfirmed = validateToolsConfirmed(source['toolsConfirmed']);
+  const bisectCommands = validateBisectCommands(source['bisectCommands'], issues);
+  const shellIntegration = validateShellIntegration(source['shellIntegration']);
+  const lfs = validateLfsSettings(source['lfs']);
 
   const config: AppConfig = {
     ...passthrough,
@@ -510,7 +725,12 @@ export function validateAppConfig(raw: unknown): ValidationResult {
     ...(repoGroups ? { repoGroups } : {}),
     ...(externalAgents ? { externalAgents } : {}),
     ...(windowState ? { windowState } : {}),
-    ...(agentLaunches ? { agentLaunches } : {})
+    ...(agentLaunches ? { agentLaunches } : {}),
+    ...(externalTools ? { externalTools } : {}),
+    ...(toolsConfirmed ? { toolsConfirmed } : {}),
+    ...(bisectCommands ? { bisectCommands } : {}),
+    ...(shellIntegration ? { shellIntegration } : {}),
+    ...(lfs ? { lfs } : {})
   };
 
   return { config, issues };

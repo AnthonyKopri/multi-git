@@ -43,6 +43,7 @@ import * as workspace from './features/workspace';
 import * as worktrees from './features/worktrees';
 import * as groups from './features/groups';
 import * as agents from './features/agents';
+import * as repoHub from './features/repo-hub';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -136,6 +137,7 @@ function closeTopmostLayer(): void {
     ui.groupEditorModal,
     ui.agentsModal,
     ui.worktreeModal,
+    ui.repoHubModal,
     ui.vaultSetupModal,
     ui.newRepoModal,
     ui.cloneModal,
@@ -808,6 +810,13 @@ function buildCommands(): palette.Command[] {
     { id: 'agent-launch', group: 'Worktrees', title: 'Launch a coding agent here', keywords: 'claude codex tool', run: () => void agents.launchAgentForActiveRepo() },
     { id: 'agent-settings', group: 'Worktrees', title: 'Coding agent settings', keywords: 'claude codex configure', run: () => agents.openAgentManager() },
     { id: 'group-new', group: 'Repository', title: 'Create a repository group', keywords: 'group fetch all', run: () => void groups.createGroup() },
+    { id: 'remotes', group: 'Repository', title: 'Manage remotes', keywords: 'origin url fetch push refspec prune', run: () => repoHub.openRepoHub('remotes') },
+    { id: 'submodules', group: 'Repository', title: 'Manage submodules', keywords: 'gitmodules init update sync', run: () => repoHub.openRepoHub('submodules') },
+    { id: 'lfs', group: 'Repository', title: 'Git LFS', keywords: 'large file storage pointer lock track', run: () => repoHub.openRepoHub('lfs') },
+    { id: 'patches', group: 'Repository', title: 'Create or apply a patch', keywords: 'diff format-patch am apply mailbox', run: () => repoHub.openRepoHub('patches') },
+    { id: 'bisect', group: 'History', title: 'Bisect', keywords: 'good bad regression find', run: () => repoHub.openRepoHub('bisect') },
+    { id: 'notes', group: 'History', title: 'Git notes', keywords: 'annotate note ref', run: () => repoHub.openRepoHub('notes') },
+    { id: 'external-tools', group: 'Repository', title: 'External tool settings', keywords: 'diff merge editor terminal explorer', run: () => repoHub.openRepoHub('tools') },
     { id: 'toggle-sidebar', group: 'View', title: 'Show or hide the branches panel', keywords: 'collapse expand sidebar left panel', run: () => toggleSide('sidebar') },
     { id: 'toggle-history', group: 'View', title: 'Show or hide the commit history', keywords: 'collapse expand right panel', run: () => toggleSide('history') },
     { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() }
@@ -886,6 +895,7 @@ async function start(): Promise<void> {
   worktrees.initWorktrees(ui, refreshAll);
   groups.initGroups(ui);
   agents.initAgents(ui);
+  repoHub.initRepoHub(ui);
 
   wireHeader();
   wireWorkspaceTabs();
