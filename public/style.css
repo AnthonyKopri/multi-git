@@ -201,6 +201,20 @@ a:hover {
   border-color: var(--text-muted);
   background: var(--bg-card-hover);
 }
+/*
+ * `.btn-sm` on an icon button did nothing until now: it only sets padding and
+ * font-size, and `.btn-icon` fixes both dimensions, so every "small" icon
+ * button in the app was drawn at the full 38px. That is why a worktree row's
+ * five actions took 190px of a 240px sidebar and left no room for the name.
+ *
+ * The glyphs inside these are already set to 14–16px at each call site, so
+ * they sit comfortably in 28px.
+ */
+.btn-icon.btn-sm {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
 
 .btn-text {
   background: transparent;
@@ -380,6 +394,9 @@ select {
   border-bottom: 1px solid var(--border-color);
   z-index: 10;
   box-shadow: var(--shadow-sm);
+  /* A query container; see PANEL-WIDTH RESPONSIVENESS at the end of this file. */
+  container-type: inline-size;
+  container-name: topbar;
 }
 
 .brand {
@@ -581,6 +598,9 @@ body.pane-resizing-y * {
   flex-direction: column;
   padding: 20px;
   overflow-y: auto;
+  /* A query container; see PANEL-WIDTH RESPONSIVENESS at the end of this file. */
+  container-type: inline-size;
+  container-name: sidepanel;
 }
 .sidebar-section {
   display: flex;
@@ -1417,6 +1437,19 @@ body.pane-resizing-y * {
   padding: 12px 20px 16px;
   overflow: hidden;
 }
+
+/*
+ * The query container for the commit box is the staging view, not the commit
+ * panel itself: an element is excluded from its own container queries, and the
+ * stacked layout has to change the panel's own min-height. The view is the same
+ * width as the panel, so the measurement is the same one either way.
+ *
+ * See PANEL-WIDTH RESPONSIVENESS at the end of this file.
+ */
+#staging-view {
+  container-type: inline-size;
+  container-name: commitbox;
+}
 .commit-input-wrapper {
   display: flex;
   gap: 12px;
@@ -1453,6 +1486,9 @@ body.pane-resizing-y * {
   gap: 20px;
   padding: 20px;
   overflow-y: auto;
+  /* A query container; see PANEL-WIDTH RESPONSIVENESS at the end of this file. */
+  container-type: inline-size;
+  container-name: historypanel;
 }
 
 .history-card {
@@ -1558,8 +1594,21 @@ body.pane-resizing-y * {
 .commit-meta {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
   color: var(--text-dim);
   font-size: 0.75rem;
+}
+/* Author and date used to run into each other in a narrow panel because
+   neither could shrink. Both ellipsis now, the author first. */
+.commit-meta > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.commit-meta > span:last-child {
+  flex-shrink: 0;
 }
 .commit-author {
   font-weight: 500;
@@ -1817,6 +1866,11 @@ body.pane-resizing-y * {
 .modal-body {
   overflow-y: auto;
   padding-right: 4px;
+  /* A query container; see PANEL-WIDTH RESPONSIVENESS at the end of this file.
+     The manager modals reuse the sidebar's row classes, so they need the same
+     reflow — keyed off the dialog's width rather than the sidebar's. */
+  container-type: inline-size;
+  container-name: modalbody;
 }
 
 .modal-header {
@@ -2545,8 +2599,13 @@ body.pane-resizing-y * {
   margin: 0 24px;
 }
 
+/* Each segment takes an equal share of what the header can spare and is allowed
+   to shrink below its content. Without `flex: 1 1 0` the wrapper sizes to the
+   repository name, which is how a long one used to push the whole row out of
+   the navbar instead of ellipsing. */
 .segment-wrapper {
   position: relative;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
 }
@@ -2557,7 +2616,9 @@ body.pane-resizing-y * {
   gap: 10px;
   padding: 5px 12px;
   min-width: 0;
-  max-width: 320px;
+  /* Fills its wrapper rather than capping itself. The old 320px cap combined
+     with a wrapper that could not shrink is what let the text escape the box. */
+  width: 100%;
   background-color: transparent;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -2611,13 +2672,16 @@ body.pane-resizing-y * {
   letter-spacing: 0.08em;
   color: var(--text-dim);
 }
+/* Ellipsis, not a fixed cap. A hard max-width truncated names that would have
+   fitted on a wide window and did nothing at all on a narrow one — the width
+   that matters is whatever the flex row leaves, which `min-width: 0` exposes. */
 .segment-value {
   font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  min-width: 0;
 }
 .segment-sub {
   font-size: 0.6875rem;
@@ -2625,13 +2689,21 @@ body.pane-resizing-y * {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  min-width: 0;
 }
 .segment-value-row {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
+}
+/* The badges are the one thing in the row that must never be the part that
+   shrinks: an ahead/behind count is unreadable truncated. */
+.segment-value-row .count-badge {
+  flex-shrink: 0;
+}
+.segment-value-row .segment-value {
+  flex: 0 1 auto;
 }
 .segment-caret {
   font-size: 18px;
@@ -3525,12 +3597,16 @@ body.pane-resizing-y * {
   background-color: var(--color-accent-bg, rgba(88, 166, 255, 0.08));
 }
 
+/* The name claims space before the button strip does. Without `flex: 1 1 auto`
+   the actions kept their full width and the name was squeezed to nothing, so a
+   narrow sidebar showed five icons and no indication of what they acted on. */
 .worktree-main,
 .agent-main {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .worktree-name,
@@ -3655,4 +3731,307 @@ body.pane-resizing-y * {
   gap: 8px;
   cursor: pointer;
   min-width: 0;
+}
+
+/* ==========================================================================
+   PANEL-WIDTH RESPONSIVENESS
+
+   Every panel in this app is resizable independently of the window, so a
+   sidebar can be 190px wide on a maximised display. That makes `@media` the
+   wrong measurement: it asks about the viewport, which says nothing about the
+   width the panel was dragged to. These rules ask the panel instead.
+
+   The container declarations themselves live with their components above and
+   point back here. The two `@media (max-width: 720px)` blocks earlier in the
+   file are correct as they are — they govern layout inside modals, which is
+   genuinely viewport-sized.
+   ========================================================================== */
+
+/* --- The top bar sheds text before it overflows -------------------------- */
+
+/* The wordmark is the first thing to go: the logo mark still identifies the
+   app, and nothing in the header is more expendable than its own name. */
+@container topbar (max-width: 900px) {
+  .brand h1 {
+    display: none;
+  }
+}
+
+/* Then the protocol pill's label. The icon plus its tooltip still says which
+   protocol the origin uses, and the pill is a shortcut, not a primary control. */
+@container topbar (max-width: 820px) {
+  #remote-protocol-label {
+    display: none;
+  }
+  .btn-chip {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+/* Then the captions above each value. "REPOSITORY", "BRANCH" and "SSH KEY"
+   duplicate what the folder, branch and key icons already say. */
+@container topbar (max-width: 760px) {
+  .segment-label {
+    display: none;
+  }
+  .segment-sub {
+    display: none;
+  }
+}
+
+/* Last, the values themselves. Icon, badges and caret always survive, so every
+   control stays clickable at any width; the value moves to the button's title,
+   which the renderer keeps in sync whenever it sets the text. */
+@container topbar (max-width: 620px) {
+  .segment-text {
+    display: none;
+  }
+  .header-segment {
+    justify-content: center;
+    gap: 4px;
+  }
+}
+
+/* --- Sidebar rows stack their actions under the name --------------------- */
+
+/* Five icon buttons at a fixed width leave nothing for the name below roughly
+   265px, which is above the sidebar's 190px minimum — so this is reachable by
+   dragging, not just by shrinking the window. */
+@container sidepanel (max-width: 265px) {
+  .worktree-item,
+  .agent-item,
+  .agent-launch,
+  .group-item,
+  .worktree-prune-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .worktree-actions,
+  .agent-actions,
+  .group-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* The manager dialogs reuse those same row classes, so they need the same
+   treatment keyed off the dialog rather than the sidebar. */
+@container modalbody (max-width: 420px) {
+  .worktree-item,
+  .agent-item,
+  .agent-launch,
+  .group-item,
+  .worktree-prune-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .worktree-actions,
+  .agent-actions,
+  .group-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* --- The commit box stacks its buttons under the message ----------------- */
+
+/* Side by side, the message box is the thing that gives way, and below about
+   460px it is too narrow to read a subject line in. Stacked, the buttons are a
+   row across the bottom and the textarea keeps the full width.
+
+   The container is the staging view, which is 40px wider than the commit
+   panel's content box because of the panel's own side padding — hence 500
+   rather than the 460 the threshold is really about. */
+@container commitbox (max-width: 500px) {
+  .commit-input-wrapper {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .commit-input-wrapper .commit-buttons {
+    align-self: stretch;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .commit-input-wrapper .commit-buttons > button {
+    height: 36px;
+    padding: 0 16px;
+  }
+
+  /* `.commit-panel` sets an explicit height from the drag handle and clips its
+     overflow. min-height wins over height, which is what stops the stacked
+     layout being cut off when the panel was last dragged short. */
+  .commit-panel {
+    min-height: 208px;
+  }
+}
+
+/* --- Commit rows keep the message when the history panel is narrow ------- */
+
+/* The graph gutter is an SVG drawn to a fixed row height so lanes tile between
+   rows; variable-height rows would leave gaps in the lines. So the row stays
+   two lines and its second line changes meaning instead.
+
+   A commit carrying branch or tag chips becomes "chips / message" and drops the
+   author and date, which are still in the drawer. A commit without chips is
+   unchanged: "message / author + date". Either way the message survives, which
+   is the one thing that was disappearing before. */
+@container historypanel (max-width: 290px) {
+  .commit-graph-msg-row {
+    flex-wrap: wrap;
+  }
+
+  .commit-graph-msg-row .commit-msg {
+    flex: 1 0 100%;
+  }
+
+  .commit-graph-msg-row .ref-chip {
+    max-width: 100%;
+  }
+
+  .commit-graph-row--tagged .commit-meta {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   COLLAPSING A SIDE PANEL, AND COLLAPSING A SECTION WITHIN ONE
+   ========================================================================== */
+
+/*
+ * A collapsed panel leaves a 24px strip behind rather than vanishing.
+ *
+ * Hiding it completely would give the commit graph the most room, but a panel
+ * with nothing on screen to reopen it is a panel the user has to remember they
+ * once had. The strip costs 24px and answers the question by being there, with
+ * a chevron pointing back at the content it would bring in.
+ */
+.pane-reveal {
+  display: none;
+  flex: 0 0 24px;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background-color: var(--bg-panel);
+  border: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  z-index: 4;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.pane-reveal:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
+}
+.pane-reveal .material-symbols-outlined {
+  font-size: 18px;
+}
+.pane-reveal-left {
+  border-right: 1px solid var(--border-color);
+}
+.pane-reveal-right {
+  border-left: 1px solid var(--border-color);
+}
+
+/* The panel, its drag handle and its header toggle all follow one class on the
+   body, so there is a single source of truth for whether a side is showing. */
+body.sidebar-collapsed .sidebar,
+body.sidebar-collapsed .pane-resizer[data-pane='sidebar'] {
+  display: none;
+}
+body.sidebar-collapsed .pane-reveal-left {
+  display: flex;
+}
+
+body.history-collapsed .sync-panel,
+body.history-collapsed .pane-resizer[data-pane='history'] {
+  display: none;
+}
+body.history-collapsed .pane-reveal-right {
+  display: flex;
+}
+
+/* --- Sections inside the sidebar ---------------------------------------- */
+
+/*
+ * `.section-header` had no rule at all until now, which is why a section's
+ * action button sat on its own line under the heading instead of beside it.
+ */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The whole heading is the hit target, not just the chevron — a 12px glyph is
+   a poor thing to ask someone to aim at repeatedly. */
+.section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.section-toggle h3,
+.section-toggle h4 {
+  margin-bottom: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.section-toggle:hover h3 {
+  color: var(--text-main);
+}
+.section-chevron {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: var(--text-dim);
+  transition: transform 0.15s ease;
+}
+.sidebar-section.collapsed .section-chevron {
+  transform: rotate(-90deg);
+}
+
+/* The heading keeps the bottom margin the h3 used to carry, so an expanded
+   section looks exactly as it did before it could collapse. */
+.section-header:has(.section-toggle) {
+  margin-bottom: 12px;
+}
+.sidebar-section.collapsed .section-header {
+  margin-bottom: 0;
+}
+.sidebar-section.collapsed .section-body {
+  display: none;
+}
+
+/* --- Horizontal strips scrolled by an ordinary wheel --------------------- */
+
+/*
+ * Fades the edge that has more content past it, so a row that scrolls looks
+ * like one. Both edges use a mask rather than an overlay so the fade works on
+ * whatever the row happens to sit on.
+ */
+.is-scrollable:not(.at-start):not(.at-end) {
+  mask-image: linear-gradient(to right, transparent 0, black 12px, black calc(100% - 12px), transparent 100%);
+}
+.is-scrollable.at-start:not(.at-end) {
+  mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
+}
+.is-scrollable.at-end:not(.at-start) {
+  mask-image: linear-gradient(to right, transparent 0, black 12px);
 }

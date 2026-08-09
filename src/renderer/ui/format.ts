@@ -56,6 +56,20 @@ export function countBadge(count: number, arrow: string): string {
   return count > 0 ? `${arrow}${count}` : '';
 }
 
+/**
+ * The tooltip for a header segment: what it does, and what it currently shows.
+ *
+ * A narrow window hides the segment's text entirely and leaves only its icon,
+ * so the value has to survive somewhere reachable. It cannot live on the value
+ * span — that is the element being hidden — so it goes on the button, which is
+ * always there. The purpose stays in front of it, because at a wide width the
+ * value is already visible and "Switch branch" is the part worth reading.
+ */
+export function segmentTitle(purpose: string, value: string): string {
+  const trimmed = value.trim();
+  return trimmed === '' ? purpose : `${purpose} · ${trimmed}`;
+}
+
 const TIME_UNITS: readonly { limitMs: number; ms: number; name: string }[] = [
   { limitMs: 60_000, ms: 1_000, name: 'second' },
   { limitMs: 3_600_000, ms: 60_000, name: 'minute' },

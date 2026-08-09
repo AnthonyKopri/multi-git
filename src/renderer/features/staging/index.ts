@@ -8,6 +8,7 @@ import { getState, shouldWarnBeforeDelete, update } from '../../state/store';
 import { confirmDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
+import { updateScrollEdges } from '../../ui/wheel-scroll';
 import { applyCommitType, COMMIT_TYPES, chipTitle, shouldShowFormatHint } from '../commit/conventional';
 import type { CommitType } from '../commit/conventional';
 import { buildDiffPickerRow, buildFileRow, diffEntriesFor, findDiffEntry, renderRows } from './file-list';
@@ -251,6 +252,10 @@ export function renderCommitTemplateChips(): void {
       )
     )
   );
+
+  // Replacing the chips changes how far the row can scroll, and that is not a
+  // scroll event, so the edge fades have to be told.
+  updateScrollEdges(ui.commitTemplateChips);
 }
 
 export function insertCommitTemplate(type: CommitType): void {

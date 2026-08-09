@@ -5,7 +5,7 @@ import { asInput, asSelect } from '../../dom/elements';
 import type { Elements } from '../../dom/elements';
 import { setHidden } from '../../dom/create';
 import { getState, update } from '../../state/store';
-import { repoBaseName } from '../../ui/format';
+import { repoBaseName, segmentTitle } from '../../ui/format';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { closeAllDropdowns } from '../../ui/dropdown';
@@ -32,11 +32,15 @@ export function renderRepoHeader(): void {
     ui.repoSegmentName.textContent = repoBaseName(activeRepo);
     ui.repoSegmentPath.textContent = activeRepo;
     ui.repoSegmentPath.title = activeRepo;
+    // The full path, not the base name: at the width that hides the segment
+    // text the tooltip is the only thing left saying which folder this is.
+    ui.repoSegment.title = segmentTitle('Switch repository', activeRepo);
     return;
   }
 
   ui.repoSegmentName.textContent = 'None selected';
   ui.repoSegmentPath.textContent = '';
+  ui.repoSegment.title = segmentTitle('Switch repository', 'None selected');
 }
 
 export function renderRepoLists(): void {

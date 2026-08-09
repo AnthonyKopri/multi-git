@@ -109,7 +109,15 @@ export function buildCommitRow(row: GraphRow, width: number): HTMLLIElement {
   });
 
   return el('li', {
-    className: 'commit-graph-row',
+    // Whether the row carries chips decides what its second line can be when
+    // the history panel is narrow. A row height fixed at GRAPH_ROW_HEIGHT is
+    // what lets the gutter SVGs tile, so the stylesheet cannot make room by
+    // growing the row; it drops the author and date instead — but only where a
+    // chip has already taken the first line. CSS cannot ask "does this row have
+    // chips", so the class answers it here.
+    className: refChips.length === 0
+      ? 'commit-graph-row'
+      : 'commit-graph-row commit-graph-row--tagged',
     // The hash rides on the element; one delegated listener reads it, instead
     // of every row carrying its own closure.
     data: { hash: commit.hash },
