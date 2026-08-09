@@ -88,6 +88,8 @@ export type SshAgentErrorCode =
   | 'REPAIR_REQUIRED'
   | 'VAULT_LOCKED'
   | 'PASSPHRASE_REQUIRED'
+  /** A passphrase was supplied and ssh-add did not accept it. Worth retrying. */
+  | 'PASSPHRASE_REJECTED'
   | 'KEY_MISSING'
   | 'PROFILE_NOT_FOUND'
   | 'FINGERPRINT_MISMATCH'

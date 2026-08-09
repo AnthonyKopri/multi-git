@@ -41,6 +41,11 @@ export function initAgentPanel(elements: Elements): void {
 
   ui.btnRepairAgent.addEventListener('click', () => void repair());
   ui.btnUnloadKey.addEventListener('click', () => void unload());
+  // Imported lazily to keep this module free of a cycle: unlock.ts needs the
+  // state this file exposes.
+  ui.btnUnlockKey.addEventListener('click', () => {
+    void import('./unlock').then(({ unlockSelectedKey }) => unlockSelectedKey());
+  });
 
   // The agent is machine state, and the machine keeps running while this
   // window is in the background: a service can be stopped, a key removed by
@@ -199,6 +204,7 @@ function render(state: SshAgentState | null): void {
     chip.textContent = 'Agent: —';
     chip.className = 'agent-chip';
     setHidden(ui.btnRepairAgent, true);
+    setHidden(ui.btnUnlockKey, true);
     setHidden(ui.btnUnloadKey, true);
     setHidden(ui.agentDiagnostic, true);
     return;
@@ -214,6 +220,15 @@ function render(state: SshAgentState | null): void {
     state.platform === 'win32' &&
     (state.availability === 'stopped' || state.availability === 'disabled');
   setHidden(ui.btnRepairAgent, !repairable);
+
+  // Offered exactly when it can work: a profile is selected, the agent is
+  // reachable, and its key is not in there yet. That is the state a window
+  // reopens in when the key is passphrase-protected, and the state a user who
+  // declined the prompt earlier needs a way back from.
+  setHidden(
+    ui.btnUnlockKey,
+    !(state.availability === 'ready' && Boolean(state.selectedProfileId) && !state.selectedKeyLoaded)
+  );
 
   setHidden(ui.btnUnloadKey, !state.selectedKeyLoaded);
 
