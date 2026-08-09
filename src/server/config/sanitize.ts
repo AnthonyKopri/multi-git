@@ -33,6 +33,14 @@ export function sanitizeConfigForClient(config: AppConfig): ClientConfig {
     },
     repoGroups: config.repoGroups ?? [],
     externalAgents: config.externalAgents ?? [],
-    agentLaunches: config.agentLaunches ?? []
+    agentLaunches: config.agentLaunches ?? [],
+    externalTools: config.externalTools ?? [],
+    toolsConfirmed: config.toolsConfirmed ?? {},
+    bisectCommands: config.bisectCommands ?? [],
+    // Absent means not installed. The client uses this to decide whether the
+    // Explorer setting offers Install or Remove, so guessing would offer to
+    // remove entries that were never written.
+    shellIntegration: { contextMenuInstalled: config.shellIntegration?.contextMenuInstalled === true },
+    lfs: { autoDownloadPreviews: config.lfs?.autoDownloadPreviews === true }
   };
 }

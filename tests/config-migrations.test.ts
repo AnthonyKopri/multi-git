@@ -189,6 +189,82 @@ describe('migrating from version 1', () => {
   });
 });
 
+/**
+ * A configuration as version 2 wrote it: the Phase 3 sections present, and
+ * none of the Phase 4 ones.
+ */
+function version2Fixture(repoPath: string) {
+  return {
+    ...version1Fixture(repoPath),
+    configVersion: 2,
+    repoGroups: [{ id: 'g1', label: 'Work', order: 0, repos: [repoPath] }],
+    externalAgents: [
+      { id: 'a1', label: 'Claude', executable: 'claude', args: [], terminal: 'direct', enabled: true }
+    ],
+    agentLaunches: [],
+    windowState: { windows: [{ repoPath }] }
+  };
+}
+
+describe('migrating from version 2', () => {
+  it('adds the external tool, bisect, shell integration and LFS sections', () => {
+    const outcome = migrateConfig(version2Fixture(workspace));
+
+    expect(outcome.fromVersion).toBe(2);
+    expect(outcome.config['configVersion']).toBe(CURRENT_CONFIG_VERSION);
+    expect(outcome.config['externalTools']).toEqual([]);
+    expect(outcome.config['bisectCommands']).toEqual([]);
+    expect(outcome.config['toolsConfirmed']).toEqual({});
+    expect(outcome.config['lfs']).toEqual({});
+  });
+
+  it('starts with the Explorer entries recorded as not installed', () => {
+    // The value is a claim about the user's registry. An upgrade has written
+    // nothing there, so anything but false would make the settings screen
+    // offer to remove entries that do not exist.
+    const outcome = migrateConfig(version2Fixture(workspace));
+
+    expect(outcome.config['shellIntegration']).toEqual({ contextMenuInstalled: false });
+  });
+
+  it('keeps every record version 2 held', () => {
+    const fixture = version2Fixture(workspace);
+    const { config } = prepareConfig(fixture);
+
+    expect(config.sshProfiles).toHaveLength(2);
+    expect(config.accountRules).toHaveLength(1);
+    expect(config.recentRepos).toEqual(fixture.recentRepos);
+    expect(config.repoGroups).toHaveLength(1);
+    expect(config.externalAgents).toHaveLength(1);
+    expect(config.windowState).toEqual({ windows: [{ repoPath: workspace }] });
+    expect(config.repoSettings[canonicalRepoKey(workspace)]).toEqual({ warnBeforeDelete: false });
+  });
+
+  it('does not overwrite Phase 4 sections a newer build already wrote', () => {
+    const withSections = {
+      ...version2Fixture(workspace),
+      externalTools: [
+        { id: 't1', kind: 'diff', label: 'VS Code', executable: 'code', args: ['--diff', '{local}', '{remote}'], enabled: true }
+      ],
+      bisectCommands: [{ id: 'b1', label: 'Unit tests', executable: 'npm', args: ['test'] }],
+      shellIntegration: { contextMenuInstalled: true },
+      toolsConfirmed: { diff: true }
+    };
+
+    const outcome = migrateConfig(withSections);
+
+    expect(outcome.config['externalTools']).toHaveLength(1);
+    expect(outcome.config['bisectCommands']).toHaveLength(1);
+    expect(outcome.config['shellIntegration']).toEqual({ contextMenuInstalled: true });
+    expect(outcome.config['toolsConfirmed']).toEqual({ diff: true });
+  });
+
+  it('is idempotent', () => {
+    const once = migrateConfig(version2Fixture(workspace)).config;
+    expect(migrateConfig(once).config).toEqual(once);
+  });
+});
+
 describe('validating the Phase 3 sections', () => {
   function withAgents(agents: unknown[]) {
     return validateAppConfig({ configVersion: 2, externalAgents: agents });
@@ -355,6 +431,125 @@ describe('validating the Phase 3 sections', () => {
 
     // It becomes a folder that gets created, so a newline in it is refused.
     expect(rejected.settings?.worktreeParentDir).toBeUndefined();
+  });
+});
+
+describe('validating the Phase 4 sections', () => {
+  function withTools(tools: unknown[]) {
+    return validateAppConfig({ configVersion: 3, externalTools: tools });
+  }
+
+  const vscodeDiff = {
+    id: 't1',
+    kind: 'diff',
+    label: 'VS Code',
+    executable: 'code',
+    args: ['--diff', '{local}', '{remote}'],
+    enabled: true
+  };
+
+  it('accepts a well-formed tool definition', () => {
+    const { config, issues } = withTools([vscodeDiff]);
+
+    expect(issues).toEqual([]);
+    expect(config.externalTools).toHaveLength(1);
+    expect(config.externalTools?.[0]?.args).toEqual(['--diff', '{local}', '{remote}']);
+  });
+
+  it('drops a tool with an unknown kind', () => {
+    const { config, issues } = withTools([{ ...vscodeDiff, kind: 'debugger' }]);
+
+    expect(config.externalTools).toEqual([]);
+    expect(issues[0]?.message).toMatch(/unknown tool kind/i);
+  });
+
+  it('drops a tool whose template uses a placeholder this build cannot expand', () => {
+    // Passing it through as literal text would hand the tool the word
+    // "{theirs}" where a file path belonged, and the diff would open on a file
+    // that does not exist.
+    const { config, issues } = withTools([{ ...vscodeDiff, args: ['--diff', '{local}', '{theirs}'] }]);
+
+    expect(config.externalTools).toEqual([]);
+    expect(issues[0]?.message).toMatch(/unknown placeholder \{theirs\}/i);
+  });
+
+  it('reports every unknown placeholder in the definition, not just the first', () => {
+    const { issues } = withTools([{ ...vscodeDiff, args: ['{mine}', '{theirs}'] }]);
+
+    expect(issues[0]?.message).toContain('{mine}');
+    expect(issues[0]?.message).toContain('{theirs}');
+  });
+
+  it('refuses an executable that is a command line rather than a program', () => {
+    const { config, issues } = withTools([{ ...vscodeDiff, executable: '' }]);
+
+    expect(config.externalTools).toEqual([]);
+    expect(issues[0]?.message).toMatch(/executable/i);
+  });
+
+  it('drops the whole vector when any argument is not text', () => {
+    // Keeping the rest would run a different command than the one configured.
+    const { config } = withTools([{ ...vscodeDiff, args: ['--diff', 42, '{remote}'] }]);
+
+    expect(config.externalTools).toEqual([]);
+  });
+
+  it('keeps a valid tool beside a broken one', () => {
+    const { config, issues } = withTools([
+      { ...vscodeDiff, kind: 'nonsense' },
+      { ...vscodeDiff, id: 't2' }
+    ]);
+
+    expect(config.externalTools).toHaveLength(1);
+    expect(config.externalTools?.[0]?.id).toBe('t2');
+    expect(issues).toHaveLength(1);
+  });
+
+  it('accepts a bisect command and its skip code', () => {
+    const { config, issues } = validateAppConfig({
+      configVersion: 3,
+      bisectCommands: [{ id: 'b1', label: 'Unit tests', executable: 'npm', args: ['test'], skipExitCode: 125 }]
+    });
+
+    expect(issues).toEqual([]);
+    expect(config.bisectCommands?.[0]?.skipExitCode).toBe(125);
+  });
+
+  it('ignores a skip code that is not an exit code', () => {
+    const { config } = validateAppConfig({
+      configVersion: 3,
+      bisectCommands: [{ id: 'b1', executable: 'npm', args: ['test'], skipExitCode: 900 }]
+    });
+
+    expect(config.bisectCommands?.[0]?.skipExitCode).toBeUndefined();
+  });
+
+  it('treats anything but an explicit true as unconfirmed', () => {
+    const { config } = validateAppConfig({
+      configVersion: 3,
+      toolsConfirmed: { diff: true, merge: 'yes', editor: 1, nonsense: true }
+    });
+
+    expect(config.toolsConfirmed).toEqual({ diff: true });
+  });
+
+  it('treats anything but an explicit true as "the Explorer entries are not installed"', () => {
+    // A corrupt value must not convince the app that registry keys exist: the
+    // uninstall path would then report success having deleted nothing.
+    for (const value of ['true', 1, null, {}]) {
+      const { config } = validateAppConfig({
+        configVersion: 3,
+        shellIntegration: { contextMenuInstalled: value }
+      });
+
+      expect(config.shellIntegration?.contextMenuInstalled).toBe(false);
+    }
+  });
+
+  it('defaults LFS previews to not downloading anything', () => {
+    const { config } = validateAppConfig({ configVersion: 3, lfs: {} });
+
+    expect(config.lfs?.autoDownloadPreviews).toBe(false);
   });
 });
 
