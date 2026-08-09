@@ -52,11 +52,6 @@ function reasonSentence(reason: UnlockReason): string {
   }
 }
 
-/** Lets a user who declined earlier be asked again by pressing Unlock. */
-export function clearUnlockRefusals(): void {
-  declined.clear();
-}
-
 /**
  * Makes the selected key usable, asking for whatever that needs.
  *
