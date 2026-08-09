@@ -42,16 +42,3 @@ export async function openRepoInNewWindow(repoPath: string): Promise<void> {
     showToast('Your browser blocked the new tab. Allow pop-ups for this page to use this.', 'warn', 7000);
   }
 }
-
-/** Paths that already have a window, so the UI can say so. */
-export async function openWindowPaths(): Promise<string[]> {
-  if (!isDesktop()) {
-    return [];
-  }
-
-  try {
-    return (await window.desktopApi?.listRepoWindows?.()) ?? [];
-  } catch {
-    return [];
-  }
-}
