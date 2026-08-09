@@ -44,6 +44,7 @@ import { groupsRouter } from './routes/groups.routes';
 import { agentsRouter } from './routes/agents.routes';
 import { remotesRouter } from './routes/remotes.routes';
 import { submodulesRouter } from './routes/submodules.routes';
+import { lfsRouter } from './routes/lfs.routes';
 
 /**
  * Default body limit.
@@ -102,6 +103,7 @@ export function createApp(): Express {
   app.use(worktreesRouter);
   app.use(remotesRouter);
   app.use(submodulesRouter);
+  app.use(lfsRouter);
 
   app.use(errorHandler);
 

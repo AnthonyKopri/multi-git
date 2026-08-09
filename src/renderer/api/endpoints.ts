@@ -31,6 +31,11 @@ import type {
   UpdateRemoteInput
 } from '../../shared/remote-types';
 import type {
+  LfsLock,
+  LfsStatusResponse,
+  LfsTransferPreview
+} from '../../shared/lfs-types';
+import type {
   SubmoduleActionResponse,
   SubmoduleInfo,
   SubmoduleListResponse,
@@ -817,3 +822,32 @@ export const getSubmoduleRepoPath = (path: string) =>
   api.get<{ success: true; path: string }>(
     `/api/submodules/repo-path?path=${encodeURIComponent(path)}`
   );
+
+// ---------- Git LFS ----------
+
+export const getLfsStatus = () => api.get<LfsStatusResponse>('/api/lfs/status');
+
+export const trackLfsPattern = (pattern: string) =>
+  api.post<{ success: true; trackedPatterns: string[] }>('/api/lfs/track', { body: { pattern } });
+
+export const untrackLfsPattern = (pattern: string) =>
+  api.post<{ success: true; trackedPatterns: string[] }>('/api/lfs/untrack', { body: { pattern } });
+
+export const previewLfsTransfer = (action: 'fetch' | 'pull' | 'prune') =>
+  api.get<{ success: true; preview: LfsTransferPreview }>(`/api/lfs/preview?action=${action}`);
+
+export const runLfsTransfer = (action: 'fetch' | 'pull' | 'prune') =>
+  api.post<{ success: true; cancelled: boolean }>('/api/lfs/transfer', { body: { action } });
+
+export const getLfsLocks = () =>
+  api.get<{ success: true; locks: LfsLock[]; unavailable?: string }>('/api/lfs/locks');
+
+export const createLfsLock = (path: string) =>
+  api.post<{ success: true; locks: LfsLock[]; unavailable?: string }>('/api/lfs/lock', {
+    body: { path }
+  });
+
+export const releaseLfsLock = (path: string, force = false) =>
+  api.post<{ success: true; locks: LfsLock[]; unavailable?: string }>('/api/lfs/unlock', {
+    body: { path, force }
+  });

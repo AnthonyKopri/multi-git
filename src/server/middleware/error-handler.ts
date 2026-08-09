@@ -11,6 +11,7 @@ import { PatchSelectionError } from '../git/patch-build';
 import { WorktreeError } from '../git/worktrees';
 import { RemoteError } from '../git/remotes';
 import { SubmoduleError } from '../git/submodules';
+import { LfsError } from '../git/lfs';
 import { CommandFailedError, CommandSpawnError } from '../process/runner';
 import { RepoPathError } from './repo-path';
 
@@ -39,6 +40,13 @@ export function asyncRoute(handler: RequestHandler): RequestHandler {
 interface ErrorShape {
   statusCode: number;
   message: string;
+  /**
+   * A machine-readable reason, for the few failures where the client has to do
+   * something other than show the message. "Git LFS is not installed" needs an
+   * install link and a different panel; "the push was rejected" does not.
+   */
+  code?: string;
+  documentation?: string;
 }
 
 function classify(error: unknown, fallbackMessage: string): ErrorShape {
@@ -53,6 +61,15 @@ function classify(error: unknown, fallbackMessage: string): ErrorShape {
     return { statusCode: error.statusCode, message: error.displayMessage || fallbackMessage };
   }
 
+  if (error instanceof LfsError) {
+    return {
+      statusCode: error.statusCode,
+      message: error.message,
+      code: error.code,
+      ...(error.documentation !== undefined ? { documentation: error.documentation } : {})
+    };
+  }
+
   if (
     error instanceof InvalidGitArgumentError ||
     error instanceof PatchSelectionError ||
@@ -60,6 +77,7 @@ function classify(error: unknown, fallbackMessage: string): ErrorShape {
     error instanceof WorktreeError ||
     error instanceof RemoteError ||
     error instanceof SubmoduleError ||
+    error instanceof LfsError ||
     error instanceof HttpError ||
     error instanceof CommandSpawnError
   ) {
@@ -85,11 +103,15 @@ export function errorHandler(
     return;
   }
 
-  const { statusCode, message } = classify(error, 'Unexpected server error');
+  const { statusCode, message, code, documentation } = classify(error, 'Unexpected server error');
 
   if (statusCode >= 500) {
     console.error('Request failed:', error);
   }
 
-  res.status(statusCode).json({ error: message });
+  res.status(statusCode).json({
+    error: message,
+    ...(code !== undefined ? { code } : {}),
+    ...(documentation !== undefined ? { documentation } : {})
+  });
 }

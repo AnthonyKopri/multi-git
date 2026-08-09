@@ -46,6 +46,7 @@ import * as agents from './features/agents';
 import * as repoHub from './features/repo-hub';
 import * as remotes from './features/remotes';
 import * as submodules from './features/submodules';
+import * as lfs from './features/lfs';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -110,7 +111,8 @@ async function refreshAll(): Promise<void> {
       signing.refreshCommitSignControl(),
       worktrees.refreshWorktrees(),
       remotes.refreshRemotes(),
-      submodules.refreshSubmodules()
+      submodules.refreshSubmodules(),
+      lfs.refreshLfs()
     ]);
   } catch (error) {
     if (!isStale(error)) {
@@ -902,6 +904,7 @@ async function start(): Promise<void> {
   repoHub.initRepoHub(ui);
   remotes.initRemotes(ui);
   submodules.initSubmodules(ui, { openRepository: repo.openRepository });
+  lfs.initLfs(ui);
 
   wireHeader();
   wireWorkspaceTabs();
