@@ -1,21 +1,30 @@
-// Electron lifecycle: start the local backend, then show the window.
+// Electron lifecycle: start the local backend, then show the windows.
 import type { Server } from 'node:http';
-import { BrowserWindow, app, ipcMain } from 'electron';
+import { BrowserWindow, app, ipcMain, screen } from 'electron';
 
 import { startServer } from '../server/index';
 import { repairSshAgentElevated } from './ssh-agent-elevation';
 import { IPC_CHANNELS } from '../shared/desktop-api';
+import { readConfig, writeConfig } from '../server/config/store';
+import { resolveRepoPath } from '../server/middleware/repo-path';
+import { launchAgent, openEditorAt, openTerminalAt } from '../server/agents/service';
+import { WindowRegistry, clampBoundsToDisplays, restorableWindows } from './window-registry';
+import type { ManagedWindow } from './window-registry';
 import {
   createLogWindow,
   createMainWindow,
   createStartupFailureWindow,
   selectFolder
 } from './windows';
+import type { AgentLaunchInput } from '../shared/agent-types';
 
-let mainWindow: BrowserWindow | null = null;
 let logWindow: BrowserWindow | null = null;
 let backendServer: Server | null = null;
 let serverUrl = 'http://localhost:3000';
+let windows: WindowRegistry | null = null;
+
+/** True once quit has begun, so a closing window stops rewriting the record. */
+let quitting = false;
 
 // Windows uses this ID to associate windows with the packaged executable and
 // its embedded icon rather than with the Electron host process.
@@ -23,17 +32,53 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.multigit.client');
 }
 
-function showMainWindow(): void {
-  mainWindow = createMainWindow(serverUrl);
+/**
+ * Persists which windows are open, coalesced.
+ *
+ * Every move and resize asks for a save, and writing the configuration file on
+ * each one would mean hundreds of atomic writes while a window is dragged.
+ */
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-    // The log window is a companion of the main window, not a reason to keep
-    // the app alive on its own.
-    if (logWindow && !logWindow.isDestroyed()) {
-      logWindow.close();
-    }
-  });
+function scheduleWindowStateSave(): void {
+  if (quitting || saveTimer !== null) {
+    return;
+  }
+
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    saveWindowState();
+  }, 500);
+}
+
+function saveWindowState(): void {
+  if (!windows) {
+    return;
+  }
+
+  try {
+    const config = readConfig();
+    config.windowState = { windows: windows.snapshot() };
+    writeConfig(config);
+  } catch (error) {
+    // Losing the window layout is not worth failing anything over.
+    console.warn('Could not record the open windows:', (error as Error).message);
+  }
+}
+
+/** Work areas of the attached displays, primary first. */
+function displayAreas(): { x: number; y: number; width: number; height: number }[] {
+  const primary = screen.getPrimaryDisplay();
+  const rest = screen.getAllDisplays().filter((display) => display.id !== primary.id);
+
+  return [primary, ...rest].map((display) => ({ ...display.workArea }));
+}
+
+function createRegistry(): WindowRegistry {
+  return new WindowRegistry((repoPath: string): ManagedWindow => {
+    const window = createMainWindow(serverUrl, repoPath ? { repoPath } : {});
+    return window as unknown as ManagedWindow;
+  }, scheduleWindowStateSave);
 }
 
 function openLogWindow(): void {
@@ -48,14 +93,113 @@ function openLogWindow(): void {
   });
 }
 
-async function startApp(): Promise<void> {
-  ipcMain.handle(IPC_CHANNELS.selectFolder, () => selectFolder(mainWindow));
+/**
+ * Reopens the windows that were open at the last quit.
+ *
+ * Returns false when there was nothing to restore, so the caller falls back to
+ * the single window this app has always opened. Bounds are clamped first: a
+ * window last closed on a monitor that is no longer attached would otherwise
+ * come back somewhere nobody can see it.
+ */
+function restoreWindows(): boolean {
+  const config = readConfig();
+
+  if (config.settings?.restoreWindowsOnStartup === false) {
+    return false;
+  }
+
+  const areas = displayAreas();
+  const records = restorableWindows(config.windowState?.windows ?? [], (repoPath) => {
+    try {
+      resolveRepoPath(repoPath);
+      return true;
+    } catch {
+      // Deleted, renamed, or on a drive that is not mounted today.
+      return false;
+    }
+  });
+
+  for (const record of records) {
+    const options = {
+      repoPath: record.repoPath,
+      ...(record.bounds ? { bounds: clampBoundsToDisplays(record.bounds, areas) } : {}),
+      ...(record.maximized ? { maximized: true } : {})
+    };
+
+    const window = createMainWindow(serverUrl, options);
+    // Registered by hand so the registry owns a window it did not build,
+    // keeping the saved bounds rather than the factory's defaults.
+    windows?.adopt(record.repoPath, window as unknown as ManagedWindow);
+  }
+
+  return records.length > 0;
+}
+
+/** Opens one window on the most recent repository, the way it always did. */
+function openInitialWindow(): void {
+  const [mostRecent] = readConfig().recentRepos;
+  windows?.openOrFocus(mostRecent ?? '');
+}
+
+/** Rejects a path the renderer sent that is not an existing repository folder. */
+function validatedRepoPath(raw: unknown): string {
+  return resolveRepoPath(typeof raw === 'string' ? raw : '');
+}
+
+function registerIpcHandlers(): void {
+  ipcMain.handle(IPC_CHANNELS.selectFolder, () => selectFolder(BrowserWindow.getFocusedWindow()));
   ipcMain.handle(IPC_CHANNELS.openLogWindow, () => {
     openLogWindow();
   });
   // Deliberately ignores every argument the renderer sends. The command it
   // runs is a constant; see src/main/ssh-agent-elevation.ts.
   ipcMain.handle(IPC_CHANNELS.repairSshAgent, () => repairSshAgentElevated());
+
+  ipcMain.handle(IPC_CHANNELS.openRepoWindow, (_event, repoPath: unknown) => {
+    windows?.openOrFocus(validatedRepoPath(repoPath));
+    return true;
+  });
+
+  ipcMain.handle(
+    IPC_CHANNELS.hasRepoWindow,
+    (_event, repoPath: unknown) => windows?.find(String(repoPath ?? '')) !== null
+  );
+
+  ipcMain.handle(IPC_CHANNELS.listRepoWindows, () => windows?.openPaths() ?? []);
+
+  ipcMain.handle(IPC_CHANNELS.claimRepoWindow, (event, repoPath: unknown) => {
+    // The window is taken from the sender, never from the message: a page
+    // cannot claim a repository on behalf of a window it does not own.
+    const sender = BrowserWindow.fromWebContents(event.sender);
+    if (sender) {
+      windows?.rekey(sender as unknown as ManagedWindow, validatedRepoPath(repoPath));
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.openTerminalHere, (_event, repoPath: unknown) =>
+    openTerminalAt(validatedRepoPath(repoPath))
+  );
+
+  ipcMain.handle(IPC_CHANNELS.openEditor, (_event, repoPath: unknown) =>
+    openEditorAt(validatedRepoPath(repoPath))
+  );
+
+  ipcMain.handle(IPC_CHANNELS.launchAgent, (_event, input: AgentLaunchInput) => {
+    // The worktree is validated; the agent is looked up by id in the saved
+    // configuration, so the page never names a program to run.
+    const worktreePath = validatedRepoPath(input?.worktreePath);
+
+    return launchAgent({
+      repoPath: worktreePath,
+      worktreePath,
+      agentId: String(input?.agentId ?? ''),
+      ...(typeof input?.initialPrompt === 'string' ? { initialPrompt: input.initialPrompt } : {})
+    });
+  });
+}
+
+async function startApp(): Promise<void> {
+  registerIpcHandlers();
 
   try {
     // Port 0 asks the OS for a free port, so a busy 3000, or a second
@@ -66,10 +210,14 @@ async function startApp(): Promise<void> {
     const port = typeof address === 'object' && address !== null ? address.port : 3000;
     serverUrl = `http://localhost:${port}`;
 
-    showMainWindow();
+    windows = createRegistry();
+
+    if (!restoreWindows()) {
+      openInitialWindow();
+    }
   } catch (error) {
     console.error('Failed to boot desktop app:', error);
-    mainWindow = createStartupFailureWindow(error);
+    createStartupFailureWindow(error);
   }
 }
 
@@ -78,6 +226,12 @@ app.on('ready', () => {
 });
 
 app.on('window-all-closed', () => {
+  // The log window is a companion of the repository windows, not a reason to
+  // keep the app alive on its own.
+  if (logWindow && !logWindow.isDestroyed()) {
+    logWindow.close();
+  }
+
   // On macOS applications conventionally stay active until the user quits
   // explicitly with Cmd+Q.
   if (process.platform !== 'darwin') {
@@ -86,9 +240,20 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (mainWindow === null) {
-    showMainWindow();
+  if (windows && windows.size === 0) {
+    openInitialWindow();
   }
+});
+
+app.on('before-quit', () => {
+  // The last chance to record the layout: by `quit` the windows are gone and
+  // their bounds with them.
+  if (saveTimer !== null) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  saveWindowState();
+  quitting = true;
 });
 
 app.on('quit', () => {
