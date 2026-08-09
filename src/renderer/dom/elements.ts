@@ -38,6 +38,9 @@ export const ELEMENT_MAP = {
   submoduleSummaryList: 'submodule-summary-list',
   lfsSummary: 'lfs-summary',
 
+  // External merge, in the conflict editor
+  btnExternalMerge: 'btn-external-merge',
+
   // Notes, in the commit detail drawer
   drawerNoteInput: 'drawer-note-input',
   drawerNoteMarker: 'drawer-note-marker',

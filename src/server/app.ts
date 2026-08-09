@@ -48,6 +48,7 @@ import { lfsRouter } from './routes/lfs.routes';
 import { patchesRouter } from './routes/patches.routes';
 import { bisectRouter } from './routes/bisect.routes';
 import { notesRouter } from './routes/notes.routes';
+import { toolsRouter } from './routes/tools.routes';
 
 /**
  * Default body limit.
@@ -84,6 +85,7 @@ export function createApp(): Express {
   app.use(cloneRouter);
   app.use(groupsRouter);
   app.use(agentsRouter);
+  app.use(toolsRouter);
 
   // Repository-scoped routers.
   app.use(statusRouter);

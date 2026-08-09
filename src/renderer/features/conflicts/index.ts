@@ -7,18 +7,61 @@ import { setHidden } from '../../dom/create';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { resolveConflictText, type ConflictChoice } from './resolve-text';
+import * as tools from '../tools';
 
 let ui: Elements;
 let refreshStatus: () => Promise<void> = async () => {};
 
+/** The file the editor is currently showing, for the external merge tool. */
+let openFilePath = '';
+
 export function initConflicts(elements: Elements, onResolved: () => Promise<void>): void {
   ui = elements;
   refreshStatus = onResolved;
+
+  ui.btnExternalMerge.addEventListener('click', () => void openInMergeTool());
+}
+
+/**
+ * Hands the conflicted file to the configured merge tool.
+ *
+ * What it deliberately does *not* do is mark the file resolved afterwards. The
+ * launcher resolves as soon as the process exists and learns nothing else, and
+ * even a tool that exits cleanly may have been closed without saving. So the
+ * app re-reads git state and leaves the file in whatever state git says it is
+ * in — which is usually still conflicted, and that is honest.
+ */
+async function openInMergeTool(): Promise<void> {
+  if (openFilePath === '') {
+    return;
+  }
+
+  const started = await tools.launchToolForKind('merge', {
+    // Git writes these three alongside the conflicted file during a merge.
+    local: `${openFilePath}.LOCAL`,
+    remote: `${openFilePath}.REMOTE`,
+    base: `${openFilePath}.BASE`,
+    merged: openFilePath,
+    path: openFilePath
+  });
+
+  if (!started) {
+    return;
+  }
+
+  showToast(
+    'The merge tool is open. When you have finished there, reload this file — Multi-Git does not assume the conflict was resolved.',
+    'info',
+    9000
+  );
+
+  await refreshStatus();
 }
 
 export async function openConflictResolver(filePath: string): Promise<void> {
   const textarea = asTextArea(ui.conflictTextarea);
 
+  openFilePath = filePath;
   ui.conflictFilePathBadge.textContent = filePath;
   textarea.value = 'Loading file content...';
   setHidden(ui.conflictModal, false);

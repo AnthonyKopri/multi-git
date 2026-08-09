@@ -14,6 +14,7 @@
 import type { SshAgentRepairResult } from './ssh-agent-types';
 import type { AgentLaunchInput, AgentLaunchResult } from './agent-types';
 import type { BisectRunOutcome } from './bisect-types';
+import type { ExternalToolKind } from './config-types';
 
 export interface DesktopApi {
   /** Opens the native folder picker. Resolves to '' when cancelled. */
@@ -69,6 +70,30 @@ export interface DesktopApi {
   selectSaveFile: (input: { suggestedName?: string; extension?: string }) => Promise<string>;
   /** Writes text the user just chose a destination for. */
   writeTextFile: (input: { filePath: string; contents: string }) => Promise<boolean>;
+
+  /**
+   * Starts a configured external tool — a diff, merge, editor, terminal or
+   * file manager. By kind or by saved id; never by executable.
+   */
+  launchTool: (input: {
+    repoPath: string;
+    kind: ExternalToolKind;
+    toolId?: string;
+    placeholders: Record<string, string | number | undefined>;
+  }) => Promise<{ launched: boolean; commandPreview: string; toolLabel: string }>;
+
+  /** Whether the opt-in Explorer entries are installed, and which keys they use. */
+  shellIntegrationStatus: () => Promise<ShellIntegrationStatus>;
+  installShellIntegration: () => Promise<ShellIntegrationStatus>;
+  removeShellIntegration: () => Promise<ShellIntegrationStatus>;
+}
+
+/** Mirrors src/main/shell-integration.ts, which the renderer cannot import. */
+export interface ShellIntegrationStatus {
+  supported: boolean;
+  installed: boolean;
+  keys: string[];
+  reason?: string;
 }
 
 /** IPC channel names, shared so main and preload cannot drift apart. */
@@ -85,7 +110,11 @@ export const IPC_CHANNELS = {
   launchAgent: 'agent:launch',
   runBisect: 'bisect:run',
   selectSaveFile: 'app:select-save-file',
-  writeTextFile: 'app:write-text-file'
+  writeTextFile: 'app:write-text-file',
+  launchTool: 'tool:launch',
+  shellIntegrationStatus: 'shell:context-menu-status',
+  installShellIntegration: 'shell:install-context-menu',
+  removeShellIntegration: 'shell:remove-context-menu'
 } as const;
 
 declare global {
