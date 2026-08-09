@@ -1,10 +1,10 @@
 ---
 title: Multi-Git feature roadmap
 status: in-progress
-last_reviewed: 2026-08-08
+last_reviewed: 2026-08-09
 owner: project maintainers
-phases_complete: [0, 1, 2]
-next_phase: 3
+phases_complete: [0, 1, 2, 3]
+next_phase: 4
 integration_branch: improvements
 ---
 
@@ -27,15 +27,20 @@ This directory turns the competitive review into independently executable implem
 | [0](phase-0-toolchain-foundations.md) | Latest toolchain, cancellable process runner, schemas and CI foundations | None | Must land first | Complete (2026-08-05) |
 | [1](phase-1-ssh-agent-pr-creator.md) | Reliable SSH agent integration and GitHub PR creator | Phase 0 | SSH and PR lanes can split | Complete (2026-08-07) |
 | [2](phase-2-review-history-recovery.md) | Precision review, history rewriting, signing and recovery | Phase 0; signing follows Phase 1 SSH | Feature lanes can split | Complete (2026-08-08) |
-| [3](phase-3-worktrees-windows-agents.md) | Worktrees, multi-window workflows and external agent launch | Phase 1 | Can run beside Phase 4 | **Ready to start** |
+| [3](phase-3-worktrees-windows-agents.md) | Worktrees, multi-window workflows and external agent launch | Phase 1 | Can run beside Phase 4 | Complete (2026-08-09) |
 | [4](phase-4-repository-power-tools.md) | Remotes, submodules, LFS, patches, bisect, notes and external tools | Phase 2 recovery primitives | Can run beside Phase 3 | **Ready to start** |
-| [5](phase-5-collaboration-stacked-work-environments.md) | Multi-provider collaboration, stacked work, WSL and remote environments | Phases 1–4 | Split by provider/environment | Blocked on Phases 3–4 |
+| [5](phase-5-collaboration-stacked-work-environments.md) | Multi-provider collaboration, stacked work, WSL and remote environments | Phases 1–4 | Split by provider/environment | Blocked on Phase 4 |
 
-Phase 2 is done, which unblocks Phase 4 — its recovery primitives were the
-dependency. **Phases 3 and 4 are now both startable and can run in parallel**:
-3 is worktrees, windows and agent launch, 4 is remotes, submodules, LFS,
-patches, bisect and notes, and they share no hotspot beyond the ones listed in
-the execution contract below.
+Phase 3 is done. **Phase 4 is the only phase now startable** — remotes,
+submodules, LFS, patches, bisect and notes — and Phase 5 waits on it.
+
+Two things Phase 3 leaves for whoever picks up Phase 4. The operation progress
+panel is still Phase 4's, and there are now two more things worth showing in
+it: the cancellable worktree status pass and the repository-group fetch, both
+of which register through `OperationRegistry` and are cancelled today only
+through their own inline controls. And `launchDetached`
+(`src/server/process/runner.ts`) is the way to start anything that outlives a
+request, which is what Phase 4's external diff and merge tools need.
 
 ```mermaid
 flowchart LR
@@ -51,16 +56,17 @@ flowchart LR
 
 ## Current state
 
-Phases 0 and 1 are merged into `improvements`, which is the integration branch
-for this programme. `main` is untouched since the work began; a single
+Phases 0, 1 and 2 are merged into `improvements`, which is the integration
+branch for this programme. `main` is untouched since the work began; a single
 `improvements` → `main` pull request closes it out once every phase has landed.
 
 | | |
 | --- | --- |
 | Integration branch | `improvements` |
-| Merged | [#14](https://github.com/AnthonyKopri/multi-git/pull/14) (Phase 0), [#15](https://github.com/AnthonyKopri/multi-git/pull/15) (Phase 1) |
-| Awaiting review | Phase 2, on `claude/roadmap-version-display-e8d226` |
-| Suite | 792 passed, 3 skipped |
+| Merged | [#14](https://github.com/AnthonyKopri/multi-git/pull/14) (Phase 0), [#15](https://github.com/AnthonyKopri/multi-git/pull/15) (Phase 1), Phase 2 |
+| Awaiting review | Phase 3 |
+| Suite | 982 passed, 3 skipped |
+| Config schema | v2 — worktree, window, group and external-agent sections |
 | Toolchain | Electron 43.3.0, TypeScript 7.0.2, Vitest 4.1.10, Node ≥ 22.12 |
 | CI | 7 jobs — Windows and Linux on Node 22.12 and 24, a leg with no `gh` and no SSH agent, docs, packaging smoke |
 | `npm audit` | 0 vulnerabilities |
@@ -86,30 +92,40 @@ before writing anything similar.
 | Show the version | `appVersion()` / `appTitle()` in `src/server/app-root.ts` | Reads the packaged package.json once. Window titles use it directly; the browser tab gets it from `GET /api/app-info`. |
 | Record a destructive operation | `captureCheckpoint` in `src/server/safety-net/checkpoints.ts` | Writes the session undo *and* the durable recovery point. Pass an `operation`; never write to one store alone. |
 | Read git's own recovery record | `src/server/git/reflog.ts` | Newest first, with each entry's previous position resolved. |
-| Answer an editor git insists on opening | `src/server/git/rebase-bridge.ts` | Fixed script, mode as an argument, payload by environment. Any future `git commit --interactive` or `filter-branch` work should reuse it rather than invent a second one. |
+| Answer an editor git insists on opening | `src/server/git/rebase-bridge.ts` | Fixed script, mode as an argument, payload by environment. Any future `git commit --interactive` or `filter-branch` work should reuse it rather than invent a second one. Phase 3's PowerShell agent launch is the same trick. |
 | Sign, or read a signature | `src/server/git/signing.ts` | Also the place that knows `%G?` = N is ambiguous. |
+| Start something that outlives the request | `launchDetached` in `src/server/process/runner.ts` | Same discipline as `run` — argv-only, no shell, explicit env, injectable — minus the waiting. An editor or a coding agent runs for hours; `run` would kill it at the timeout. |
+| List or change worktrees | `src/server/git/worktrees.ts` | Porcelain `-z` with a newline fallback, family key from `--git-common-dir`, and the placement rules. Never parse `git worktree list` without `--porcelain`. |
+| Ask which account a folder uses | `profileForRepo` in `src/server/ssh/agent-session.ts` | Resolves to the family's main worktree. A repository and its worktrees share one `.git/config`, so they share one identity — there is no such thing as a per-worktree account. |
+| Get a locked key usable | `ensureKeyUsable` in `src/renderer/features/accounts/unlock.ts` | Handles both `VAULT_LOCKED` and `PASSPHRASE_REQUIRED`, coalesces concurrent callers, and never prompts from a background refresh. |
+| Open a repository in its own window | `src/main/window-registry.ts` | Keyed by canonical identity, so two spellings of one folder focus one window. Display clamping and restore filtering are pure functions. |
 | Test something that shells out | `tests/helpers/fake-runner.ts` | Scripted responses plus argv/stdin/env assertions. No `gh`, agent, key or network anywhere in the suite. |
 | Test renderer behaviour | `// @vitest-environment happy-dom` | Mount the real `public/index.html`, so a renamed element id fails the suite. See `tests/pull-request-window.test.ts` and `tests/diff-selection.test.ts`. |
 
 ### Open follow-ups carried forward
 
-None of these block Phase 3 or Phase 4. They are listed so they are not
-rediscovered as surprises. Details and evidence are in
+None of these block Phase 4. They are listed so they are not rediscovered as
+surprises. Details and evidence are in
 [FEATURE_PARITY.md](FEATURE_PARITY.md#open-follow-ups); things decided against
 rather than merely outstanding are under
 [Explicitly deferred or rejected](FEATURE_PARITY.md#explicitly-deferred-or-rejected).
 
 1. **Express 5** — the one dependency not at latest. Nothing blocks it; it was
    left out of Phase 0 as a runtime-framework major touching every route file.
-2. **Repository paths outside Latin-1 cannot be opened** — a pre-existing
-   defect in how `x-repo-path` is transported. `café` works, `中文` and emoji
-   do not.
-3. **Operation progress has no UI** — the server side landed in Phase 0 and
-   Phase 2 registers diff reads through it, so the work to cancel is tracked
-   and the runner takes an AbortSignal. The panel that would let a user press
-   cancel is Phase 4's.
-4. **Never manually exercised** — creating a real pull request, and the fork
+2. **Operation progress has no UI** — the server side landed in Phase 0, and
+   Phase 2's diff reads plus Phase 3's worktree status pass and group fetch all
+   register through it. Each has its own inline control today; the general
+   panel is Phase 4's.
+3. **Never manually exercised** — creating a real pull request, and the fork
    workflow. Both are covered against a scripted `gh`.
+4. **Agent launch never run against a real Claude or Codex install** — neither
+   is on the development machine's PATH. Detection, argv construction, the
+   environment allowlist and the failure paths are covered against a scripted
+   runner and a fake launcher.
+
+**Fixed in Phase 3:** repository paths outside Latin-1 could not be opened at
+all — `x-repo-path` is now base64-encoded in transport, and `中文` and emoji
+folders are covered end to end in `tests/repo-path-transport.test.ts`.
 
 ## Agent execution contract
 

@@ -23,9 +23,9 @@ Status values: **Current** means materially available today; **Planned** has an 
 | Interactive rebase, autosquash and commit splitting | Visual planner with reorder, reword, squash, fixup, drop, autosquash preview and splitting (Phase 2D) | [GitHub Desktop request](https://github.com/desktop/desktop/issues/12354), [GitKraken requests](https://feedback.gitkraken.com/) | Phase 2 | Done |
 | SSH and GPG commit/tag signing | Per-repository signing, signature status that never overclaims verification (Phase 2E) | [GitHub Desktop signing request](https://github.com/desktop/desktop/issues/78), Tower | Phase 2 | Done |
 | Persistent reflog/Safety Net recovery | Durable recovery journal beside the reflog, capture on every destructive operation (Phase 2C) | Tower, TortoiseGit | Phase 2 | Done |
-| Worktrees and per-worktree WIP | Not available | [GitHub Desktop request](https://github.com/desktop/desktop/issues/19307), [GitKraken discussion](https://feedback.gitkraken.com/suggestions/187158/comment/279649), [Fork releases](https://fork.dev/releasenoteswin) | Phase 3 | Planned |
-| Multi-window and repository groups | One active repository | [GitHub Desktop request](https://github.com/desktop/desktop/issues/3606), GitKraken current releases | Phase 3 | Planned |
-| Launch external coding agents | Not available | [GitKraken current releases](https://help.gitkraken.com/gitkraken-desktop/current/) | Phase 3 | Planned |
+| Worktrees and per-worktree WIP | Full lifecycle with recovery-backed removal; each worktree keeps its own window and WIP (Phase 3) | [GitHub Desktop request](https://github.com/desktop/desktop/issues/19307), [GitKraken discussion](https://feedback.gitkraken.com/suggestions/187158/comment/279649), [Fork releases](https://fork.dev/releasenoteswin) | Phase 3 | Done |
+| Multi-window and repository groups | A window per repository or worktree, restored on launch; groups with a cancellable Fetch all (Phase 3) | [GitHub Desktop request](https://github.com/desktop/desktop/issues/3606), GitKraken current releases | Phase 3 | Done |
+| Launch external coding agents | Configured executables launched in a worktree with the family's SSH identity ready (Phase 3) | [GitKraken current releases](https://help.gitkraken.com/gitkraken-desktop/current/) | Phase 3 | Done |
 | Multiple remotes and remote management | Limited | Tower, SmartGit | Phase 4 | Planned |
 | Submodules | No full management UI | Sourcetree, SmartGit, TortoiseGit | Phase 4 | Planned |
 | Git LFS and locking | No full management UI | Sourcetree, SmartGit, TortoiseGit | Phase 4 | Planned |
@@ -33,7 +33,7 @@ Status values: **Current** means materially available today; **Planned** has an 
 | Bisect workflow | Not available | Fork, [SmartGit what's new](https://www.smartgit.dev/whats-new/), TortoiseGit | Phase 4 | Planned |
 | Git Notes | Not available | SmartGit what's new | Phase 4 | Planned |
 | External diff/merge/editor tools | Limited editor launch | [GitHub Desktop request](https://github.com/desktop/desktop/issues/9609), GitKraken requests | Phase 4 | Planned |
-| Operation progress and cancellation | Server-side registry, SSE stream and cancel endpoint landed in Phase 0; no UI yet | [GitKraken requests](https://feedback.gitkraken.com/), [GitHub Desktop clone cancellation request](https://github.com/desktop/desktop/issues/2082) | Phases 0/4 | Phase 0 done; UI planned |
+| Operation progress and cancellation | Server-side registry, SSE stream and cancel endpoint landed in Phase 0; the worktree status pass and group fetch have inline controls (Phase 3); no general panel yet | [GitKraken requests](https://feedback.gitkraken.com/), [GitHub Desktop clone cancellation request](https://github.com/desktop/desktop/issues/2082) | Phases 0/4 | Phase 0 done; panel planned |
 | Command palette | Ctrl+K over app and Git actions (Phase 2B) | Sublime Merge | Phase 2 | Done |
 | Branch pin, rename, prune and stale cleanup | Pin, rename, set upstream, merged/stale detection, prune, bulk guarded delete (Phase 2B) | [GitHub Desktop pin request](https://github.com/desktop/desktop/issues/15767), Tower | Phase 2 | Done |
 | Stacked branches and PRs | Not available | [Tower stacked PRs](https://www.git-tower.com/features/stacked-prs/) | Phase 5 | Planned |
@@ -57,15 +57,14 @@ Status values: **Current** means materially available today; **Planned** has an 
 
 ## Open follow-ups
 
-Everything known to be outstanding after Phases 0, 1 and 2, in one place. None
-of it blocks Phase 3 or Phase 4. Each row links to the section holding the
-evidence.
+Everything known to be outstanding after Phases 0–3, in one place. None of it
+blocks Phase 4. Each row links to the section holding the evidence.
 
 | Item | Kind | Owner | Detail |
 | --- | --- | --- | --- |
 | Express 4 → 5 | Dependency | Standalone PR | The only dependency not at latest. Nothing blocks it — the server declares no parametric or wildcard routes, and every handler already reads `req.body ?? {}`. Left out of Phase 0 as a runtime-framework major touching `app.ts` and every route file. See [Justified pins and deferrals](#justified-pins-and-deferrals). |
-| Repository paths outside Latin-1 cannot be opened | Pre-existing defect | Standalone PR | `x-repo-path` carries the path as an HTTP header; header values are byte strings and `fetch` truncates each UTF-16 code unit to its low byte. `café` survives, `中文` and emoji do not. Reproduced on the pre-upgrade baseline too. See [Pre-existing defect found during Phase 0 verification](#pre-existing-defect-found-during-phase-0-verification-not-fixed-here). |
-| Operation progress has no UI | Deliberate scope split | Phase 4 | Registry, SSE stream and cancel endpoint landed in Phase 0. The panel is Phase 4's. |
+| Operation progress has no general UI | Deliberate scope split | Phase 4 | Registry, SSE stream and cancel endpoint landed in Phase 0. Phase 3 added two more operations that register through it — the worktree status pass and the group fetch — each with its own inline control. The general panel is Phase 4's. |
+| Agent launch never run against a real Claude or Codex install | Untested by hand | Whoever has one installed | Neither is on the development machine's PATH, so detection legitimately finds nothing there. Argv construction for all three terminal modes, the environment allowlist, the missing-tool path and the failure recording are covered against a scripted runner and a fake launcher in `tests/agents.test.ts`. |
 | Creating a real pull request | Untested by hand | Whoever next uses it | Covered against a scripted `gh`. Running it for real would open a pull request on a real repository. |
 | The fork workflow | Untested by hand | Whoever next uses it | Same reason. Ownership detection *has* been run against real `gh` on a non-fork. |
 | `@types/node` held at 24.x | Intentional pin | Revisit with Electron | Electron 43 embeds Node 24; newer types would describe APIs the runtime lacks. Encoded as an `ignore` rule in `.github/dependabot.yml`. |
@@ -81,6 +80,99 @@ evidence.
 - **Windows Application Control can block a freshly built, unsigned `.exe`.**
   Packaging succeeds and the artifact is valid; launching it may not be
   permitted until the policy is satisfied.
+
+## Phase 3 record (2026-08-09)
+
+### Two planning assumptions that were wrong
+
+Both were caught by checking git's behaviour rather than by a failing test, and
+both would otherwise have become bugs.
+
+**Linked worktrees share one `.git/config`.** The phase plan said each new
+worktree needs the Phase 1 `core.sshCommand` pin applied to it. It does not:
+`git config --local` writes to `$GIT_COMMON_DIR/config`, which every worktree of
+a family reads. The pin is inherited. The consequence is larger than one skipped
+write — a repository and its worktrees have **one** SSH identity, and a UI
+offering a per-worktree account would have been offering something git cannot
+honour, silently rewriting the shared value each time. Per-worktree identities
+would need `extensions.worktreeConfig`, a repository-level extension other tools
+would also see; that was considered and rejected. `profileForRepo` and
+`rememberProfileForRepo` now resolve through `mainWorktreePathSync`, so a
+worktree with no record of its own inherits the family's account rather than
+dropping to System SSH.
+
+**A coding agent cannot be launched through `ExecutableRunner.run`.** That
+method awaits completion under a five-minute default timeout — it would hold a
+promise open for a whole session and then kill the tool. `launchDetached` was
+added alongside it: same argv-only, no-shell, explicit-environment,
+injectable-for-tests discipline, minus the waiting. It resolves when the process
+exists and learns nothing else, which is exactly what the product boundary
+already promised.
+
+### Files and configuration written outside the repository
+
+| Path | When | Notes |
+| --- | --- | --- |
+| `~/.multi-git-client-config.json` | Worktree, group, agent and window changes | Schema v2 adds `repoGroups`, `externalAgents`, `windowState` and `agentLaunches`, plus three settings. The migration is additive and idempotent. |
+| `<worktree parent>/…` | Creating a worktree | The folder git creates, at the path previewed before the button is pressed. |
+| `<main repo>/.git/multi-git/recovery.json` | Forced worktree removal | Written against the *main* worktree, because the removed worktree's own git directory goes with it. |
+
+### What a launched tool does and does not inherit
+
+Its environment is an allowlist — `PATH`, `PATHEXT`, `ComSpec`, `SystemRoot`,
+`WINDIR`, `TEMP`, `TMP`, `TMPDIR`, `USERPROFILE`, `USERNAME`, `USER`, `HOME`,
+`HOMEDRIVE`, `HOMEPATH`, `APPDATA`, `LOCALAPPDATA`, `PROGRAMFILES`,
+`PROGRAMDATA`, `NUMBER_OF_PROCESSORS`, `PROCESSOR_ARCHITECTURE`, `OS`,
+`SSH_AUTH_SOCK`, `LANG`, `LC_ALL`, `TERM`, `COLORTERM` — plus per-agent
+overrides filtered through `sanitizeEnvOverrides`.
+
+It never inherits `SSH_ASKPASS` or `SSH_ASKPASS_REQUIRE`, which would hand it a
+bridge that answers with a stored passphrase; `GIT_SSH_COMMAND`, `GIT_SSH`,
+`GIT_ASKPASS`; or `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
+`GIT_CONFIG_GLOBAL`, `GIT_CONFIG_SYSTEM`, `GIT_SEQUENCE_EDITOR`, `GIT_EDITOR`,
+which describe what Multi-Git happens to be doing. The identity travels with the
+folder through `core.sshCommand`, which is precisely why nothing needs to be
+passed.
+
+### Where a typed passphrase goes
+
+Into `loadKeyIntoAgent`, which writes it to a mode-0600 script in a private
+temporary directory, points `SSH_ASKPASS` at that script for one `ssh-add`, and
+removes the directory in a `finally`. It is added to the runner's redaction
+list, so it cannot survive into a logged result. It is not returned to the
+caller, not written to the config, and stored in the vault only when the user
+explicitly asks *and* the passphrase has already been shown to load the key —
+saving a wrong value would fail silently on every future launch.
+`tests/ssh-unlock.test.ts` asserts its absence from the fake runner's complete
+record of argv, cwd, environment and stdin.
+
+### Desktop-only authorization boundaries
+
+`window:open-repo`, `window:has-repo`, `window:list-repos`,
+`window:claim-repo`, `tool:open-terminal`, `tool:open-editor`, `agent:launch`.
+
+Every path argument is re-validated in the main process with `resolveRepoPath`;
+the renderer is not trusted to supply a directory. `agent:launch` takes an agent
+*id* which is looked up in the saved configuration, so no message from a page
+can name a program to run. `window:claim-repo` takes its window from
+`event.sender`, never from the message, so a page cannot claim a repository on
+behalf of a window it does not own. The HTTP server gained routes for agent
+definitions and detection and no launch route at all.
+
+### Manual scenarios executed
+
+- Booted the compiled server and drove the new routes: `/api/worktrees` against
+  this repository's own eight-worktree family, `/api/agents`,
+  `/api/agents/detect` and `/api/repo-groups`.
+- Loaded the renderer in a browser: the sidebar listed all eight worktrees with
+  branch names and live dirty counts, the manager opened with removal disabled
+  on the main worktree, the prune preview was empty, and the create form
+  previewed `…\multi-git.worktrees\feature-login-page` for a branch typed as
+  `feature/login page`.
+- Detection correctly reported nothing on a machine with neither CLI installed.
+
+Not exercised by hand: launching a real agent, and restoring windows across an
+actual restart of the packaged desktop app.
 
 ## Phase 1 record (2026-08-07)
 
@@ -214,7 +306,7 @@ standalone follow-up PR before Phase 1 branches widen the blast radius.
   previously undocumented.
 - **esbuild target moved from `node18` to `node22.12`.**
 
-### Pre-existing defect found during Phase 0 verification, not fixed here
+### Pre-existing defect found during Phase 0 verification, fixed in Phase 3
 
 **A repository path containing characters outside Latin-1 cannot be opened.**
 `x-repo-path` carries the repository path as an HTTP header, and header values
@@ -235,11 +327,22 @@ baseline, so it is not a regression from the toolchain move:
 The JSON body path is unaffected, which is why opening a repository through the
 picker appears to succeed before every subsequent request fails.
 
-Left out of Phase 0 deliberately: the fix is to percent-encode the header in
-`src/renderer/api/client.ts` and decode it in
-`src/server/middleware/repo-path.ts`, both of which are shared hotspots the
-execution contract asks to be claimed, and it is unrelated to the toolchain and
-foundation work this phase delivers. Worth a small standalone PR.
+Left out of Phase 0 deliberately: the fix touches
+`src/renderer/api/client.ts` and `src/server/middleware/repo-path.ts`, both of
+which are shared hotspots the execution contract asks to be claimed, and it is
+unrelated to the toolchain and foundation work that phase delivered.
+
+**Fixed in Phase 3**, because worktrees are folders the user names themselves,
+which turned a theoretical case into a likely one. The header now carries
+base64 of the path's UTF-8 bytes, marked by `x-repo-path-encoding: base64`, and
+the middleware decodes it. Base64 is not self-describing and
+`Buffer.from(value, 'base64')` is lenient — it skips characters outside the
+alphabet and returns whatever it collected — so the decoded bytes are
+re-encoded and compared, turning a corrupted header into a 400 rather than a
+plausible path pointing somewhere else. A raw, unmarked value still works, so
+existing scripts and `curl` lines are unaffected.
+`tests/repo-path-transport.test.ts` covers the round trip and drives real
+repositories in `中文-仓库` and `🔑-keys` folders end to end.
 
 ### Defect found and fixed during Phase 0 verification
 
