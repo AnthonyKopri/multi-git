@@ -13,6 +13,7 @@
 
 import type { SshAgentRepairResult } from './ssh-agent-types';
 import type { AgentLaunchInput, AgentLaunchResult } from './agent-types';
+import type { BisectRunOutcome } from './bisect-types';
 
 export interface DesktopApi {
   /** Opens the native folder picker. Resolves to '' when cancelled. */
@@ -53,6 +54,21 @@ export interface DesktopApi {
   openEditor: (repoPath: string) => Promise<boolean>;
   /** Starts a configured external agent in a worktree. */
   launchAgent: (input: AgentLaunchInput) => Promise<AgentLaunchResult>;
+
+  /**
+   * Runs a saved bisect test command until git reaches a verdict.
+   *
+   * Here rather than on the HTTP API for the same reason as the three above:
+   * it starts a program, and the loopback server answers anything on this
+   * machine that can reach the port. The renderer names a saved definition by
+   * id; the main process looks it up in the configuration.
+   */
+  runBisect: (input: { repoPath: string; commandId: string }) => Promise<BisectRunOutcome>;
+
+  /** Opens a native Save dialog. Resolves to '' when cancelled. */
+  selectSaveFile: (input: { suggestedName?: string; extension?: string }) => Promise<string>;
+  /** Writes text the user just chose a destination for. */
+  writeTextFile: (input: { filePath: string; contents: string }) => Promise<boolean>;
 }
 
 /** IPC channel names, shared so main and preload cannot drift apart. */
@@ -66,7 +82,10 @@ export const IPC_CHANNELS = {
   claimRepoWindow: 'window:claim-repo',
   openTerminalHere: 'tool:open-terminal',
   openEditor: 'tool:open-editor',
-  launchAgent: 'agent:launch'
+  launchAgent: 'agent:launch',
+  runBisect: 'bisect:run',
+  selectSaveFile: 'app:select-save-file',
+  writeTextFile: 'app:write-text-file'
 } as const;
 
 declare global {
