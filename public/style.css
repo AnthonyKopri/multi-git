@@ -4118,3 +4118,120 @@ body.history-collapsed .pane-reveal-right {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+/* ==========================================================================
+   OPERATIONS BAR
+   ========================================================================== */
+
+/*
+ * Sits outside <main>, which is what keeps it usable.
+ *
+ * The main body gets `filter: blur(4px)` and `pointer-events: none` while an
+ * operation blocks the app. A bar inside it would show a Cancel button that
+ * could not be clicked, which is worse than showing none.
+ */
+.operations-bar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
+  z-index: 6;
+}
+
+.operations-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 20px;
+  min-height: 32px;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+.operations-summary:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
+.operations-glyph {
+  font-size: 16px;
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+/* A spinning glyph is the whole point of the idle/running distinction: the bar
+   has to read as "something is happening" without being looked at directly. */
+.operations-bar[data-state='running'] .operations-glyph {
+  color: var(--color-primary);
+  animation: btnSpin 1.4s linear infinite;
+}
+
+.operations-headline {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.operations-bar[data-state='running'] .operations-headline {
+  color: var(--text-main);
+}
+
+.operations-elapsed {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+
+.operations-caret {
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.operations-summary[aria-expanded='true'] .operations-caret {
+  transform: rotate(180deg);
+}
+
+.operations-panel {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0 20px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.operations-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.operation-state {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.operation-row.operation-failed .operation-state {
+  color: var(--color-danger);
+}
+.operation-row.operation-succeeded .operation-state {
+  color: var(--color-success);
+}
+.operation-row.operation-cancelled .operation-state {
+  color: var(--color-warning);
+}
+
+/* Stacks the same way the sidebar rows do when there is no width for a row. */
+@media (max-width: 640px) {
+  .operation-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
