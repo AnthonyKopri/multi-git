@@ -51,6 +51,7 @@ import * as operationsBar from './features/operations';
 import * as patches from './features/patches';
 import * as bisect from './features/bisect';
 import * as notes from './features/notes';
+import * as tools from './features/tools';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -827,7 +828,7 @@ function buildCommands(): palette.Command[] {
     { id: 'patches', group: 'Repository', title: 'Create or apply a patch', keywords: 'diff format-patch am apply mailbox', run: () => repoHub.openRepoHub('patches') },
     { id: 'bisect', group: 'History', title: 'Bisect', keywords: 'good bad regression find', run: () => repoHub.openRepoHub('bisect') },
     { id: 'notes', group: 'History', title: 'Git notes', keywords: 'annotate note ref', run: () => repoHub.openRepoHub('notes') },
-    { id: 'external-tools', group: 'Repository', title: 'External tool settings', keywords: 'diff merge editor terminal explorer', run: () => repoHub.openRepoHub('tools') },
+    { id: 'external-tools', group: 'Repository', title: 'External tool and Explorer settings', keywords: 'diff merge editor terminal explorer context menu', run: () => repoHub.openRepoHub('tools') },
     { id: 'toggle-sidebar', group: 'View', title: 'Show or hide the branches panel', keywords: 'collapse expand sidebar left panel', run: () => toggleSide('sidebar') },
     { id: 'toggle-history', group: 'View', title: 'Show or hide the commit history', keywords: 'collapse expand right panel', run: () => toggleSide('history') },
     { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() }
@@ -916,6 +917,7 @@ async function start(): Promise<void> {
   bisect.initBisect({ refreshAll });
   notes.initNotes(ui);
   notes.initDrawerControls();
+  tools.initTools();
 
   wireHeader();
   wireWorkspaceTabs();

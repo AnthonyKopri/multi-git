@@ -10,6 +10,8 @@ import { readConfig, writeConfig } from '../server/config/store';
 import { resolveRepoPath } from '../server/middleware/repo-path';
 import { launchAgent, openEditorAt, openTerminalAt } from '../server/agents/service';
 import { runBisect } from '../server/git/bisect';
+import { launchTool } from '../server/tools/launch';
+import * as shellIntegration from './shell-integration';
 import { WindowRegistry, clampBoundsToDisplays, restorableWindows } from './window-registry';
 import type { ManagedWindow } from './window-registry';
 import {
@@ -19,6 +21,7 @@ import {
   selectFolder
 } from './windows';
 import type { AgentLaunchInput } from '../shared/agent-types';
+import type { ExternalToolKind } from '../shared/config-types';
 
 let logWindow: BrowserWindow | null = null;
 let backendServer: Server | null = null;
@@ -280,6 +283,44 @@ function registerIpcHandlers(): void {
       return true;
     }
   );
+
+  ipcMain.handle(
+    IPC_CHANNELS.launchTool,
+    (
+      _event,
+      input: { repoPath?: unknown; kind?: unknown; toolId?: unknown; placeholders?: unknown }
+    ) =>
+      launchTool({
+        repoPath: validatedRepoPath(input?.repoPath),
+        kind: String(input?.kind ?? '') as ExternalToolKind,
+        ...(typeof input?.toolId === 'string' ? { toolId: input.toolId } : {}),
+        // Each value is resolved against the repository inside launchTool
+        // before it becomes an argument.
+        placeholders: (input?.placeholders ?? {}) as Record<string, string>
+      })
+  );
+
+  // The three below take no arguments at all. What gets written is a constant
+  // in src/main/shell-integration.ts, so a renderer cannot choose a key.
+  ipcMain.handle(IPC_CHANNELS.shellIntegrationStatus, () => shellIntegration.readStatus());
+
+  ipcMain.handle(IPC_CHANNELS.installShellIntegration, async () => {
+    const status = await shellIntegration.install(app.getPath('exe'));
+    rememberShellIntegration(status.installed);
+    return status;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.removeShellIntegration, async () => {
+    const status = await shellIntegration.remove();
+    rememberShellIntegration(status.installed);
+    return status;
+  });
+}
+
+/** Keeps the configuration's record in step with what the registry says. */
+function rememberShellIntegration(installed: boolean): void {
+  const config = readConfig();
+  writeConfig({ ...config, shellIntegration: { contextMenuInstalled: installed } });
 }
 
 async function startApp(): Promise<void> {
