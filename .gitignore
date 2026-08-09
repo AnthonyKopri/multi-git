@@ -95,3 +95,6 @@ coverage/
 .eslintcache
 *.tsbuildinfo
 /GITHUB_SETUP.md
+
+# Private, local-only product planning
+/docs/roadmap/
