@@ -18,6 +18,21 @@ import {
 
 const OID = 'aa696a17eadd68fd8d98001239dac9feb2075842';
 
+const isWindows = process.platform === 'win32';
+
+/**
+ * An absolute path on either platform.
+ *
+ * `path.join('D:', 'work')` is a drive-relative path on Windows and an
+ * ordinary *relative* one on POSIX, where `D:` is just a folder name. The
+ * placement rules resolve both sides so they do not care, but anything
+ * comparing against a resolved result does — which is how the suggested-parent
+ * test passed on Windows and failed on Linux.
+ */
+function abs(...segments: string[]): string {
+  return path.join(isWindows ? 'D:\\' : '/', ...segments);
+}
+
 /** Newline form: records separated by a blank line, lock reason quoted. */
 const NEWLINE_FIXTURE = [
   'worktree C:/tmp/mgwt/main',
@@ -167,30 +182,30 @@ describe('parseWorktreePorcelain', () => {
 });
 
 describe('findPlacementConflict', () => {
-  const existing = [path.join('D:', 'work', 'app'), path.join('D:', 'work', 'app.worktrees', 'login')];
+  const existing = [abs('work', 'app'), abs('work', 'app.worktrees', 'login')];
 
   it('accepts a path that overlaps nothing', () => {
-    expect(findPlacementConflict(path.join('D:', 'work', 'app.worktrees', 'billing'), existing)).toBeNull();
+    expect(findPlacementConflict(abs('work', 'app.worktrees', 'billing'), existing)).toBeNull();
   });
 
   it('rejects a path that is already a worktree', () => {
-    expect(findPlacementConflict(path.join('D:', 'work', 'app'), existing)).toMatch(/already a worktree/);
+    expect(findPlacementConflict(abs('work', 'app'), existing)).toMatch(/already a worktree/);
   });
 
   it('rejects a path inside the repository itself', () => {
     // The case a user reaches for first, and the one git handles worst.
-    const conflict = findPlacementConflict(path.join('D:', 'work', 'app', 'wt', 'login'), existing);
+    const conflict = findPlacementConflict(abs('work', 'app', 'wt', 'login'), existing);
     expect(conflict).toMatch(/nested/i);
-    expect(conflict).toContain(path.join('D:', 'work', 'app'));
+    expect(conflict).toContain(abs('work', 'app'));
   });
 
   it('rejects a path that would contain an existing worktree', () => {
-    expect(findPlacementConflict(path.join('D:', 'work', 'app.worktrees'), existing)).toMatch(/nested/i);
+    expect(findPlacementConflict(abs('work', 'app.worktrees'), existing)).toMatch(/nested/i);
   });
 
   it('does not mistake a sibling with a shared prefix for a child', () => {
     // `app.worktrees` starts with `app` but is not inside it.
-    expect(findPlacementConflict(path.join('D:', 'work', 'app-two'), [path.join('D:', 'work', 'app')])).toBeNull();
+    expect(findPlacementConflict(abs('work', 'app-two'), [abs('work', 'app')])).toBeNull();
   });
 
   it('sees through a difference in case on Windows', () => {
@@ -230,15 +245,15 @@ describe('worktreeFolderName', () => {
 
 describe('suggesting where a worktree goes', () => {
   it('defaults to a sibling folder named after the repository', () => {
-    const main = path.join('D:', 'work', 'app');
-    expect(suggestWorktreeParent(main)).toBe(path.join('D:', 'work', 'app.worktrees'));
+    const main = abs('work', 'app');
+    expect(suggestWorktreeParent(main)).toBe(abs('work', 'app.worktrees'));
     expect(suggestWorktreePath(main, 'feature/login')).toBe(
-      path.join('D:', 'work', 'app.worktrees', 'feature-login')
+      abs('work', 'app.worktrees', 'feature-login')
     );
   });
 
   it('never suggests a location inside the repository', () => {
-    const main = path.join('D:', 'work', 'app');
+    const main = abs('work', 'app');
     const suggestion = suggestWorktreePath(main, 'x');
 
     expect(findPlacementConflict(suggestion, [main])).toBeNull();
@@ -246,11 +261,11 @@ describe('suggesting where a worktree goes', () => {
 
   it('uses a configured parent when the user set one', () => {
     const suggestion = suggestWorktreePath(
-      path.join('D:', 'work', 'app'),
+      abs('work', 'app'),
       'feature/login',
-      path.join('E:', 'trees')
+      abs('trees')
     );
-    expect(suggestion).toBe(path.join('E:', 'trees', 'feature-login'));
+    expect(suggestion).toBe(abs('trees', 'feature-login'));
   });
 });
 

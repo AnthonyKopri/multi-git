@@ -22,6 +22,20 @@ export function git(cwd: string, ...args: string[]): string {
   });
 }
 
+/**
+ * A throwaway directory under a path spelled the way git will spell it.
+ *
+ * `realpathSync.native` rather than `realpathSync`, because on Windows the
+ * plain form leaves an 8.3 short name alone. GitHub's Windows runners have a
+ * `TEMP` of `C:\Users\RUNNER~1\…`, so a fixture built with the plain form
+ * compares short paths against the long ones git prints back, and every
+ * assertion about a worktree path fails there and nowhere else. `.native` is
+ * also what `canonicalRepoKey` uses, so fixtures and the product agree.
+ */
+function realTempDir(prefix: string): string {
+  return fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
+}
+
 export function writeFile(repo: string, relativePath: string, contents: string): void {
   const target = path.join(repo, relativePath);
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -39,7 +53,7 @@ function configureRepo(repo: string): void {
 
 /** An initialised repository with an identity configured and no commits. */
 export function createEmptyRepo(): string {
-  const repo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-itest-')));
+  const repo = realTempDir('multi-git-itest-');
   created.push(repo);
 
   configureRepo(repo);
@@ -55,7 +69,7 @@ export function createEmptyRepo(): string {
  * has to survive the trip through an HTTP header.
  */
 export function createEmptyRepoNamed(folderName: string): string {
-  const parent = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-named-')));
+  const parent = realTempDir('multi-git-named-');
   created.push(parent);
 
   const repo = path.join(parent, folderName);
@@ -67,7 +81,7 @@ export function createEmptyRepoNamed(folderName: string): string {
 
 /** A temporary folder that is not a repository. Cleaned up with the rest. */
 export function createTempDir(prefix = 'multi-git-tmp-'): string {
-  const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
+  const directory = realTempDir(prefix);
   created.push(directory);
   return directory;
 }
