@@ -39,6 +39,9 @@ import { safetyNetRouter } from './routes/safety-net.routes';
 import { recoveryRouter } from './routes/recovery.routes';
 import { pullRequestsRouter } from './routes/pull-requests.routes';
 import { newRepoRouter } from './routes/new-repo.routes';
+import { worktreesRouter } from './routes/worktrees.routes';
+import { groupsRouter } from './routes/groups.routes';
+import { agentsRouter } from './routes/agents.routes';
 
 /**
  * Default body limit.
@@ -73,6 +76,8 @@ export function createApp(): Express {
   app.use(newRepoRouter);
   app.use(folderRouter);
   app.use(cloneRouter);
+  app.use(groupsRouter);
+  app.use(agentsRouter);
 
   // Repository-scoped routers.
   app.use(statusRouter);
@@ -92,6 +97,7 @@ export function createApp(): Express {
   app.use(safetyNetRouter);
   app.use(recoveryRouter);
   app.use(pullRequestsRouter);
+  app.use(worktreesRouter);
 
   app.use(errorHandler);
 
