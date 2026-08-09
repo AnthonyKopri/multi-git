@@ -117,7 +117,7 @@ export type CollapsibleSide = 'sidebar' | 'history';
 interface CollapseSpec {
   /** Class on <body> that the stylesheet keys the whole layout off. */
   bodyClass: string;
-  /** The strip that stays behind, and the header button that mirrors it. */
+  /** The centre-tab restore button, and the panel-header button it mirrors. */
   revealId: string;
   toggleId: string;
   /** Present tense, for the tooltip of whichever control would restore it. */
@@ -281,9 +281,9 @@ function onKeyDown(name: PaneName, spec: PaneSpec, event: KeyboardEvent): void {
 /**
  * Puts a side's collapsed state on the page and keeps both controls honest.
  *
- * The strip and the header button describe the same thing from opposite sides,
- * so their labels and `aria-expanded` are derived here rather than written by
- * whoever happened to trigger the change.
+ * The centre-tab restore button and the panel-header button describe the same
+ * thing from opposite states, so their labels and `aria-expanded` are derived
+ * here rather than written by whoever happened to trigger the change.
  */
 function applyCollapsed(side: CollapsibleSide, collapsed: boolean, root: ParentNode): void {
   const spec = COLLAPSE_SPECS[side];
@@ -301,7 +301,7 @@ function applyCollapsed(side: CollapsibleSide, collapsed: boolean, root: ParentN
     toggle.title = `${label} (${spec.shortcut})`;
     toggle.setAttribute('aria-label', label);
   }
-  // The strip only exists to reopen, so its label never changes with state.
+  // The centre-tab control only exists to reopen, so its label never changes.
   if (reveal) {
     reveal.title = `${spec.showLabel} (${spec.shortcut})`;
   }
