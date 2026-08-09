@@ -26,6 +26,18 @@ export const ELEMENT_MAP = {
   sidebarReveal: 'sidebar-reveal',
   historyReveal: 'history-reveal',
 
+  // Repository hub. The panels are found by id from the tab name, so they are
+  // not listed individually.
+  btnRepoHub: 'btn-repo-hub',
+  repoHubModal: 'repo-hub-modal',
+  repoHubTabs: 'repo-hub-tabs',
+  btnCloseRepoHub: 'btn-close-repo-hub',
+  remoteCount: 'remote-count',
+  remoteSummaryList: 'remote-summary-list',
+  submoduleCount: 'submodule-count',
+  submoduleSummaryList: 'submodule-summary-list',
+  lfsSummary: 'lfs-summary',
+
   // Header Segments
   repoSegment: 'repo-segment',
   repoSegmentName: 'repo-segment-name',

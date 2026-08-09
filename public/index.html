@@ -175,6 +175,9 @@
         <button id="btn-create-pr" class="btn btn-icon" title="Create pull request" aria-label="Create pull request">
           <span class="material-symbols-outlined" aria-hidden="true">call_merge</span>
         </button>
+        <button id="btn-repo-hub" class="btn btn-icon" type="button" title="Repository tools — remotes, submodules, LFS, patches, bisect, notes" aria-label="Repository tools">
+          <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
+        </button>
         <button id="btn-open-logs" class="btn btn-icon" title="Open terminal log window" aria-label="Open terminal log window">
           <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
         </button>
@@ -334,6 +337,61 @@
             <ul id="worktree-list" class="stash-list-ul worktree-list">
               <li class="empty-state">No worktrees</li>
             </ul>
+          </div>
+        </div>
+
+        <!-- Repository summaries.
+             Deliberately thin: a count and a way into the Repository hub at the
+             right tab. The full tools live there so the sidebar does not grow a
+             section per Phase 4 feature. -->
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="remotes">
+          <div class="section-header">
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-remotes">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Remotes <span id="remote-count" class="count-badge hidden"></span></h3>
+            </button>
+            <button id="btn-remotes-manage" class="btn btn-text btn-sm" type="button" data-hub-tab="remotes" title="Add, edit and test remotes">
+              <span>Manage</span>
+            </button>
+          </div>
+          <div class="section-body" id="section-remotes">
+            <ul id="remote-summary-list" class="stash-list-ul">
+              <li class="empty-state">No remotes</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="submodules">
+          <div class="section-header">
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-submodules">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Submodules <span id="submodule-count" class="count-badge hidden"></span></h3>
+            </button>
+            <button id="btn-submodules-manage" class="btn btn-text btn-sm" type="button" data-hub-tab="submodules" title="Initialize, update and sync submodules">
+              <span>Manage</span>
+            </button>
+          </div>
+          <div class="section-body" id="section-submodules">
+            <ul id="submodule-summary-list" class="stash-list-ul">
+              <li class="empty-state">No submodules</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="lfs">
+          <div class="section-header">
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-lfs">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Git LFS</h3>
+            </button>
+            <button id="btn-lfs-manage" class="btn btn-text btn-sm" type="button" data-hub-tab="lfs" title="Tracked patterns, objects and locks">
+              <span>Manage</span>
+            </button>
+          </div>
+          <div class="section-body" id="section-lfs">
+            <div id="lfs-summary" class="lfs-summary">
+              <span class="empty-state">Not checked yet</span>
+            </div>
           </div>
         </div>
 
@@ -1524,6 +1582,62 @@
         <ul id="recovery-reflog-list" class="recovery-list">
           <li class="empty-state">No reflog entries</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPOSITORY HUB
+       The six Phase 4 toolsets behind one window, so the sidebar does not grow
+       a section each. Every tab's content is owned by its own feature module;
+       this markup is only the shell and the strip that switches between them. -->
+  <div id="repo-hub-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-card-wide repo-hub-card">
+      <div class="modal-header">
+        <h2>Repository</h2>
+        <button id="btn-close-repo-hub" class="btn-close" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div id="repo-hub-tabs" class="hub-tabs" role="tablist" aria-label="Repository tools">
+        <button type="button" class="hub-tab active" role="tab" id="hub-tab-remotes" data-hub-tab="remotes" aria-selected="true" aria-controls="hub-panel-remotes">
+          <span class="material-symbols-outlined" aria-hidden="true">cloud</span>
+          <span>Remotes</span>
+        </button>
+        <button type="button" class="hub-tab" role="tab" id="hub-tab-submodules" data-hub-tab="submodules" aria-selected="false" aria-controls="hub-panel-submodules">
+          <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+          <span>Submodules</span>
+        </button>
+        <button type="button" class="hub-tab" role="tab" id="hub-tab-lfs" data-hub-tab="lfs" aria-selected="false" aria-controls="hub-panel-lfs">
+          <span class="material-symbols-outlined" aria-hidden="true">database</span>
+          <span>LFS</span>
+        </button>
+        <button type="button" class="hub-tab" role="tab" id="hub-tab-patches" data-hub-tab="patches" aria-selected="false" aria-controls="hub-panel-patches">
+          <span class="material-symbols-outlined" aria-hidden="true">difference</span>
+          <span>Patches</span>
+        </button>
+        <button type="button" class="hub-tab" role="tab" id="hub-tab-bisect" data-hub-tab="bisect" aria-selected="false" aria-controls="hub-panel-bisect">
+          <span class="material-symbols-outlined" aria-hidden="true">bug_report</span>
+          <span>Bisect</span>
+        </button>
+        <button type="button" class="hub-tab" role="tab" id="hub-tab-notes" data-hub-tab="notes" aria-selected="false" aria-controls="hub-panel-notes">
+          <span class="material-symbols-outlined" aria-hidden="true">sticky_note_2</span>
+          <span>Notes</span>
+        </button>
+        <button type="button" class="hub-tab" role="tab" id="hub-tab-tools" data-hub-tab="tools" aria-selected="false" aria-controls="hub-panel-tools">
+          <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
+          <span>Tools</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="hub-panel" id="hub-panel-remotes" role="tabpanel" aria-labelledby="hub-tab-remotes"></div>
+        <div class="hub-panel hidden" id="hub-panel-submodules" role="tabpanel" aria-labelledby="hub-tab-submodules"></div>
+        <div class="hub-panel hidden" id="hub-panel-lfs" role="tabpanel" aria-labelledby="hub-tab-lfs"></div>
+        <div class="hub-panel hidden" id="hub-panel-patches" role="tabpanel" aria-labelledby="hub-tab-patches"></div>
+        <div class="hub-panel hidden" id="hub-panel-bisect" role="tabpanel" aria-labelledby="hub-tab-bisect"></div>
+        <div class="hub-panel hidden" id="hub-panel-notes" role="tabpanel" aria-labelledby="hub-tab-notes"></div>
+        <div class="hub-panel hidden" id="hub-panel-tools" role="tabpanel" aria-labelledby="hub-tab-tools"></div>
       </div>
     </div>
   </div>

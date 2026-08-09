@@ -4035,3 +4035,86 @@ body.history-collapsed .pane-reveal-right {
 .is-scrollable.at-end:not(.at-start) {
   mask-image: linear-gradient(to right, transparent 0, black 12px);
 }
+
+/* ==========================================================================
+   REPOSITORY HUB
+   ========================================================================== */
+
+.repo-hub-card {
+  /* Taller than the default modal: these tabs hold lists, not a short form. */
+  height: min(760px, calc(100vh - 40px));
+}
+
+/* The strip never wraps — seven tabs on two lines reads as two groups rather
+   than one row. It scrolls instead, with the wheel redirected in the same way
+   as the commit template chips. */
+.hub-tabs {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 16px;
+  /* A visible scrollbar under the tabs would sit between them and the panel
+     they control, which reads as a divider that is not one. */
+  scrollbar-width: none;
+}
+.hub-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.hub-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.hub-tab .material-symbols-outlined {
+  font-size: 18px;
+}
+.hub-tab:hover {
+  color: var(--text-main);
+}
+.hub-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.hub-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Below this the icons alone identify the tabs, and seven of them fit without
+   scrolling — which beats seven labelled tabs that do not. */
+@container modalbody (max-width: 560px) {
+  .hub-tab span:not(.material-symbols-outlined) {
+    display: none;
+  }
+  .hub-tab {
+    padding: 8px 12px;
+  }
+}
+
+.lfs-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
