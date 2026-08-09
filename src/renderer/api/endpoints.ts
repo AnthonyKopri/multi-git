@@ -73,8 +73,11 @@ import type {
   AgentLaunchRecord,
   BisectCommandDefinition,
   ExternalAgentDefinition,
+  ExternalToolDefinition,
+  ExternalToolKind,
   RepoGroup
 } from '../../shared/config-types';
+import type { DetectedTool } from '../../shared/tool-types';
 import type { DetectedAgent } from '../../shared/agent-types';
 
 /** Requests that are not about the open repository. */
@@ -923,3 +926,38 @@ export const deleteNote = (commit: string, ref?: string) =>
 
 export const syncNotes = (direction: 'fetch' | 'push', remote = 'origin', ref?: string) =>
   api.post<{ success: true }>('/api/notes/sync', { body: { direction, remote, ref } });
+
+// ---------- external tools ----------
+
+export const getTools = () =>
+  api.get<{ success: true; tools: ExternalToolDefinition[]; confirmed: Record<string, boolean> }>(
+    '/api/tools',
+    global
+  );
+
+export const detectTools = () =>
+  api.get<{ success: true; detected: DetectedTool[] }>('/api/tools/detect', global);
+
+export const addDetectedTools = () =>
+  api.post<{ success: true; added: ExternalToolDefinition[]; tools: ExternalToolDefinition[] }>(
+    '/api/tools/detect',
+    global
+  );
+
+export const saveTool = (tool: Partial<ExternalToolDefinition>) =>
+  api.post<{ success: true; tool: ExternalToolDefinition; tools: ExternalToolDefinition[] }>(
+    '/api/tools',
+    { ...global, body: tool }
+  );
+
+export const deleteTool = (id: string) =>
+  api.delete<{ success: true; tools: ExternalToolDefinition[] }>('/api/tools', {
+    ...global,
+    body: { id }
+  });
+
+export const confirmToolKind = (kind: ExternalToolKind) =>
+  api.post<{ success: true; confirmed: boolean }>('/api/tools/confirm', {
+    ...global,
+    body: { kind }
+  });

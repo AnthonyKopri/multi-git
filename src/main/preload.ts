@@ -57,7 +57,27 @@ const desktopApi: DesktopApi = {
     ipcRenderer.invoke(IPC_CHANNELS.writeTextFile, {
       filePath: String(input?.filePath ?? ''),
       contents: String(input?.contents ?? '')
-    }) as Promise<boolean>
+    }) as Promise<boolean>,
+
+  // A kind, or a saved id. Never an executable — the main process resolves the
+  // definition, exactly as it does for agents and bisect commands.
+  launchTool: (input) =>
+    ipcRenderer.invoke(IPC_CHANNELS.launchTool, input) as ReturnType<DesktopApi['launchTool']>,
+
+  shellIntegrationStatus: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.shellIntegrationStatus) as ReturnType<
+      DesktopApi['shellIntegrationStatus']
+    >,
+  // Both take no arguments: what gets written is a constant in the main
+  // process, so a renderer cannot influence which keys are touched.
+  installShellIntegration: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.installShellIntegration) as ReturnType<
+      DesktopApi['installShellIntegration']
+    >,
+  removeShellIntegration: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.removeShellIntegration) as ReturnType<
+      DesktopApi['removeShellIntegration']
+    >
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

@@ -4294,3 +4294,19 @@ body.history-collapsed .pane-reveal-right {
 .lfs-pointer-only .worktree-name {
   opacity: 0.75;
 }
+
+/* Placeholder and registry-key reference lists. */
+.placeholder-help {
+  list-style: none;
+  margin: 4px 0 12px;
+  padding: 0;
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.placeholder-help li {
+  padding: 2px 0;
+}
+.placeholder-help code {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--color-primary);
+}
