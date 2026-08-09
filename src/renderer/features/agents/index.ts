@@ -15,7 +15,7 @@ import type { Elements } from '../../dom/elements';
 import { asInput, asSelect } from '../../dom/elements';
 import { el, fragment, icon, setHidden } from '../../dom/create';
 import { getState } from '../../state/store';
-import { confirmDialog, promptDialog } from '../../ui/dialogs';
+import { confirmDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { formatRelativeTime } from '../../ui/format';
@@ -416,17 +416,4 @@ export async function launchAgentForActiveRepo(): Promise<void> {
   }
 
   await launchAgentFor(activeRepo);
-}
-
-/** Kept for the palette, which offers a prompt-free launch. */
-export async function promptForWorktreeAndLaunch(): Promise<void> {
-  const chosen = await promptDialog({
-    title: 'Launch a coding agent',
-    label: 'Folder to launch it in',
-    type: 'text'
-  });
-
-  if (chosen !== null && chosen.trim() !== '') {
-    await launchAgentFor(chosen.trim());
-  }
 }

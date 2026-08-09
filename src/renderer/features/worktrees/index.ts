@@ -28,7 +28,6 @@ let ui: Elements;
 let refreshAll: () => Promise<void> = async () => {};
 
 let worktrees: WorktreeInfo[] = [];
-let mainPath = '';
 let suggestedParent = '';
 
 export function initWorktrees(elements: Elements, onChanged: () => Promise<void>): void {
@@ -208,7 +207,6 @@ export async function refreshWorktrees(): Promise<void> {
   try {
     const result = await api.getWorktrees();
     worktrees = result.worktrees;
-    mainPath = result.mainPath;
     suggestedParent = result.suggestedParent;
 
     renderSidebar();
@@ -617,9 +615,4 @@ export function handleWorktreeAction(target: HTMLElement): void {
     case 'remove':
       void removeWorktree(worktree);
   }
-}
-
-/** The main worktree of the open repository's family. Used by the header. */
-export function familyMainPath(): string {
-  return mainPath;
 }
