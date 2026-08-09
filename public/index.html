@@ -748,6 +748,25 @@
 
     </main>
 
+    <!-- OPERATIONS BAR
+         A sibling of <main>, not a child of it. The main body is blurred and
+         made pointer-events: none while an operation blocks the app, so a bar
+         inside it would show a Cancel button nobody could click. -->
+    <div id="operations-bar" class="operations-bar" data-state="idle">
+      <button type="button" id="operations-summary" class="operations-summary" aria-expanded="false" aria-controls="operations-panel">
+        <span class="material-symbols-outlined operations-glyph" aria-hidden="true">check_circle</span>
+        <span id="operations-headline" class="operations-headline">Nothing running</span>
+        <span id="operations-count" class="count-badge hidden"></span>
+        <span id="operations-elapsed" class="operations-elapsed"></span>
+        <span class="material-symbols-outlined operations-caret" aria-hidden="true">expand_less</span>
+      </button>
+      <div id="operations-panel" class="operations-panel hidden" role="region" aria-label="Operations">
+        <ul id="operations-list" class="operations-list">
+          <li class="empty-state">Nothing has run yet</li>
+        </ul>
+      </div>
+    </div>
+
   </div>
 
   <!-- NO REPO STATE OVERLAY -->

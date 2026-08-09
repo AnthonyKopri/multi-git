@@ -38,6 +38,15 @@ export const ELEMENT_MAP = {
   submoduleSummaryList: 'submodule-summary-list',
   lfsSummary: 'lfs-summary',
 
+  // Operations bar
+  operationsBar: 'operations-bar',
+  operationsSummary: 'operations-summary',
+  operationsHeadline: 'operations-headline',
+  operationsCount: 'operations-count',
+  operationsElapsed: 'operations-elapsed',
+  operationsPanel: 'operations-panel',
+  operationsList: 'operations-list',
+
   // Header Segments
   repoSegment: 'repo-segment',
   repoSegmentName: 'repo-segment-name',

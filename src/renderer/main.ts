@@ -47,6 +47,7 @@ import * as repoHub from './features/repo-hub';
 import * as remotes from './features/remotes';
 import * as submodules from './features/submodules';
 import * as lfs from './features/lfs';
+import * as operationsBar from './features/operations';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -905,6 +906,8 @@ async function start(): Promise<void> {
   remotes.initRemotes(ui);
   submodules.initSubmodules(ui, { openRepository: repo.openRepository });
   lfs.initLfs(ui);
+  // Opens the operation stream, so the bar is live before anything is started.
+  operationsBar.initOperations(ui);
 
   wireHeader();
   wireWorkspaceTabs();
