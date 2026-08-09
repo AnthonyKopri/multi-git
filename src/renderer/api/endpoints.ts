@@ -31,6 +31,14 @@ import type {
   UpdateRemoteInput
 } from '../../shared/remote-types';
 import type {
+  AmState,
+  ApplyPatchOutcome,
+  ApplyPatchRequest,
+  PatchPreview,
+  PatchRequest
+} from '../../shared/patch-types';
+import type { BisectSession, BisectVerdict } from '../../shared/bisect-types';
+import type {
   LfsLock,
   LfsStatusResponse,
   LfsTransferPreview
@@ -63,6 +71,7 @@ import type {
 } from '../../shared/worktree-types';
 import type {
   AgentLaunchRecord,
+  BisectCommandDefinition,
   ExternalAgentDefinition,
   RepoGroup
 } from '../../shared/config-types';
@@ -851,3 +860,66 @@ export const releaseLfsLock = (path: string, force = false) =>
   api.post<{ success: true; locks: LfsLock[]; unavailable?: string }>('/api/lfs/unlock', {
     body: { path, force }
   });
+
+// ---------- patches ----------
+
+export const createPatch = (request: PatchRequest) =>
+  api.post<{ success: true; preview: PatchPreview }>('/api/patches/create', { body: request });
+
+export const applyPatch = (request: ApplyPatchRequest) =>
+  api.post<{ success: true; outcome: ApplyPatchOutcome }>('/api/patches/apply', { body: request });
+
+export const getAmState = () =>
+  api.get<{ success: true; state: AmState }>('/api/patches/am-state');
+
+export const controlAm = (action: 'continue' | 'skip' | 'abort') =>
+  api.post<{ success: true; state: AmState }>('/api/patches/am', { body: { action } });
+
+// ---------- bisect ----------
+
+export const getBisect = () =>
+  api.get<{ success: true; session: BisectSession; commands: BisectCommandDefinition[] }>(
+    '/api/bisect'
+  );
+
+export const startBisect = (goodRef: string, badRef: string) =>
+  api.post<{ success: true; session: BisectSession }>('/api/bisect/start', {
+    body: { goodRef, badRef }
+  });
+
+export const markBisect = (verdict: BisectVerdict) =>
+  api.post<{ success: true; session: BisectSession }>('/api/bisect/mark', { body: { verdict } });
+
+export const resetBisect = () =>
+  api.post<{ success: true; session: BisectSession }>('/api/bisect/reset');
+
+export const saveBisectCommand = (definition: Partial<BisectCommandDefinition>) =>
+  api.post<{ success: true; commands: BisectCommandDefinition[] }>('/api/bisect/commands', {
+    body: definition
+  });
+
+// ---------- notes ----------
+
+export const getNotesRefs = () =>
+  api.get<{ success: true; refs: string[]; defaultRef: string }>('/api/notes/refs');
+
+export const getNotesIndex = (ref?: string) =>
+  api.get<{ success: true; commits: string[] }>(
+    `/api/notes/index${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`
+  );
+
+export const getNote = (commit: string, ref?: string) =>
+  api.get<{ success: true; note: string | null }>(
+    `/api/notes?commit=${encodeURIComponent(commit)}${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`
+  );
+
+export const saveNote = (commit: string, message: string, ref?: string) =>
+  api.post<{ success: true; note: string | null }>('/api/notes', {
+    body: { commit, message, ref }
+  });
+
+export const deleteNote = (commit: string, ref?: string) =>
+  api.delete<{ success: true }>('/api/notes', { body: { commit, ref } });
+
+export const syncNotes = (direction: 'fetch' | 'push', remote = 'origin', ref?: string) =>
+  api.post<{ success: true }>('/api/notes/sync', { body: { direction, remote, ref } });

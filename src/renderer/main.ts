@@ -48,6 +48,9 @@ import * as remotes from './features/remotes';
 import * as submodules from './features/submodules';
 import * as lfs from './features/lfs';
 import * as operationsBar from './features/operations';
+import * as patches from './features/patches';
+import * as bisect from './features/bisect';
+import * as notes from './features/notes';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -113,7 +116,8 @@ async function refreshAll(): Promise<void> {
       worktrees.refreshWorktrees(),
       remotes.refreshRemotes(),
       submodules.refreshSubmodules(),
-      lfs.refreshLfs()
+      lfs.refreshLfs(),
+      notes.refreshNotesIndex()
     ]);
   } catch (error) {
     if (!isStale(error)) {
@@ -908,6 +912,10 @@ async function start(): Promise<void> {
   lfs.initLfs(ui);
   // Opens the operation stream, so the bar is live before anything is started.
   operationsBar.initOperations(ui);
+  patches.initPatches();
+  bisect.initBisect({ refreshAll });
+  notes.initNotes(ui);
+  notes.initDrawerControls();
 
   wireHeader();
   wireWorkspaceTabs();
