@@ -26,6 +26,9 @@ Its defining feature is account-aware SSH: each repository can use its own key a
 - **Keep branches tidy:** see which are merged, stale or tracking a branch that no longer exists, then pin, rename, re-point or delete them in bulk.
 - **Sign your work:** configure SSH or GPG signing per repository, and see what a commit's signature actually proves.
 - **Resolve conflicts visually:** choose the current or incoming version, edit the result, stage it, and continue or abort the operation.
+- **Work on two branches at once:** create and manage Git worktrees, open each in its own window, and remove them without ever losing uncommitted work by accident.
+- **Group repositories that belong together:** fetch a whole group in one action, cancel it mid-flight, and see the result for each repository.
+- **Hand a folder to a coding agent:** launch Claude, Codex, or any executable you configure in the worktree you choose, with the right account already usable.
 - **Recover from mistakes:** restore recently discarded files, undo checkpointed operations, and browse a durable recovery journal beside Git's own reflog.
 - **See what the app did:** open the live Terminal Log for the Git commands, output, warnings, and errors behind each action.
 
@@ -474,6 +477,38 @@ The optional vault lets Multi-Git use passphrase-protected keys without asking o
 
 The master key is not stored and cannot be recovered. Saved passphrases are encrypted on disk with AES-256-GCM using a 256-bit key derived with `scrypt`, plus a random salt and IV. They are made available only while the vault is unlocked.
 
+You do not have to use the vault. When a window opens on a repository whose key is locked, or when you fetch, pull or push with one, Multi-Git asks for what it needs then and there — the vault master key if the passphrase is saved, or the key's own passphrase if it is not — and offers to remember it afterwards. Declining is remembered for the session; **Unlock key** in the accounts menu asks again whenever you are ready. A passphrase you type reaches `ssh` through a short-lived askpass bridge and appears in no command line, no log, and no file unless you asked it to be saved.
+
+### Worktrees
+
+A worktree is a second working folder for the same repository, so two branches can be checked out at once without stashing. Remotes, history, configuration and the object store are shared; the files, the index and whatever is half-finished in them are not.
+
+The **Worktrees** section in the sidebar lists every worktree of the open repository, with its branch, whether it is clean, and how far ahead or behind it is. Each row can open the worktree in this window or a new one, open a terminal there, launch a coding agent, or copy the path.
+
+**Manage** opens the full manager:
+
+- **Create** from a new branch, an existing branch, or a detached commit. The suggested folder is a sibling of the repository named `<repo>.worktrees`, and the absolute path is always shown before the button does anything. A branch already checked out elsewhere is refused, naming where.
+- **Lock** with an optional reason, so Git refuses to prune or remove it — for a worktree on a removable drive, for instance. The reason is shown wherever the lock gets in the way.
+- **Move** a worktree, or **Repair links** after folders were moved outside Multi-Git.
+- **Prune preview** lists the worktrees Git would forget because their folders are gone. Looking never removes anything.
+- **Remove** refuses a worktree that is dirty or locked. Removing one with uncommitted changes anyway requires typing its folder name, and Multi-Git snapshots the work into the Safety Net first — that snapshot lives in the shared object store, so it survives the folder.
+
+One account per repository family: a repository and its worktrees share one `.git/config`, so they share one SSH identity. Choosing an account in any worktree sets it for all of them, which is what Git will actually do.
+
+### Multiple windows and repository groups
+
+**Open in a new window** gives a repository or worktree its own window with its own selection, diff and commit message. Asking twice focuses the window that already exists rather than opening a second one that would fight it for the same index lock. Windows reopen at the next launch; turn that off with **Reopen windows on startup**. In browser mode the equivalent is a named tab.
+
+The **Groups** section collects repositories that belong together. **Fetch all** fetches every one of them with a concurrency cap, can be cancelled, and reports each repository separately — one unreachable remote does not hide the five that worked.
+
+### Coding agents
+
+Multi-Git can start a tool you configure in the worktree you choose. **Detect installed** looks for known CLIs on your PATH and seeds an editable definition; you can add any executable by hand, with its own arguments and environment.
+
+A launch sets the worktree as the working directory, passes arguments as separate values with no shell anywhere in the path, and gives the tool an allowlisted environment rather than a copy of Multi-Git's. An optional starting prompt is passed as one argument and is never recorded. Before launching, Multi-Git makes sure the account that worktree uses is actually loaded, so the agent can push.
+
+What it does not do: install hooks, read the tool's session state, or claim to know what it is doing. **Launched** means the process started. Launching is available in the desktop app only — the local HTTP server has no route that starts a program.
+
 ### Workspace Explorer and blame
 
 **Workspace Explorer** provides a collapsible tree of tracked and untracked repository files. Select a file to read its contents, then click **Show Blame** for line-by-line commit, author, and date attribution. Click a blame entry to open that commit in History.
@@ -500,8 +535,11 @@ Click the terminal icon in the top toolbar to open the live log in a separate wi
 Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, and the current UI loads its fonts and Material Symbols from Google Fonts when an internet connection is available.
 
 ```text
-~/.multi-git-client-config.json   recent repositories, profiles, rules, settings
+~/.multi-git-client-config.json   recent repositories, profiles, rules, settings,
+                                  repository groups, agent definitions and launch
+                                  history, and which windows were open
 ~/.multi-git-client-secrets.json  encrypted passphrases, if the vault is used
+<repository>/.git/multi-git/      the durable recovery journal
 <temporary directory>/multi-git-trash/  short-lived discarded-file snapshots
 ```
 
@@ -515,6 +553,9 @@ Several further protections apply, on the principle that a repository's contents
 - File reads resolve symlinks before checking containment, so a link inside a repository cannot reach a file outside it.
 - Values that reach a Git or GitHub CLI argument vector are validated, and file paths are separated with `--`, so a branch, tag, or file name that looks like a command-line option is treated as data.
 - Reading a public key is limited to keys registered to a profile or living under `~/.ssh`.
+- Starting a program is not something the local API can do. Terminals, editors and coding agents are launched only through the desktop app's preload bridge, which validates every path and takes an agent id rather than an executable name.
+- A launched tool gets an allowlisted environment, not a copy of Multi-Git's — in particular it never inherits the askpass bridge that would answer with a stored passphrase.
+- Agent launch history records what was started and where, but never the prompt.
 
 ## Releases
 
@@ -567,7 +608,9 @@ multi-git/
 
 The whole application is TypeScript, compiled into `out/`. `public/` holds only the HTML, CSS, and the Terminal Log window script, which are copied alongside the bundle at build time.
 
-The UI talks to a localhost JSON API. Repository-scoped requests carry the selected path in the `x-repo-path` header, which one middleware validates. Git commands are executed as argument arrays with Node's `spawn`, never through a shell; values that could be read as options are validated and pathspecs are separated with `--`. A selected profile is applied per operation with `GIT_SSH_COMMAND`, and saved passphrases use a short-lived askpass bridge.
+The UI talks to a localhost JSON API. Repository-scoped requests carry the selected path in the `x-repo-path` header, which one middleware validates; the app sends it base64-encoded, marked by `x-repo-path-encoding`, so a folder named in any script survives the trip. Git commands are executed as argument arrays with Node's `spawn`, never through a shell; values that could be read as options are validated and pathspecs are separated with `--`. A selected profile is applied per operation with `GIT_SSH_COMMAND`, and saved passphrases use a short-lived askpass bridge.
+
+Starting a program that is not Git — a terminal, an editor, a coding agent — is deliberately not on that API. Those go through the Electron preload bridge instead, which validates every path it is given and looks agents up by id in your saved configuration, so nothing reachable over the local port can name a program to run.
 
 ## Developer Commands
 
@@ -645,6 +688,35 @@ curl -H "x-repo-path: /path/to/repository" \
 # Both versions of an image, as data URIs
 curl -H "x-repo-path: /path/to/repository" \
   "http://localhost:3000/api/git/diff/blobs?path=logo.png&source=working-tree"
+
+# Every worktree of this repository's family
+curl -H "x-repo-path: /path/to/repository" \
+  http://localhost:3000/api/worktrees
+
+# The same, with dirty counts and ahead/behind (one or two Git calls each)
+curl -H "x-repo-path: /path/to/repository" \
+  http://localhost:3000/api/worktrees/status
+
+# Create one on a new branch
+curl -X POST http://localhost:3000/api/worktrees \
+  -H "Content-Type: application/json" \
+  -H "x-repo-path: /path/to/repository" \
+  -d '{"targetPath":"/path/to/repository.worktrees/login","branchMode":"new","branch":"feature/login"}'
+
+# What a prune would forget. Looking removes nothing.
+curl -H "x-repo-path: /path/to/repository" \
+  http://localhost:3000/api/worktrees/prune-preview
+
+# Configured coding agents and the launch history
+curl http://localhost:3000/api/agents
+```
+
+A repository path outside Latin-1 needs the encoded form the app itself uses, because an HTTP header cannot carry those bytes directly:
+
+```bash
+curl -H "x-repo-path: $(printf %s '/path/to/中文-仓库' | base64 -w0)" \
+  -H "x-repo-path-encoding: base64" \
+  http://localhost:3000/api/git/status
 ```
 
 The API is an internal application interface rather than a versioned public contract and may change between releases.

@@ -1,7 +1,8 @@
 ---
 title: "Phase 3: Worktrees, windows and external coding agents"
 phase: 3
-status: planned
+status: complete
+completed: 2026-08-09
 depends_on: [phase-1]
 recommended_dependencies: [phase-2-recovery]
 dependencies_met: true
@@ -12,27 +13,37 @@ lanes: [worktrees, multi-window, agent-launch]
 
 # Phase 3: Worktrees, Windows and External Coding Agents
 
-> **Ready to start.** Phase 1 is in `improvements`, and Phase 2 completed on
-> 2026-08-08, so nothing this phase needs is outstanding. It can run in
-> parallel with Phase 4, which shares no code with it beyond the hotspots
-> listed in the execution contract.
+> **Complete, 2026-08-09.** Every workstream landed, plus the SSH unlock
+> prompt described under Workstream D and the `x-repo-path` transport fix that
+> had been carried as an open follow-up since Phase 0.
 >
-> Phase 2 landed the recovery journal
-> (`src/server/safety-net/recovery.ts`), which is what a forced worktree
-> removal should capture through — see Workstream A below. It is now
-> available rather than merely recommended.
+> Two assumptions in the original plan turned out to be wrong when checked
+> against git and against this codebase. Both are corrected below and in the
+> implementation; they are recorded rather than quietly edited out, because
+> either one would have been rediscovered as a bug.
 >
-> Two Phase 0/1 pieces matter here more than anywhere else. Launching an
-> external coding agent must go through the `ExecutableRunner` in
-> `src/server/process/runner.ts` — argv-only, no shell, cancellable, with
-> process-tree termination, which is what a long-lived agent process needs.
-> And the reason a launched agent authenticates correctly at all is the
-> per-repository `core.sshCommand` that Phase 1 writes
-> (`src/server/ssh/repo-routing.ts`): the identity travels with the folder
-> rather than with Multi-Git's child-process environment. **A worktree is a
-> separate folder, so each one needs that pin applied when it is created** —
-> otherwise an agent launched in a worktree authenticates as whichever key ssh
-> offers first, which is the account mix-up Phase 1 exists to prevent.
+> **1. Worktrees do not each need the `core.sshCommand` pin.** The plan said
+> "a worktree is a separate folder, so each one needs that pin applied when it
+> is created". They do not: linked worktrees share one `.git/config`, because
+> `git config --local` writes to `$GIT_COMMON_DIR/config`. The pin Phase 1
+> writes is therefore *already inherited* by every worktree of the family, and
+> writing a second one would be writing the same value to the same file.
+> A repository and its worktrees consequently have **one** SSH identity, not
+> one each — per-worktree identities would need `extensions.worktreeConfig`,
+> which was considered and rejected as a repository-level git extension that
+> other tools reading the repository would also see. `profileForRepo` and
+> `rememberProfileForRepo` now resolve to the family's main worktree, so the
+> settings agree with what git will actually do.
+>
+> **2. Agent launch cannot go through `ExecutableRunner.run`.** That method
+> awaits completion with a five-minute default timeout, which is the wrong
+> shape for a tool someone will be talking to for an hour: it would hold a
+> promise open for the whole session and then kill the process. A sibling
+> `launchDetached` was added to the same module, keeping every property that
+> made the runner worth having — argv-only, `shell: false`, explicit
+> environment, injectable for tests — and dropping only the waiting. Process
+> tree termination does not apply: Multi-Git does not manage an agent's
+> lifetime, and says so.
 >
 > The full list of foundations is in
 > [README.md](README.md#current-state).
@@ -146,6 +157,90 @@ export interface AgentLaunchResult {
 - Multiple windows/worktrees retain independent UI and WIP state without duplicate backend work.
 - Configured agents open in the intended worktree with robust argv/cwd and working SSH routing.
 - No proprietary agent monitoring, hidden remote rewrite, or arbitrary server-side command execution is introduced.
+
+## Workstream D — restoring an account, and asking to unlock it
+
+Added during implementation. A window that reopens on a repository whose key is
+locked looked ready and failed at the first push; the app only ever *mentioned*
+the problem, in a log line and a toast telling the user to go and fix it
+somewhere else.
+
+"Locked" is two states and they need two questions. `VAULT_LOCKED` means the
+passphrase is saved but the vault needs its master key, so the master key is
+what to ask for. `PASSPHRASE_REQUIRED` means the key is protected and nothing is
+saved for it, so the key's own passphrase is what to ask for — with an offer to
+remember it, made only after the passphrase has demonstrably loaded the key. A
+third code, `PASSPHRASE_REJECTED`, distinguishes "that was not it, try again"
+from "ask for one".
+
+A supplied passphrase reaches ssh through the existing AskPass bridge and
+nowhere else: not into an argument vector, not into an environment variable, not
+into a response body, and not into the log. `tests/ssh-unlock.test.ts` asserts
+that against the fake runner's full record of everything that would have reached
+a child process.
+
+The prompt appears when a window opens on a locked key and before a
+user-initiated fetch, pull or push — all three authenticate with the same key,
+so prompting only for push would be arbitrary. It never appears during a
+background refresh or a focus re-check. Declining is remembered for the session,
+and the **Unlock key** button in the accounts dropdown is the way back.
+
+## Phase 3 record (2026-08-09)
+
+### Versions and compatibility
+
+| | |
+| --- | --- |
+| Git | 2.55.0 in development. `git worktree list --porcelain -z` needs 2.36; older versions fall back to the newline form automatically, probed once per family and remembered |
+| Windows Terminal | `wt.exe` when present; PowerShell is the fallback for **Open terminal here**, so the action never silently does nothing |
+| Suite | 982 passed, 3 skipped (was 792 passed, 3 skipped) |
+
+### Rules worth not rediscovering
+
+- **Canonicalisation.** Worktrees are grouped by `canonicalRepoKey` of
+  `git rev-parse --path-format=absolute --git-common-dir`. Two spellings of one
+  repository collapse; two genuinely different repositories do not.
+- **Git prints forward slashes on Windows.** `git worktree list` reports
+  `C:/Users/…` while the rest of the application uses `C:\Users\…`. Normalised
+  once, in `listWorktrees`, before any comparison, message or settings key.
+- **Worktree parent default.** `<parent of repo>\<repo name>.worktrees\<branch
+  slug>`, overridable per creation and by `settings.worktreeParentDir`. Never
+  inside the repository: git refuses some nested layouts and a worktree inside
+  the repository appears in its own status output forever after.
+- **Removal protections.** A dirty or locked worktree is refused outright. A
+  forced removal needs all three of: a path `git worktree list` itself returned,
+  the folder's name typed by the user, and a recovery point written first.
+  Uncommitted work is snapshotted with `git stash create`, which writes a commit
+  into the *shared* object store and so outlives the folder; that object name is
+  the recovery point's `stashRef`. The recovery point is written against the
+  main worktree, because the doomed worktree's git directory goes with it.
+  `git worktree remove --force` does the deleting — this application never
+  removes a directory tree it computed.
+- **No watchers were added.** The refresh model is unchanged: on demand and on
+  window focus. Structure is one git call regardless of family size; the dirty
+  counts are a second, cancellable pass with a concurrency cap of 4.
+- **Agent adapters tested.** `direct`, `windows-terminal` and `powershell`.
+  Windows Terminal re-parses after `--` and treats `;` as a command separator,
+  so arguments are escaped for that one character. PowerShell is the only mode
+  needing a string it will parse, so that string is a compile-time constant and
+  the executable and arguments travel in the environment as JSON — the
+  `rebase-bridge.ts` pattern.
+- **Desktop-only boundaries.** Window creation, focus and claim; open terminal;
+  open editor; launch agent. All Electron IPC, all re-validating their path
+  argument in the main process with `resolveRepoPath`. `launchAgent` takes an
+  agent *id*, looked up in the saved configuration, so no caller ever names a
+  program to run. The HTTP server exposes agent definitions and detection and
+  has no launch route at all.
+- **Prompt privacy.** Prompt text is passed as one argv element and is absent
+  from the command preview, the launch history and the Terminal Log.
+  `settings.storeAgentPrompts` exists and defaults to false.
+
+### Carried out of scope deliberately
+
+- `git worktree add --orphan` and bare-repository families are listed correctly
+  but cannot be created from the UI.
+- Group membership is edited from the repositories Multi-Git has opened before,
+  because those are the ones whose location it can still resolve.
 
 ## Handoff notes
 
