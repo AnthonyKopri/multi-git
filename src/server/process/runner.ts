@@ -348,6 +348,93 @@ export function createExecutableRunner(): ExecutableRunner {
 /** Shared instance for callers with nothing to inject. */
 export const executableRunner: ExecutableRunner = createExecutableRunner();
 
+export interface DetachedLaunchOptions {
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  /**
+   * Whether the process gets its own visible console window. True for an
+   * interactive tool the user is about to type into; false hides it.
+   */
+  visible?: boolean;
+}
+
+export interface DetachedLauncher {
+  /**
+   * Starts a program that outlives this request, and does not wait for it.
+   *
+   * Resolves once the process exists, rejects if it could not be started. It
+   * deliberately learns nothing else: an editor or a coding agent runs for
+   * hours, and `run` above would hold a promise open for all of it and then
+   * kill it at the timeout.
+   */
+  launch(
+    executable: string,
+    args: readonly string[],
+    options?: DetachedLaunchOptions
+  ): Promise<{ pid?: number }>;
+}
+
+/**
+ * The detached launcher used in production.
+ *
+ * Same discipline as `run`: the executable and its arguments stay separate
+ * values, `shell` is false, and the environment is whatever the caller decided
+ * rather than an inherited copy. What differs is only the waiting.
+ */
+export function createDetachedLauncher(spawnFn: typeof spawn = spawn): DetachedLauncher {
+  return {
+    launch(executable, args, options = {}) {
+      return new Promise((resolve, reject) => {
+        const spawnOptions: SpawnOptions = {
+          shell: false,
+          windowsHide: options.visible !== true,
+          detached: true,
+          // Nothing is going to read these: the process is on its own from
+          // here, and an unread pipe would eventually block it.
+          stdio: 'ignore'
+        };
+        if (options.cwd !== undefined) {
+          spawnOptions.cwd = options.cwd;
+        }
+        if (options.env !== undefined) {
+          spawnOptions.env = options.env;
+        }
+
+        let child: ChildProcess;
+        try {
+          child = spawnFn(executable, [...args], spawnOptions);
+        } catch (error) {
+          reject(new CommandSpawnError(executable, error as Error));
+          return;
+        }
+
+        let settled = false;
+
+        child.on('error', (error: Error) => {
+          if (!settled) {
+            settled = true;
+            reject(new CommandSpawnError(executable, error));
+          }
+        });
+
+        child.on('spawn', () => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+
+          // Released from this process's job control, so quitting Multi-Git
+          // does not take the user's editor or agent with it.
+          child.unref();
+          resolve(child.pid === undefined ? {} : { pid: child.pid });
+        });
+      });
+    }
+  };
+}
+
+export const detachedLauncher: DetachedLauncher = createDetachedLauncher();
+
 /** Formats a command for the Terminal Log, with secrets already removed. */
 export function describeCommand(
   executable: string,
