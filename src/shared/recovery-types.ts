@@ -19,7 +19,8 @@ export type RecoveryOperation =
   | 'branch-move'
   | 'stash-drop'
   | 'discard-all'
-  | 'restore';
+  | 'restore'
+  | 'worktree-remove';
 
 export interface RecoveryPoint {
   id: string;
