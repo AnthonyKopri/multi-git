@@ -415,7 +415,65 @@ export const ELEMENT_MAP = {
   btnSshHealthOpen: 'btn-ssh-health-open',
 
   // SSH config management toggle
-  sshManageConfigCheckbox: 'ssh-manage-config-checkbox'
+  sshManageConfigCheckbox: 'ssh-manage-config-checkbox',
+
+  // Worktrees
+  worktreeCount: 'worktree-count',
+  worktreeList: 'worktree-list',
+  btnWorktreeManage: 'btn-worktree-manage',
+  worktreeModal: 'worktree-modal',
+  btnCloseWorktreeModal: 'btn-close-worktree-modal',
+  worktreeCreateForm: 'worktree-create-form',
+  worktreeBranchMode: 'worktree-branch-mode',
+  worktreeBranchRow: 'worktree-branch-row',
+  worktreeBranchInput: 'worktree-branch-input',
+  worktreeStartPointRow: 'worktree-start-point-row',
+  worktreeStartPoint: 'worktree-start-point',
+  worktreePathInput: 'worktree-path-input',
+  btnWorktreeBrowse: 'btn-worktree-browse',
+  worktreePathPreview: 'worktree-path-preview',
+  worktreeLockNew: 'worktree-lock-new',
+  btnCreateWorktree: 'btn-create-worktree',
+  worktreeManagerList: 'worktree-manager-list',
+  btnWorktreeRepair: 'btn-worktree-repair',
+  worktreePruneList: 'worktree-prune-list',
+
+  // Repository groups
+  groupList: 'group-list',
+  btnGroupCreate: 'btn-group-create',
+  groupEditorModal: 'group-editor-modal',
+  groupEditorTitle: 'group-editor-title',
+  groupEditorList: 'group-editor-list',
+  btnCloseGroupEditor: 'btn-close-group-editor',
+  btnCancelGroupEditor: 'btn-cancel-group-editor',
+  btnSaveGroupMembers: 'btn-save-group-members',
+
+  // External coding agents
+  agentsModal: 'agents-modal',
+  btnCloseAgentsModal: 'btn-close-agents-modal',
+  agentDesktopOnlyNote: 'agent-desktop-only-note',
+  agentList: 'agent-list',
+  btnDetectAgents: 'btn-detect-agents',
+  agentForm: 'agent-form',
+  agentLabelInput: 'agent-label-input',
+  agentExecutableInput: 'agent-executable-input',
+  agentArgsInput: 'agent-args-input',
+  agentTerminalSelect: 'agent-terminal-select',
+  agentPromptModeCheckbox: 'agent-prompt-mode',
+  btnSaveAgent: 'btn-save-agent',
+  agentHistoryList: 'agent-history-list',
+  agentLaunchModal: 'agent-launch-modal',
+  btnCloseAgentLaunch: 'btn-close-agent-launch',
+  agentLaunchTarget: 'agent-launch-target',
+  agentLaunchForm: 'agent-launch-form',
+  agentLaunchSelect: 'agent-launch-select',
+  agentLaunchPromptRow: 'agent-launch-prompt-row',
+  agentLaunchPrompt: 'agent-launch-prompt',
+  btnCancelAgentLaunch: 'btn-cancel-agent-launch',
+  btnLaunchAgent: 'btn-launch-agent',
+
+  // Loading a locked key on demand
+  btnUnlockKey: 'btn-unlock-key'
 } as const;
 
 export type ElementKey = keyof typeof ELEMENT_MAP;

@@ -38,6 +38,11 @@ import * as ssh from './features/ssh-manager';
 import * as staging from './features/staging';
 import * as sync from './features/sync';
 import * as workspace from './features/workspace';
+import * as worktrees from './features/worktrees';
+import * as groups from './features/groups';
+import * as agents from './features/agents';
+import { openRepoInNewWindow } from './features/windows';
+import { unlockSelectedKey } from './features/accounts/unlock';
 
 import type { CommitType } from './features/commit/conventional';
 
@@ -97,7 +102,8 @@ async function refreshAll(): Promise<void> {
       shelf.refreshSafetyNet(),
       shelf.refreshTagList(),
       recovery.refreshRecovery(),
-      signing.refreshCommitSignControl()
+      signing.refreshCommitSignControl(),
+      worktrees.refreshWorktrees()
     ]);
   } catch (error) {
     if (!isStale(error)) {
@@ -122,6 +128,12 @@ function closeTopmostLayer(): void {
     ui.searchModal,
     ui.branchAdminModal,
     ui.recoveryModal,
+    // Innermost first: the launch dialog and the group editor open on top of
+    // the managers behind them, so Escape must close those before their parent.
+    ui.agentLaunchModal,
+    ui.groupEditorModal,
+    ui.agentsModal,
+    ui.worktreeModal,
     ui.vaultSetupModal,
     ui.newRepoModal,
     ui.cloneModal,
@@ -486,6 +498,9 @@ function wireShelves(): void {
 
   ui.btnRecoveryOpen.addEventListener('click', () => recovery.openRecoveryBrowser());
   ui.btnCloseRecoveryModal.addEventListener('click', () => recovery.closeRecoveryBrowser());
+  wireWorktrees();
+  wireGroups();
+  wireAgents();
   delegate(ui.recoveryPointsList, 'click', '[data-action]', recovery.handleRecoveryAction);
   delegate(ui.recoveryReflogList, 'click', '[data-action]', recovery.handleRecoveryAction);
 
@@ -494,6 +509,54 @@ function wireShelves(): void {
     if (row?.dataset['trashId']) {
       void shelf.restoreTrashEntry(row.dataset['trashId'], row.dataset['path'] ?? '');
     }
+  });
+}
+
+function wireWorktrees(): void {
+  ui.btnWorktreeManage.addEventListener('click', () => worktrees.openWorktreeManager());
+  ui.btnCloseWorktreeModal.addEventListener('click', () => worktrees.closeWorktreeManager());
+
+  // One handler per list, both dispatching on the row's data-worktree-path.
+  delegate(ui.worktreeList, 'click', '[data-worktree-path]', worktrees.handleWorktreeAction);
+  delegate(ui.worktreeManagerList, 'click', '[data-worktree-path]', worktrees.handleWorktreeAction);
+
+  ui.worktreeBranchMode.addEventListener('change', () => worktrees.onCreateFormChanged());
+  ui.worktreeBranchInput.addEventListener('input', () => worktrees.onCreateFormChanged());
+  ui.worktreePathInput.addEventListener('input', () => worktrees.markPathTouched());
+  ui.btnWorktreeBrowse.addEventListener('click', () => void worktrees.browseWorktreeParent());
+  ui.btnWorktreeRepair.addEventListener('click', () => void worktrees.repairWorktreeLinks());
+
+  ui.worktreeCreateForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void worktrees.submitCreateWorktree();
+  });
+}
+
+function wireGroups(): void {
+  ui.btnGroupCreate.addEventListener('click', () => void groups.createGroup());
+  delegate(ui.groupList, 'click', '[data-group-id]', groups.handleGroupAction);
+
+  ui.btnCloseGroupEditor.addEventListener('click', () => groups.closeGroupEditor());
+  ui.btnCancelGroupEditor.addEventListener('click', () => groups.closeGroupEditor());
+  ui.btnSaveGroupMembers.addEventListener('click', () => void groups.saveGroupMembers());
+}
+
+function wireAgents(): void {
+  ui.btnCloseAgentsModal.addEventListener('click', () => agents.closeAgentManager());
+  ui.btnDetectAgents.addEventListener('click', () => void agents.detectInstalledAgents());
+  delegate(ui.agentList, 'click', '[data-agent-id]', agents.handleAgentAction);
+
+  ui.agentForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void agents.submitAgentForm();
+  });
+
+  ui.btnCloseAgentLaunch.addEventListener('click', () => agents.closeLaunchDialog());
+  ui.btnCancelAgentLaunch.addEventListener('click', () => agents.closeLaunchDialog());
+  ui.agentLaunchSelect.addEventListener('change', () => agents.onLaunchAgentChanged());
+  ui.agentLaunchForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void agents.submitLaunch();
   });
 }
 
@@ -737,6 +800,12 @@ function buildCommands(): palette.Command[] {
     { id: 'staging-tab', group: 'View', title: 'Go to the Staging Area', run: () => workspace.switchViewTab('staging') },
     { id: 'explorer-tab', group: 'View', title: 'Go to the Explorer', run: () => workspace.switchViewTab('explorer') },
     { id: 'ssh', group: 'Accounts', title: 'Manage SSH profiles', keywords: 'keys accounts', run: () => ssh.openSshModal() },
+    { id: 'unlock-key', group: 'Accounts', title: 'Unlock the selected SSH key', keywords: 'passphrase vault agent load', run: () => void unlockSelectedKey() },
+    { id: 'worktrees', group: 'Worktrees', title: 'Manage worktrees', keywords: 'worktree create remove branch folder', run: () => worktrees.openWorktreeManager() },
+    { id: 'new-window', group: 'Worktrees', title: 'Open this repository in a new window', keywords: 'window split', run: () => void openRepoInNewWindow(getState().activeRepo ?? '') },
+    { id: 'agent-launch', group: 'Worktrees', title: 'Launch a coding agent here', keywords: 'claude codex tool', run: () => void agents.launchAgentForActiveRepo() },
+    { id: 'agent-settings', group: 'Worktrees', title: 'Coding agent settings', keywords: 'claude codex configure', run: () => agents.openAgentManager() },
+    { id: 'group-new', group: 'Repository', title: 'Create a repository group', keywords: 'group fetch all', run: () => void groups.createGroup() },
     { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() }
   ];
 }
@@ -798,6 +867,9 @@ async function start(): Promise<void> {
   ssh.initSshManager(ui);
   pullRequest.initPullRequests(ui, { refreshStatus });
   workspace.initWorkspace(ui, { refreshStatus });
+  worktrees.initWorktrees(ui, refreshAll);
+  groups.initGroups(ui);
+  agents.initAgents(ui);
 
   wireHeader();
   wireWorkspaceTabs();
@@ -824,6 +896,17 @@ async function start(): Promise<void> {
   // the first paint.
   void accounts.validateSshProfilesOnStartup();
   void applyAppTitle();
+  void groups.refreshGroups();
+
+  // A window opened for a specific repository says so in its URL. That wins
+  // over the most recent one, which is what stops every restored window from
+  // briefly loading the same repository and then switching.
+  const requested = new URLSearchParams(window.location.search).get('repo');
+  if (requested) {
+    logToTerminal(`Opening ${requested}...`);
+    await repo.openRepository(requested);
+    return;
+  }
 
   const { recentRepos } = getState();
   if (recentRepos.length > 0) {

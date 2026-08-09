@@ -33,6 +33,21 @@ import type {
   SigningMode,
   SigningStatusResponse
 } from '../../shared/signing-types';
+import type {
+  CreateWorktreeInput,
+  PrunePreviewResponse,
+  RemoveWorktreeInput,
+  RemoveWorktreeResult,
+  WorktreeActionResult,
+  WorktreeInfo,
+  WorktreeListResponse
+} from '../../shared/worktree-types';
+import type {
+  AgentLaunchRecord,
+  ExternalAgentDefinition,
+  RepoGroup
+} from '../../shared/config-types';
+import type { DetectedAgent } from '../../shared/agent-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -594,10 +609,21 @@ export const getSshAgentStatus = (repoPath?: string, profileId?: string) =>
     query: { repoPath, profileId }
   });
 
-export const loadSshAgentKey = (repoPath: string | null, profileId: string) =>
+export interface LoadKeyOptions {
+  /** A passphrase the user just typed. Used once, then forgotten. */
+  passphrase?: string;
+  /** Stores that passphrase in the vault. Ignored while the vault is locked. */
+  savePassphrase?: boolean;
+}
+
+export const loadSshAgentKey = (
+  repoPath: string | null,
+  profileId: string,
+  options: LoadKeyOptions = {}
+) =>
   api.post<SshAgentLoadResponse & { routingChanged: boolean }>('/api/ssh/agent/load', {
     ...global,
-    body: { repoPath, profileId }
+    body: { repoPath, profileId, ...options }
   });
 
 export const unloadSshAgentKey = (profileId: string, force = false) =>
@@ -615,3 +641,92 @@ export const preflightPullRequest = (headBranch?: string, baseBranch?: string) =
 
 export const createPullRequest = (input: PullRequestCreateInput & { pushFirst?: boolean }) =>
   api.post<PullRequestCreateResponse>('/api/pull-requests', { body: input });
+
+// ---------- worktrees ----------
+
+export const getWorktrees = () => api.get<WorktreeListResponse>('/api/worktrees');
+
+export const getWorktreeStatus = () =>
+  api.get<{ success: true; worktrees: WorktreeInfo[]; cancelled: boolean }>(
+    '/api/worktrees/status'
+  );
+
+export const createWorktree = (input: Omit<CreateWorktreeInput, 'repoPath'>) =>
+  api.post<WorktreeActionResult>('/api/worktrees', { body: input });
+
+export const moveWorktree = (from: string, to: string) =>
+  api.post<WorktreeActionResult>('/api/worktrees/move', { body: { from, to } });
+
+export const lockWorktree = (path: string, reason?: string) =>
+  api.post<WorktreeActionResult>('/api/worktrees/lock', { body: { path, reason } });
+
+export const unlockWorktree = (path: string) =>
+  api.post<WorktreeActionResult>('/api/worktrees/unlock', { body: { path } });
+
+export const repairWorktrees = (paths?: string[]) =>
+  api.post<WorktreeActionResult>('/api/worktrees/repair', { body: { paths } });
+
+export const previewWorktreePrune = () =>
+  api.get<PrunePreviewResponse>('/api/worktrees/prune-preview');
+
+export const removeWorktree = (input: RemoveWorktreeInput) =>
+  api.delete<RemoveWorktreeResult>('/api/worktrees', { body: input });
+
+// ---------- repository groups ----------
+
+/** A group's members resolved to paths, with the ones that have gone flagged. */
+export interface GroupMember {
+  repoPath: string;
+  missing: boolean;
+}
+
+export interface ClientRepoGroup extends RepoGroup {
+  members: GroupMember[];
+}
+
+export const getRepoGroups = () =>
+  api.get<{ success: true; groups: ClientRepoGroup[] }>('/api/repo-groups', global);
+
+export const saveRepoGroup = (group: Partial<RepoGroup> & { label: string }) =>
+  api.post<Api.ConfigMutationResponse>('/api/repo-groups', { ...global, body: group });
+
+export const deleteRepoGroup = (id: string) =>
+  api.delete<Api.ConfigMutationResponse>('/api/repo-groups', { ...global, body: { id } });
+
+export interface GroupFetchOutcome {
+  repoPath: string;
+  ok: boolean;
+  message: string;
+}
+
+export const fetchRepoGroup = (id: string) =>
+  api.post<{ success: true; cancelled: boolean; operationId: string; results: GroupFetchOutcome[] }>(
+    '/api/repo-groups/fetch',
+    { ...global, body: { id } }
+  );
+
+// ---------- external agents ----------
+
+export const getAgents = () =>
+  api.get<{ success: true; agents: ExternalAgentDefinition[]; launches: AgentLaunchRecord[] }>(
+    '/api/agents',
+    global
+  );
+
+export const detectAgents = () =>
+  api.get<{ success: true; detected: DetectedAgent[] }>('/api/agents/detect', global);
+
+export const addDetectedAgents = () =>
+  api.post<{ success: true; added: ExternalAgentDefinition[] } & Api.ConfigMutationResponse>(
+    '/api/agents/detect',
+    global
+  );
+
+export const saveAgent = (agent: Partial<ExternalAgentDefinition>) =>
+  api.post<{ success: true; agent: ExternalAgentDefinition } & Api.ConfigMutationResponse>(
+    '/api/agents',
+    { ...global, body: agent }
+  );
+
+export const deleteAgent = (id: string) =>
+  api.delete<Api.ConfigMutationResponse>('/api/agents', { ...global, body: { id } });
