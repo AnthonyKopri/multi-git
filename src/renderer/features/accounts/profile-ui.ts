@@ -1,6 +1,6 @@
 // The header's SSH Key segment, its dropdown, and the identity row.
 import { el, fragment, icon, setHidden } from '../../dom/create';
-import { profileColor } from '../../ui/format';
+import { profileColor, segmentTitle } from '../../ui/format';
 import { profileIdentity } from './identity';
 import type { Elements } from '../../dom/elements';
 import type { AppState } from '../../state/store';
@@ -64,7 +64,12 @@ export function renderProfileUI(ui: Elements, state: Readonly<AppState>): void {
     ? (state.sshProfiles.find((p) => p.id === state.activeProfileId) ?? null)
     : null;
 
-  ui.profileSegmentName.textContent = profile?.label ?? 'System SSH';
+  const profileLabel = profile?.label ?? 'System SSH';
+  ui.profileSegmentName.textContent = profileLabel;
+  ui.profileSegment.title = segmentTitle(
+    'Switch SSH key profile for this repository',
+    profileLabel
+  );
 
   if (profile) {
     ui.profileColorDot.classList.remove('profile-dot-system');

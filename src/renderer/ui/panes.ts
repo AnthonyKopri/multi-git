@@ -103,6 +103,57 @@ export const PANE_SPECS: Record<PaneName, PaneSpec> = {
 const KEYBOARD_STEP_PX = 16;
 
 const STORAGE_PREFIX = 'pane_size_';
+const COLLAPSE_PREFIX = 'pane_collapsed_';
+
+/**
+ * The two panes that can be taken off screen entirely.
+ *
+ * Only the outer columns: the middle one is the work, and the Explorer, Diff
+ * and commit splits are inside it, so collapsing those would leave a pane with
+ * no way to say what it was.
+ */
+export type CollapsibleSide = 'sidebar' | 'history';
+
+interface CollapseSpec {
+  /** Class on <body> that the stylesheet keys the whole layout off. */
+  bodyClass: string;
+  /** The strip that stays behind, and the header button that mirrors it. */
+  revealId: string;
+  toggleId: string;
+  /** Present tense, for the tooltip of whichever control would restore it. */
+  showLabel: string;
+  hideLabel: string;
+  shortcut: string;
+}
+
+const COLLAPSE_SPECS: Record<CollapsibleSide, CollapseSpec> = {
+  sidebar: {
+    bodyClass: 'sidebar-collapsed',
+    revealId: 'sidebar-reveal',
+    toggleId: 'btn-toggle-sidebar',
+    showLabel: 'Show branches panel',
+    hideLabel: 'Hide branches panel',
+    shortcut: 'Ctrl+B'
+  },
+  history: {
+    bodyClass: 'history-collapsed',
+    revealId: 'history-reveal',
+    toggleId: 'btn-toggle-history',
+    showLabel: 'Show commit history',
+    hideLabel: 'Hide commit history',
+    shortcut: 'Ctrl+Shift+B'
+  }
+};
+
+/** True when a pane is one of the collapsible sides and is currently collapsed. */
+function isPaneCollapsed(name: PaneName): boolean {
+  const spec = COLLAPSE_SPECS[name as CollapsibleSide] as CollapseSpec | undefined;
+  return spec !== undefined && document.body.classList.contains(spec.bodyClass);
+}
+
+export function isSideCollapsed(side: CollapsibleSide): boolean {
+  return document.body.classList.contains(COLLAPSE_SPECS[side].bodyClass);
+}
 
 /**
  * Clamps a requested size to what the spec allows and what the window can
@@ -140,7 +191,10 @@ function appliedSize(spec: PaneSpec): number {
 function availableFor(spec: PaneSpec): number {
   const total = spec.axis === 'x' ? window.innerWidth : window.innerHeight;
   const taken = (spec.siblings ?? []).reduce(
-    (sum, other) => sum + appliedSize(PANE_SPECS[other]),
+    // A collapsed sibling is not on screen and takes nothing. Counting its
+    // remembered width anyway would cap this pane as though the other were
+    // still there, which is the opposite of what collapsing it was for.
+    (sum, other) => sum + (isPaneCollapsed(other) ? 0 : appliedSize(PANE_SPECS[other])),
     0
   );
   return total - taken;
@@ -224,6 +278,63 @@ function onKeyDown(name: PaneName, spec: PaneSpec, event: KeyboardEvent): void {
   persist(name, setSize(spec, requested));
 }
 
+/**
+ * Puts a side's collapsed state on the page and keeps both controls honest.
+ *
+ * The strip and the header button describe the same thing from opposite sides,
+ * so their labels and `aria-expanded` are derived here rather than written by
+ * whoever happened to trigger the change.
+ */
+function applyCollapsed(side: CollapsibleSide, collapsed: boolean, root: ParentNode): void {
+  const spec = COLLAPSE_SPECS[side];
+  document.body.classList.toggle(spec.bodyClass, collapsed);
+
+  const reveal = root.querySelector<HTMLElement>(`#${spec.revealId}`);
+  const toggle = root.querySelector<HTMLElement>(`#${spec.toggleId}`);
+
+  for (const control of [reveal, toggle]) {
+    control?.setAttribute('aria-expanded', String(!collapsed));
+  }
+
+  const label = collapsed ? spec.showLabel : spec.hideLabel;
+  if (toggle) {
+    toggle.title = `${label} (${spec.shortcut})`;
+    toggle.setAttribute('aria-label', label);
+  }
+  // The strip only exists to reopen, so its label never changes with state.
+  if (reveal) {
+    reveal.title = `${spec.showLabel} (${spec.shortcut})`;
+  }
+}
+
+/**
+ * Collapses or restores a side and remembers it.
+ *
+ * The sizes are re-clamped afterwards because the pane that stayed can now use
+ * the space the other gave up, and would otherwise sit at a cap computed for a
+ * layout that no longer exists.
+ */
+export function setSideCollapsed(side: CollapsibleSide, collapsed: boolean): void {
+  applyCollapsed(side, collapsed, document);
+  window.localStorage.setItem(`${COLLAPSE_PREFIX}${side}`, String(collapsed));
+  reclampAll();
+}
+
+export function toggleSide(side: CollapsibleSide): void {
+  setSideCollapsed(side, !isSideCollapsed(side));
+}
+
+function storedCollapsed(side: CollapsibleSide): boolean {
+  return window.localStorage.getItem(`${COLLAPSE_PREFIX}${side}`) === 'true';
+}
+
+/** Re-clamps every pane to what the window can currently spare. */
+function reclampAll(): void {
+  for (const [name, spec] of Object.entries(PANE_SPECS) as [PaneName, PaneSpec][]) {
+    applySize(spec, clampPaneSize(spec, storedSize(name, spec), availableFor(spec)));
+  }
+}
+
 function wireHandle(handle: HTMLElement): void {
   const name = handle.dataset['pane'] as PaneName | undefined;
   const spec = name ? PANE_SPECS[name] : undefined;
@@ -242,8 +353,23 @@ function wireHandle(handle: HTMLElement): void {
   });
 }
 
-/** Applies the remembered sizes and makes every handle in the page draggable. */
+/**
+ * Applies the remembered sizes and collapse states, and makes every handle in
+ * the page draggable.
+ */
 export function initPanes(root: ParentNode = document): void {
+  // Collapse first: a collapsed side frees space, and the sizes clamped below
+  // should be clamped against the layout that will actually be on screen.
+  for (const side of Object.keys(COLLAPSE_SPECS) as CollapsibleSide[]) {
+    applyCollapsed(side, storedCollapsed(side), root);
+
+    const spec = COLLAPSE_SPECS[side];
+    root.querySelector<HTMLElement>(`#${spec.revealId}`)
+      ?.addEventListener('click', () => setSideCollapsed(side, false));
+    root.querySelector<HTMLElement>(`#${spec.toggleId}`)
+      ?.addEventListener('click', () => toggleSide(side));
+  }
+
   for (const [name, spec] of Object.entries(PANE_SPECS) as [PaneName, PaneSpec][]) {
     applySize(spec, storedSize(name, spec));
   }
@@ -255,9 +381,5 @@ export function initPanes(root: ParentNode = document): void {
   // Shrinking the window can invalidate a size that was fine before. Re-clamp
   // without persisting: the user's chosen size should come back when there is
   // room for it again.
-  window.addEventListener('resize', () => {
-    for (const [name, spec] of Object.entries(PANE_SPECS) as [PaneName, PaneSpec][]) {
-      applySize(spec, clampPaneSize(spec, storedSize(name, spec), availableFor(spec)));
-    }
-  });
+  window.addEventListener('resize', reclampAll);
 }

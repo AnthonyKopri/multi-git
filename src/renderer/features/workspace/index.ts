@@ -6,7 +6,7 @@ import { asInput } from '../../dom/elements';
 import type { Elements } from '../../dom/elements';
 import { setHidden } from '../../dom/create';
 import { getState, isConflicted } from '../../state/store';
-import { countBadge, repoBaseName } from '../../ui/format';
+import { countBadge, repoBaseName, segmentTitle } from '../../ui/format';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { refreshIdentity } from '../accounts/identity';
@@ -34,6 +34,7 @@ export function renderBranchHeader(): void {
 
   if (!status) {
     ui.branchSegmentName.textContent = '—';
+    ui.branchSegment.title = segmentTitle('Switch branch', '');
     setCountBadge(ui.branchAheadBadge, 0, '↑');
     setCountBadge(ui.branchBehindBadge, 0, '↓');
     setCountBadge(ui.pushCountBadge, 0, '↑');
@@ -44,6 +45,7 @@ export function renderBranchHeader(): void {
 
   ui.branchSegmentName.textContent = status.branch || '—';
   ui.branchSegmentName.title = status.branch;
+  ui.branchSegment.title = segmentTitle('Switch branch', status.branch);
 
   setCountBadge(ui.branchAheadBadge, status.ahead, '↑');
   setCountBadge(ui.branchBehindBadge, status.behind, '↓');

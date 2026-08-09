@@ -15,7 +15,9 @@ import * as api from './api/endpoints';
 import { initToasts } from './ui/toast';
 import { cancelOpenDialog, hasOpenDialog, initDialogs } from './ui/dialogs';
 import { closeAllDropdowns, initDropdowns, registerDropdown } from './ui/dropdown';
-import { initPanes } from './ui/panes';
+import { initPanes, toggleSide } from './ui/panes';
+import { initCollapsibleSections } from './ui/sections';
+import { attachHorizontalWheel } from './ui/wheel-scroll';
 import { logToTerminal, openLogWindow } from './ui/log';
 
 import * as accounts from './features/accounts';
@@ -806,6 +808,8 @@ function buildCommands(): palette.Command[] {
     { id: 'agent-launch', group: 'Worktrees', title: 'Launch a coding agent here', keywords: 'claude codex tool', run: () => void agents.launchAgentForActiveRepo() },
     { id: 'agent-settings', group: 'Worktrees', title: 'Coding agent settings', keywords: 'claude codex configure', run: () => agents.openAgentManager() },
     { id: 'group-new', group: 'Repository', title: 'Create a repository group', keywords: 'group fetch all', run: () => void groups.createGroup() },
+    { id: 'toggle-sidebar', group: 'View', title: 'Show or hide the branches panel', keywords: 'collapse expand sidebar left panel', run: () => toggleSide('sidebar') },
+    { id: 'toggle-history', group: 'View', title: 'Show or hide the commit history', keywords: 'collapse expand right panel', run: () => toggleSide('history') },
     { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() }
   ];
 }
@@ -820,6 +824,14 @@ function wireGlobal(): void {
       event.preventDefault();
       palette.setCommands(buildCommands());
       palette.openPalette();
+      return;
+    }
+
+    // Ctrl+B for the left panel, as every editor does it, and Ctrl+Shift+B for
+    // the right. `key` is compared case-insensitively because Shift changes it.
+    if ((key.ctrlKey || key.metaKey) && key.key.toLowerCase() === 'b') {
+      event.preventDefault();
+      toggleSide(key.shiftKey ? 'history' : 'sidebar');
       return;
     }
 
@@ -846,6 +858,10 @@ async function start(): Promise<void> {
   initDialogs(ui);
   initDropdowns();
   initPanes();
+  initCollapsibleSections();
+  // The chip row scrolls sideways and would otherwise need a shift-wheel or a
+  // trackpad to reach the chips past its edge.
+  attachHorizontalWheel(ui.commitTemplateChips);
 
   accounts.initAccounts(ui);
   repo.initRepo(ui, refreshAll);
