@@ -29,6 +29,14 @@ Its defining feature is account-aware SSH: each repository can use its own key a
 - **Work on two branches at once:** create and manage Git worktrees, open each in its own window, and remove them without ever losing uncommitted work by accident.
 - **Group repositories that belong together:** fetch a whole group in one action, cancel it mid-flight, and see the result for each repository.
 - **Hand a folder to a coding agent:** launch Claude, Codex, or any executable you configure in the worktree you choose, with the right account already usable.
+- **Manage remotes properly:** separate fetch and push URLs, refspecs, prune preference, a connectivity test, and a fetch-all that reports each remote separately.
+- **Work with submodules without guessing:** see the commit the superproject pins and the one the submodule is actually at as two different facts, then initialize, update, sync or remove one.
+- **Handle large files:** inspect Git LFS patterns and objects, tell a downloaded file from a pointer, fetch or prune with a preview of what will move, and take or release file locks.
+- **Move changes as patches:** build one from commits, a range or your uncommitted work, check it applies before it does, and apply it as working changes or as commits.
+- **Find the commit that broke it:** bisect by hand, or let a saved test command decide each step for you.
+- **Annotate commits after the fact:** attach a Git note without rewriting history, and see at a glance which commits carry one.
+- **Use the tools you already have:** configure external diff, merge, editor and terminal programs, and optionally add "Open in Multi-Git" to the Windows Explorer right-click menu.
+- **Watch and stop long work:** a bar along the bottom shows what is running, how long it has taken, and lets you cancel it.
 - **Recover from mistakes:** restore recently discarded files, undo checkpointed operations, and browse a durable recovery journal beside Git's own reflog.
 - **See what the app did:** open the live Terminal Log for the Git commands, output, warnings, and errors behind each action.
 
@@ -508,6 +516,32 @@ Multi-Git can start a tool you configure in the worktree you choose. **Detect in
 A launch sets the worktree as the working directory, passes arguments as separate values with no shell anywhere in the path, and gives the tool an allowlisted environment rather than a copy of Multi-Git's. An optional starting prompt is passed as one argument and is never recorded. Before launching, Multi-Git makes sure the account that worktree uses is actually loaded, so the agent can push.
 
 What it does not do: install hooks, read the tool's session state, or claim to know what it is doing. **Launched** means the process started. Launching is available in the desktop app only — the local HTTP server has no route that starts a program.
+
+### The Repository hub
+
+The **Repository** button in the top toolbar opens one window holding the tools that act on the repository as a whole: **Remotes**, **Submodules**, **LFS**, **Patches**, **Bisect**, **Notes** and **Tools**. The sidebar keeps a short summary of the first three and jumps straight to the right tab.
+
+**Remotes** shows more than a URL, because a remote is more than one. Fetch and push URLs are separate rows — a push URL that differs is the fork workflow, reading from upstream and writing to your own. Refspecs are shown rather than assumed, and prune says whether it was set on this remote or inherited from `fetch.prune`. **Test** reaches the remote with the account this repository uses and tells you whether a failure was the network or the key. Removing a remote or pruning its stale branches saves a recovery point first: a remote-tracking ref is the only local record that a branch existed once its remote is gone.
+
+**Submodules** keeps two commits apart, because conflating them is what makes submodule tools dangerous. The superproject records which commit a submodule *should* be at; the submodule's working tree is at whatever you left it at. A row says which of the two is out of step rather than showing one "out of date" badge that could mean either. **Update** moves the working tree to the pinned commit — it does not change what is pinned. Each submodule is acted on separately, so one whose remote is down does not hide the nine that worked.
+
+**LFS** needs Git LFS installed; Multi-Git will not install it, and says so plainly rather than showing an empty list that reads as "no large files here". A tracked file is committed as a small pointer, and the real bytes may or may not be on this machine — the list says which, and offers to fetch the ones that are not. Every transfer previews what it would move first. Locking is optional in the LFS spec, so a server without it is reported as a fact; force-releasing someone else's lock asks first and is never a silent retry.
+
+**Patches** builds one from commits, a range, or your uncommitted work, in mailbox form (which keeps each commit's author and message) or as a plain diff. **Check only** tells you whether it applies without writing anything. Applying saves a recovery point first, and a patch that would write outside the repository is refused before anything runs.
+
+**Bisect** checks out the middle of a range and asks whether it is good or bad. Mark each step yourself, or save a test command and let its exit code decide — 0 good, 125 skip, anything else bad. The session lives in the repository, so it survives closing the app, and **Reset** works even on one left behind by a crash. Running a command is available in the desktop app only.
+
+**Notes** attaches text to a commit afterwards. The note lives in its own ref, so writing one does not rewrite history — and does not travel with an ordinary push, which is why fetching and pushing notes are separate actions here. Commits carrying a note are marked in the history list; open one to read or edit it.
+
+**Tools** configures external diff, merge, editor, terminal and file-manager programs. **Detect installed** fills in a definition for each tool found on your PATH, including the arguments it expects. Those arguments are a guess, so the first time each kind is used Multi-Git shows the exact command and asks — once per kind, not once per launch. An external merge tool never marks a file resolved on your behalf: Multi-Git re-reads Git's state afterwards rather than assuming.
+
+The same tab can add **Open in Multi-Git** to the Windows Explorer right-click menu. It writes two registry keys under your own user account — no administrator rights, no file associations — and shows you exactly which two before it writes or removes them.
+
+### The operations bar
+
+A thin bar along the bottom of the window shows what Multi-Git is currently running: a clone, a fetch, an LFS transfer, a submodule update, a history search. Click it for the full list, with how long each has taken, a **Cancel** button for the ones that can be stopped, and copyable diagnostics with secrets already removed.
+
+Cancelling a network operation is not the same as undoing one. If a push has already sent its objects, cancelling stops the process but the remote may have received them — the bar says so rather than claiming a clean stop.
 
 ### Workspace Explorer and blame
 
