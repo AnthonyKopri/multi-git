@@ -13,6 +13,7 @@ import { withButtonBusy } from '../../ui/busy';
 import { renderRecentRepos } from './repo-list';
 import { applyConfigSnapshot, loadConfig, renderAccounts, restoreProfileForRepo } from '../accounts';
 import { refreshIdentity } from '../accounts/identity';
+import { ensureKeyUsable } from '../accounts/unlock';
 
 let ui: Elements;
 
@@ -97,8 +98,19 @@ export async function openRepository(repoPath: string): Promise<void> {
     await restoreProfileForRepo(opened);
 
     renderRepoLists();
+
+    // The main process keys its windows by repository, so it has to be told
+    // which one this window now shows — otherwise "Open in new window" for the
+    // repository already on screen would open a second window for it.
+    void window.desktopApi?.claimRepoWindow?.(opened);
+
     await Promise.all([refreshAll(), refreshIdentity()]);
     renderAccounts();
+
+    // The account is restored above; this is what makes it usable. A window
+    // that reopens on a locked key otherwise looks ready and fails at the
+    // first push.
+    void ensureKeyUsable({ reason: 'startup' });
   } catch (error) {
     if (isStale(error)) {
       return;

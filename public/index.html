@@ -128,6 +128,9 @@
               <button id="btn-repair-agent" class="btn btn-secondary btn-sm hidden" title="Enable and start the OpenSSH Authentication Agent service">
                 Repair and start
               </button>
+              <button id="btn-unlock-key" class="btn btn-secondary btn-sm hidden" title="Load this key into the SSH agent, asking for its passphrase if it needs one">
+                Unlock key
+              </button>
               <button id="btn-unload-key" class="btn btn-text btn-sm hidden" title="Remove this key from the SSH agent">
                 Unload key
               </button>
@@ -278,6 +281,32 @@
               <li class="empty-state">No recovery points</li>
             </ul>
           </div>
+        </div>
+
+        <!-- Worktrees: the other working folders of this repository family -->
+        <div class="sidebar-section border-t mt-4 pt-4">
+          <div class="section-header">
+            <h3>Worktrees <span id="worktree-count" class="count-badge hidden"></span></h3>
+            <button id="btn-worktree-manage" class="btn btn-text btn-sm" title="Create, move, lock and remove worktrees">
+              <span>Manage</span>
+            </button>
+          </div>
+          <ul id="worktree-list" class="stash-list-ul worktree-list">
+            <li class="empty-state">No worktrees</li>
+          </ul>
+        </div>
+
+        <!-- Repository groups -->
+        <div class="sidebar-section border-t mt-4 pt-4">
+          <div class="section-header">
+            <h3>Groups</h3>
+            <button id="btn-group-create" class="btn btn-text btn-sm" title="Group related repositories so they can be fetched together">
+              <span>New</span>
+            </button>
+          </div>
+          <ul id="group-list" class="group-list">
+            <li class="empty-state">No groups yet</li>
+          </ul>
         </div>
       </aside>
 
@@ -1440,6 +1469,191 @@
         <ul id="recovery-reflog-list" class="recovery-list">
           <li class="empty-state">No reflog entries</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKTREE MANAGER -->
+  <div id="worktree-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Worktrees</h2>
+        <button id="btn-close-worktree-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          A worktree is a second working folder for the same repository, so two branches can be
+          checked out at once. Remotes, history and configuration are shared; only the files and
+          the index are separate.
+        </p>
+
+        <h4>Create a worktree</h4>
+        <form id="worktree-create-form" class="worktree-form">
+          <div class="form-row">
+            <label for="worktree-branch-mode">Check out</label>
+            <select id="worktree-branch-mode">
+              <option value="new">A new branch</option>
+              <option value="existing">An existing branch</option>
+              <option value="detached">A commit, with no branch</option>
+            </select>
+          </div>
+          <div class="form-row" id="worktree-branch-row">
+            <label for="worktree-branch-input">Branch</label>
+            <input type="text" id="worktree-branch-input" placeholder="feature/login" autocomplete="off">
+          </div>
+          <div class="form-row" id="worktree-start-point-row">
+            <label for="worktree-start-point">Start from</label>
+            <input type="text" id="worktree-start-point" placeholder="HEAD, a branch, or a commit (optional)" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <label for="worktree-path-input">Folder</label>
+            <input type="text" id="worktree-path-input" placeholder="Where the folder goes" autocomplete="off">
+            <button type="button" id="btn-worktree-browse" class="btn btn-secondary btn-sm">Browse</button>
+          </div>
+          <p class="modal-desc worktree-path-preview">Will be created at: <span id="worktree-path-preview"></span></p>
+          <label class="amend-row">
+            <input type="checkbox" id="worktree-lock-new">
+            <span>Lock it, so Git refuses to prune or remove it</span>
+          </label>
+          <div class="form-actions">
+            <button type="submit" id="btn-create-worktree" class="btn btn-primary">Create worktree</button>
+          </div>
+        </form>
+
+        <h4 class="mt-4">This repository's worktrees</h4>
+        <ul id="worktree-manager-list" class="worktree-list">
+          <li class="empty-state">No worktrees</li>
+        </ul>
+
+        <div class="section-header mt-4">
+          <h4>Prune preview</h4>
+          <button id="btn-worktree-repair" class="btn btn-text btn-sm" title="Fix the administrative links after folders were moved outside Multi-Git">
+            <span>Repair links</span>
+          </button>
+        </div>
+        <p class="modal-desc">Worktrees Git would forget, because their folders are gone. Nothing is removed by looking.</p>
+        <ul id="worktree-prune-list" class="worktree-list">
+          <li class="empty-state">Nothing to prune</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXTERNAL AGENTS -->
+  <div id="agents-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Coding agents</h2>
+        <button id="btn-close-agents-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Multi-Git starts a tool you configure, in the worktree you choose, with the account that
+          worktree uses already loaded. It does not monitor what the tool does afterwards.
+        </p>
+        <div id="agent-desktop-only-note" class="inline-warning hidden">
+          Launching is only available in the desktop app. Definitions can still be edited here.
+        </div>
+
+        <div class="section-header">
+          <h4>Configured agents</h4>
+          <button id="btn-detect-agents" class="btn btn-secondary btn-sm" title="Look for known tools on your PATH">
+            <span>Detect installed</span>
+          </button>
+        </div>
+        <ul id="agent-list" class="agent-list">
+          <li class="empty-state">No agents configured</li>
+        </ul>
+
+        <h4 class="mt-4">Add or edit</h4>
+        <form id="agent-form" class="worktree-form">
+          <div class="form-row">
+            <label for="agent-label-input">Name</label>
+            <input type="text" id="agent-label-input" placeholder="Claude Code" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <label for="agent-executable-input">Executable</label>
+            <input type="text" id="agent-executable-input" placeholder="claude" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <label for="agent-args-input">Arguments</label>
+            <input type="text" id="agent-args-input" placeholder="Optional, space separated" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <label for="agent-terminal-select">Open in</label>
+            <select id="agent-terminal-select">
+              <option value="windows-terminal">Windows Terminal</option>
+              <option value="powershell">A PowerShell window</option>
+              <option value="direct">Its own window</option>
+            </select>
+          </div>
+          <label class="amend-row">
+            <input type="checkbox" id="agent-prompt-mode" checked>
+            <span>This tool accepts a starting prompt as its first argument</span>
+          </label>
+          <div class="form-actions">
+            <button type="submit" id="btn-save-agent" class="btn btn-primary">Save agent</button>
+          </div>
+        </form>
+
+        <h4 class="mt-4">Launch history</h4>
+        <p class="modal-desc">What was started, where, and whether it started. Prompt text is not recorded.</p>
+        <ul id="agent-history-list" class="agent-list">
+          <li class="empty-state">Nothing launched yet</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAUNCH AN AGENT -->
+  <div id="agent-launch-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2>Launch a coding agent</h2>
+        <button id="btn-close-agent-launch" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">In: <span id="agent-launch-target" class="agent-launch-target"></span></p>
+        <form id="agent-launch-form" class="worktree-form">
+          <div class="form-row">
+            <label for="agent-launch-select">Agent</label>
+            <select id="agent-launch-select"></select>
+          </div>
+          <div class="form-row" id="agent-launch-prompt-row">
+            <label for="agent-launch-prompt">Starting prompt</label>
+            <input type="text" id="agent-launch-prompt" placeholder="Optional — passed as one argument, not stored" autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-agent-launch" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-launch-agent" class="btn btn-primary">Launch</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUP MEMBERSHIP EDITOR -->
+  <div id="group-editor-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2 id="group-editor-title">Repositories in this group</h2>
+        <button id="btn-close-group-editor" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Only repositories Multi-Git has opened before can be grouped, because it has to know where to find them.</p>
+        <ul id="group-editor-list" class="group-editor-list"></ul>
+        <div class="form-actions">
+          <button type="button" id="btn-cancel-group-editor" class="btn btn-secondary">Cancel</button>
+          <button type="button" id="btn-save-group-members" class="btn btn-primary">Save</button>
+        </div>
       </div>
     </div>
   </div>
