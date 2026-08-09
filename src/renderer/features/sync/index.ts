@@ -8,6 +8,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { setButtonBusy } from '../../ui/busy';
 import { activeProfile } from '../accounts';
+import { ensureKeyUsable } from '../accounts/unlock';
 import { getAccountMismatch } from '../accounts/identity';
 import { refreshOrigin } from '../repo';
 import type { SyncResponse } from '../../../shared/api-types';
@@ -84,12 +85,19 @@ export async function performSync(
 
   if (profile) {
     logToTerminal(`Using SSH profile: ${profile.label} (${profile.privateKeyPath})`, 'info');
-    if (profile.hasSavedPassword && !getState().vaultStatus.unlocked) {
+
+    // Ask for whatever the key needs before starting, rather than letting git
+    // fail on an identity that was never loaded. Fetch and pull go through the
+    // same check as push: they authenticate with the same key, and prompting
+    // for only one of the three would be arbitrary.
+    if (!(await ensureKeyUsable({ reason: action }))) {
+      logToTerminal(`${titleCase(action)} cancelled: "${profile.label}" is not unlocked.`);
       showToast(
-        'This profile has a saved passphrase, but the vault is locked. Unlock it in the SSH key menu first.',
+        `${titleCase(action)} cancelled — "${profile.label}" is not unlocked. Use Unlock in the SSH key menu when you are ready.`,
         'warn',
-        6000
+        7000
       );
+      return;
     }
   } else {
     logToTerminal('Using system default SSH configuration', 'info');

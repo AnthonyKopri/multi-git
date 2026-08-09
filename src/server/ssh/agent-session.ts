@@ -6,7 +6,13 @@
 // so those primitives stay testable with nothing but a fake runner.
 import { readConfig, writeConfig } from '../config/store';
 import { canonicalRepoKey } from '../config/repo-identity';
-import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/vault';
+import { mainWorktreePathSync } from '../git/worktrees';
+import {
+  getStoredPassphrase,
+  hasStoredPassphrase,
+  isUnlocked,
+  setStoredPassphrase
+} from '../vault/vault';
 import {
   loadKeyIntoAgent,
   readAgentState,
@@ -57,6 +63,22 @@ export interface ApplyProfileOptions {
   repoPath?: string | undefined;
   profileId: string;
   runner?: ExecutableRunner | undefined;
+  /**
+   * A passphrase the user just typed, used in preference to the vault.
+   *
+   * The reason this exists: the vault answers "the passphrase I saved earlier",
+   * and until now there was no way to answer "the passphrase I know right now".
+   * That left a passphrase-protected key with nothing saved for it permanently
+   * unloadable from inside the app, which is exactly the state a restored
+   * window opens in.
+   *
+   * It is never stored, never logged and never part of an argument vector: it
+   * goes to `loadKeyIntoAgent`, which hands it to ssh through the AskPass
+   * bridge and adds it to the runner's redaction list.
+   */
+  passphrase?: string | undefined;
+  /** Saves the supplied passphrase in the vault. Requires an unlocked vault. */
+  savePassphrase?: boolean | undefined;
 }
 
 /**
@@ -111,7 +133,13 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
     };
   }
 
-  if (hasStoredPassphrase(profile.id) && !isUnlocked()) {
+  const supplied = options.passphrase !== undefined && options.passphrase !== ''
+    ? options.passphrase
+    : null;
+
+  // A passphrase the user has just typed answers the question the vault would
+  // have answered, so a locked vault is no longer a dead end.
+  if (supplied === null && hasStoredPassphrase(profile.id) && !isUnlocked()) {
     return {
       success: false,
       agent: before,
@@ -121,13 +149,20 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
     };
   }
 
-  const passphrase = isUnlocked() ? getStoredPassphrase(profile.id) : null;
+  const passphrase = supplied ?? (isUnlocked() ? getStoredPassphrase(profile.id) : null);
 
   const outcome = await loadKeyIntoAgent({
     privateKeyPath: profile.privateKeyPath,
     ...(passphrase ? { passphrase } : {}),
     ...(runner ? { runner } : {})
   });
+
+  // Only after the key demonstrably loaded: storing a passphrase that turns
+  // out to be wrong would leave the user with a saved value that fails
+  // silently on every future launch.
+  if (outcome.loaded && supplied !== null && options.savePassphrase === true && isUnlocked()) {
+    setStoredPassphrase(profile.id, supplied);
+  }
 
   const after = await agentStatus({ profileId, ...(runner ? { runner } : {}) });
 
@@ -136,10 +171,12 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
       success: false,
       agent: after,
       error: outcome.error ?? 'The key could not be loaded into the agent.',
-      // A protected key with nothing in the vault is the common case, and it
-      // has an obvious remedy the UI can offer.
-      code:
-        !passphrase && hasStoredPassphrase(profile.id) === false
+      // Three different situations, three different things for the UI to do:
+      // ask for the passphrase, say the one just given was wrong and ask
+      // again, or report a failure that typing will not solve.
+      code: supplied !== null
+        ? 'PASSPHRASE_REJECTED'
+        : !passphrase && hasStoredPassphrase(profile.id) === false
           ? 'PASSPHRASE_REQUIRED'
           : 'LOAD_FAILED',
       routingChanged
@@ -287,9 +324,23 @@ export async function ensureAgentForRepo(
   }
 }
 
-/** Remembers which profile a repository uses, keyed by canonical identity. */
+/**
+ * The folder an account selection is recorded against.
+ *
+ * A repository and its worktrees share one `.git/config`, so they share one
+ * `core.sshCommand` and therefore one identity — git gives no way to have two
+ * without turning on a repository-level extension. Recording the choice
+ * against the main worktree makes the settings agree with what git will
+ * actually do, instead of offering a per-worktree account that silently
+ * rewrites the shared value.
+ */
+function identityOwner(repoPath: string): string {
+  return mainWorktreePathSync(repoPath) ?? repoPath;
+}
+
+/** Remembers which profile a repository family uses, by canonical identity. */
 export function rememberProfileForRepo(repoPath: string, profileId: string): boolean {
-  const key = canonicalRepoKey(repoPath);
+  const key = canonicalRepoKey(identityOwner(repoPath));
   if (key === '') {
     return false;
   }
@@ -300,8 +351,22 @@ export function rememberProfileForRepo(repoPath: string, profileId: string): boo
   return writeConfig(config);
 }
 
-/** The profile a repository was last set to, if any. */
+/**
+ * The profile this folder's family was last set to, if any.
+ *
+ * The folder's own record is preferred, so a choice made before worktrees
+ * existed still applies. A worktree created since has no record of its own and
+ * inherits the family's — without which opening one in a new window would drop
+ * silently to System SSH even though the family is pinned to an account.
+ */
 export function profileForRepo(repoPath: string): string | null {
-  const key = canonicalRepoKey(repoPath);
-  return key === '' ? null : (readConfig().repoSettings[key]?.sshProfileId ?? null);
+  const settings = readConfig().repoSettings;
+
+  const ownKey = canonicalRepoKey(repoPath);
+  if (ownKey !== '' && settings[ownKey]?.sshProfileId !== undefined) {
+    return settings[ownKey].sshProfileId ?? null;
+  }
+
+  const familyKey = canonicalRepoKey(identityOwner(repoPath));
+  return familyKey === '' ? null : (settings[familyKey]?.sshProfileId ?? null);
 }
