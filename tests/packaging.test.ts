@@ -147,6 +147,85 @@ describe('element ids', () => {
   });
 });
 
+/**
+ * Narrowing helpers must agree with the markup.
+ *
+ * `asInput`, `asSelect` and friends throw at runtime when the element is not
+ * the tag they name — by design, so a mismatch is loud rather than silently
+ * undefined. But nothing checked that they *match*, and `asInput` on the
+ * `<select>` behind `#signing-mode` shipped: the signing settings dialog threw
+ * "Expected #signing-mode to be HTMLInputElement, found HTMLSelectElement" the
+ * moment it opened, and no test noticed because the id existed and the
+ * TypeScript types are identical either way.
+ *
+ * This is a static check over every call site in the renderer, so the whole
+ * class of mistake fails the suite rather than one instance of it.
+ */
+describe('typed element access', () => {
+  const html = fs.readFileSync(fromAppRoot('public', 'index.html'), 'utf8');
+
+  const EXPECTED_TAG: Record<string, string> = {
+    asInput: 'input',
+    asSelect: 'select',
+    asTextArea: 'textarea',
+    asForm: 'form',
+    asButton: 'button'
+  };
+
+  /** The tag of the element carrying an id, or null when it is not there. */
+  function tagFor(id: string): string | null {
+    const match = new RegExp(`<([a-zA-Z][\\w-]*)\\b[^>]*\\bid="${id}"`).exec(html);
+    return match?.[1]?.toLowerCase() ?? null;
+  }
+
+  function rendererSources(directory: string): string[] {
+    return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const full = `${directory}/${entry.name}`;
+      if (entry.isDirectory()) {
+        return rendererSources(full);
+      }
+      return entry.name.endsWith('.ts') ? [full] : [];
+    });
+  }
+
+  it('narrows every element to the tag index.html actually uses', async () => {
+    const { ELEMENT_MAP } = (await import('../src/renderer/dom/elements')) as {
+      ELEMENT_MAP: Record<string, string>;
+    };
+
+    const mismatches: string[] = [];
+    let callSites = 0;
+
+    for (const file of rendererSources(fromAppRoot('src', 'renderer'))) {
+      const source = fs.readFileSync(file, 'utf8');
+
+      for (const [, helper, key] of source.matchAll(
+        /\b(asInput|asSelect|asTextArea|asForm|asButton)\(\s*ui\.(\w+)\s*\)/g
+      )) {
+        const id = ELEMENT_MAP[key as string];
+        if (id === undefined) {
+          continue;
+        }
+
+        callSites += 1;
+
+        const actual = tagFor(id);
+        const expected = EXPECTED_TAG[helper as string];
+
+        if (actual !== null && actual !== expected) {
+          mismatches.push(
+            `${file.split(/[\\/]/).slice(-2).join('/')}: ${helper}(ui.${key}) but #${id} is a <${actual}>`
+          );
+        }
+      }
+    }
+
+    // A regex that stopped matching would make this pass by finding nothing.
+    expect(callSites, 'no typed element access found; the scan has gone stale').toBeGreaterThan(20);
+    expect(mismatches).toEqual([]);
+  });
+});
+
 describe('the log window', () => {
   it('is packaged alongside the main page', () => {
     expect(fs.existsSync(fromAppRoot('public', 'logs.html'))).toBe(true);

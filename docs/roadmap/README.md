@@ -101,6 +101,7 @@ before writing anything similar.
 | Open a repository in its own window | `src/main/window-registry.ts` | Keyed by canonical identity, so two spellings of one folder focus one window. Display clamping and restore filtering are pure functions. |
 | Test something that shells out | `tests/helpers/fake-runner.ts` | Scripted responses plus argv/stdin/env assertions. No `gh`, agent, key or network anywhere in the suite. |
 | Test renderer behaviour | `// @vitest-environment happy-dom` | Mount the real `public/index.html`, so a renamed element id fails the suite. See `tests/pull-request-window.test.ts` and `tests/diff-selection.test.ts`. |
+| Narrow an element to its tag | `asInput` / `asSelect` / … in `src/renderer/dom/elements.ts` | `tests/packaging.test.ts` checks every call against the tag `index.html` actually uses. Using the wrong one fails the suite instead of throwing when the dialog opens. |
 
 ### Open follow-ups carried forward
 

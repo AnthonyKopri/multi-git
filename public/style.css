@@ -1434,7 +1434,10 @@ body.pane-resizing-y * {
   flex: 0 0 auto;
   align-self: flex-end;
 }
-.commit-input-wrapper button {
+/* The Commit button itself, not every button that happens to sit near it —
+   the Settings link beside the Sign checkbox was inheriting 48px and making
+   the whole column too tall for the panel. */
+.commit-input-wrapper .commit-buttons > button {
   height: 48px;
   padding: 0 24px;
 }
@@ -2953,6 +2956,21 @@ body.pane-resizing-y * {
   gap: 6px;
   align-items: stretch;
 }
+/*
+ * Amend and Sign share a line.
+ *
+ * Stacked, this column wanted 126px inside a box that is 85px tall at the
+ * default panel height. It is bottom-anchored, so the surplus came out of the
+ * top and the Commit button sat on the template chips. One line each was the
+ * difference between a column that fits and one that does not.
+ */
+.commit-toggles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
 .amend-row {
   display: flex;
   align-items: center;
@@ -3223,12 +3241,22 @@ body.pane-resizing-y * {
 /* ==========================================================================
    COMMIT MESSAGE TEMPLATE CHIPS
    ========================================================================== */
+/*
+ * One line, always.
+ *
+ * These chips used to wrap. The commit panel is a fixed height, so a second
+ * row of chips took its space from the message box below — and the Commit
+ * button, which is 48px tall and anchored to the bottom of that box, then
+ * overflowed upwards and sat on top of the chips it had displaced. Scrolling
+ * sideways keeps the row exactly one line high whatever it contains.
+ */
 .commit-template-row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
   min-width: 0;
+  flex-shrink: 0;
 }
 .commit-template-row input {
   width: 90px;
@@ -3239,8 +3267,18 @@ body.pane-resizing-y * {
 .template-chips {
   display: flex;
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* The chips are 21px tall; a visible scrollbar under them would double the
+     height of the row and reintroduce the problem it exists to solve. */
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+.template-chips::-webkit-scrollbar {
+  display: none;
 }
 .template-chip {
   padding: 3px 10px;
@@ -3252,6 +3290,9 @@ body.pane-resizing-y * {
   font-size: 0.6875rem;
   cursor: pointer;
   transition: all 0.15s ease;
+  /* Never squashed into an unreadable sliver; the row scrolls instead. */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .template-chip:hover {
   color: var(--color-primary);
@@ -3259,11 +3300,12 @@ body.pane-resizing-y * {
   background-color: var(--color-primary-glow);
 }
 .commit-format-hint {
-  margin-left: auto;
   font-size: 0.6875rem;
   color: var(--text-dim);
   font-style: italic;
   white-space: nowrap;
+  /* Held at the end of the row rather than scrolling away with the chips. */
+  flex-shrink: 0;
 }
 
 /* ==========================================================================

@@ -235,6 +235,20 @@ and the **Unlock key** button in the accounts dropdown is the way back.
   from the command preview, the launch history and the Terminal Log.
   `settings.storeAgentPrompts` exists and defaults to false.
 
+### Two Phase 2 defects fixed along the way
+
+Reported from a built app while this phase was in progress. Both belong to
+Phase 2 and are written up in full under
+[its follow-up fixes](phase-2-review-history-recovery.md#two-ui-defects-reported-from-a-phase-2-build-fixed-2026-08-09):
+the signing settings dialog threw on open because a `<select>` was narrowed
+with `asInput`, and the Commit button was drawn over the commit template chips
+because its column did not fit the panel.
+
+The first left a general check behind. `tests/packaging.test.ts` now verifies
+every typed element access in the renderer against the tag `index.html` uses,
+which the existing id check could not do — the id existed, and the TypeScript
+types are identical either way.
+
 ### Carried out of scope deliberately
 
 - `git worktree add --orphan` and bare-repository families are listed correctly
