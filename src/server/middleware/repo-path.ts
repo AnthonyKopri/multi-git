@@ -4,6 +4,14 @@
 // handed the raw header straight to spawn() as a working directory, with no
 // check that it existed, was a directory, or was a repository at all. This
 // centralises that and gives handlers a resolved, verified path.
+//
+// The header also carries paths this process cannot spell in Latin-1. HTTP
+// header values are byte strings, so a path containing `中文` or an emoji is
+// truncated a code unit at a time on the way out of the browser and arrives as
+// a folder that does not exist. `x-repo-path-encoding: base64` marks a value
+// whose bytes are the UTF-8 encoding of the real path, which survives that trip
+// intact. A raw value is still accepted, so an existing script or `curl` line
+// keeps working.
 import fs from 'node:fs';
 import path from 'node:path';
 import type { NextFunction, Request, Response } from 'express';
@@ -48,6 +56,45 @@ function isGitRepository(candidate: string): boolean {
   return true;
 }
 
+/** Header naming the encoding of `x-repo-path`. Only `base64` is defined. */
+export const REPO_PATH_ENCODING_HEADER = 'x-repo-path-encoding';
+
+/**
+ * Recovers the path from a transport-encoded header value.
+ *
+ * Base64 is not self-describing and `Buffer.from(value, 'base64')` is lenient
+ * to a fault: it skips characters outside the alphabet and returns whatever it
+ * managed to collect. So the decoded bytes are re-encoded and compared, which
+ * turns a corrupted or truncated header into an error instead of a plausible
+ * path pointing somewhere else.
+ */
+export function decodeRepoPathHeader(rawValue: unknown, encoding: unknown): string {
+  if (typeof rawValue !== 'string') {
+    throw new RepoPathError('No repository path provided');
+  }
+
+  if (typeof encoding !== 'string' || encoding.trim().toLowerCase() !== 'base64') {
+    return rawValue;
+  }
+
+  const value = rawValue.trim();
+  const bytes = Buffer.from(value, 'base64');
+
+  // Compared without padding, because an encoder may legitimately omit it.
+  const unpadded = (text: string): string => text.replace(/=+$/, '');
+  if (unpadded(bytes.toString('base64')) !== unpadded(value)) {
+    throw new RepoPathError('Repository path header is not valid base64');
+  }
+
+  if (bytes.includes(0)) {
+    // A NUL would end the string early in every C API below this, spawn's
+    // working directory included.
+    throw new RepoPathError('Repository path contains a null byte');
+  }
+
+  return bytes.toString('utf8');
+}
+
 /**
  * Resolves and validates the header, throwing a RepoPathError the shared error
  * middleware turns into a response.
@@ -80,7 +127,9 @@ export function resolveRepoPath(rawValue: unknown): string {
 /** Express middleware form. Attaches `req.repoPath`. */
 export function requireRepoPath(req: Request, _res: Response, next: NextFunction): void {
   try {
-    req.repoPath = resolveRepoPath(req.headers['x-repo-path']);
+    req.repoPath = resolveRepoPath(
+      decodeRepoPathHeader(req.headers['x-repo-path'], req.headers[REPO_PATH_ENCODING_HEADER])
+    );
     next();
   } catch (error) {
     next(error);

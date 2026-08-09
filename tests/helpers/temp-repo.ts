@@ -28,18 +28,48 @@ export function writeFile(repo: string, relativePath: string, contents: string):
   fs.writeFileSync(target, contents, 'utf8');
 }
 
-/** An initialised repository with an identity configured and no commits. */
-export function createEmptyRepo(): string {
-  const repo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-itest-')));
-  created.push(repo);
-
+/** Applies the identity and hygiene settings every fixture repository needs. */
+function configureRepo(repo: string): void {
   git(repo, 'init', '--initial-branch=main');
   git(repo, 'config', 'user.name', 'Test User');
   git(repo, 'config', 'user.email', 'test@example.com');
   git(repo, 'config', 'commit.gpgsign', 'false');
   git(repo, 'config', 'core.autocrlf', 'false');
+}
+
+/** An initialised repository with an identity configured and no commits. */
+export function createEmptyRepo(): string {
+  const repo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-itest-')));
+  created.push(repo);
+
+  configureRepo(repo);
 
   return repo;
+}
+
+/**
+ * An empty repository in a folder with the exact name given.
+ *
+ * `mkdtemp` appends random characters, so it cannot produce a folder called
+ * `中文` on its own. The name is the point for the transport tests: it is what
+ * has to survive the trip through an HTTP header.
+ */
+export function createEmptyRepoNamed(folderName: string): string {
+  const parent = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-named-')));
+  created.push(parent);
+
+  const repo = path.join(parent, folderName);
+  fs.mkdirSync(repo);
+  configureRepo(repo);
+
+  return repo;
+}
+
+/** A temporary folder that is not a repository. Cleaned up with the rest. */
+export function createTempDir(prefix = 'multi-git-tmp-'): string {
+  const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
+  created.push(directory);
+  return directory;
 }
 
 /** A repository with two commits and a known file. */

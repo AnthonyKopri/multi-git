@@ -75,6 +75,30 @@ export interface RequestOptions {
   ignoreRepoGeneration?: boolean;
 }
 
+/**
+ * Encodes a repository path for the x-repo-path header.
+ *
+ * Header values are byte strings, and `fetch` writes one byte per UTF-16 code
+ * unit — so it silently truncates anything above U+00FF. A folder called
+ * `中文` arrived at the server as two unrelated bytes and resolved to a path
+ * that does not exist, which is why such a repository could be picked but never
+ * used. Base64 of the UTF-8 bytes is pure ASCII and survives the trip; the
+ * server is told what it is looking at by x-repo-path-encoding.
+ */
+export function encodeRepoPathHeader(repoPath: string): string {
+  const bytes = new TextEncoder().encode(repoPath);
+
+  // btoa takes one character per byte, so the bytes are widened back into a
+  // string first. Chunked because a very long path would otherwise be spread
+  // as one enormous argument list.
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 1024) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + 1024));
+  }
+
+  return btoa(binary);
+}
+
 function buildUrl(path: string, query: RequestOptions['query']): string {
   if (!query) {
     return path;
@@ -102,7 +126,8 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     if (activeRepoPath === null) {
       throw new ApiError('No repository is open.', 400);
     }
-    headers['x-repo-path'] = activeRepoPath;
+    headers['x-repo-path'] = encodeRepoPathHeader(activeRepoPath);
+    headers['x-repo-path-encoding'] = 'base64';
   }
 
   const capturedGeneration = generation;
