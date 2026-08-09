@@ -204,27 +204,38 @@ describe('launching a tool', () => {
 });
 
 describe('detection', () => {
+  /*
+   * `resolveExecutable` asks `where` on Windows and `which` everywhere else, so
+   * a rule hard-coded to one of them matches nothing on the other platform and
+   * detection silently finds zero tools. The finder is read from the platform
+   * for the same reason the product does.
+   */
+  const finder = process.platform === 'win32' ? 'where' : 'which';
+  const resolvedPath = process.platform === 'win32' ? 'C:\\Program Files\\code.exe' : '/usr/bin/code';
+
   it('offers a definition for each tool that is on PATH', async () => {
     const runner = new FakeRunner()
       .otherwise({ exitCode: 1 })
-      .on(command('where', 'code'), { stdout: 'C:\\Program Files\\code.exe\n' });
+      .on(command(finder, 'code'), { stdout: `${resolvedPath}\n` });
 
     const detected = await detectTools(runner);
 
     expect(detected.length).toBeGreaterThan(0);
     expect(detected.every((entry) => entry.executable === 'code')).toBe(true);
-    expect(detected[0]?.resolvedPath).toContain('code.exe');
+    expect(detected[0]?.resolvedPath).toBe(resolvedPath);
   });
 
   it('looks each executable up once even when several definitions share it', async () => {
     const runner = new FakeRunner()
       .otherwise({ exitCode: 1 })
-      .on(command('where', 'code'), { stdout: 'C:\\code.exe\n' });
+      .on(command(finder, 'code'), { stdout: `${resolvedPath}\n` });
 
-    await detectTools(runner);
+    const detected = await detectTools(runner);
 
     // `code` seeds a diff, a merge and an editor definition; three PATH lookups
-    // for one program would be three processes for no reason.
+    // for one program would be three processes for no reason. Asserted against
+    // the definitions it produced, so the count means something.
+    expect(detected.length).toBeGreaterThan(1);
     expect(runner.calls.filter((call) => call.args.includes('code'))).toHaveLength(1);
   });
 
