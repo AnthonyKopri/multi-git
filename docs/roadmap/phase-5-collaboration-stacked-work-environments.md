@@ -3,7 +3,7 @@ title: "Phase 5: Collaboration, stacked work and environments"
 phase: 5
 status: planned
 depends_on: [phase-1, phase-2, phase-3, phase-4]
-blocked_on: [phase-3, phase-4]
+dependencies_met: true
 suggested_branch: claude/phase-5-collaboration-stacked-work-environments
 parallelizable: true
 lanes: [providers, pr-dashboard, stacked-work, wsl, remote-ssh-discovery]
@@ -11,9 +11,18 @@ lanes: [providers, pr-dashboard, stacked-work, wsl, remote-ssh-discovery]
 
 # Phase 5: Collaboration, Stacked Work and Environments
 
-> **Blocked on Phases 3 and 4.** Phase 2 completed on 2026-08-08, so of the
-> four prerequisites only worktrees (Phase 3) and the power tools (Phase 4)
-> are outstanding.
+> **Ready to start.** Every prerequisite has landed: Phase 3 on 2026-08-09 and
+> Phase 4 the same day.
+>
+> Three things Phase 4 leaves for this phase. The operations bar
+> (`src/renderer/features/operations/index.ts`) already shows and cancels
+> anything registered with `OperationRegistry`, so a long-running provider call
+> needs an `operations.begin` and an `AbortSignal`, not a UI. Starting a program
+> is not on the HTTP API — agent launch, bisect runs and external tools all go
+> through the Electron IPC bridge, and WSL and remote-SSH execution should
+> follow that rather than adding a header check. And `src/server/git/remotes.ts`
+> is the one place that validates and mutates a remote; a provider that rewrites
+> one should call into it.
 >
 > Phase 1 delivered the `HostingProvider` contract
 > (`src/shared/provider-types.ts`) with GitHub as the only implementation,

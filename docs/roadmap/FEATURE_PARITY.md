@@ -57,13 +57,15 @@ Status values: **Current** means materially available today; **Planned** has an 
 
 ## Open follow-ups
 
-Everything known to be outstanding after Phases 0–3, in one place. None of it
-blocks Phase 4. Each row links to the section holding the evidence.
+Everything known to be outstanding after Phases 0–4, in one place. None of it
+blocks Phase 5. Each row links to the section holding the evidence.
 
 | Item | Kind | Owner | Detail |
 | --- | --- | --- | --- |
 | Express 4 → 5 | Dependency | Standalone PR | The only dependency not at latest. Nothing blocks it — the server declares no parametric or wildcard routes, and every handler already reads `req.body ?? {}`. Left out of Phase 0 as a runtime-framework major touching `app.ts` and every route file. See [Justified pins and deferrals](#justified-pins-and-deferrals). |
-| Operation progress has no general UI | Deliberate scope split | Phase 4 | Registry, SSE stream and cancel endpoint landed in Phase 0. Phase 3 added two more operations that register through it — the worktree status pass and the group fetch — each with its own inline control. The general panel is Phase 4's. |
+| LFS locking never run against a real lock server | Untested by hand | Whoever has one | It needs a host implementing the LFS lock API, which no local fixture provides. The argv, the ownership split from `locks --verify`, the force-unlock authorisation path and "this server does not support locking" are covered against a scripted `git lfs` in `tests/lfs.test.ts`. |
+| Explorer entries never installed on a clean machine | Untested by hand | Whoever next uses it | `reg add` and `reg delete` argv, the HKCU-only constraint and the `%V` command form are asserted in `tests/external-tools.test.ts`, but the round trip through a real Explorer has not been watched. |
+| A patch whose bytes are not valid UTF-8 cannot be applied from the text field | Known limitation | Needs a binary upload path | The patch arrives as a JSON string, so the decode happened in the renderer before the server saw it. `createPatch` flags a binary patch in its preview for exactly this reason. See [Phase 4 record](#phase-4-record-2026-08-09). |
 | Agent launch never run against a real Claude or Codex install | Untested by hand | Whoever has one installed | Neither is on the development machine's PATH, so detection legitimately finds nothing there. Argv construction for all three terminal modes, the environment allowlist, the missing-tool path and the failure recording are covered against a scripted runner and a fake launcher in `tests/agents.test.ts`. |
 | Creating a real pull request | Untested by hand | Whoever next uses it | Covered against a scripted `gh`. Running it for real would open a pull request on a real repository. |
 | The fork workflow | Untested by hand | Whoever next uses it | Same reason. Ownership detection *has* been run against real `gh` on a non-fork. |
@@ -80,6 +82,103 @@ blocks Phase 4. Each row links to the section holding the evidence.
 - **Windows Application Control can block a freshly built, unsigned `.exe`.**
   Packaging succeeds and the artifact is valid; launching it may not be
   permitted until the policy is satisfied.
+
+## Phase 4 record (2026-08-09)
+
+Delivered on `claude/phase-4-planning-responsive-ui-82df62`, alongside eight
+layout defects carried over from Phase 3.
+
+### Three assumptions that were wrong
+
+**A container cannot style itself with its own container query.** The commit
+panel was made a query container so its buttons could stack below the message
+box when cramped — and the stacking worked, while the `min-height` that stops
+the stacked layout being clipped silently did not. An element is excluded from
+its own `@container` matches. The container is now the staging view, which is
+the same width; the threshold carries a `+40px` offset for the panel's own side
+padding, and says so.
+
+**`.btn-icon.btn-sm` did not exist.** `.btn-sm` sets only padding and
+font-size, and `.btn-icon` fixes both dimensions, so every "small" icon button
+in the app was drawn at the full 38px. That is the mechanical cause of the
+crowded worktree rows reported after Phase 3: five actions took 190px of a
+240px sidebar. They are 28px now, which affects branch, agent and group rows
+too — all of which asked for small and never got it.
+
+**A patch is not always bytes.** `src/server/git/encoding.ts` exists because a
+diff must survive the round trip from git to `git apply`, and its latin1
+transport is correct for a string that came *from* git's own bytes. A patch
+pasted or loaded in the renderer did not: it arrived as text, already decoded,
+so encoding it back as latin1 would corrupt every character above U+00FF. It is
+encoded as UTF-8 instead, and the case that genuinely cannot round-trip — a
+binary patch — is flagged in the preview rather than silently mangled.
+
+### Where the desktop-only boundary is, and why
+
+Three Phase 4 features start a program: external tool launch, the automated
+bisect run, and — from Phase 3 — agent launch. None of them is reachable over
+HTTP. The loopback server answers anything on this machine that can reach the
+port, and a header claiming to be the desktop app is not a boundary, because
+anything that can reach the port can set one. Saving a definition is
+configuration and stays on HTTP; running it goes through Electron IPC.
+
+Saving a patch follows the same shape from the other direction: the main process
+writes only to a path that came back from `showSaveDialog`, and each path is
+spent on first use, so one dialog authorises exactly one write.
+
+### Registry entries used for Explorer integration
+
+Written only by `src/main/shell-integration.ts`, only on Windows, and only when
+the user presses Install after seeing both keys:
+
+| Key | Purpose |
+| --- | --- |
+| `HKCU\Software\Classes\Directory\shell\MultiGit` | Right-clicking a folder |
+| `HKCU\Software\Classes\Directory\Background\shell\MultiGit` | Right-clicking inside an open folder |
+
+Each gets a default value naming the menu item and a `command` subkey holding
+`"<exe>" "%V"`. `%V` rather than `%1`, because `%1` is empty for a background
+right-click. No HKLM, so no administrator rights and nothing changed for other
+accounts. No file association is claimed. Remove deletes exactly these two.
+
+### External-tool template grammar
+
+An argument template is an array, and placeholders are substituted **within** an
+element, never across one — `--diff={local}` stays a single argument whatever
+the path contains, which is why nothing in the feature quotes anything.
+
+`{local}` `{remote}` `{base}` `{merged}` `{path}` `{line}` `{cwd}`
+
+Anything else is refused at the point a definition is saved and again
+immediately before launch, because the configuration file is ordinary JSON in
+the user's home directory that a sync client can change in between. Passing an
+unknown placeholder through as literal text would hand a diff tool the word
+`{theirs}` where a path belonged.
+
+### Minimum versions
+
+| Tool | Needed for |
+| --- | --- |
+| Git ≥ 2.22 | `git submodule set-branch` |
+| Git ≥ 2.30 | `git bisect` subcommands used here; `rev-list --bisect-vars` is much older |
+| Git LFS ≥ 2.0 | `ls-files --json`, `locks --json`, `locks --verify --json` |
+| `reg.exe` | Present on every supported Windows version |
+
+Local submodule fixtures need `protocol.file.allow=always`; git has refused the
+`file` transport for submodules since CVE-2022-39253. That is set on the test
+fixtures, never by the product — the protection is a real one, and an
+application has no business turning it off on a user's behalf. It has to reach
+two places: `-c` on the fixture's own commands, because `git submodule add`
+spawns a `git clone` that never reads the superproject's local config, and a
+global config file for the git the product runs.
+
+### Cancellation caveats
+
+Cancelling a network operation is not undoing it. `git push` may already have
+sent its objects when the process is killed, so a cancelled operation reports
+that the remote may have received part of it rather than claiming a clean stop.
+An operation that cannot be interrupted safely is registered as not cancellable
+and offers no button, rather than one that does nothing.
 
 ## Phase 3 record (2026-08-09)
 
