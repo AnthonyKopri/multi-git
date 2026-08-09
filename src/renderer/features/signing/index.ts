@@ -9,7 +9,7 @@
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
-import { asInput } from '../../dom/elements';
+import { asInput, asSelect } from '../../dom/elements';
 import { el, fragment, setHidden } from '../../dom/create';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
@@ -113,7 +113,7 @@ function applyModeVisibility(mode: SigningMode): void {
 }
 
 function fillForm(config: SigningConfig): void {
-  asInput(ui.signingMode).value = config.mode;
+  asSelect(ui.signingMode).value = config.mode;
   asInput(ui.signingKey).value = config.signingKey ?? '';
   asInput(ui.signingAllowedSigners).value = config.allowedSignersFile ?? '';
   asInput(ui.signingDefaultCommits).checked = config.signCommitsByDefault;
@@ -159,7 +159,7 @@ export function closeSigningSettings(): void {
 }
 
 async function save(): Promise<void> {
-  const mode = asInput(ui.signingMode).value as SigningMode;
+  const mode = asSelect(ui.signingMode).value as SigningMode;
   const key = asInput(ui.signingKey).value.trim();
   const allowed = asInput(ui.signingAllowedSigners).value.trim();
 
@@ -243,7 +243,7 @@ export function wireSigning(): void {
   ui.btnCancelSigning.addEventListener('click', () => closeSigningSettings());
 
   ui.signingMode.addEventListener('change', () => {
-    applyModeVisibility(asInput(ui.signingMode).value as SigningMode);
+    applyModeVisibility(asSelect(ui.signingMode).value as SigningMode);
   });
 
   ui.signingKeyPicker.addEventListener('change', () => {

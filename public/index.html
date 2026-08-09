@@ -409,15 +409,17 @@
                   <span class="material-symbols-outlined">done_all</span>
                   <span id="btn-commit-label">Commit</span>
                 </button>
-                <label class="amend-row" title="Replace the last commit with the staged changes and this message">
-                  <input type="checkbox" id="commit-amend-checkbox">
-                  <span>Amend last commit</span>
-                </label>
-                <label class="amend-row" id="commit-sign-row" title="Sign this commit">
-                  <input type="checkbox" id="commit-sign-checkbox">
-                  <span>Sign</span>
+                <div class="commit-toggles">
+                  <label class="amend-row" title="Replace the last commit with the staged changes and this message">
+                    <input type="checkbox" id="commit-amend-checkbox">
+                    <span>Amend</span>
+                  </label>
+                  <label class="amend-row" id="commit-sign-row" title="Sign this commit">
+                    <input type="checkbox" id="commit-sign-checkbox">
+                    <span>Sign</span>
+                  </label>
                   <button id="btn-signing-settings" type="button" class="btn btn-text btn-sm" title="Signing settings">Settings</button>
-                </label>
+                </div>
               </div>
             </div>
           </div>

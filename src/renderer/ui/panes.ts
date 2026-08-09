@@ -82,9 +82,18 @@ export const PANE_SPECS: Record<PaneName, PaneSpec> = {
     variable: '--commit-panel-height',
     axis: 'y',
     direction: -1,
-    min: 110,
+    /**
+     * Set by what the panel cannot shrink: 28px of padding, a 35px template
+     * row, and an 82px button column holding a 48px Commit button and the two
+     * toggles under it. The old 110 was below that, and because the column is
+     * anchored to the bottom of the message box the surplus came out of the
+     * top — which is how the Commit button ended up drawn over the commit
+     * template chips. Stored sizes are re-clamped on load, so a layout already
+     * dragged too small is repaired rather than left broken.
+     */
+    min: 150,
     max: 560,
-    fallback: 148,
+    fallback: 156,
     // Header, tabs, and enough of the staging lists to still be a file list.
     reserve: 320
   }

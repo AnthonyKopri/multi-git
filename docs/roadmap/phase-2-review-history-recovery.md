@@ -334,6 +334,44 @@ skips where gpg cannot produce a key, rather than pretending to have run.
 
 No defect was found in the GPG paths; they were simply unverified.
 
+### Two UI defects reported from a Phase 2 build, fixed 2026-08-09
+
+Both were found by a user running the built app, during Phase 3. They are
+recorded here because they are Phase 2's, not Phase 3's.
+
+**The signing settings dialog threw on open.** `#signing-mode` is a `<select>`,
+and three call sites in `src/renderer/features/signing/index.ts` narrowed it
+with `asInput`. The helper throws when the tag does not match — deliberately,
+so a mismatch is loud rather than silently `undefined` — so pressing
+**Settings** produced `Expected #signing-mode to be HTMLInputElement, found
+HTMLSelectElement` and the dialog never opened. Signing itself was unaffected;
+only its settings dialog was unreachable.
+
+Fixed by using `asSelect`. The gap that let it ship is closed more generally:
+`tests/packaging.test.ts` now statically checks every `asInput` / `asSelect` /
+`asTextArea` / `asForm` / `asButton` call on a registered element against the
+tag `index.html` actually uses, so the whole class fails the suite rather than
+one instance of it. The existing id check could never have caught this — the id
+existed, and the TypeScript types are identical either way.
+
+**The Commit button was drawn on top of the commit template chips.** The button
+column is anchored to the bottom of the message box, and it wanted 126px inside
+a box 85px tall at the default panel height, so the surplus came out of the top.
+Three things contributed and all three are fixed:
+
+- `.commit-input-wrapper button` set a 48px height on *every* button in the
+  wrapper, including the small **Settings** link beside the Sign checkbox. Now
+  scoped to the Commit button itself.
+- Amend and Sign were stacked; they now share a line. The column needs 82px.
+- The commit panel's resize floor was 110px, below what its own contents
+  require. Now 150px, with the default at 156px. Stored sizes are re-clamped on
+  load, so a layout already dragged too small is repaired rather than left
+  broken.
+
+The template chips no longer wrap either — they scroll sideways, which is what
+keeps that row exactly one line high whatever it holds. Moving **Settings** out
+of the Sign `<label>` also stopped it toggling the checkbox on the way past.
+
 ## Workstream A status
 
 ### Shipped
