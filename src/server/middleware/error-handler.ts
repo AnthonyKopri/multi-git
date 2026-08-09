@@ -9,6 +9,8 @@ import { GitError } from '../git/run';
 import { InvalidGitArgumentError } from '../git/args';
 import { PatchSelectionError } from '../git/patch-build';
 import { WorktreeError } from '../git/worktrees';
+import { RemoteError } from '../git/remotes';
+import { SubmoduleError } from '../git/submodules';
 import { CommandFailedError, CommandSpawnError } from '../process/runner';
 import { RepoPathError } from './repo-path';
 
@@ -56,6 +58,8 @@ function classify(error: unknown, fallbackMessage: string): ErrorShape {
     error instanceof PatchSelectionError ||
     error instanceof RepoPathError ||
     error instanceof WorktreeError ||
+    error instanceof RemoteError ||
+    error instanceof SubmoduleError ||
     error instanceof HttpError ||
     error instanceof CommandSpawnError
   ) {

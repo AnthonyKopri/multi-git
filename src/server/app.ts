@@ -42,6 +42,8 @@ import { newRepoRouter } from './routes/new-repo.routes';
 import { worktreesRouter } from './routes/worktrees.routes';
 import { groupsRouter } from './routes/groups.routes';
 import { agentsRouter } from './routes/agents.routes';
+import { remotesRouter } from './routes/remotes.routes';
+import { submodulesRouter } from './routes/submodules.routes';
 
 /**
  * Default body limit.
@@ -98,6 +100,8 @@ export function createApp(): Express {
   app.use(recoveryRouter);
   app.use(pullRequestsRouter);
   app.use(worktreesRouter);
+  app.use(remotesRouter);
+  app.use(submodulesRouter);
 
   app.use(errorHandler);
 

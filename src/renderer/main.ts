@@ -44,6 +44,8 @@ import * as worktrees from './features/worktrees';
 import * as groups from './features/groups';
 import * as agents from './features/agents';
 import * as repoHub from './features/repo-hub';
+import * as remotes from './features/remotes';
+import * as submodules from './features/submodules';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -106,7 +108,9 @@ async function refreshAll(): Promise<void> {
       shelf.refreshTagList(),
       recovery.refreshRecovery(),
       signing.refreshCommitSignControl(),
-      worktrees.refreshWorktrees()
+      worktrees.refreshWorktrees(),
+      remotes.refreshRemotes(),
+      submodules.refreshSubmodules()
     ]);
   } catch (error) {
     if (!isStale(error)) {
@@ -896,6 +900,8 @@ async function start(): Promise<void> {
   groups.initGroups(ui);
   agents.initAgents(ui);
   repoHub.initRepoHub(ui);
+  remotes.initRemotes(ui);
+  submodules.initSubmodules(ui, { openRepository: repo.openRepository });
 
   wireHeader();
   wireWorkspaceTabs();

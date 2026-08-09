@@ -7,6 +7,7 @@ import { withRepoLock } from '../git/lock';
 import { buildSshCommand, runGitCommand } from '../git/run';
 import type { GitCommandOptions } from '../git/run';
 import { getToggledRemoteUrl, isLikelyHttpRemote, parseRemoteUrl } from '../git/remote';
+import { updateRemote } from '../git/remotes';
 import { getOriginRemoteUrl, runSyncOperationWithProfile } from '../ssh/profiles';
 import { createAskpassBridge } from '../ssh/askpass';
 import { readConfig } from '../config/store';
@@ -156,7 +157,13 @@ syncRouter.post(
       );
     }
 
-    await runGitCommand(repoPath, ['remote', 'set-url', 'origin', toggledUrl]);
+    // Through the remote editor's own update path rather than a `set-url` of
+    // its own. The pill stays a one-click shortcut, but there is one place that
+    // decides what a valid remote URL is, and one place that takes the
+    // repository lock to change one.
+    await withRepoLock(repoPath, () =>
+      updateRemote(repoPath, { name: 'origin', fetchUrl: toggledUrl })
+    );
 
     res.json({
       success: true,
