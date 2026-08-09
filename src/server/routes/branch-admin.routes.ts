@@ -186,31 +186,12 @@ branchAdminRouter.post(
   })
 );
 
-/** Removes remote-tracking refs whose branches are gone from the remote. */
-branchAdminRouter.post(
-  '/api/git/remote/prune',
-  asyncRoute(async (req, res) => {
-    const repoPath = req.repoPath as string;
-    const { remote, dryRun } = (req.body ?? {}) as { remote?: unknown; dryRun?: unknown };
-
-    const safeRemote = refArg(remote ?? 'origin', 'Remote name');
-    const args = ['remote', 'prune', safeRemote];
-    if (dryRun) {
-      args.splice(2, 0, '--dry-run');
-    }
-
-    const { stdout, stderr } = await runGitCommand(repoPath, args);
-
-    // git prints "* [would prune] origin/gone" per ref; the names are what the
-    // UI needs in order to say what happened, or what would.
-    const pruned = `${stdout}\n${stderr}`
-      .split('\n')
-      .map((line) => /\[would prune\]|\[pruned\]/.test(line) ? line.replace(/^.*\](\s*)/, '').trim() : '')
-      .filter(Boolean);
-
-    res.json({ success: true, remote: safeRemote, dryRun: dryRun === true, pruned, stdout, stderr });
-  })
-);
+// Pruning used to live here as `/api/git/remote/prune`, hardcoded to origin at
+// the caller and with no recovery point. It is now `/api/remotes/prune` in
+// remotes.routes.ts, which validates the remote name as a remote name rather
+// than as a ref, pins the locale so the output it parses is stable, and
+// captures a checkpoint first — a remote-tracking ref is the only local record
+// that a branch existed once its remote is gone.
 
 /** Deletes several branches, reporting each outcome rather than stopping. */
 branchAdminRouter.post(
