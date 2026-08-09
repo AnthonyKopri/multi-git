@@ -728,6 +728,17 @@
                 </div>
               </div>
 
+              <!-- Git note for this commit. Editing one does not rewrite the
+                   commit: the note lives in its own ref. -->
+              <div class="changed-files-section">
+                <h5>
+                  Note
+                  <span id="drawer-note-marker" class="count-badge hidden" title="This commit carries a note">•</span>
+                </h5>
+                <textarea id="drawer-note-input" class="drawer-note-input" rows="3" placeholder="No note. Type one and save; empty removes it."></textarea>
+                <button id="btn-save-note" class="btn btn-secondary btn-sm" type="button">Save note</button>
+              </div>
+
               <div class="changed-files-section">
                 <h5 id="drawer-files-heading">Files Changed</h5>
                 <ul id="drawer-files-list" class="changed-files-ul">

@@ -7,6 +7,7 @@ import { el, fragment, icon, setHidden } from '../../dom/create';
 import { getState, update } from '../../state/store';
 import { statusLabel } from '../../ui/format';
 import * as signing from '../signing';
+import * as notes from '../notes';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
@@ -171,6 +172,12 @@ export async function showCommitDetails(commitHash: string): Promise<void> {
     // Fire and forget: verifying a signature can shell out to gpg, and the
     // rest of the drawer should not wait behind it.
     void signing.showCommitSignature(data.commit.hash);
+
+    // The note is read per commit, here, rather than for every row in the list
+    // — the list only needs to know whether one exists, which one call answers
+    // for the whole ref.
+    notes.renderDrawerNoteState(data.commit.hash);
+    void notes.loadNoteForDrawer(data.commit.hash);
 
     ui.drawerFilesList.replaceChildren(
       fragment(

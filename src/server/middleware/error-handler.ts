@@ -12,6 +12,9 @@ import { WorktreeError } from '../git/worktrees';
 import { RemoteError } from '../git/remotes';
 import { SubmoduleError } from '../git/submodules';
 import { LfsError } from '../git/lfs';
+import { PatchError } from '../git/patches';
+import { BisectError } from '../git/bisect';
+import { NotesError } from '../git/notes';
 import { CommandFailedError, CommandSpawnError } from '../process/runner';
 import { RepoPathError } from './repo-path';
 
@@ -77,6 +80,9 @@ function classify(error: unknown, fallbackMessage: string): ErrorShape {
     error instanceof WorktreeError ||
     error instanceof RemoteError ||
     error instanceof SubmoduleError ||
+    error instanceof PatchError ||
+    error instanceof BisectError ||
+    error instanceof NotesError ||
     error instanceof LfsError ||
     error instanceof HttpError ||
     error instanceof CommandSpawnError

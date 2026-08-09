@@ -38,7 +38,26 @@ const desktopApi: DesktopApi = {
   // definition up in the saved configuration, so the page cannot name a
   // program to run.
   launchAgent: (input: AgentLaunchInput) =>
-    ipcRenderer.invoke(IPC_CHANNELS.launchAgent, input) as Promise<AgentLaunchResult>
+    ipcRenderer.invoke(IPC_CHANNELS.launchAgent, input) as Promise<AgentLaunchResult>,
+
+  // Same shape as launchAgent, for the same reason: a saved definition's id,
+  // never a command line.
+  runBisect: (input) =>
+    ipcRenderer.invoke(IPC_CHANNELS.runBisect, {
+      repoPath: String(input?.repoPath ?? ''),
+      commandId: String(input?.commandId ?? '')
+    }) as ReturnType<DesktopApi['runBisect']>,
+
+  selectSaveFile: (input) =>
+    ipcRenderer.invoke(IPC_CHANNELS.selectSaveFile, {
+      suggestedName: String(input?.suggestedName ?? ''),
+      extension: String(input?.extension ?? '')
+    }) as Promise<string>,
+  writeTextFile: (input) =>
+    ipcRenderer.invoke(IPC_CHANNELS.writeTextFile, {
+      filePath: String(input?.filePath ?? ''),
+      contents: String(input?.contents ?? '')
+    }) as Promise<boolean>
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

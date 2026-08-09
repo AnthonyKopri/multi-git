@@ -1,6 +1,7 @@
 // Electron lifecycle: start the local backend, then show the windows.
+import fs from 'node:fs';
 import type { Server } from 'node:http';
-import { BrowserWindow, app, ipcMain, screen } from 'electron';
+import { BrowserWindow, app, dialog, ipcMain, screen } from 'electron';
 
 import { startServer } from '../server/index';
 import { repairSshAgentElevated } from './ssh-agent-elevation';
@@ -8,6 +9,7 @@ import { IPC_CHANNELS } from '../shared/desktop-api';
 import { readConfig, writeConfig } from '../server/config/store';
 import { resolveRepoPath } from '../server/middleware/repo-path';
 import { launchAgent, openEditorAt, openTerminalAt } from '../server/agents/service';
+import { runBisect } from '../server/git/bisect';
 import { WindowRegistry, clampBoundsToDisplays, restorableWindows } from './window-registry';
 import type { ManagedWindow } from './window-registry';
 import {
@@ -25,6 +27,42 @@ let windows: WindowRegistry | null = null;
 
 /** True once quit has begun, so a closing window stops rewriting the record. */
 let quitting = false;
+
+/**
+ * Destinations the user has just chosen in a native Save dialog.
+ *
+ * `writeTextFile` exists so the renderer can save a patch, and a channel that
+ * writes to any path the page names would be a file-write primitive. A path
+ * only becomes writable by going through the dialog, and is spent on first use,
+ * so one dialog authorises exactly one write.
+ */
+const rememberedSavePaths = new Set<string>();
+
+async function selectSaveFile(
+  parent: BrowserWindow | null,
+  options: { suggestedName: string; extension: string }
+): Promise<string> {
+  const filters = options.extension
+    ? [{ name: options.extension.toUpperCase(), extensions: [options.extension] }]
+    : [];
+
+  const result = await dialog.showSaveDialog(parent ?? undefined!, {
+    ...(options.suggestedName ? { defaultPath: options.suggestedName } : {}),
+    filters: [...filters, { name: 'All files', extensions: ['*'] }]
+  });
+
+  if (result.canceled || !result.filePath) {
+    return '';
+  }
+
+  rememberedSavePaths.add(result.filePath);
+  return result.filePath;
+}
+
+/** True when this path came from a Save dialog. Consumes it either way. */
+function consumeSavePath(filePath: string): boolean {
+  return rememberedSavePaths.delete(filePath);
+}
 
 // Windows uses this ID to associate windows with the packaged executable and
 // its embedded icon rather than with the Electron host process.
@@ -196,6 +234,52 @@ function registerIpcHandlers(): void {
       ...(typeof input?.initialPrompt === 'string' ? { initialPrompt: input.initialPrompt } : {})
     });
   });
+
+  ipcMain.handle(
+    IPC_CHANNELS.runBisect,
+    async (_event, input: { repoPath?: unknown; commandId?: unknown }) => {
+      // Same boundary as launchAgent, and the reason it is not an HTTP route:
+      // this starts a program. The repository is validated, and the command is
+      // looked up by id in the saved configuration — the page never names one.
+      const repoPath = validatedRepoPath(input?.repoPath);
+      const commandId = String(input?.commandId ?? '');
+
+      const definition = (readConfig().bisectCommands ?? []).find(
+        (candidate) => candidate.id === commandId
+      );
+
+      if (!definition) {
+        throw new Error('That test command is not one of the saved ones.');
+      }
+
+      return runBisect(repoPath, definition);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.selectSaveFile,
+    (_event, input: { suggestedName?: unknown; extension?: unknown }) =>
+      selectSaveFile(BrowserWindow.getFocusedWindow(), {
+        suggestedName: String(input?.suggestedName ?? ''),
+        extension: String(input?.extension ?? '')
+      })
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.writeTextFile,
+    async (_event, input: { filePath?: unknown; contents?: unknown }) => {
+      // Only to a path the user just chose in the native Save dialog, which is
+      // what `rememberedSavePath` records. A renderer cannot name an arbitrary
+      // destination and have it written.
+      const filePath = String(input?.filePath ?? '');
+      if (!consumeSavePath(filePath)) {
+        throw new Error('That destination was not chosen in a Save dialog.');
+      }
+
+      await fs.promises.writeFile(filePath, String(input?.contents ?? ''), 'utf8');
+      return true;
+    }
+  );
 }
 
 async function startApp(): Promise<void> {

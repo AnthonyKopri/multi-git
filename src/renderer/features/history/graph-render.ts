@@ -4,6 +4,7 @@
 // recreated every row on each page load, so scrolling through 20 pages
 // rebuilt 42,000 rows' worth of DOM instead of 4,000.
 import { el, fragment, icon } from '../../dom/create';
+import { hasNote } from '../notes';
 import {
   GRAPH_ROW_HEIGHT,
   graphLaneX,
@@ -96,7 +97,19 @@ export function buildCommitRow(row: GraphRow, width: number): HTMLLIElement {
     className: 'commit-graph-msg-row',
     children: [
       ...refChips,
-      el('span', { className: 'commit-msg', text: commit.message, title: commit.message })
+      el('span', { className: 'commit-msg', text: commit.message, title: commit.message }),
+      // A marker, not the note itself. Rows are a fixed height so the gutter
+      // SVGs tile, and note text is arbitrarily long — reading it is the
+      // drawer's job.
+      ...(hasNote(commit.hash)
+        ? [
+            el('span', {
+              className: 'commit-note-marker',
+              text: '•',
+              title: 'This commit carries a note'
+            })
+          ]
+        : [])
     ]
   });
 

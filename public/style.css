@@ -4235,3 +4235,62 @@ body.history-collapsed .pane-reveal-right {
     align-items: stretch;
   }
 }
+
+/* Note marker on a commit row, and the drawer's editor. */
+.commit-note-marker {
+  flex: 0 0 auto;
+  color: var(--color-warning);
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.drawer-note-input {
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+}
+
+/* The patch preview and the box a patch is pasted into. */
+.patch-preview {
+  max-height: 220px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  white-space: pre;
+  color: var(--text-muted);
+}
+
+.patch-input {
+  width: 100%;
+  resize: vertical;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  margin: 8px 0;
+}
+
+/* Pushes the trailing buttons of a toolbar to the right. */
+.submodule-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.submodule-toolbar .spacer {
+  flex: 1 1 auto;
+}
+
+/* A submodule that has never been checked out reads as pending, not broken. */
+.submodule-uninitialized .worktree-name {
+  opacity: 0.7;
+}
+
+/* An LFS object that is only a pointer. */
+.lfs-pointer-only .worktree-name {
+  opacity: 0.75;
+}
