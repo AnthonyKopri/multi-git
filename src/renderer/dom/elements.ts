@@ -19,6 +19,13 @@ export const ELEMENT_MAP = {
   btnManageSsh: 'btn-manage-ssh',
   btnRefresh: 'btn-refresh',
 
+  // Collapsing the side panels. Each side has two controls: the header button
+  // that hides it, and the strip left behind that brings it back.
+  btnToggleSidebar: 'btn-toggle-sidebar',
+  btnToggleHistory: 'btn-toggle-history',
+  sidebarReveal: 'sidebar-reveal',
+  historyReveal: 'history-reveal',
+
   // Header Segments
   repoSegment: 'repo-segment',
   repoSegmentName: 'repo-segment-name',

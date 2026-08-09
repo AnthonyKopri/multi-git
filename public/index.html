@@ -151,6 +151,12 @@
 
       <!-- Global Controls -->
       <div class="global-actions">
+        <button id="btn-toggle-sidebar" class="btn btn-icon" type="button" aria-expanded="true" aria-controls="main-content" title="Hide branches panel (Ctrl+B)" aria-label="Hide branches panel">
+          <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+        </button>
+        <button id="btn-toggle-history" class="btn btn-icon" type="button" aria-expanded="true" aria-controls="main-content" title="Hide commit history (Ctrl+Shift+B)" aria-label="Hide commit history">
+          <span class="material-symbols-outlined" aria-hidden="true">right_panel_close</span>
+        </button>
         <button id="btn-remote-protocol" class="btn btn-chip hidden" type="button">
           <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
           <span id="remote-protocol-label">SSH</span>
@@ -181,132 +187,172 @@
     <!-- MAIN BODY -->
     <main id="main-content" class="main-body disabled-view">
       
+      <!-- All that is left of the sidebar when it is collapsed, and the way back. -->
+      <button type="button" id="sidebar-reveal" class="pane-reveal pane-reveal-left" aria-expanded="false" aria-controls="main-content" title="Show branches panel (Ctrl+B)" aria-label="Show branches panel">
+        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+      </button>
+
       <!-- SIDEBAR (BRANCHES & MERGING) -->
       <aside class="sidebar">
-        <div class="sidebar-section">
+        <div class="sidebar-section" data-section="branches">
           <div class="section-header">
-            <h3>Branches</h3>
-          </div>
-          
-          <!-- Branch Creation -->
-          <div class="branch-create-box">
-            <input type="text" id="new-branch-input" placeholder="New branch name...">
-            <button id="btn-create-branch" class="btn btn-primary btn-sm" title="Create and checkout branch">
-              <span class="material-symbols-outlined">add</span>
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-branches">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Branches</h3>
             </button>
           </div>
 
-          <!-- Branch Lists -->
-          <div class="branch-lists">
-            <h4>Local Branches</h4>
-            <ul id="local-branches-list" class="branch-list-ul">
-              <!-- Rendered dynamically -->
-            </ul>
-            
-            <h4 class="mt-4">Remote Branches</h4>
-            <ul id="remote-branches-list" class="branch-list-ul">
-              <!-- Rendered dynamically -->
-            </ul>
+          <div class="section-body" id="section-branches">
+            <!-- Branch Creation -->
+            <div class="branch-create-box">
+              <input type="text" id="new-branch-input" placeholder="New branch name...">
+              <button id="btn-create-branch" class="btn btn-primary btn-sm" title="Create and checkout branch">
+                <span class="material-symbols-outlined">add</span>
+              </button>
+            </div>
+
+            <!-- Branch Lists -->
+            <div class="branch-lists">
+              <h4>Local Branches</h4>
+              <ul id="local-branches-list" class="branch-list-ul">
+                <!-- Rendered dynamically -->
+              </ul>
+
+              <h4 class="mt-4">Remote Branches</h4>
+              <ul id="remote-branches-list" class="branch-list-ul">
+                <!-- Rendered dynamically -->
+              </ul>
+            </div>
           </div>
         </div>
 
         <!-- Merge / Rebase section -->
-        <div class="sidebar-section border-t mt-4 pt-4">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="integrate">
           <div class="section-header">
-            <h3>Merge / Rebase</h3>
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-integrate">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Merge / Rebase</h3>
+            </button>
           </div>
-          <p class="section-desc">Integrate another branch into current</p>
-          <div class="integration-controls">
-            <select id="integrate-branch-select" aria-label="Branch to merge or rebase">
-              <!-- Local + Remote branches -->
-            </select>
-            <div class="btn-group mt-2">
-              <button id="btn-merge" class="btn btn-secondary btn-sm">
-                <span class="material-symbols-outlined">call_merge</span> Merge
-              </button>
-              <button id="btn-rebase" class="btn btn-secondary btn-sm">
-                <span class="material-symbols-outlined">swap_calls</span> Rebase
-              </button>
+          <div class="section-body" id="section-integrate">
+            <p class="section-desc">Integrate another branch into current</p>
+            <div class="integration-controls">
+              <select id="integrate-branch-select" aria-label="Branch to merge or rebase">
+                <!-- Local + Remote branches -->
+              </select>
+              <div class="btn-group mt-2">
+                <button id="btn-merge" class="btn btn-secondary btn-sm">
+                  <span class="material-symbols-outlined">call_merge</span> Merge
+                </button>
+                <button id="btn-rebase" class="btn btn-secondary btn-sm">
+                  <span class="material-symbols-outlined">swap_calls</span> Rebase
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Stashes section -->
-        <div class="sidebar-section border-t mt-4 pt-4">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="stashes">
           <div class="section-header">
-            <h3>Stashes</h3>
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-stashes">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Stashes</h3>
+            </button>
             <button id="btn-stash-save" class="btn btn-text btn-sm" title="Stash all current changes">
               <span class="material-symbols-outlined" style="font-size: 16px;">archive</span>
               <span>Stash</span>
             </button>
           </div>
-          <input type="text" id="stash-search" class="stash-search" placeholder="Filter stashes by message or path" autocomplete="off" aria-label="Filter stashes">
-          <ul id="stash-list" class="stash-list-ul">
-            <li class="empty-state">No stashes</li>
-          </ul>
+          <div class="section-body" id="section-stashes">
+            <input type="text" id="stash-search" class="stash-search" placeholder="Filter stashes by message or path" autocomplete="off" aria-label="Filter stashes">
+            <ul id="stash-list" class="stash-list-ul">
+              <li class="empty-state">No stashes</li>
+            </ul>
+          </div>
         </div>
 
         <!-- Tags section -->
-        <div class="sidebar-section border-t mt-4 pt-4">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="tags">
           <div class="section-header">
-            <h3>Tags</h3>
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-tags">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Tags</h3>
+            </button>
           </div>
-          <ul id="tag-list" class="stash-list-ul">
-            <li class="empty-state">No tags</li>
-          </ul>
+          <div class="section-body" id="section-tags">
+            <ul id="tag-list" class="stash-list-ul">
+              <li class="empty-state">No tags</li>
+            </ul>
+          </div>
         </div>
 
         <!-- Safety Net: operation checkpoints + recoverable discards -->
-        <div class="sidebar-section border-t mt-4 pt-4">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="safety-net">
           <div class="section-header">
-            <h3>Safety Net</h3>
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-safety-net">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Safety Net</h3>
+            </button>
             <span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-dim);" title="Risky operations save a checkpoint here so they can be undone. Discarded files can be restored for 24 hours.">health_and_safety</span>
           </div>
-          <div class="branch-lists">
-            <h4>Undoable Operations</h4>
-            <ul id="checkpoint-list" class="stash-list-ul">
-              <li class="empty-state">No recent operations</li>
-            </ul>
-            <h4 class="mt-4">Recently Discarded</h4>
-            <ul id="trash-list" class="stash-list-ul">
-              <li class="empty-state">Nothing discarded recently</li>
-            </ul>
-            <div class="section-header mt-4">
-              <h4>Recovery Points</h4>
-              <button id="btn-recovery-open" class="btn btn-text btn-sm" title="Browse recovery points and the reflog">
-                <span>Browse</span>
-              </button>
+          <div class="section-body" id="section-safety-net">
+            <div class="branch-lists">
+              <h4>Undoable Operations</h4>
+              <ul id="checkpoint-list" class="stash-list-ul">
+                <li class="empty-state">No recent operations</li>
+              </ul>
+              <h4 class="mt-4">Recently Discarded</h4>
+              <ul id="trash-list" class="stash-list-ul">
+                <li class="empty-state">Nothing discarded recently</li>
+              </ul>
+              <div class="section-header mt-4">
+                <h4>Recovery Points</h4>
+                <button id="btn-recovery-open" class="btn btn-text btn-sm" title="Browse recovery points and the reflog">
+                  <span>Browse</span>
+                </button>
+              </div>
+              <ul id="recovery-list" class="stash-list-ul">
+                <li class="empty-state">No recovery points</li>
+              </ul>
             </div>
-            <ul id="recovery-list" class="stash-list-ul">
-              <li class="empty-state">No recovery points</li>
-            </ul>
           </div>
         </div>
 
         <!-- Worktrees: the other working folders of this repository family -->
-        <div class="sidebar-section border-t mt-4 pt-4">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="worktrees">
           <div class="section-header">
-            <h3>Worktrees <span id="worktree-count" class="count-badge hidden"></span></h3>
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-worktrees">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Worktrees <span id="worktree-count" class="count-badge hidden"></span></h3>
+            </button>
             <button id="btn-worktree-manage" class="btn btn-text btn-sm" title="Create, move, lock and remove worktrees">
               <span>Manage</span>
             </button>
           </div>
-          <ul id="worktree-list" class="stash-list-ul worktree-list">
-            <li class="empty-state">No worktrees</li>
-          </ul>
+          <div class="section-body" id="section-worktrees">
+            <ul id="worktree-list" class="stash-list-ul worktree-list">
+              <li class="empty-state">No worktrees</li>
+            </ul>
+          </div>
         </div>
 
         <!-- Repository groups -->
-        <div class="sidebar-section border-t mt-4 pt-4">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="groups">
           <div class="section-header">
-            <h3>Groups</h3>
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-groups">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Groups</h3>
+            </button>
             <button id="btn-group-create" class="btn btn-text btn-sm" title="Group related repositories so they can be fetched together">
               <span>New</span>
             </button>
           </div>
-          <ul id="group-list" class="group-list">
-            <li class="empty-state">No groups yet</li>
-          </ul>
+          <div class="section-body" id="section-groups">
+            <ul id="group-list" class="group-list">
+              <li class="empty-state">No groups yet</li>
+            </ul>
+          </div>
         </div>
       </aside>
 
@@ -418,7 +464,9 @@
                     <input type="checkbox" id="commit-sign-checkbox">
                     <span>Sign</span>
                   </label>
-                  <button id="btn-signing-settings" type="button" class="btn btn-text btn-sm" title="Signing settings">Settings</button>
+                  <button id="btn-signing-settings" type="button" class="btn btn-icon btn-sm" title="Signing settings" aria-label="Signing settings">
+                    <span class="material-symbols-outlined" style="font-size: 16px;" aria-hidden="true">settings</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -630,10 +678,15 @@
               </div>
             </div>
           </div>
-          
+
         </div>
 
       </section>
+
+      <!-- All that is left of the history panel when it is collapsed. -->
+      <button type="button" id="history-reveal" class="pane-reveal pane-reveal-right" aria-expanded="false" aria-controls="main-content" title="Show commit history (Ctrl+Shift+B)" aria-label="Show commit history">
+        <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+      </button>
 
     </main>
 
