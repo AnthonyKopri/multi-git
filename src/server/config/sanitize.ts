@@ -18,7 +18,21 @@ export function sanitizeConfigForClient(config: AppConfig): ClientConfig {
     repoSettings: config.repoSettings,
     vaultStatus: getVaultStatus(),
     settings: {
-      manageSshConfig: !config.settings || config.settings.manageSshConfig !== false
-    }
+      manageSshConfig: !config.settings || config.settings.manageSshConfig !== false,
+      // Restoring is the default; the setting exists to turn it off.
+      restoreWindowsOnStartup: config.settings?.restoreWindowsOnStartup !== false,
+      // Prompt text is the most sensitive part of a launch, so keeping it is
+      // opt-in and the client is told which way round it currently is.
+      storeAgentPrompts: config.settings?.storeAgentPrompts === true,
+      ...(config.settings?.recoveryRetentionDays !== undefined
+        ? { recoveryRetentionDays: config.settings.recoveryRetentionDays }
+        : {}),
+      ...(config.settings?.worktreeParentDir !== undefined
+        ? { worktreeParentDir: config.settings.worktreeParentDir }
+        : {})
+    },
+    repoGroups: config.repoGroups ?? [],
+    externalAgents: config.externalAgents ?? [],
+    agentLaunches: config.agentLaunches ?? []
   };
 }
