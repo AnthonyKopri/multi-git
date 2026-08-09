@@ -51,9 +51,11 @@ sshAgentRouter.get(
 sshAgentRouter.post(
   '/api/ssh/agent/load',
   asyncRoute(async (req, res) => {
-    const { repoPath, profileId } = (req.body ?? {}) as {
+    const { repoPath, profileId, passphrase, savePassphrase } = (req.body ?? {}) as {
       repoPath?: unknown;
       profileId?: unknown;
+      passphrase?: unknown;
+      savePassphrase?: unknown;
     };
 
     const resolvedRepo = optionalRepoPath(repoPath);
@@ -61,7 +63,12 @@ sshAgentRouter.post(
 
     const result = await applyProfile({
       ...(resolvedRepo ? { repoPath: resolvedRepo } : {}),
-      profileId: selectedProfile
+      profileId: selectedProfile,
+      // Used for this one load and then dropped. It reaches ssh through the
+      // AskPass bridge, is on the runner's redaction list, and is stored only
+      // when the user asked for that and the vault is open to receive it.
+      ...(typeof passphrase === 'string' && passphrase !== '' ? { passphrase } : {}),
+      ...(savePassphrase === true ? { savePassphrase: true } : {})
     });
 
     // Remembered even when loading failed: the user's choice of account for
