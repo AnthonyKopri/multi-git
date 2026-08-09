@@ -7,6 +7,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 import { IPC_CHANNELS } from '../shared/desktop-api';
 import type { DesktopApi } from '../shared/desktop-api';
+import type { AgentLaunchInput, AgentLaunchResult } from '../shared/agent-types';
 
 const desktopApi: DesktopApi = {
   selectFolder: () => ipcRenderer.invoke(IPC_CHANNELS.selectFolder) as Promise<string>,
@@ -15,7 +16,29 @@ const desktopApi: DesktopApi = {
   // the elevated command in the main process cannot be influenced from a
   // renderer that a crafted repository managed to get script into.
   repairSshAgent: () =>
-    ipcRenderer.invoke(IPC_CHANNELS.repairSshAgent) as ReturnType<DesktopApi['repairSshAgent']>
+    ipcRenderer.invoke(IPC_CHANNELS.repairSshAgent) as ReturnType<DesktopApi['repairSshAgent']>,
+
+  // The path arguments below are forwarded, and every one of them is
+  // re-validated in the main process before it is used. This side coerces to a
+  // string so a non-string cannot reach a handler expecting one, but it is not
+  // the check that matters — the renderer is not trusted.
+  openRepoWindow: (repoPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.openRepoWindow, String(repoPath)) as Promise<boolean>,
+  hasRepoWindow: (repoPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.hasRepoWindow, String(repoPath)) as Promise<boolean>,
+  listRepoWindows: () => ipcRenderer.invoke(IPC_CHANNELS.listRepoWindows) as Promise<string[]>,
+  claimRepoWindow: (repoPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.claimRepoWindow, String(repoPath)) as Promise<void>,
+
+  openTerminalHere: (repoPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.openTerminalHere, String(repoPath)) as Promise<boolean>,
+  openEditor: (repoPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.openEditor, String(repoPath)) as Promise<boolean>,
+  // Carries an agent id, not an executable: the main process looks the
+  // definition up in the saved configuration, so the page cannot name a
+  // program to run.
+  launchAgent: (input: AgentLaunchInput) =>
+    ipcRenderer.invoke(IPC_CHANNELS.launchAgent, input) as Promise<AgentLaunchResult>
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

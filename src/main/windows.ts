@@ -32,10 +32,38 @@ const SECURE_WEB_PREFERENCES = {
   sandbox: true
 } as const;
 
-export function createMainWindow(serverUrl: string): BrowserWindow {
+export interface MainWindowOptions {
+  /** Repository or worktree this window opens. Omit for the last used one. */
+  repoPath?: string;
+  bounds?: { x: number; y: number; width: number; height: number };
+  maximized?: boolean;
+}
+
+/**
+ * The URL a window loads.
+ *
+ * The repository travels as a query parameter rather than being pushed into
+ * the page afterwards, so a window knows which repository it is for before it
+ * runs a single request — otherwise every restored window would briefly open
+ * the most recent repository and then switch, refreshing twice and racing the
+ * one that legitimately has it.
+ */
+export function windowUrl(serverUrl: string, repoPath?: string): string {
+  return repoPath ? `${serverUrl}/?repo=${encodeURIComponent(repoPath)}` : serverUrl;
+}
+
+export function createMainWindow(
+  serverUrl: string,
+  options: MainWindowOptions = {}
+): BrowserWindow {
   const window = new BrowserWindow({
-    width: 1280,
-    height: 850,
+    width: options.bounds?.width ?? 1280,
+    height: options.bounds?.height ?? 850,
+    ...(options.bounds ? { x: options.bounds.x, y: options.bounds.y } : {}),
+    // A window narrower than this cannot show the sidebar and the workspace at
+    // once, which is the layout the whole UI assumes.
+    minWidth: 900,
+    minHeight: 600,
     title: appTitle(),
     icon: ICON(),
     webPreferences: {
@@ -45,8 +73,12 @@ export function createMainWindow(serverUrl: string): BrowserWindow {
   });
 
   pinTitle(window);
-  window.loadURL(serverUrl);
+  window.loadURL(windowUrl(serverUrl, options.repoPath));
   window.setMenuBarVisibility(false);
+
+  if (options.maximized) {
+    window.maximize();
+  }
 
   return window;
 }
