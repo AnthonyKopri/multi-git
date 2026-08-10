@@ -142,7 +142,7 @@ jobs:
         # app loads at runtime.
         run: npx electron-builder --win --dir --publish never
 
-      - name: Verify the packaged app has its entry point
+      - name: Verify the packaged app
         shell: pwsh
         run: |
           $asar = Get-ChildItem -Path dist -Recurse -Filter app.asar | Select-Object -First 1
@@ -153,4 +153,25 @@ jobs:
             throw 'app.asar does not contain out/node/main/main.js'
           }
 
-          Write-Output "Packaged $($asar.FullName)"
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $exe = Get-ChildItem -Path dist -Recurse -Filter "$($package.build.productName).exe" | Select-Object -First 1
+          if (-not $exe) { throw "Packaged executable was not found" }
+
+          $info = $exe.VersionInfo
+          $expectedStrings = @{
+            ProductName = $package.build.productName
+            FileDescription = $package.description
+            OriginalFilename = "$($package.build.productName).exe"
+          }
+          foreach ($field in $expectedStrings.Keys) {
+            if ($info.$field -ne $expectedStrings[$field]) {
+              throw "$field is '$($info.$field)', expected '$($expectedStrings[$field])'"
+            }
+          }
+          foreach ($field in @('FileVersion', 'ProductVersion')) {
+            if (-not $info.$field.StartsWith($package.version)) {
+              throw "$field is '$($info.$field)', expected version $($package.version)"
+            }
+          }
+
+          Write-Output "Packaged $($exe.FullName) with $($info.ProductName) $($info.ProductVersion)"
