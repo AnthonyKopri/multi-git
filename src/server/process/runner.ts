@@ -356,6 +356,8 @@ export interface DetachedLaunchOptions {
    * interactive tool the user is about to type into; false hides it.
    */
   visible?: boolean;
+  /** Best-effort notification after a successfully started process exits. */
+  onExit?: () => void;
 }
 
 export interface DetachedLauncher {
@@ -363,9 +365,9 @@ export interface DetachedLauncher {
    * Starts a program that outlives this request, and does not wait for it.
    *
    * Resolves once the process exists, rejects if it could not be started. It
-   * deliberately learns nothing else: an editor or a coding agent runs for
-   * hours, and `run` above would hold a promise open for all of it and then
-   * kill it at the timeout.
+   * does not hold the request open: an editor or a coding agent runs for hours,
+   * and `run` above would wait for all of it and then kill it at the timeout.
+   * Callers with temporary launch files may receive a best-effort exit notice.
    */
   launch(
     executable: string,
@@ -409,6 +411,21 @@ export function createDetachedLauncher(spawnFn: typeof spawn = spawn): DetachedL
         }
 
         let settled = false;
+        let started = false;
+
+        child.on('close', () => {
+          if (!started || !options.onExit) {
+            return;
+          }
+
+          // Cleanup hooks must not turn a process that already finished into
+          // an uncaught error in the main process.
+          try {
+            options.onExit();
+          } catch {
+            // Best effort. The caller owns any reporting it needs.
+          }
+        });
 
         child.on('error', (error: Error) => {
           if (!settled) {
@@ -422,6 +439,7 @@ export function createDetachedLauncher(spawnFn: typeof spawn = spawn): DetachedL
             return;
           }
           settled = true;
+          started = true;
 
           // Released from this process's job control, so quitting Multi-Git
           // does not take the user's editor or agent with it.

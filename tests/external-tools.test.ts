@@ -13,6 +13,7 @@
 // under HKCU and nothing else. A test that only checked "install succeeded"
 // would pass just as happily if it had written to HKLM.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import fs from 'node:fs';
 import path from 'node:path';
 import request from 'supertest';
 import type { Express } from 'express';
@@ -28,6 +29,12 @@ import {
 import { CONTEXT_MENU_KEYS, install, readStatus, remove } from '../src/main/shell-integration';
 import { readConfig, writeConfig } from '../src/server/config/store';
 import { FakeRunner, command } from './helpers/fake-runner';
+import {
+  cleanupRepos,
+  createEmptyRepo,
+  git,
+  writeFile
+} from './helpers/temp-repo';
 import type { DetachedLauncher } from '../src/server/process/runner';
 import type { ExternalToolDefinition } from '../src/shared/config-types';
 
@@ -35,14 +42,29 @@ const app: Express = createApp();
 
 /** A launcher that records instead of spawning. */
 function recordingLauncher(): DetachedLauncher & {
-  calls: { executable: string; args: readonly string[]; cwd?: string }[];
+  calls: {
+    executable: string;
+    args: readonly string[];
+    cwd?: string;
+    onExit?: () => void;
+  }[];
 } {
-  const calls: { executable: string; args: readonly string[]; cwd?: string }[] = [];
+  const calls: {
+    executable: string;
+    args: readonly string[];
+    cwd?: string;
+    onExit?: () => void;
+  }[] = [];
 
   return {
     calls,
     launch(executable, args, options = {}) {
-      calls.push({ executable, args, ...(options.cwd ? { cwd: options.cwd } : {}) });
+      calls.push({
+        executable,
+        args,
+        ...(options.cwd ? { cwd: options.cwd } : {}),
+        ...(options.onExit ? { onExit: options.onExit } : {})
+      });
       return Promise.resolve({ pid: 1234 });
     }
   };
@@ -70,7 +92,64 @@ afterEach(() => {
   // These tests write real definitions into the real configuration, so it is
   // put back exactly as it was.
   writeConfig(savedConfig);
+  cleanupRepos();
 });
+
+function expectMergeConflict(repo: string, branch: string): void {
+  try {
+    git(repo, 'merge', branch);
+  } catch {
+    // A conflicted merge exits non-zero by design.
+  }
+
+  if (git(repo, 'ls-files', '--unmerged').trim() === '') {
+    throw new Error('The test fixture did not produce an unmerged index.');
+  }
+}
+
+function binaryConflictRepo(): {
+  repo: string;
+  base: Buffer;
+  local: Buffer;
+  remote: Buffer;
+} {
+  const repo = createEmptyRepo();
+  const base = Buffer.from([0x00, 0xff, 0x01, 0x02]);
+  const local = Buffer.from([0x00, 0xfe, 0x10, 0x11]);
+  const remote = Buffer.from([0x00, 0xfd, 0x20, 0x21]);
+  const file = path.join(repo, 'asset.bin');
+
+  fs.writeFileSync(file, base);
+  git(repo, 'add', 'asset.bin');
+  git(repo, 'commit', '-m', 'base');
+
+  git(repo, 'checkout', '-b', 'side');
+  fs.writeFileSync(file, remote);
+  git(repo, 'commit', '-am', 'remote');
+
+  git(repo, 'checkout', 'main');
+  fs.writeFileSync(file, local);
+  git(repo, 'commit', '-am', 'local');
+  expectMergeConflict(repo, 'side');
+
+  return { repo, base, local, remote };
+}
+
+function mergePlaceholders(filePath: string): {
+  base: string;
+  local: string;
+  remote: string;
+  merged: string;
+  path: string;
+} {
+  return {
+    base: `${filePath}.BASE`,
+    local: `${filePath}.LOCAL`,
+    remote: `${filePath}.REMOTE`,
+    merged: filePath,
+    path: filePath
+  };
+}
 
 describe('expanding an argument template', () => {
   it('substitutes within an argument, not across it', () => {
@@ -157,6 +236,124 @@ describe('launching a tool', () => {
     // Resolved to absolute paths inside the repository.
     expect(call?.args[1]).toBe(path.resolve(repoPath, 'package.json'));
     expect(call?.cwd).toBe(path.resolve(repoPath));
+  });
+
+  it('materializes the base, local and remote index stages as exact bytes', async () => {
+    const { repo, base, local, remote } = binaryConflictRepo();
+    saveToolDefinition(
+      tool({
+        kind: 'merge',
+        label: 'Test merge tool',
+        executable: 'mergetool',
+        args: ['{base}', '{local}', '{remote}', '-o', '{merged}']
+      })
+    );
+    const launcher = recordingLauncher();
+    const placeholders = mergePlaceholders('asset.bin');
+
+    await launchTool({ repoPath: repo, kind: 'merge', placeholders }, launcher);
+
+    expect(fs.readFileSync(path.join(repo, placeholders.base))).toEqual(base);
+    expect(fs.readFileSync(path.join(repo, placeholders.local))).toEqual(local);
+    expect(fs.readFileSync(path.join(repo, placeholders.remote))).toEqual(remote);
+    expect(launcher.calls[0]?.args).toEqual([
+      path.join(repo, placeholders.base),
+      path.join(repo, placeholders.local),
+      path.join(repo, placeholders.remote),
+      '-o',
+      path.join(repo, placeholders.merged)
+    ]);
+
+    // Detected merge tools wait in the launched process. Once that process
+    // exits, their temporary inputs are removed but the merge result remains.
+    launcher.calls[0]?.onExit?.();
+    expect(fs.existsSync(path.join(repo, placeholders.base))).toBe(false);
+    expect(fs.existsSync(path.join(repo, placeholders.local))).toBe(false);
+    expect(fs.existsSync(path.join(repo, placeholders.remote))).toBe(false);
+    expect(fs.existsSync(path.join(repo, placeholders.merged))).toBe(true);
+  });
+
+  it('uses an empty base for an add/add conflict with no stage 1', async () => {
+    const repo = createEmptyRepo();
+    writeFile(repo, 'seed.txt', 'seed\n');
+    git(repo, 'add', 'seed.txt');
+    git(repo, 'commit', '-m', 'seed');
+
+    git(repo, 'checkout', '-b', 'side');
+    writeFile(repo, 'added.txt', 'remote\n');
+    git(repo, 'add', 'added.txt');
+    git(repo, 'commit', '-m', 'remote add');
+
+    git(repo, 'checkout', 'main');
+    writeFile(repo, 'added.txt', 'local\n');
+    git(repo, 'add', 'added.txt');
+    git(repo, 'commit', '-m', 'local add');
+    expectMergeConflict(repo, 'side');
+
+    saveToolDefinition(
+      tool({
+        kind: 'merge',
+        executable: 'mergetool',
+        args: ['{base}', '{local}', '{remote}', '{merged}']
+      })
+    );
+    const launcher = recordingLauncher();
+    const placeholders = mergePlaceholders('added.txt');
+
+    await launchTool({ repoPath: repo, kind: 'merge', placeholders }, launcher);
+
+    expect(fs.readFileSync(path.join(repo, placeholders.base))).toEqual(Buffer.alloc(0));
+    expect(fs.readFileSync(path.join(repo, placeholders.local), 'utf8')).toBe('local\n');
+    expect(fs.readFileSync(path.join(repo, placeholders.remote), 'utf8')).toBe('remote\n');
+    launcher.calls[0]?.onExit?.();
+  });
+
+  it('never overwrites a sidecar and rolls back inputs it already created', async () => {
+    const { repo } = binaryConflictRepo();
+    const placeholders = mergePlaceholders('asset.bin');
+    writeFile(repo, placeholders.local, 'belongs to the repository owner');
+    saveToolDefinition(
+      tool({
+        kind: 'merge',
+        executable: 'mergetool',
+        args: ['{base}', '{local}', '{remote}', '{merged}']
+      })
+    );
+    const launcher = recordingLauncher();
+
+    await expect(
+      launchTool({ repoPath: repo, kind: 'merge', placeholders }, launcher)
+    ).rejects.toThrow(/already exists.*left untouched/i);
+
+    expect(fs.readFileSync(path.join(repo, placeholders.local), 'utf8')).toBe(
+      'belongs to the repository owner'
+    );
+    expect(fs.existsSync(path.join(repo, placeholders.base))).toBe(false);
+    expect(fs.existsSync(path.join(repo, placeholders.remote))).toBe(false);
+    expect(launcher.calls).toEqual([]);
+  });
+
+  it('removes every sidecar when the merge tool cannot be started', async () => {
+    const { repo } = binaryConflictRepo();
+    const placeholders = mergePlaceholders('asset.bin');
+    saveToolDefinition(
+      tool({
+        kind: 'merge',
+        executable: 'missing-mergetool',
+        args: ['{base}', '{local}', '{remote}', '{merged}']
+      })
+    );
+    const launcher: DetachedLauncher = {
+      launch: () => Promise.reject(new Error('ENOENT'))
+    };
+
+    await expect(
+      launchTool({ repoPath: repo, kind: 'merge', placeholders }, launcher)
+    ).rejects.toThrow(/ENOENT/);
+
+    expect(fs.existsSync(path.join(repo, placeholders.base))).toBe(false);
+    expect(fs.existsSync(path.join(repo, placeholders.local))).toBe(false);
+    expect(fs.existsSync(path.join(repo, placeholders.remote))).toBe(false);
   });
 
   it('refuses a file outside the repository', async () => {
