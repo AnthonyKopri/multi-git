@@ -8,6 +8,7 @@ import { Router } from 'express';
 import {
   agentStatus,
   applyProfile,
+  loadAllProfileKeys,
   profileForRepo,
   rememberProfileForRepo,
   unloadProfileKey
@@ -82,6 +83,29 @@ sshAgentRouter.post(
       success: result.success,
       agent: result.agent,
       routingChanged: result.routingChanged,
+      ...(result.error ? { error: result.error } : {}),
+      ...(result.code ? { code: result.code } : {})
+    });
+  })
+);
+
+/**
+ * Loads every profile's key into the machine's agent.
+ *
+ * Not repository-scoped, and not routing-scoped either: this is about the
+ * machine's agent, so it deliberately does not touch any repository's
+ * `core.sshCommand`. Which identity a repository uses stays that repository's
+ * setting; this only makes the keys available.
+ */
+sshAgentRouter.post(
+  '/api/ssh/agent/load-all',
+  asyncRoute(async (_req, res) => {
+    const result = await loadAllProfileKeys();
+
+    res.json({
+      success: result.success,
+      agent: result.agent,
+      entries: result.entries,
       ...(result.error ? { error: result.error } : {}),
       ...(result.code ? { code: result.code } : {})
     });

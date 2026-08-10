@@ -4,9 +4,8 @@
 // `GIT_SSH_COMMAND -i <key>`, which works for commands Multi-Git itself runs
 // and for nothing else. Open a terminal in the same repository, or let an
 // external coding agent run `git push`, and the identity is gone. Loading the
-// key into the machine's own agent is what makes选 identity real for every
-// the selected identity real for every process, which is the point of the
-// feature.
+// key into the machine's own agent is what makes the selected identity real
+// for every process, which is the point of the feature.
 //
 // Three rules hold throughout:
 //
@@ -115,6 +114,39 @@ export async function readKeyFingerprint(
     return parseFingerprint(result.stdout);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Whether the private key is passphrase-protected.
+ *
+ * `-P ''` is what makes this safe to call on a schedule: supplying an empty
+ * passphrase means ssh-keygen answers immediately either way instead of
+ * prompting. An unencrypted key prints its public half; an encrypted one is
+ * refused. Nothing waits for a terminal that is not there.
+ *
+ * This is the difference between "ask the user for a passphrase" and "hang for
+ * thirty seconds and then time out", which is what `ssh-add` does on an
+ * encrypted key when no AskPass bridge is supplying one.
+ */
+export async function isKeyEncrypted(
+  privateKeyPath: string,
+  runner: ExecutableRunner = executableRunner
+): Promise<boolean> {
+  const keyPath = normalizeSshPath(privateKeyPath);
+
+  try {
+    const result = await runner.run('ssh-keygen', ['-y', '-P', '', '-f', keyPath], {
+      timeoutMs: AGENT_TIMEOUT_MS,
+      allowNonZero: [1, 255]
+    });
+
+    return result.exitCode !== 0;
+  } catch {
+    // Unreadable, missing, or no ssh-keygen. Reported as not-encrypted so the
+    // caller proceeds to ssh-add, which produces the real error rather than
+    // one guessed at here.
+    return false;
   }
 }
 
@@ -275,6 +307,18 @@ export async function loadKeyIntoAgent(options: LoadKeyOptions): Promise<LoadKey
   }
 
   const expected = await readKeyFingerprint(keyPath, runner);
+
+  // Asked before ssh-add rather than after it fails, because "after it fails"
+  // here means thirty seconds of ssh-add waiting on a prompt no one can answer.
+  // The caller wants to put a passphrase box in front of the user; it wants to
+  // do that now, not once the timeout has expired.
+  if (!options.passphrase && (await isKeyEncrypted(keyPath, runner))) {
+    return {
+      loaded: false,
+      fingerprint: expected,
+      error: 'This key is protected by a passphrase, and none was supplied.'
+    };
+  }
 
   // The passphrase goes to a mode-0600 script in a private temp directory that
   // is removed in the finally below, whatever happens in between.

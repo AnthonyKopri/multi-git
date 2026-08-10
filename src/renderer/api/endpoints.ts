@@ -7,6 +7,7 @@
 import { api } from './client';
 import type * as Api from '../../shared/api-types';
 import type {
+  SshAgentBulkLoadResponse,
   SshAgentLoadResponse,
   SshAgentStatusResponse
 } from '../../shared/ssh-agent-types';
@@ -39,6 +40,8 @@ import type {
 } from '../../shared/patch-types';
 import type { BisectSession, BisectVerdict } from '../../shared/bisect-types';
 import type {
+  LfsInstallAction,
+  LfsInstallResponse,
   LfsLock,
   LfsStatusResponse,
   LfsTransferPreview
@@ -660,6 +663,10 @@ export const unloadSshAgentKey = (profileId: string, force = false) =>
     body: { profileId, force }
   });
 
+/** Loads every profile's key into the machine's agent. Never prompts. */
+export const loadAllSshAgentKeys = () =>
+  api.post<SshAgentBulkLoadResponse>('/api/ssh/agent/load-all', { ...global, body: {} });
+
 // ---------- pull requests ----------
 
 export const preflightPullRequest = (headBranch?: string, baseBranch?: string) =>
@@ -838,6 +845,9 @@ export const getSubmoduleRepoPath = (path: string) =>
 // ---------- Git LFS ----------
 
 export const getLfsStatus = () => api.get<LfsStatusResponse>('/api/lfs/status');
+
+export const setLfsInstallation = (action: LfsInstallAction) =>
+  api.post<LfsInstallResponse>('/api/lfs/installation', { body: { action } });
 
 export const trackLfsPattern = (pattern: string) =>
   api.post<{ success: true; trackedPatterns: string[] }>('/api/lfs/track', { body: { pattern } });

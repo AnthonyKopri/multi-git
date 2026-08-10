@@ -11,6 +11,8 @@
 // something that is not a failure: not installed, no lock API, an object that
 // exists as a pointer but has never been downloaded.
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import request from 'supertest';
 import type { Express } from 'express';
 
@@ -96,8 +98,17 @@ describe('when Git LFS is not installed', () => {
   it('never tries to install it', async () => {
     await api().post('/api/lfs/transfer').send({ action: 'fetch' }).expect(409);
 
-    const everything = runner.everythingSeen();
-    expect(everything).not.toMatch(/\binstall\b/);
+    // Asserted on argv, not on `everythingSeen()`. That helper serialises the
+    // environment too, which is right for the leak scans that use it and wrong
+    // here: it made this test fail on a *branch named* something with "install"
+    // in it, by way of GITHUB_HEAD_REF. What is being pinned is that no command
+    // was run, and a command is its arguments.
+    const commands = runner.calls.map((call) => call.args.join(' '));
+
+    expect(commands.some((entry) => /\binstall\b/.test(entry))).toBe(false);
+    // Positively: the only thing a refused transfer should have asked is
+    // whether LFS exists at all.
+    expect(commands).toEqual(['lfs version']);
   });
 });
 
@@ -324,5 +335,159 @@ describe('cancellation', () => {
     // Without a signal reaching the child, the operations bar could show a
     // Cancel button that does nothing.
     expect(call?.options.signal).toBeDefined();
+  });
+});
+
+/**
+ * Whether LFS is wired into *this repository*.
+ *
+ * A third question, and the one the other two kept hiding. "Is git-lfs on
+ * PATH" and "does this project track large files" can both be answered without
+ * noticing that `git lfs install` has written four hooks which run on every
+ * pull, merge, checkout and commit regardless. On an SSH remote those hooks ask
+ * ssh for an LFS token, so a repository with no large files in it can still sit
+ * waiting on a passphrase prompt under a line that says Git LFS.
+ *
+ * These run against a real repository on disk rather than a scripted runner:
+ * the hooks and `.gitattributes` are real files, and reading them correctly is
+ * the whole of what is being tested.
+ */
+describe('repository-level installation', () => {
+  const hooksDir = (): string => path.join(repo, '.git', 'hooks');
+
+  /** Writes the hooks `git lfs install` writes. */
+  function writeLfsHooks(names: readonly string[] = ['post-checkout', 'post-merge', 'pre-push']): void {
+    fs.mkdirSync(hooksDir(), { recursive: true });
+    for (const name of names) {
+      fs.writeFileSync(
+        path.join(hooksDir(), name),
+        `#!/bin/sh\ncommand -v git-lfs >/dev/null 2>&1 || exit 2\ngit lfs ${name} "$@"\n`
+      );
+    }
+  }
+
+  it('reports a repository with no hooks as not installed', async () => {
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    expect(response.body.status.installation).toMatchObject({
+      installed: false,
+      redundant: false
+    });
+  });
+
+  it('finds the hooks git lfs install writes', async () => {
+    writeLfsHooks();
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    expect(response.body.status.installation.installed).toBe(true);
+    expect(response.body.status.installation.hooks).toEqual(
+      expect.arrayContaining(['post-checkout', 'post-merge', 'pre-push'])
+    );
+  });
+
+  it('calls hooks that track nothing redundant', async () => {
+    writeLfsHooks();
+    // A repository that routes nothing through LFS has no LFS objects either;
+    // the shared fixture's two are what a repository that does use it looks
+    // like, which is the opposite case.
+    runner.on(command('git', 'lfs', 'ls-files'), { stdout: JSON.stringify({ files: [] }) });
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    // Nothing is routed through the filter and no objects are present, so the
+    // hooks cost something on every pull and return nothing.
+    expect(response.body.status.installation.redundant).toBe(true);
+  });
+
+  it('does not call them redundant when a file is routed through LFS', async () => {
+    writeLfsHooks();
+    fs.writeFileSync(path.join(repo, '.gitattributes'), '*.psd filter=lfs diff=lfs merge=lfs -text\n');
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    expect(response.body.status.installation.redundant).toBe(false);
+  });
+
+  it('reads .gitattributes rather than asking git lfs, so a missing binary cannot mislead it', async () => {
+    // The repository whose hooks outlived the program. `git lfs track` cannot
+    // run here, would answer "no patterns", and would make a repository that
+    // genuinely uses LFS look safe to strip.
+    setLfsRunner(new FakeRunner().otherwise({ spawnError: true }));
+    writeLfsHooks();
+    fs.writeFileSync(path.join(repo, '.gitattributes'), '*.psd filter=lfs diff=lfs merge=lfs\n');
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    expect(response.body.status.availability.installed).toBe(false);
+    expect(response.body.status.installation.installed).toBe(true);
+    expect(response.body.status.installation.redundant).toBe(false);
+  });
+
+  it('leaves a hand-written hook that merely shares a name alone', async () => {
+    fs.mkdirSync(hooksDir(), { recursive: true });
+    fs.writeFileSync(path.join(hooksDir(), 'pre-push'), '#!/bin/sh\nnpm test\n');
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    // Matched on the body, not the name: deleting someone's own pre-push
+    // because LFS uses that name too would be far worse than missing an
+    // installation.
+    expect(response.body.status.installation.installed).toBe(false);
+    expect(response.body.status.installation.hooks).toEqual([]);
+  });
+});
+
+describe('changing the installation', () => {
+  it('always scopes the change to this repository', async () => {
+    await api().post('/api/lfs/installation').send({ action: 'uninstall' }).expect(200);
+
+    const call = runner.callsTo('git').find((entry) => entry.args.includes('uninstall'));
+
+    // Without --local these write the user's *global* config, so an uninstall
+    // meant to speed one repository up would take LFS out of every other
+    // repository on the machine.
+    expect(call?.args).toEqual(['lfs', 'uninstall', '--local']);
+  });
+
+  it('installs with --local too', async () => {
+    await api().post('/api/lfs/installation').send({ action: 'install' }).expect(200);
+
+    const call = runner.callsTo('git').find((entry) => entry.args.includes('install'));
+    expect(call?.args).toEqual(['lfs', 'install', '--local']);
+  });
+
+  it('rejects anything that is not install or uninstall', async () => {
+    await api().post('/api/lfs/installation').send({ action: 'purge' }).expect(400);
+  });
+
+  it('will not install what is not there', async () => {
+    setLfsRunner(new FakeRunner().otherwise({ spawnError: true }));
+
+    const response = await api().post('/api/lfs/installation').send({ action: 'install' }).expect(409);
+
+    expect(response.body.code).toBe('LFS_MISSING');
+  });
+
+  it('still removes hooks when git lfs itself is gone', async () => {
+    // The state that hurts most: hooks left by a machine that had LFS, on one
+    // that does not. `git lfs uninstall` cannot run, and those hooks are
+    // exactly what is slowing every pull down.
+    setLfsRunner(new FakeRunner().otherwise({ spawnError: true }));
+
+    const hooks = path.join(repo, '.git', 'hooks');
+    fs.mkdirSync(hooks, { recursive: true });
+    fs.writeFileSync(path.join(hooks, 'post-merge'), '#!/bin/sh\ngit lfs post-merge "$@"\n');
+    fs.writeFileSync(path.join(hooks, 'pre-push'), '#!/bin/sh\nnpm test\n');
+
+    const response = await api()
+      .post('/api/lfs/installation')
+      .send({ action: 'uninstall' })
+      .expect(200);
+
+    expect(response.body.installation.installed).toBe(false);
+    expect(fs.existsSync(path.join(hooks, 'post-merge'))).toBe(false);
+    // Not ours, not touched.
+    expect(fs.existsSync(path.join(hooks, 'pre-push'))).toBe(true);
   });
 });
