@@ -98,8 +98,17 @@ describe('when Git LFS is not installed', () => {
   it('never tries to install it', async () => {
     await api().post('/api/lfs/transfer').send({ action: 'fetch' }).expect(409);
 
-    const everything = runner.everythingSeen();
-    expect(everything).not.toMatch(/\binstall\b/);
+    // Asserted on argv, not on `everythingSeen()`. That helper serialises the
+    // environment too, which is right for the leak scans that use it and wrong
+    // here: it made this test fail on a *branch named* something with "install"
+    // in it, by way of GITHUB_HEAD_REF. What is being pinned is that no command
+    // was run, and a command is its arguments.
+    const commands = runner.calls.map((call) => call.args.join(' '));
+
+    expect(commands.some((entry) => /\binstall\b/.test(entry))).toBe(false);
+    // Positively: the only thing a refused transfer should have asked is
+    // whether LFS exists at all.
+    expect(commands).toEqual(['lfs version']);
   });
 });
 
