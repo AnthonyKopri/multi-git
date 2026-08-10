@@ -1,7 +1,7 @@
 {
   "name": "multi-git",
   "version": "3.0.0",
-  "description": "A lightweight Git GUI client with dynamic SSH key switching",
+  "description": "A local-first Git desktop client for multiple repositories, accounts, and SSH identities",
   "main": "out/node/main/main.js",
   "scripts": {
     "start": "npm run compile && node out/node/server/cli.js",

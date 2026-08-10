@@ -11,11 +11,28 @@ module.exports = async (context) => {
   }
 
   const { rcedit } = await import('rcedit');
+  const { appInfo } = context.packager;
   const executablePath = path.join(
     context.appOutDir,
-    `${context.packager.appInfo.productFilename}.exe`
+    `${appInfo.productFilename}.exe`
   );
   const iconPath = path.join(context.packager.projectDir, 'Multi Git Logo.ico');
 
-  await rcedit(executablePath, { icon: iconPath });
+  // signAndEditExecutable is disabled because electron-builder's signing-tool
+  // archive can fail to extract on Windows without Developer Mode. That also
+  // means Electron's generic version resource survives unless this hook
+  // replaces it along with the icon.
+  await rcedit(executablePath, {
+    icon: iconPath,
+    'file-version': appInfo.shortVersion || appInfo.buildVersion,
+    'product-version': appInfo.shortVersionWindows || appInfo.getVersionInWeirdWindowsForm(),
+    'version-string': {
+      CompanyName: appInfo.companyName || '',
+      FileDescription: appInfo.description,
+      InternalName: appInfo.productFilename,
+      LegalCopyright: appInfo.copyright,
+      OriginalFilename: `${appInfo.productFilename}.exe`,
+      ProductName: appInfo.productName
+    }
+  });
 };

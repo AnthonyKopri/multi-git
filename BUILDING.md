@@ -24,14 +24,14 @@ For what the app does see [README.md](README.md).
 | Node.js | 22.12 or newer | `node --version`; also the floor in `package.json` `engines` |
 | npm | ships with Node | `npm --version` |
 | Git | any recent release | must be on `PATH`; the app shells out to it |
-| OpenSSH | `ssh` and `ssh-keygen` on `PATH` | needed at runtime, not to build |
+| OpenSSH | `ssh`, `ssh-add`, and `ssh-keygen` on `PATH` | needed at runtime, not to build |
 | Windows | 10 or 11 | required to build the Windows artifacts |
 
 Building the Windows targets on macOS or Linux is not supported by this
 project's configuration. Develop anywhere; cut releases on Windows.
 
-The GitHub CLI (`gh`) is optional. It is only used at runtime, by the new
-repository dialog, to create a remote repository. Nothing in the build needs it.
+The GitHub CLI (`gh`) is optional. It is used at runtime by the new-repository
+dialog and the pull-request creator. Nothing in the build needs it.
 
 ## First-time setup
 
@@ -124,13 +124,24 @@ paths, and file replacement all behave differently there.
 
 Beyond that, verification is manual. The paths worth walking before a release:
 
-1. Open a repository, stage a file, commit, and check the History panel.
-2. Switch SSH profiles and confirm fetch, pull, and push use the right key.
-3. Create a repository through **New Repo** with a license and a `.gitignore`,
+1. Open a repository; inspect split and unified diffs; stage, unstage, and
+   discard a hunk or selected lines; commit; and check the History panel.
+2. Selectively stash part of a tracked file, inspect the stash, and restore it
+   with its staged/unstaged split.
+3. Switch SSH profiles, unlock a protected key, confirm the native-agent status,
+   and verify fetch, pull, and push use the right identity.
+4. Open the pull-request creator on a disposable branch and verify its target,
+   commit range, template, push state, and optional fields before creating one.
+5. Create a repository through **New Repo** with a license and a `.gitignore`,
    including the **Custom** option, which must open your default editor.
-4. Clone a repository over SSH.
-5. Trigger a merge conflict and resolve it in the conflict editor.
-6. Undo something from **Safety Net**.
+6. Clone a repository over SSH.
+7. Run an interactive rebase, trigger a conflict, resolve it, and inspect the
+   recovery point created before the rewrite.
+8. Create a worktree, open it in another window, and fetch a repository group.
+9. Exercise each Repository hub tab; verify missing `gh` or Git LFS tools are
+   reported as unavailable rather than as empty data.
+10. Restore a tracked change from **Safety Net** and create a recovery branch
+    from a reflog entry.
 
 ## Releasing a new version
 
@@ -169,7 +180,7 @@ git commit -am "chore: release v1.0.6"
 ```
 
 ```bash
-git tag v1.0.6
+git tag Release_v1.0.6
 ```
 
 ### Skipping the prompts
@@ -178,6 +189,14 @@ Every prompt has a flag, so the same script works in CI or a one-liner:
 
 ```bash
 node scripts/release.js --bump patch --target both --yes
+```
+
+To rebuild the already-versioned release without accidentally incrementing it,
+pass `none` explicitly. A non-interactive invocation with no flags defaults to
+a patch bump:
+
+```bash
+node scripts/release.js --bump none --target both
 ```
 
 | Flag | Values | Default when omitted |
@@ -258,7 +277,8 @@ does not collide with an installer build.
 `scripts/after-pack.js` runs automatically after packaging. It stamps the
 Windows executable icon and metadata with `rcedit`, because
 `win.signAndEditExecutable` is `false` in the Electron Builder config. If you
-change the icon or product name, check the resulting `.exe` properties.
+change the icon, product name, description, or version, check the resulting
+`.exe` properties.
 
 ## Build output
 
