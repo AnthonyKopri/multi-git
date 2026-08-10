@@ -12,7 +12,11 @@ interface PackageManifest {
   version?: string;
   main?: string;
   scripts?: Record<string, string>;
-  build?: { files?: string[] };
+  build?: {
+    files?: string[];
+    nsis?: { artifactName?: string };
+    portable?: { artifactName?: string };
+  };
 }
 
 function readManifest(): PackageManifest {
@@ -25,6 +29,15 @@ describe('packaging', () => {
 
   it('declares a semantic version', () => {
     expect(manifest.version ?? '').toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('uses stable, target-specific Windows release filenames', () => {
+    expect(manifest.build?.nsis?.artifactName).toBe(
+      'Multi-Git-Client-Setup-${version}.${ext}'
+    );
+    expect(manifest.build?.portable?.artifactName).toBe(
+      'Multi-Git-Client-Portable-${version}.${ext}'
+    );
   });
 
   it('ships the template bodies the new-repository wizard reads', () => {
@@ -67,6 +80,21 @@ describe('packaging', () => {
       releaseDriver.includes("'--publish', 'never'"),
       'scripts/release.js must pass --publish never, or a release without GH_TOKEN fails after building'
     ).toBe(true);
+  });
+
+  it('creates checksums only after electron-builder finishes', () => {
+    const releaseDriver = fs.readFileSync(fromAppRoot('scripts', 'release.js'), 'utf8');
+    const buildCall = releaseDriver.indexOf('await runBuild');
+    const checksumCall = releaseDriver.indexOf('await writeChecksumManifest');
+
+    expect(buildCall, 'scripts/release.js does not await its package build').toBeGreaterThan(-1);
+    expect(checksumCall, 'scripts/release.js does not create SHA256SUMS.txt').toBeGreaterThan(
+      buildCall
+    );
+  });
+
+  it('keeps GitHub release upload an explicit command', () => {
+    expect(manifest.scripts?.['release:upload']).toBe('node scripts/upload-release-assets.js');
   });
 
   it('compiles before packaging in every path that packages', () => {

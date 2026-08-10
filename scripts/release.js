@@ -1,4 +1,4 @@
-// Version bump + Windows build driver. Run with `npm run release`.
+// Version bump + Windows build + checksum driver. Run with `npm run release`.
 //
 // Prompts for the new version and which artifacts to produce, then hands off
 // to electron-builder. Every prompt can be answered up front with a flag so
@@ -12,6 +12,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const { resolveReleaseAssets, writeChecksumManifest } = require('./release-assets');
 
 const ROOT = path.join(__dirname, '..');
 const PACKAGE_JSON = path.join(ROOT, 'package.json');
@@ -248,6 +249,10 @@ async function main() {
     console.log(`  version: ${current}${version === current ? ' (unchanged)' : ` -> ${version}`}`);
     console.log(`  target:  ${target.label}`);
     console.log(`  command: electron-builder ${target.args.join(' ')}`);
+    for (const asset of resolveReleaseAssets({ version, targetName })) {
+      console.log(`  artifact: ${path.relative(ROOT, asset.path)}`);
+    }
+    console.log(`  checksums: ${path.join('dist', 'SHA256SUMS.txt')}`);
     return;
   }
 
@@ -277,17 +282,25 @@ async function main() {
 
     console.log(`Building: ${target.label}\n`);
     await runBuild(builderEntry, target.args);
+
+    console.log('\nCalculating SHA-256 checksums...');
+    const checksum = await writeChecksumManifest({ version, targetName });
+    console.log(checksum.contents.trimEnd());
+    console.log(`Wrote ${path.relative(ROOT, checksum.manifestPath)}`);
   } catch (error) {
     if (version !== current) {
       applyVersion(current);
-      console.error(`\nBuild failed. Version rolled back to ${current}.`);
+      console.error(`\nRelease failed. Version rolled back to ${current}.`);
     }
     throw error;
   }
 
-  console.log(`\nDone. Artifacts for ${version} are in dist/.`);
+  console.log(`\nDone. Artifacts and SHA256SUMS.txt for ${version} are in dist/.`);
   if (version !== current) {
     console.log('The version bump is not committed or tagged — do that yourself when the build looks right.');
+  }
+  if (targetName === 'both') {
+    console.log('After the tag and draft GitHub release exist, run "npm run release:upload".');
   }
 }
 

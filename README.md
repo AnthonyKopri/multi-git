@@ -52,11 +52,16 @@ Packaged releases are currently provided for Windows.
 1. Install [Git for Windows](https://git-scm.com/download/win) if `git` is not already available on your system.
 2. Open the [latest Multi-Git release](https://github.com/AnthonyKopri/multi-git/releases/latest).
 3. Download one of the two `.exe` files:
-   - **`Multi-Git Client Setup <version>.exe`** installs Multi-Git and lets you choose the installation directory.
-   - **`Multi-Git Client <version>.exe`** is portable and can be run without installation.
+   - **`Multi-Git-Client-Setup-<version>.exe`** is the recommended installer and lets you choose the installation directory.
+   - **`Multi-Git-Client-Portable-<version>.exe`** can be run without installation.
 4. Launch **Multi-Git Client**.
 
 The Windows packages are not currently code-signed, so Windows may show a SmartScreen warning. Only continue if the file came from this repository's official Releases page.
+
+Each release also includes `SHA256SUMS.txt`, a plain-text list of the expected
+SHA-256 fingerprint for each executable. To verify a download in PowerShell,
+run `Get-FileHash -Algorithm SHA256 <downloaded-file>` and compare its `Hash`
+with the matching line in that file.
 
 ### Run from source
 
@@ -675,9 +680,11 @@ multi-git/
 |   `-- logs.html       # Live Terminal Log window
 |-- tests/              # Vitest: unit, integration, and pre-release checks
 |-- scripts/
-|   |-- build.mjs       # esbuild bundling and static asset copy
-|   |-- release.js      # Version bump and build driver
-|   `-- after-pack.js   # Windows executable icon and version metadata
+|   |-- build.mjs                # esbuild bundling and static asset copy
+|   |-- release.js               # Version bump, build, and checksum driver
+|   |-- release-assets.js        # Release filenames, labels, and checksums
+|   |-- upload-release-assets.js # Explicit GitHub asset upload
+|   `-- after-pack.js            # Windows executable icon and version metadata
 |-- out/                # Compiled output (generated, not committed)
 |-- package.json        # Scripts, dependencies, and Electron Builder config
 `-- LICENSE             # MIT license
@@ -699,9 +706,10 @@ The API exposes fixed-purpose operations that may invoke Git, GitHub/OpenSSH hel
 | `npm test` | Type-check every source and run the Vitest suite. |
 | `npm run typecheck` | Type-check without running the tests. |
 | `npm run compile` | Build the TypeScript sources into `out/`. |
-| `npm run release` | Bump the version and build, prompting for both. |
+| `npm run release` | Bump the version, build, and create `dist/SHA256SUMS.txt`, prompting for both targets. |
 | `npm run release:installer` | Prompt for a version, then build only the installer. |
 | `npm run release:portable` | Prompt for a version, then build only the portable executable. |
+| `npm run release:upload` | Upload the current build to an existing GitHub release with download labels. |
 | `npm run build` | Build targets configured in `package.json`. |
 | `npm run build-win` | Build Windows NSIS installer and portable executable. |
 | `npm run build-standalone` | Build only the portable Windows target into `dist-standalone`. |

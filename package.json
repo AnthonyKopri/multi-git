@@ -17,7 +17,8 @@
     "build-standalone": "npm run compile && electron-builder --win portable --config.directories.output=dist-standalone",
     "release": "node scripts/release.js",
     "release:installer": "node scripts/release.js --target installer",
-    "release:portable": "node scripts/release.js --target portable"
+    "release:portable": "node scripts/release.js --target portable",
+    "release:upload": "node scripts/upload-release-assets.js"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -69,8 +70,12 @@
       ]
     },
     "nsis": {
+      "artifactName": "Multi-Git-Client-Setup-${version}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "Multi-Git-Client-Portable-${version}.${ext}"
     }
   }
 }

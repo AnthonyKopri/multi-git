@@ -31,7 +31,8 @@ Building the Windows targets on macOS or Linux is not supported by this
 project's configuration. Develop anywhere; cut releases on Windows.
 
 The GitHub CLI (`gh`) is optional. It is used at runtime by the new-repository
-dialog and the pull-request creator. Nothing in the build needs it.
+dialog and the pull-request creator, and by `npm run release:upload`. Local
+builds and checksum generation do not need it.
 
 ## First-time setup
 
@@ -145,15 +146,17 @@ Beyond that, verification is manual. The paths worth walking before a release:
 
 ## Releasing a new version
 
-`npm run release` bumps the version and builds, asking about both:
+`npm run release` bumps the version, builds, and writes SHA-256 checksums,
+asking about both:
 
 ```bash
 npm run release
 ```
 
-It builds only. Nothing is uploaded, no GitHub token is needed, and the version
-bump is left uncommitted for you to review. If the build fails the bump is
-rolled back, so a failed release does not leave the project renamed.
+It works locally only. Nothing is uploaded, no GitHub token is needed, and the
+version bump is left uncommitted for you to review. If compilation, packaging,
+or checksum generation fails, the bump is rolled back so a failed release does
+not leave the project renamed.
 
 ```text
 Current version: 1.0.5
@@ -171,9 +174,11 @@ What should be built?
 Target [3]:
 ```
 
-The version is written to both `package.json` and `package-lock.json`. The
-bump is **not** committed or tagged — review the artifacts first, then commit
-and tag yourself:
+The version is written to both `package.json` and `package-lock.json`. After a
+successful build, `dist/SHA256SUMS.txt` is replaced atomically with checksums
+for exactly the target or targets built by that invocation. Stale executables
+in `dist/` are never included. The bump is **not** committed or tagged — review
+the artifacts first, then commit and tag yourself:
 
 ```bash
 git commit -am "chore: release v1.0.6"
@@ -229,6 +234,42 @@ To rebuild without changing the version:
 node scripts/release.js --bump none --target both
 ```
 
+### Uploading the assets and applying GitHub labels
+
+Create the GitHub release as a draft first, then upload the already-built
+artifacts with:
+
+```bash
+npm run release:upload
+```
+
+The default tag is `Release_v<package version>`. To select it explicitly:
+
+```bash
+npm run release:upload -- --tag Release_v3.0.0
+```
+
+This command regenerates `SHA256SUMS.txt` from the exact files it is about to
+upload, then runs `gh release upload` with these display labels:
+
+- `Windows installer (recommended)`
+- `Portable Windows executable`
+- `SHA-256 checksums`
+
+The upload command requires both executables, an existing release, and an
+authenticated GitHub CLI. It always uploads the installer, portable build, and
+their shared checksum file together, so the manifest always describes the full
+binary set and split uploads cannot collide on it. It does not use `--clobber`,
+so it will not delete an existing asset to replace it. Upload to a draft before
+publishing when immutable releases are enabled; names and labels cannot be
+changed after publication in that mode.
+
+Use `--dry-run` to print the exact `gh` command without writing or uploading:
+
+```bash
+npm run release:upload -- --tag Release_v3.0.0 --dry-run
+```
+
 ## Build targets in detail
 
 `npm run release` is a wrapper. These call Electron Builder directly and never
@@ -240,9 +281,10 @@ touch the version.
 npx electron-builder --win nsis
 ```
 
-Produces `dist/Multi-Git Client Setup <version>.exe`. Configured in
+Produces `dist/Multi-Git-Client-Setup-<version>.exe`. Configured in
 `package.json` under `build.nsis`:
 
+- `artifactName` gives the local file and GitHub asset one stable name;
 - `oneClick: false` — a real wizard rather than a silent install;
 - `allowToChangeInstallationDirectory: true` — the user picks the location.
 
@@ -252,10 +294,10 @@ Produces `dist/Multi-Git Client Setup <version>.exe`. Configured in
 npx electron-builder --win portable
 ```
 
-Produces `dist/Multi-Git Client <version>.exe`: a single executable that
-unpacks to a temporary folder at launch and needs no installation. User data
-still lives in the home directory, so a portable copy shares configuration and
-the vault with an installed one.
+Produces `dist/Multi-Git-Client-Portable-<version>.exe`: a single executable
+that unpacks to a temporary folder at launch and needs no installation. User
+data still lives in the home directory, so a portable copy shares configuration
+and the vault with an installed one.
 
 ### Both at once
 
@@ -283,8 +325,20 @@ change the icon, product name, description, or version, check the resulting
 ## Build output
 
 Both artifacts land in `dist/` (or `dist-standalone/` for that one script).
+The release driver also writes `dist/SHA256SUMS.txt`; direct
+`electron-builder`, `npm run build-win`, and `npm run build-standalone` calls do
+not. The checksum file is ordinary UTF-8 text without a BOM. Each line contains
+a lowercase SHA-256 digest, two spaces, and the exact artifact basename.
 `dist/`, `dist-standalone/`, `out/`, `release/`, and `*.blockmap` are all in
 `.gitignore` — build output is never committed.
+
+There is no special checksum container: `SHA256SUMS.txt` is a plain-text file
+that is uploaded beside the binaries. A Windows user can calculate a download's
+value with PowerShell and compare it with the matching line:
+
+```powershell
+Get-FileHash -Algorithm SHA256 -LiteralPath .\Multi-Git-Client-Setup-3.0.0.exe
+```
 
 Expect a few hundred megabytes per build. Delete the folder between releases
 if disk space is tight:
