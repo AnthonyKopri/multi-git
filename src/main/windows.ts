@@ -3,7 +3,7 @@ import { BrowserWindow, dialog } from 'electron';
 
 import { appTitle, fromAppRoot } from '../server/app-root';
 
-const ICON = (): string => fromAppRoot('Multi Git Logo.ico');
+const ICON = (): string => fromAppRoot('docs', 'images', 'multi-git-logo.ico');
 
 /**
  * Stops the loaded page from replacing the window title.

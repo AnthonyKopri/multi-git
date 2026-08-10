@@ -14,6 +14,7 @@ interface PackageManifest {
   scripts?: Record<string, string>;
   build?: {
     files?: string[];
+    icon?: string;
     nsis?: { artifactName?: string };
     portable?: { artifactName?: string };
   };
@@ -44,6 +45,14 @@ describe('packaging', () => {
     // These are data files loaded at runtime, not code, so no bundler pulls
     // them in. Losing this entry breaks the wizard only in packaged builds.
     expect(packaged).toContain('templates/**/*');
+  });
+
+  it('ships the application icon from the shared documentation assets', () => {
+    const icon = 'docs/images/multi-git-logo.ico';
+
+    expect(manifest.build?.icon).toBe(icon);
+    expect(packaged).toContain(icon);
+    expect(fs.existsSync(fromAppRoot(...icon.split('/')))).toBe(true);
   });
 
   it('ships every entry point the app loads at runtime', () => {

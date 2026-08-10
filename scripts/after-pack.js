@@ -16,7 +16,12 @@ module.exports = async (context) => {
     context.appOutDir,
     `${appInfo.productFilename}.exe`
   );
-  const iconPath = path.join(context.packager.projectDir, 'Multi Git Logo.ico');
+  const iconPath = path.join(
+    context.packager.projectDir,
+    'docs',
+    'images',
+    'multi-git-logo.ico'
+  );
 
   // signAndEditExecutable is disabled because electron-builder's signing-tool
   // archive can fail to extract on Windows without Developer Mode. That also

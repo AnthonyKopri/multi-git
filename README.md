@@ -1,49 +1,33 @@
 # Multi-Git Client
 
+**A free, open-source, local-first Windows Git client for multiple repositories, accounts, and SSH identities.**
+
+[**Download for Windows →**](https://github.com/AnthonyKopri/multi-git/releases/latest) ·
+[Five-minute guide](#five-minute-guide) ·
+[Full feature guide](#feature-guide)
+
+<p align="center">
+  <img
+    src="docs/images/multi-git-overview.png"
+    alt="Multi-Git Client showing repository controls, SSH identity selection, staging, Safety Net, worktrees, and commit history"
+    width="1200"
+  >
+</p>
+
 [![Latest release](https://img.shields.io/github/v/release/AnthonyKopri/multi-git?display_name=tag&sort=semver)](https://github.com/AnthonyKopri/multi-git/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/AnthonyKopri/multi-git/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AnthonyKopri/multi-git/actions/workflows/ci.yml)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078d4.svg)](https://github.com/AnthonyKopri/multi-git/releases/latest)
-[![Electron](https://img.shields.io/badge/Electron-desktop-47848f.svg)](https://www.electronjs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**A free, open-source Git desktop client built for multiple repositories, accounts, and SSH identities.**
+## Why Multi-Git?
 
-Multi-Git brings the everyday comfort of clients such as Tower and GitHub Desktop to a transparent, local-first application. Open or clone a repository, review a visual history, stage only what you want, commit, sync, open a pull request, resolve conflicts, and recover from risky operations without translating every intention into a Git command.
+| Work across repositories | Work with confidence |
+| --- | --- |
+| **Multiple repositories and SSH identities**<br>Keep repository-specific SSH keys and commit identities separate, with origin rules and native-agent routing. | **Precision staging and richer diffs**<br>Stage, unstage, discard, or stash selected hunks and lines, with unified and side-by-side review. |
+| **Worktrees and multiple windows**<br>Work on several branches at once, restore repository windows, and fetch related repository groups together. | **Visual rebase and signed history**<br>Plan interactive rebases, split commits, and sign commits or tags with SSH or GPG. |
+| **Safety Net and recovery**<br>Recover checkpointed destructive operations through a durable journal alongside Git's reflog. | **GitHub PRs and Repository hub**<br>Create pull requests and manage remotes, submodules, LFS, patches, bisect sessions, and notes. |
 
-Its defining feature is account-aware SSH: each repository can use its own key and commit identity, with optional origin-based rules that automatically select the right profile. There is no subscription, account requirement, or hosted service. Multi-Git is MIT-licensed and performs its work through the Git installation on your computer.
-
-## What You Can Do
-
-- **Work across repositories quickly:** open, create, clone, remember, switch, and remove repositories from the recent list.
-- **Set up a new repository in one dialog:** choose visibility, pick a license template and fill in its placeholders, and add a `.gitignore` from a stack template, a general one, or your own.
-- **Stage and commit with confidence:** click files to stage or unstage, stage or discard a single hunk or a handful of lines, amend commits, and use Conventional Commit shortcuts.
-- **Read a change properly:** unified or side-by-side, with the words that actually changed picked out, whitespace-only changes hidden on request, and before/after previews for images.
-- **See the shape of the project:** browse an all-branches commit graph, inspect commits and changed files, follow file history, and view Git blame.
-- **Sync without the command line:** fetch, pull, push, see ahead/behind counts, switch a compatible origin between HTTPS and SSH, and retry rejected pushes with `--force-with-lease`.
-- **Open a GitHub pull request:** inspect the exact commit range, publish an unpushed branch, and create a ready or draft PR with reviewers, assignees, labels, and a repository pull-request template through the GitHub CLI.
-- **Keep work and personal accounts separate:** assign an SSH key and Git identity to each profile, auto-select profiles from origin URLs, and catch account or identity mismatches before commit or push.
-- **Use the native SSH agent safely:** see whether the selected key is loaded, unlock it only when needed, repair the Windows agent service with explicit approval, and leave identities loaded by other applications alone.
-- **Handle advanced Git workflows:** create and switch branches, track remote branches, merge, rebase, cherry-pick, revert, reset, stash, and manage tags.
-- **Rewrite history deliberately:** plan an interactive rebase visually — reorder, reword, squash, fixup, drop, autosquash — and split a commit into several without leaving the app.
-- **Find things:** search commits by message, author, path, ref or date range; compare any two refs; and reach every action from a Ctrl+K command palette.
-- **Keep branches tidy:** see which are merged, stale or tracking a branch that no longer exists, then pin, rename, re-point or delete them in bulk.
-- **Sign your work:** configure SSH or GPG signing per repository, and see what a commit's signature actually proves.
-- **Resolve conflicts visually:** choose the current or incoming version, edit the result, stage it, and continue or abort the operation.
-- **Work on two branches at once:** create and manage Git worktrees, open each in its own window, and remove them without ever losing uncommitted work by accident.
-- **Group repositories that belong together:** fetch a whole group in one action, cancel it mid-flight, and see the result for each repository.
-- **Shape the workspace around the task:** resize every major pane, collapse either side panel or individual sidebar sections, and keep controls reachable when the window gets narrow.
-- **Hand a folder to a coding agent:** launch Claude, Codex, or any executable you configure in the worktree you choose, while Multi-Git prepares the selected SSH routing and reports when it is not ready.
-- **Manage remotes properly:** separate fetch and push URLs, refspecs, prune preference, a connectivity test, and a fetch-all that reports each remote separately.
-- **Work with submodules without guessing:** see the commit the superproject pins and the one the submodule is actually at as two different facts, then initialize, update, sync, or deinitialize one.
-- **Handle large files:** inspect Git LFS patterns and objects, tell a downloaded file from a pointer, fetch or prune with a preview of what will move, and take or release file locks.
-- **Move changes as patches:** build one from commits, a range or your uncommitted work, check it applies before it does, and apply it as working changes or as commits.
-- **Find the commit that broke it:** bisect by hand, or let a saved test command decide each step for you.
-- **Annotate commits after the fact:** attach a Git note without rewriting history, and see at a glance which commits carry one.
-- **Bring your own merge tool:** detect and configure external programs, open conflicts in the selected merge tool, and optionally add "Open in Multi-Git" to the Windows Explorer right-click menu.
-- **Watch and stop long work:** a bar along the bottom shows what is running, how long it has taken, and lets you cancel it.
-- **Recover from mistakes:** restore recently discarded files, undo checkpointed operations, and browse a durable recovery journal beside Git's own reflog.
-- **See what the app did:** open the live Terminal Log for the Git commands, output, warnings, and errors behind each action.
-
-## Install And Start
+## Download and Install
 
 ### Windows: installer or portable app
 
@@ -62,29 +46,6 @@ Each release also includes `SHA256SUMS.txt`, a plain-text list of the expected
 SHA-256 fingerprint for each executable. To verify a download in PowerShell,
 run `Get-FileHash -Algorithm SHA256 <downloaded-file>` and compare its `Hash`
 with the matching line in that file.
-
-### Run from source
-
-Running from source requires [Node.js 22.12 or newer](https://nodejs.org/), npm, Git, and OpenSSH (`ssh`, `ssh-add`, and `ssh-keygen`). The GitHub CLI (`gh`) is optional unless you want Multi-Git to create GitHub repositories or pull requests, and Git LFS is optional unless you use the LFS tools.
-
-```bash
-git clone https://github.com/AnthonyKopri/multi-git.git
-cd multi-git
-npm install
-npm run desktop
-```
-
-`npm install` does not download the Electron runtime on its own — Electron ships that as an explicit `install-electron` step rather than an install script. `npm run desktop` runs it for you when the binary is missing; `npm start` never needs it.
-
-For browser-based development, run:
-
-```bash
-npm start
-```
-
-Then open `http://localhost:3000`. Desktop mode chooses a free local port automatically; browser mode uses `PORT` or port `3000`.
-
-> Packaged macOS and Linux builds are not published yet. The Electron source is designed to be portable, but those platforms still need packaging and workflow testing.
 
 ## Five-Minute Guide
 
@@ -673,6 +634,7 @@ multi-git/
 |-- templates/
 |   |-- licenses/       # License texts from choosealicense.com
 |   `-- gitignore/      # Ignore templates from github/gitignore
+|-- docs/images/        # README screenshot and packaged application icon
 |-- public/
 |   |-- index.html      # Application shell and dialogs
 |   |-- logs.js         # Terminal Log window script
@@ -695,6 +657,29 @@ The application logic is predominantly TypeScript and is compiled into `out/`; t
 The UI talks to a localhost JSON API. Repository-scoped requests carry the selected path in the `x-repo-path` header, which one middleware validates; the app sends it base64-encoded, marked by `x-repo-path-encoding`, so a folder named in any script survives the trip. Git commands are executed as argument arrays with Node's `spawn`, never through a shell; values that could be read as options are validated and pathspecs are separated with `--`. A selected profile is applied per operation with `GIT_SSH_COMMAND`, and saved passphrases use a short-lived askpass bridge.
 
 The API exposes fixed-purpose operations that may invoke Git, GitHub/OpenSSH helpers, the default file opener, or a folder picker. It can validate and store executable definitions, but does not directly execute an arbitrary command supplied by a request. User-configured agents and external tools instead go through the Electron preload bridge, which validates context and resolves saved definitions by id; saved automated-bisect commands are likewise validated as argument vectors rather than shell strings.
+
+## Run from Source
+
+Running from source requires [Node.js 22.12 or newer](https://nodejs.org/), npm, Git, and OpenSSH (`ssh`, `ssh-add`, and `ssh-keygen`). The GitHub CLI (`gh`) is optional unless you want Multi-Git to create GitHub repositories or pull requests, and Git LFS is optional unless you use the LFS tools.
+
+```bash
+git clone https://github.com/AnthonyKopri/multi-git.git
+cd multi-git
+npm install
+npm run desktop
+```
+
+`npm install` does not download the Electron runtime on its own — Electron ships that as an explicit `install-electron` step rather than an install script. `npm run desktop` runs it for you when the binary is missing; `npm start` never needs it.
+
+For browser-based development, run:
+
+```bash
+npm start
+```
+
+Then open `http://localhost:3000`. Desktop mode chooses a free local port automatically; browser mode uses `PORT` or port `3000`.
+
+> Packaged macOS and Linux builds are not published yet. The Electron source is designed to be portable, but those platforms still need packaging and workflow testing.
 
 ## Developer Commands
 

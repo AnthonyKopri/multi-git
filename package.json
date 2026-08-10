@@ -54,10 +54,10 @@
     "files": [
       "out/**/*",
       "templates/**/*",
-      "Multi Git Logo.ico",
+      "docs/images/multi-git-logo.ico",
       "package.json"
     ],
-    "icon": "Multi Git Logo.ico",
+    "icon": "docs/images/multi-git-logo.ico",
     "directories": {
       "output": "dist"
     },
