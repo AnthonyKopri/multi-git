@@ -41,9 +41,9 @@ function api() {
 function installedRunner(): FakeRunner {
   return new FakeRunner()
     .on(command('git', 'lfs', 'version'), { stdout: 'git-lfs/3.4.1 (GitHub; windows amd64)\n' })
-    .on(command('git', 'lfs', 'track'), {
-      stdout: 'Listing tracked patterns\n    *.psd (.gitattributes)\n    assets/** (.gitattributes)\n'
-    })
+    // No stub for `git lfs track`: the pattern list is read from
+    // `.gitattributes`, and a status read must never invoke that command at
+    // all. See "reading state must not change it" below.
     .on(command('git', 'lfs', 'ls-files'), {
       stdout: JSON.stringify({
         files: [
@@ -114,6 +114,11 @@ describe('when Git LFS is not installed', () => {
 
 describe('reading the state', () => {
   it('reports the version and the tracked patterns', async () => {
+    fs.writeFileSync(
+      path.join(repo, '.gitattributes'),
+      '# large files\n*.psd filter=lfs diff=lfs merge=lfs -text\nassets/** filter=lfs diff=lfs merge=lfs -text\n*.md text\n'
+    );
+
     const response = await api().get('/api/lfs/status').expect(200);
 
     expect(response.body.status.availability).toMatchObject({
@@ -121,9 +126,19 @@ describe('reading the state', () => {
       version: '3.4.1',
       configured: true
     });
-    // The pattern is the first token; the file it came from is in parentheses
-    // and is not part of it.
+    // The pattern is the first token. A comment, a blank line and an entry
+    // whose attributes never mention the filter are all not patterns.
     expect(response.body.status.trackedPatterns).toEqual(['*.psd', 'assets/**']);
+  });
+
+  it('does not read an unset filter as a routed one', async () => {
+    // `-filter=lfs` switches LFS off for a path. Reading it as "routed through
+    // LFS" would keep claiming a repository uses LFS after it stopped.
+    fs.writeFileSync(path.join(repo, '.gitattributes'), '*.psd -filter=lfs\n');
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    expect(response.body.status.trackedPatterns).toEqual([]);
   });
 
   it('separates an object that is here from one that is only a pointer', async () => {
@@ -152,6 +167,140 @@ describe('reading the state', () => {
     // An empty list is honest; guessing at the plain text format would not be.
     expect(response.body.status.objects).toEqual([]);
     expect(response.body.status.availability.installed).toBe(true);
+  });
+});
+
+/**
+ * What a status read is allowed to cost.
+ *
+ * Reading the locks is the only part of it that leaves the machine, and on an
+ * SSH remote it is `ssh git-lfs-authenticate` twice over, seconds each. The
+ * sidebar summary refreshes after every commit, checkout, branch switch and
+ * window focus, so a round trip taken when it cannot tell anyone anything is
+ * paid again and again — which is what made "Reading Git LFS state" look like
+ * it restarted the moment it finished.
+ */
+describe('what reading the state is allowed to cost', () => {
+  /** A repository where LFS exists but nothing is routed through it. */
+  function unusedRunner(): FakeRunner {
+    return installedRunner()
+      .on(command('git', 'lfs', 'track'), { stdout: 'Listing tracked patterns\n' })
+      .on(command('git', 'lfs', 'ls-files'), { stdout: JSON.stringify({ files: [] }) });
+  }
+
+  const lockCalls = (): string[][] =>
+    runner
+      .callsTo('git')
+      .filter((entry) => entry.args[1] === 'locks')
+      .map((entry) => [...entry.args]);
+
+  it('does not contact the lock server for a repository that routes nothing through LFS', async () => {
+    setLfsRunner((runner = unusedRunner()));
+
+    await api().get('/api/lfs/status').expect(200);
+
+    expect(lockCalls()).toEqual([]);
+  });
+
+  it('says the lock server was not asked, rather than that nothing is locked', async () => {
+    setLfsRunner((runner = unusedRunner()));
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    // The two look identical in the panel and mean opposite things.
+    expect(response.body.status.locks).toEqual([]);
+    expect(response.body.status.locksUnavailable).toMatch(/not checked/i);
+  });
+
+  it('skips --verify when nothing is locked, because there is nothing to attribute', async () => {
+    await api().get('/api/lfs/status').expect(200);
+
+    // The shared fixture answers `[]`. One round trip already settled it; the
+    // second would ask the same server which of no locks are the user's own.
+    expect(lockCalls()).toEqual([['lfs', 'locks', '--json']]);
+  });
+
+  it('does not re-read the locks for a status refresh seconds later', async () => {
+    await api().get('/api/lfs/status').expect(200);
+    await api().get('/api/lfs/status').expect(200);
+
+    expect(lockCalls()).toHaveLength(1);
+  });
+
+  it('still reads them fresh when the locks themselves were asked for', async () => {
+    await api().get('/api/lfs/status').expect(200);
+    await api().get('/api/lfs/locks').expect(200);
+
+    // Opening the lock list is a deliberate act, and a remembered answer is not
+    // what it asked for.
+    expect(lockCalls()).toHaveLength(2);
+  });
+
+  it('bounds --verify, which would otherwise wait out the five-minute default', async () => {
+    runner.on(command('git', 'lfs', 'locks', '--json'), {
+      stdout: JSON.stringify([{ id: '1', path: 'art/logo.psd', owner: { name: 'someone' } }])
+    });
+
+    await api().get('/api/lfs/locks').expect(200);
+
+    const verify = runner
+      .callsTo('git')
+      .find((entry) => entry.args.includes('--verify'));
+
+    // A lock server that stops answering must not turn a status read into a
+    // five-minute stall under a line that says "Reading Git LFS state".
+    expect(verify?.options.timeoutMs).toBe(30_000);
+  });
+
+});
+
+/**
+ * Reading the state must not change it.
+ *
+ * `git lfs track` with no arguments looks like a listing and is documented as
+ * one, but it reinstalls all four hooks as a side effect. Using it to read the
+ * pattern list meant every status refresh — after each commit, checkout, branch
+ * switch and window focus — silently put back the hooks the user had just
+ * removed, so both `git lfs uninstall` and this application's own "Disable LFS
+ * here" appeared to do nothing at all.
+ */
+describe('reading state must not change it', () => {
+  it('never runs git lfs track for a status read', async () => {
+    fs.writeFileSync(path.join(repo, '.gitattributes'), '*.psd filter=lfs\n');
+
+    await api().get('/api/lfs/status').expect(200);
+
+    const track = runner.callsTo('git').filter((entry) => entry.args[1] === 'track');
+
+    expect(track).toEqual([]);
+    // And it still got the answer, from the file that actually holds it.
+    // Otherwise this would pass by simply having stopped looking.
+    const response = await api().get('/api/lfs/status').expect(200);
+    expect(response.body.status.trackedPatterns).toEqual(['*.psd']);
+  });
+
+  it('leaves the removed hooks removed', async () => {
+    // The sequence the user hits: disable LFS for this repository, then let
+    // anything at all trigger the next refresh.
+    fs.mkdirSync(path.join(repo, '.git', 'hooks'), { recursive: true });
+    const hook = path.join(repo, '.git', 'hooks', 'pre-push');
+    fs.writeFileSync(hook, '#!/bin/sh\ngit lfs pre-push "$@"\n');
+
+    await api().post('/api/lfs/installation').send({ action: 'uninstall' }).expect(200);
+    fs.rmSync(hook, { force: true });
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    expect(response.body.status.installation.installed).toBe(false);
+    expect(fs.existsSync(hook)).toBe(false);
+  });
+
+  it('still tracks a pattern through git lfs track when asked to change something', async () => {
+    await api().post('/api/lfs/track').send({ pattern: '*.mp4' }).expect(200);
+
+    // Writing is what that command is for; only reading through it was wrong.
+    const call = runner.callsTo('git').find((entry) => entry.args[1] === 'track');
+    expect(call?.args).toEqual(['lfs', 'track', '--', '*.mp4']);
   });
 });
 

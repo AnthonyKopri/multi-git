@@ -124,10 +124,23 @@ const ALL_EXIT_CODES: readonly number[] = Array.from({ length: 256 }, (_, code) 
 // ---------- availability ----------
 
 export async function readAvailability(repoPath: string): Promise<LfsAvailability> {
+  return (await readAvailabilityWithPatterns(repoPath)).availability;
+}
+
+/**
+ * Availability, together with the tracked patterns it had to read anyway.
+ *
+ * `configured` cannot be decided without the pattern list, and `readStatus`
+ * needs that same list for its own answer. Returning it here is what stops
+ * `git lfs track` being run twice for one status read.
+ */
+async function readAvailabilityWithPatterns(
+  repoPath: string
+): Promise<{ availability: LfsAvailability; trackedPatterns: string[] }> {
   const version = await runLfs(repoPath, ['version'], { timeoutMs: 10_000 });
 
   if (version.spawnFailed || version.code !== 0) {
-    return { installed: false, configured: false };
+    return { availability: { installed: false, configured: false }, trackedPatterns: [] };
   }
 
   // "git-lfs/3.4.1 (GitHub; windows amd64; go 1.21.5)" — the first token is
@@ -136,13 +149,18 @@ export async function readAvailability(repoPath: string): Promise<LfsAvailabilit
 
   // Configured means this repository actually uses LFS, which is a different
   // question from whether the program exists.
-  const attributes = await tryGitCommand(repoPath, ['check-attr', '-a', '--', '.gitattributes']);
-  const patterns = await readTrackedPatterns(repoPath);
+  const [attributes, trackedPatterns] = await Promise.all([
+    tryGitCommand(repoPath, ['check-attr', '-a', '--', '.gitattributes']),
+    readTrackedPatterns(repoPath)
+  ]);
 
   return {
-    installed: true,
-    ...(parsed?.[1] ? { version: parsed[1] } : {}),
-    configured: patterns.length > 0 || (attributes?.stdout ?? '').includes('lfs')
+    availability: {
+      installed: true,
+      ...(parsed?.[1] ? { version: parsed[1] } : {}),
+      configured: trackedPatterns.length > 0 || (attributes?.stdout ?? '').includes('lfs')
+    },
+    trackedPatterns
   };
 }
 
@@ -269,46 +287,101 @@ const ATTRIBUTE_FILE_LIMIT = 50;
  * of hooks is doing the most damage and the least good.
  */
 async function hasLfsAttributes(repoPath: string): Promise<boolean> {
-  // `.git/info/attributes` is not a tracked file, so ls-files will never
-  // return it, and it routes files just as effectively.
+  return (await readTrackedPatterns(repoPath)).length > 0;
+}
+
+/** An attributes file, with the prefix its patterns are relative to. */
+interface AttributeFile {
+  file: string;
+  prefix: string;
+}
+
+/**
+ * Every attributes file that can route a file in this repository.
+ *
+ * `.git/info/attributes` is included because it is not a tracked file, so
+ * ls-files will never return it, and it routes files just as effectively. The
+ * working-tree root `.gitattributes` is read directly rather than through
+ * ls-files, because git honours it whether or not it has been committed — and
+ * reading only tracked files would call a repository that was set up but not
+ * yet committed redundant, and offer to strip the hooks it is about to need.
+ */
+async function attributeFiles(repoPath: string): Promise<AttributeFile[]> {
+  const files: AttributeFile[] = [];
+
   const infoPath = await tryGitCommand(repoPath, ['rev-parse', '--git-path', 'info/attributes']);
   const infoRelative = infoPath?.stdout.trim();
 
   if (infoRelative) {
-    const resolved = path.isAbsolute(infoRelative)
-      ? infoRelative
-      : path.join(repoPath, infoRelative);
-    if (mentionsLfsFilter(resolved)) {
-      return true;
-    }
+    files.push({
+      file: path.isAbsolute(infoRelative) ? infoRelative : path.join(repoPath, infoRelative),
+      prefix: ''
+    });
   }
 
-  // The working-tree root file, checked directly rather than through
-  // `ls-files`. Git honours `.gitattributes` whether or not it is committed, so
-  // a repository set up but not yet committed still routes its files — and
-  // reading only tracked files would call that repository redundant and offer
-  // to strip the hooks it is about to need.
-  if (mentionsLfsFilter(path.join(repoPath, '.gitattributes'))) {
-    return true;
-  }
+  files.push({ file: path.join(repoPath, '.gitattributes'), prefix: '' });
 
   const listed = await tryGitCommand(repoPath, ['ls-files', '-z', '--', ...ATTRIBUTE_PATHSPECS]);
 
-  const files = (listed?.stdout ?? '')
+  const nested = (listed?.stdout ?? '')
     .split('\0')
-    .filter((entry) => entry !== '')
+    .filter((entry) => entry !== '' && entry !== '.gitattributes')
     .slice(0, ATTRIBUTE_FILE_LIMIT);
 
-  return files.some((file) => mentionsLfsFilter(path.join(repoPath, file)));
+  for (const entry of nested) {
+    // A nested file's patterns are relative to its own directory, which is what
+    // makes `assets/*.psd` a different pattern from `*.psd`.
+    files.push({
+      file: path.join(repoPath, entry),
+      prefix: `${path.posix.dirname(entry.replace(/\\/g, '/'))}/`
+    });
+  }
+
+  return files;
 }
 
-/** `*.psd filter=lfs diff=lfs merge=lfs -text` — the filter is the part that matters. */
-function mentionsLfsFilter(attributesPath: string): boolean {
+/**
+ * The LFS patterns one attributes file declares.
+ *
+ * `*.psd filter=lfs diff=lfs merge=lfs -text` — the filter is the part that
+ * matters, and it has to be an attribute in its own right: `-filter=lfs` unsets
+ * the filter, and a repository that had just switched LFS off for a path would
+ * otherwise be read as still routing it.
+ */
+function lfsPatternsIn(attributesPath: string): string[] {
+  let text: string;
+
   try {
-    return /filter\s*=\s*lfs/.test(fs.readFileSync(attributesPath, 'utf8'));
+    text = fs.readFileSync(attributesPath, 'utf8');
   } catch {
-    return false;
+    // Absent, unreadable, a directory. Not something to claim as a pattern.
+    return [];
   }
+
+  const patterns: string[] = [];
+
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+
+    if (trimmed === '' || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    // Not a plain split on whitespace: a pattern containing a space is quoted.
+    const match = trimmed.match(/^("(?:[^"\\]|\\.)*"|\S+)\s+(.*)$/);
+    const pattern = match?.[1];
+    const attributes = match?.[2];
+
+    if (!pattern || !attributes || !/(^|\s)filter\s*=\s*lfs(\s|$)/.test(attributes)) {
+      continue;
+    }
+
+    patterns.push(
+      pattern.startsWith('"') ? pattern.slice(1, -1).replace(/\\(.)/g, '$1') : pattern
+    );
+  }
+
+  return patterns;
 }
 
 /**
@@ -384,24 +457,34 @@ async function removeInstallationWithoutLfs(repoPath: string): Promise<LfsInstal
 /**
  * The patterns `.gitattributes` routes through LFS.
  *
- * `git lfs track` with no arguments lists them, one per line, indented, in the
- * form `    *.psd (.gitattributes)`. The pattern is the first token; the file
- * it came from is in parentheses and is not needed here.
+ * Read from the attributes files, not from `git lfs track`, and that is the
+ * whole point of it. `git lfs track` with no arguments looks like a listing,
+ * but it reinstalls all four hooks as a side effect — so using it to read state
+ * silently put back the hooks this panel had just been used to remove, on the
+ * very next refresh, and made "Disable LFS here" look like it did nothing.
+ *
+ * Reading the files is also the only form of the question that still has an
+ * answer on a machine where LFS is not installed, which is exactly when a stale
+ * set of hooks is doing the most damage and the least good.
  */
 export async function readTrackedPatterns(repoPath: string): Promise<string[]> {
-  const result = await runLfs(repoPath, ['track']);
+  const patterns: string[] = [];
+  const seen = new Set<string>();
 
-  if (result.spawnFailed || result.code !== 0) {
-    return [];
+  for (const { file, prefix } of await attributeFiles(repoPath)) {
+    for (const pattern of lfsPatternsIn(file)) {
+      // A leading slash anchors a pattern to its own file's directory, which
+      // the prefix already expresses.
+      const full = prefix === '' ? pattern : `${prefix}${pattern.replace(/^\//, '')}`;
+
+      if (!seen.has(full)) {
+        seen.add(full);
+        patterns.push(full);
+      }
+    }
   }
 
-  return result.stdout
-    .split(/\r?\n/)
-    .slice(1) // The first line is a heading, not a pattern.
-    .map((line) => line.trim())
-    .filter((line) => line !== '')
-    .map((line) => line.replace(/\s*\([^)]*\)\s*$/, '').trim())
-    .filter((pattern) => pattern !== '');
+  return patterns;
 }
 
 export async function trackPattern(repoPath: string, pattern: string): Promise<string[]> {
@@ -542,6 +625,21 @@ export async function runTransfer(
 
 // ---------- locks ----------
 
+export interface LfsLockState {
+  locks: LfsLock[];
+  unavailable?: string;
+}
+
+/**
+ * The bound on anything that talks to a lock server.
+ *
+ * Applied to `--verify` as well as to the listing. Without it that second call
+ * falls through to the runner's five-minute default, and a lock server that
+ * stops answering turns a status read into a five-minute stall under a line
+ * that says "Reading Git LFS state".
+ */
+const LOCK_TIMEOUT_MS = 30_000;
+
 /**
  * Reads the locks a server holds.
  *
@@ -552,10 +650,10 @@ export async function runTransfer(
 export async function listLocks(
   repoPath: string,
   options: { signal?: AbortSignal } = {}
-): Promise<{ locks: LfsLock[]; unavailable?: string }> {
+): Promise<LfsLockState> {
   const result = await runLfs(repoPath, ['locks', '--json'], {
     ...options,
-    timeoutMs: 30_000
+    timeoutMs: LOCK_TIMEOUT_MS
   });
 
   if (result.spawnFailed) {
@@ -571,53 +669,118 @@ export async function listLocks(
     return { locks: [] };
   }
 
-  // Which locks are the user's own is answered by `--verify`, which splits them
-  // into "ours" and "theirs". Without it every lock looks like someone else's.
-  const verified = await runLfs(repoPath, ['locks', '--verify', '--json'], options);
-  const mine = new Set<string>();
-
-  if (verified.code === 0 && verified.stdout.trim() !== '') {
-    try {
-      const parsed = JSON.parse(verified.stdout) as { ours?: { id?: string }[] };
-      for (const lock of parsed.ours ?? []) {
-        if (lock.id) {
-          mine.add(lock.id);
-        }
-      }
-    } catch {
-      // Leave every lock reading as someone else's, which is the safe
-      // direction: it offers force-unlock rather than a plain one.
-    }
-  }
+  let held: { id?: string; path?: string; owner?: { name?: string }; locked_at?: string }[];
 
   try {
-    const parsed = JSON.parse(result.stdout) as {
-      id?: string;
-      path?: string;
-      owner?: { name?: string };
-      locked_at?: string;
-    }[];
-
-    return {
-      locks: (Array.isArray(parsed) ? parsed : [])
-        .filter((lock) => typeof lock.path === 'string')
-        .map((lock) => ({
-          id: String(lock.id ?? ''),
-          path: lock.path as string,
-          owner: lock.owner?.name ?? 'unknown',
-          ...(lock.locked_at ? { lockedAt: lock.locked_at } : {}),
-          mine: mine.has(String(lock.id ?? ''))
-        }))
-    };
+    const parsed = JSON.parse(result.stdout) as typeof held;
+    held = (Array.isArray(parsed) ? parsed : []).filter((lock) => typeof lock.path === 'string');
   } catch {
     return { locks: [], unavailable: 'The lock list could not be read.' };
   }
+
+  // Nothing is locked, so there is nothing to attribute to anyone. `--verify`
+  // is a second round trip to the same server for an answer already known, and
+  // an empty list is the overwhelmingly common case — most repositories have
+  // never taken a lock at all.
+  if (held.length === 0) {
+    return { locks: [] };
+  }
+
+  const mine = await ownedLockIds(repoPath, options);
+
+  return {
+    locks: held.map((lock) => ({
+      id: String(lock.id ?? ''),
+      path: lock.path as string,
+      owner: lock.owner?.name ?? 'unknown',
+      ...(lock.locked_at ? { lockedAt: lock.locked_at } : {}),
+      mine: mine.has(String(lock.id ?? ''))
+    }))
+  };
+}
+
+/**
+ * The ids of the locks this user holds, per `git lfs locks --verify`.
+ *
+ * Empty on any doubt, which leaves every lock reading as someone else's — the
+ * safe direction, because it offers force-unlock rather than a plain one and so
+ * asks the user instead of assuming.
+ */
+async function ownedLockIds(
+  repoPath: string,
+  options: { signal?: AbortSignal }
+): Promise<Set<string>> {
+  const verified = await runLfs(repoPath, ['locks', '--verify', '--json'], {
+    ...options,
+    timeoutMs: LOCK_TIMEOUT_MS
+  });
+  const mine = new Set<string>();
+
+  if (verified.code !== 0 || verified.stdout.trim() === '') {
+    return mine;
+  }
+
+  try {
+    const parsed = JSON.parse(verified.stdout) as { ours?: { id?: string }[] };
+    for (const lock of parsed.ours ?? []) {
+      if (lock.id) {
+        mine.add(lock.id);
+      }
+    }
+  } catch {
+    // Left empty deliberately; see above.
+  }
+
+  return mine;
+}
+
+/**
+ * The lock list `readStatus` reads, remembered briefly.
+ *
+ * The panel and the sidebar summary are refreshed after every commit, checkout,
+ * branch switch and window focus. Each of those reads is a network round trip
+ * to the lock server, and repeating it seconds later cannot have a different
+ * answer often enough to be worth the wait. The lock *tab* and every mutating
+ * route still read through `listLocks` directly, so nothing a user does here is
+ * ever answered from a stale copy.
+ */
+const LOCK_CACHE_TTL_MS = 30_000;
+
+const lockCache = new Map<string, { readAt: number; state: LfsLockState }>();
+
+/** Drops the remembered lock list, for a repository or for all of them. */
+export function forgetLocks(repoPath?: string): void {
+  if (repoPath === undefined) {
+    lockCache.clear();
+  } else {
+    lockCache.delete(repoPath);
+  }
+}
+
+async function recentLocks(
+  repoPath: string,
+  options: { signal?: AbortSignal }
+): Promise<LfsLockState> {
+  const cached = lockCache.get(repoPath);
+
+  if (cached && Date.now() - cached.readAt < LOCK_CACHE_TTL_MS) {
+    return cached.state;
+  }
+
+  const state = await listLocks(repoPath, options);
+  lockCache.set(repoPath, { readAt: Date.now(), state });
+
+  return state;
 }
 
 export async function createLock(repoPath: string, filePath: string): Promise<void> {
   await requireLfs(repoPath);
 
-  const result = await runLfs(repoPath, ['lock', '--', pathArg(filePath)], { timeoutMs: 30_000 });
+  const result = await runLfs(repoPath, ['lock', '--', pathArg(filePath)], {
+    timeoutMs: LOCK_TIMEOUT_MS
+  });
+
+  forgetLocks(repoPath);
 
   if (result.code !== 0) {
     throw new LfsError(
@@ -648,7 +811,9 @@ export async function releaseLock(
   }
   args.push('--', pathArg(filePath));
 
-  const result = await runLfs(repoPath, args, { timeoutMs: 30_000 });
+  const result = await runLfs(repoPath, args, { timeoutMs: LOCK_TIMEOUT_MS });
+
+  forgetLocks(repoPath);
 
   if (result.code !== 0) {
     const message = result.stderr.trim();
@@ -663,11 +828,20 @@ export async function releaseLock(
 
 // ---------- the whole picture ----------
 
+/**
+ * Said instead of "nothing is locked" when the lock server was never asked.
+ *
+ * The two look identical in the panel and mean opposite things, which is the
+ * same distinction the rest of this module keeps for an empty object list.
+ */
+const LOCKS_NOT_CHECKED =
+  'Not checked. No file in this repository is routed through LFS, so the lock server was not contacted.';
+
 export async function readStatus(
   repoPath: string,
   options: { signal?: AbortSignal } = {}
 ): Promise<LfsStatus> {
-  const availability = await readAvailability(repoPath);
+  const { availability, trackedPatterns } = await readAvailabilityWithPatterns(repoPath);
 
   if (!availability.installed) {
     // The repository can still carry hooks from a machine that did have LFS,
@@ -682,14 +856,25 @@ export async function readStatus(
     };
   }
 
-  const [installation, trackedPatterns, objects, lockState] = await Promise.all([
+  const [installation, objects] = await Promise.all([
     readInstallation(repoPath),
-    readTrackedPatterns(repoPath),
-    listObjects(repoPath),
-    // Locks are the only part that reaches the network, and a server that is
-    // slow or does not support them must not hold up the rest of the panel.
-    listLocks(repoPath, options).catch(() => ({ locks: [] as LfsLock[] }))
+    listObjects(repoPath)
   ]);
+
+  // Reading the locks is the only part of this that leaves the machine, and on
+  // an SSH remote it is two round trips through `ssh git-lfs-authenticate`
+  // costing seconds each. A repository that routes no file through LFS and
+  // holds no LFS object cannot have anything worth locking, so it is not asked
+  // — and this status read is refreshed after every commit, checkout, branch
+  // switch and window focus, which is what made those seconds add up to a
+  // "Reading Git LFS state" that never seemed to stop.
+  const usesLfs = availability.configured || trackedPatterns.length > 0 || objects.length > 0;
+
+  const lockState: LfsLockState = usesLfs
+    ? // A lock server that is slow or unreachable is reported as unavailable,
+      // never allowed to fail the rest of the panel.
+      await recentLocks(repoPath, options).catch(() => ({ locks: [] as LfsLock[] }))
+    : { locks: [], unavailable: LOCKS_NOT_CHECKED };
 
   return {
     availability,
@@ -697,8 +882,6 @@ export async function readStatus(
     trackedPatterns,
     objects,
     locks: lockState.locks,
-    ...('unavailable' in lockState && lockState.unavailable
-      ? { locksUnavailable: lockState.unavailable }
-      : {})
+    ...(lockState.unavailable ? { locksUnavailable: lockState.unavailable } : {})
   };
 }
