@@ -204,11 +204,44 @@ export async function unlockVault(): Promise<boolean> {
       await refreshAgent();
     }
 
+    // And for every other profile too. Unlocking the vault is the moment every
+    // saved passphrase becomes available at once, so this is when the machine's
+    // agent can hold the whole set — which is what makes the identities real
+    // for terminals and external tools, not just for this window.
+    //
+    // Quiet on purpose: nothing here prompts, and a key that still needs a
+    // passphrase typed is left for the Load all keys button rather than
+    // interrupting an unlock the user asked for for another reason.
+    const loadedElsewhere = await loadRemainingKeys();
+    if (loadedElsewhere > 0) {
+      logToTerminal(
+        `Loaded ${loadedElsewhere} more key(s) into the SSH agent from the vault.`,
+        'success'
+      );
+    }
+
     showToast('Vault unlocked for this session.', 'success');
     return true;
   } catch (error) {
     showToast(errorMessage(error, 'Failed to unlock the vault.'), 'error');
     return false;
+  }
+}
+
+/**
+ * Loads whatever the newly-open vault can now supply. Returns how many arrived.
+ *
+ * Failures are swallowed: this is an extra that runs after a successful unlock,
+ * and an agent that cannot be reached must not turn "vault unlocked" into an
+ * error message about something the user did not ask for.
+ */
+async function loadRemainingKeys(): Promise<number> {
+  try {
+    const result = await api.loadAllSshAgentKeys();
+    await refreshAgent();
+    return result.entries.filter((entry) => entry.outcome === 'loaded').length;
+  } catch {
+    return 0;
   }
 }
 

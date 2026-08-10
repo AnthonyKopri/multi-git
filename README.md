@@ -432,6 +432,10 @@ Selecting or unlocking a profile loads that key into the machine's native SSH ag
 
 On Windows, **Repair and start** can set the OpenSSH Authentication Agent service to start automatically and start it now. The desktop app shows the operating-system elevation prompt because changing a disabled service needs administrator approval; browser mode only explains the manual command.
 
+**Load all keys** puts every configured profile's key into the machine's agent in one press, rather than one repository at a time. Keys with no passphrase, and keys whose passphrase is in an unlocked vault, load without a prompt; anything still locked is listed afterwards and asked for one at a time. Unlocking the vault does the same pass automatically, since that is the moment every saved passphrase becomes available at once. Neither path changes any repository's `core.sshCommand` — loading a key is a machine-level act, and which identity a repository uses stays that repository's setting.
+
+A key that is passphrase-protected is now detected with `ssh-keygen -y -P ''` before `ssh-add` is invoked. Without that check `ssh-add` waits on a prompt no background process can answer until it times out, which looks from the outside like the application hanging at the moment you pressed Push.
+
 Multi-Git tracks which identities it loaded during the current session. **Unload key** removes the selected session-owned key with `ssh-add -d`; **Vault Lock** removes session-owned keys one at a time and never runs `ssh-add -D`, so pre-existing identities from other applications are not cleared.
 
 #### Add an existing key
@@ -488,7 +492,9 @@ The optional vault lets Multi-Git use passphrase-protected keys without asking o
 
 The master key is not stored and cannot be recovered. Saved passphrases are encrypted on disk with AES-256-GCM using a 256-bit key derived with `scrypt`, plus a random salt and IV. They are made available only while the vault is unlocked.
 
-You do not have to use the vault. When a window opens on a repository whose key is locked, or when you fetch, pull or push with one, Multi-Git asks for what it needs then and there — the vault master key if the passphrase is saved, or the key's own passphrase if it is not — and offers to remember it afterwards. Declining is remembered for the session; **Unlock key** in the accounts menu asks again whenever you are ready. A passphrase you type reaches `ssh` through a short-lived askpass bridge and appears in no command line, no log, and no file unless you asked it to be saved.
+You do not have to use the vault. When a window opens on a repository whose key is locked, or when you fetch, pull or push with one, Multi-Git asks for what it needs then and there — the vault master key if the passphrase is saved, or the key's own passphrase if it is not — and offers to remember it afterwards. A passphrase you type reaches `ssh` through a short-lived askpass bridge and appears in no command line, no log, and no file unless you asked it to be saved.
+
+Declining is remembered only for the prompts you did not ask for: a window restoring, or an external tool being launched. Pressing **Fetch**, **Pull** or **Push** always asks, because at that moment you have just asked for the thing the key is for. If the agent itself is stopped or missing rather than the key being locked, the dialog says so — a passphrase cannot start a service — and offers to run the operation anyway, which still works through the per-operation `GIT_SSH_COMMAND` routing.
 
 ### Worktrees
 
@@ -529,6 +535,8 @@ The **Repository** button in the top toolbar opens one window holding the tools 
 **Submodules** keeps two commits apart, because conflating them is what makes submodule tools dangerous. The superproject records which commit a submodule *should* be at; the submodule's working tree is at whatever you left it at. A row says which of the two is out of step rather than showing one "out of date" badge that could mean either. **Update** moves the working tree to the pinned commit — it does not change what is pinned. **Deinitialize** removes the checked-out working tree but leaves the `.gitmodules` declaration in place; uncommitted submodule contents cannot be recovered. Each submodule is acted on separately, so one whose remote is down does not hide the nine that worked.
 
 **LFS** needs Git LFS installed; Multi-Git will not install it, and says so plainly rather than showing an empty list that reads as "no large files here". A tracked file is committed as a small pointer, and the real bytes may or may not be on this machine — the list says which, and offers to fetch the ones that are not. Every transfer previews what it would move first. Locking is optional in the LFS spec, so a server without it is reported as a fact; force-releasing someone else's lock asks first and is never a silent retry.
+
+The tab also answers a third question the other two hide: whether `git lfs install` has been run *in this repository*. It writes four hooks that run on every pull, merge, checkout and commit whether or not a single file is tracked, and on an SSH remote those hooks ask `ssh` for an LFS token — so a repository with no large files in it can still appear to hang on a line that says Git LFS. When the hooks are there and nothing is routed through the filter, the sidebar says so and **Disable LFS here** removes them. Both directions are `--local`, so neither can reach your global configuration or change what other repositories do, and a hook whose body does not name LFS is never touched however its file is named. Removal works even on a machine where `git lfs` itself is gone, which is the case where stale hooks cost the most.
 
 **Patches** builds one from commits, a range, or your uncommitted work, in mailbox form (which keeps each commit's author and message) or as a plain diff. **Check only** tells you whether it applies without writing anything. Applying saves a recovery point first, and a patch that would write outside the repository is refused before anything runs.
 
