@@ -507,7 +507,7 @@ async function removeWorktree(worktree: WorktreeInfo): Promise<void> {
 
   const typed = await promptDialog({
     title: `Remove ${name}`,
-    label: `This worktree has uncommitted changes. A snapshot is recorded in the Safety Net first, but the folder goes. Type "${name}" to confirm.`,
+    label: `This worktree has uncommitted changes. Safety Net snapshots tracked staged and unstaged work first, but untracked files cannot be recovered after the folder is removed. Type "${name}" to confirm.`,
     type: 'text'
   });
 
