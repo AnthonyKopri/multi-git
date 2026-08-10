@@ -383,6 +383,7 @@ describe('the detached launcher', () => {
   });
 
   it('rejects when the program does not exist', async () => {
+    let exits = 0;
     const fakeSpawn = (() => {
       const child = {
         on(event: string, listener: (value?: unknown) => void) {
@@ -396,7 +397,14 @@ describe('the detached launcher', () => {
       return child;
     }) as unknown as typeof import('node:child_process').spawn;
 
-    await expect(createDetachedLauncher(fakeSpawn).launch('nope', [])).rejects.toThrow(/nope/);
+    await expect(
+      createDetachedLauncher(fakeSpawn).launch('nope', [], {
+        onExit: () => {
+          exits += 1;
+        }
+      })
+    ).rejects.toThrow(/nope/);
+    expect(exits).toBe(0);
   });
 
   it('hides the window when the caller did not ask for one', async () => {
@@ -419,6 +427,33 @@ describe('the detached launcher', () => {
 
     await createDetachedLauncher(fakeSpawn).launch('code', ['/work']);
     expect(seen['windowsHide']).toBe(true);
+  });
+
+  it('notifies a caller with temporary files after the process exits', async () => {
+    const listeners = new Map<string, (value?: unknown) => void>();
+    const child = {
+      pid: 7,
+      on(event: string, listener: (value?: unknown) => void) {
+        listeners.set(event, listener);
+        if (event === 'spawn') {
+          queueMicrotask(() => listener());
+        }
+        return child;
+      },
+      unref() {}
+    };
+    const fakeSpawn = (() => child) as unknown as typeof import('node:child_process').spawn;
+    let exits = 0;
+
+    await createDetachedLauncher(fakeSpawn).launch('mergetool', ['file.txt'], {
+      onExit: () => {
+        exits += 1;
+      }
+    });
+
+    expect(exits).toBe(0);
+    listeners.get('close')?.(0);
+    expect(exits).toBe(1);
   });
 });
 

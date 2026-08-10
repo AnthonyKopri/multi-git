@@ -37,7 +37,8 @@ async function openInMergeTool(): Promise<void> {
   }
 
   const started = await tools.launchToolForKind('merge', {
-    // Git writes these three alongside the conflicted file during a merge.
+    // The desktop launcher fills these protected sibling files from Git's
+    // unmerged index stages, then removes them when the tool exits.
     local: `${openFilePath}.LOCAL`,
     remote: `${openFilePath}.REMOTE`,
     base: `${openFilePath}.BASE`,
