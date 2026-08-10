@@ -1,6 +1,6 @@
 {
   "name": "multi-git",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "A local-first Git desktop client for multiple repositories, accounts, and SSH identities",
   "main": "out/node/main/main.js",
   "scripts": {
