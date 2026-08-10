@@ -7,7 +7,7 @@
 
 **A free, open-source Git desktop client built for multiple repositories, accounts, and SSH identities.**
 
-Multi-Git brings the everyday comfort of clients such as Tower and GitHub Desktop to a transparent, local-first application. Open or clone a repository, review a visual history, stage only what you want, commit, sync, resolve conflicts, and recover from risky operations without translating every intention into a Git command.
+Multi-Git brings the everyday comfort of clients such as Tower and GitHub Desktop to a transparent, local-first application. Open or clone a repository, review a visual history, stage only what you want, commit, sync, open a pull request, resolve conflicts, and recover from risky operations without translating every intention into a Git command.
 
 Its defining feature is account-aware SSH: each repository can use its own key and commit identity, with optional origin-based rules that automatically select the right profile. There is no subscription, account requirement, or hosted service. Multi-Git is MIT-licensed and performs its work through the Git installation on your computer.
 
@@ -19,7 +19,9 @@ Its defining feature is account-aware SSH: each repository can use its own key a
 - **Read a change properly:** unified or side-by-side, with the words that actually changed picked out, whitespace-only changes hidden on request, and before/after previews for images.
 - **See the shape of the project:** browse an all-branches commit graph, inspect commits and changed files, follow file history, and view Git blame.
 - **Sync without the command line:** fetch, pull, push, see ahead/behind counts, switch a compatible origin between HTTPS and SSH, and retry rejected pushes with `--force-with-lease`.
+- **Open a GitHub pull request:** inspect the exact commit range, publish an unpushed branch, and create a ready or draft PR with reviewers, assignees, labels, and a repository pull-request template through the GitHub CLI.
 - **Keep work and personal accounts separate:** assign an SSH key and Git identity to each profile, auto-select profiles from origin URLs, and catch account or identity mismatches before commit or push.
+- **Use the native SSH agent safely:** see whether the selected key is loaded, unlock it only when needed, repair the Windows agent service with explicit approval, and leave identities loaded by other applications alone.
 - **Handle advanced Git workflows:** create and switch branches, track remote branches, merge, rebase, cherry-pick, revert, reset, stash, and manage tags.
 - **Rewrite history deliberately:** plan an interactive rebase visually — reorder, reword, squash, fixup, drop, autosquash — and split a commit into several without leaving the app.
 - **Find things:** search commits by message, author, path, ref or date range; compare any two refs; and reach every action from a Ctrl+K command palette.
@@ -28,14 +30,15 @@ Its defining feature is account-aware SSH: each repository can use its own key a
 - **Resolve conflicts visually:** choose the current or incoming version, edit the result, stage it, and continue or abort the operation.
 - **Work on two branches at once:** create and manage Git worktrees, open each in its own window, and remove them without ever losing uncommitted work by accident.
 - **Group repositories that belong together:** fetch a whole group in one action, cancel it mid-flight, and see the result for each repository.
-- **Hand a folder to a coding agent:** launch Claude, Codex, or any executable you configure in the worktree you choose, with the right account already usable.
+- **Shape the workspace around the task:** resize every major pane, collapse either side panel or individual sidebar sections, and keep controls reachable when the window gets narrow.
+- **Hand a folder to a coding agent:** launch Claude, Codex, or any executable you configure in the worktree you choose, while Multi-Git prepares the selected SSH routing and reports when it is not ready.
 - **Manage remotes properly:** separate fetch and push URLs, refspecs, prune preference, a connectivity test, and a fetch-all that reports each remote separately.
-- **Work with submodules without guessing:** see the commit the superproject pins and the one the submodule is actually at as two different facts, then initialize, update, sync or remove one.
+- **Work with submodules without guessing:** see the commit the superproject pins and the one the submodule is actually at as two different facts, then initialize, update, sync, or deinitialize one.
 - **Handle large files:** inspect Git LFS patterns and objects, tell a downloaded file from a pointer, fetch or prune with a preview of what will move, and take or release file locks.
 - **Move changes as patches:** build one from commits, a range or your uncommitted work, check it applies before it does, and apply it as working changes or as commits.
 - **Find the commit that broke it:** bisect by hand, or let a saved test command decide each step for you.
 - **Annotate commits after the fact:** attach a Git note without rewriting history, and see at a glance which commits carry one.
-- **Use the tools you already have:** configure external diff, merge, editor and terminal programs, and optionally add "Open in Multi-Git" to the Windows Explorer right-click menu.
+- **Bring your own merge tool:** detect and configure external programs, open conflicts in the selected merge tool, and optionally add "Open in Multi-Git" to the Windows Explorer right-click menu.
 - **Watch and stop long work:** a bar along the bottom shows what is running, how long it has taken, and lets you cancel it.
 - **Recover from mistakes:** restore recently discarded files, undo checkpointed operations, and browse a durable recovery journal beside Git's own reflog.
 - **See what the app did:** open the live Terminal Log for the Git commands, output, warnings, and errors behind each action.
@@ -49,15 +52,15 @@ Packaged releases are currently provided for Windows.
 1. Install [Git for Windows](https://git-scm.com/download/win) if `git` is not already available on your system.
 2. Open the [latest Multi-Git release](https://github.com/AnthonyKopri/multi-git/releases/latest).
 3. Download one of the two `.exe` files:
-   - **`Multi-Git.Client.Setup.<version>.exe`** installs Multi-Git and lets you choose the installation directory.
-   - **`Multi-Git.Client.<version>.exe`** is portable and can be run without installation.
+   - **`Multi-Git Client Setup <version>.exe`** installs Multi-Git and lets you choose the installation directory.
+   - **`Multi-Git Client <version>.exe`** is portable and can be run without installation.
 4. Launch **Multi-Git Client**.
 
 The Windows packages are not currently code-signed, so Windows may show a SmartScreen warning. Only continue if the file came from this repository's official Releases page.
 
 ### Run from source
 
-Running from source requires [Node.js 22.12 or newer](https://nodejs.org/), npm, Git, and OpenSSH (`ssh` and `ssh-keygen`).
+Running from source requires [Node.js 22.12 or newer](https://nodejs.org/), npm, Git, and OpenSSH (`ssh`, `ssh-add`, and `ssh-keygen`). The GitHub CLI (`gh`) is optional unless you want Multi-Git to create GitHub repositories or pull requests, and Git LFS is optional unless you use the LFS tools.
 
 ```bash
 git clone https://github.com/AnthonyKopri/multi-git.git
@@ -145,6 +148,12 @@ The application is organized around one active repository:
 - The top toolbar contains origin protocol, sync, log, and refresh controls.
 
 Use the repository dropdown to reopen recent projects, open another folder, create a repository, clone, or remove an entry from recents. Removing an entry only forgets it in Multi-Git; it does not delete the repository.
+
+### Adjustable workspace
+
+Drag the dividers to resize the branch sidebar, History, Workspace Explorer tree, File Diff file list, and commit box. Double-click a divider to restore its default. The left and right panels can also be collapsed from their headers and reopened from the edge of the center workspace; `Ctrl+B` toggles Branches and `Ctrl+Shift+B` toggles History. Individual sidebar sections collapse from their headings.
+
+Sizes and collapsed state live in browser storage. They are shared by windows in the current desktop run and persist in browser mode when it returns to the same port; a new desktop launch uses a new local origin and starts from the defaults. When the window becomes narrow, the toolbar, repository rows, commit controls, and side-panel sections reflow or scroll so their actions remain reachable.
 
 ### Creating a new repository
 
@@ -250,6 +259,22 @@ docs: update portable installation steps
 ```
 
 Enter an optional scope, then click one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, or `perf`. The helper inserts or replaces the prefix; it never blocks a non-conventional message.
+
+### Creating GitHub pull requests
+
+The pull-request button in the top toolbar opens a preflight instead of sending anything immediately. Multi-Git checks that the repository has a GitHub remote, the GitHub CLI (`gh`) is installed and signed in, the branch is not detached, the selected head contains commits the base does not, and an open pull request does not already exist.
+
+The creator shows the target repository, base and compare branches, ahead/behind counts, changed-file count, and the commit subjects that will be included. It suggests a title from the single commit or branch name and a description from the repository's pull-request template or commit subjects, without replacing text you have already edited.
+
+From the same form you can:
+
+- push the compare branch first when it has not been published yet, using the active SSH profile;
+- create a ready pull request or a draft;
+- allow or deny maintainer edits;
+- add reviewers, assignees, and labels; and
+- create from a fork while targeting its upstream repository.
+
+Creation runs through `gh`, so Multi-Git stores no GitHub token. A failed request leaves the title and description in place for retry, and if the branch was pushed before creation failed, the dialog reports that state instead of pushing it again.
 
 ### Interactive rebase
 
@@ -397,17 +422,19 @@ Safety Net adds a recovery layer around actions that are easy to regret.
 
 **Undoable Operations** keeps up to 10 in-memory checkpoints per repository for merge, rebase, cherry-pick, revert, and reset. Clicking undo hard-resets the branch to the saved pre-operation `HEAD`. Checkpoints disappear when the backend/app restarts.
 
-**Recovery Points** are the durable half. Before every reset, rebase, merge,
-cherry-pick, revert, amend, undo, branch delete, stash drop and bulk discard,
-Multi-Git records where every ref that could move was pointing — to a file
+**Recovery Points** are the durable half. Before reset, rebase, merge,
+cherry-pick, revert, amend, undo-commit, branch deletion, stash drop,
+bulk discard, worktree removal, remote removal or prune, submodule deinitialize,
+and patch apply, Multi-Git records where every ref that could move was pointing — to a file
 inside the repository's own `.git`, so it survives restarting the app. The
 recovery browser shows those points beside Git's own reflog, which covers
 everything that happened outside Multi-Git too.
 
-From either list you can create a branch at a recorded position, which recovers
-work without moving anything you are standing on; reset a ref back to it, which
-is a hard reset and says so; or copy the equivalent Git command. Restoring
-records a recovery point of its own, so undoing an undo works. Points expire
+From both Recovery Points and reflog you can create a branch at a recorded position, which recovers
+work without moving anything you are standing on, or copy the equivalent Git
+command. A Recovery Point also offers **Restore**, which hard-resets the branch
+recorded by that point and says so; reflog rows stay read-only. Restoring records
+a recovery point of its own, so undoing an undo works. Points expire
 after 14 days by default, and expiry is frozen entirely while a merge or rebase
 is unfinished.
 
@@ -430,6 +457,16 @@ Authentication and authorship are related in the UI but distinct in Git:
 An SSH profile can carry both. When you switch to a profile whose identity differs from the repository, Multi-Git offers to update the repository-local Git identity. It also warns before committing with a mismatched identity or pushing with an account that conflicts with an Auto-Select Rule.
 
 On a machine with no repositories yet, the welcome screen carries its own **Set Up Keys** button. It reports how many key profiles exist and opens the SSH manager, going straight to the generator when there are none, so a first key can be created before the first clone.
+
+#### Native SSH agent
+
+The accounts menu distinguishes a working agent with no identities from a stopped, disabled, missing, or unreachable agent. Its status chip also says whether the selected profile's key is loaded.
+
+Selecting or unlocking a profile loads that key into the machine's native SSH agent after obtaining its passphrase from the unlocked vault or a one-time prompt. This makes the same identity available to terminals, editors, and coding agents launched for the repository; in-app Git operations still have their per-operation `GIT_SSH_COMMAND` routing if the agent is unavailable.
+
+On Windows, **Repair and start** can set the OpenSSH Authentication Agent service to start automatically and start it now. The desktop app shows the operating-system elevation prompt because changing a disabled service needs administrator approval; browser mode only explains the manual command.
+
+Multi-Git tracks which identities it loaded during the current session. **Unload key** removes the selected session-owned key with `ssh-add -d`; **Vault Lock** removes session-owned keys one at a time and never runs `ssh-add -D`, so pre-existing identities from other applications are not cleared.
 
 #### Add an existing key
 
@@ -481,7 +518,7 @@ The optional vault lets Multi-Git use passphrase-protected keys without asking o
 1. Click **Set Up Vault** and choose a master key.
 2. Add or edit an SSH profile, enter its SSH passphrase, and enable **Save passphrase in the encrypted vault**.
 3. Unlock the vault once per app session when that profile is needed.
-4. Click **Lock** to remove the derived decryption key from app memory.
+4. Click **Lock** to remove the derived decryption key from app memory and unload the SSH identities this Multi-Git session added to the native agent.
 
 The master key is not stored and cannot be recovered. Saved passphrases are encrypted on disk with AES-256-GCM using a 256-bit key derived with `scrypt`, plus a random salt and IV. They are made available only while the vault is unlocked.
 
@@ -499,13 +536,13 @@ The **Worktrees** section in the sidebar lists every worktree of the open reposi
 - **Lock** with an optional reason, so Git refuses to prune or remove it — for a worktree on a removable drive, for instance. The reason is shown wherever the lock gets in the way.
 - **Move** a worktree, or **Repair links** after folders were moved outside Multi-Git.
 - **Prune preview** lists the worktrees Git would forget because their folders are gone. Looking never removes anything.
-- **Remove** refuses a worktree that is dirty or locked. Removing one with uncommitted changes anyway requires typing its folder name, and Multi-Git snapshots the work into the Safety Net first — that snapshot lives in the shared object store, so it survives the folder.
+- **Remove** refuses a worktree that is dirty or locked. Removing one with uncommitted changes anyway requires typing its folder name. Multi-Git snapshots tracked staged and unstaged work into the shared object store first, but Git cannot make that snapshot from untracked-only files; the confirmation warns that untracked files are not recoverable after forced removal.
 
 One account per repository family: a repository and its worktrees share one `.git/config`, so they share one SSH identity. Choosing an account in any worktree sets it for all of them, which is what Git will actually do.
 
 ### Multiple windows and repository groups
 
-**Open in a new window** gives a repository or worktree its own window with its own selection, diff and commit message. Asking twice focuses the window that already exists rather than opening a second one that would fight it for the same index lock. Windows reopen at the next launch; turn that off with **Reopen windows on startup**. In browser mode the equivalent is a named tab.
+**Open in a new window** gives a repository or worktree its own window with its own selection, diff and commit message. Asking twice focuses the window that already exists rather than opening a second one that would fight it for the same index lock. Window restoration is enabled by default through the `restoreWindowsOnStartup` configuration setting. In browser mode the equivalent is a named tab.
 
 The **Groups** section collects repositories that belong together. **Fetch all** fetches every one of them with a concurrency cap, can be cancelled, and reports each repository separately — one unreachable remote does not hide the five that worked.
 
@@ -513,9 +550,9 @@ The **Groups** section collects repositories that belong together. **Fetch all**
 
 Multi-Git can start a tool you configure in the worktree you choose. **Detect installed** looks for known CLIs on your PATH and seeds an editable definition; you can add any executable by hand, with its own arguments and environment.
 
-A launch sets the worktree as the working directory, passes arguments as separate values with no shell anywhere in the path, and gives the tool an allowlisted environment rather than a copy of Multi-Git's. An optional starting prompt is passed as one argument and is never recorded. Before launching, Multi-Git makes sure the account that worktree uses is actually loaded, so the agent can push.
+A launch sets the worktree as the working directory, passes arguments as separate values with no shell anywhere in the path, and gives the tool an allowlisted environment rather than a copy of Multi-Git's. An optional starting prompt is passed as one argument and is never recorded. Before launching, Multi-Git tries to prepare the account that worktree uses and reports its routing state; declining or failing an unlock does not block launch, so the tool may still need authentication before it can push.
 
-What it does not do: install hooks, read the tool's session state, or claim to know what it is doing. **Launched** means the process started. Launching is available in the desktop app only — the local HTTP server has no route that starts a program.
+What it does not do: install hooks, read the tool's session state, or claim to know what it is doing. **Launched** means the process started. Agent definitions can be managed in either mode, but no HTTP route launches one; launch is desktop IPC only.
 
 ### The Repository hub
 
@@ -523,7 +560,7 @@ The **Repository** button in the top toolbar opens one window holding the tools 
 
 **Remotes** shows more than a URL, because a remote is more than one. Fetch and push URLs are separate rows — a push URL that differs is the fork workflow, reading from upstream and writing to your own. Refspecs are shown rather than assumed, and prune says whether it was set on this remote or inherited from `fetch.prune`. **Test** reaches the remote with the account this repository uses and tells you whether a failure was the network or the key. Removing a remote or pruning its stale branches saves a recovery point first: a remote-tracking ref is the only local record that a branch existed once its remote is gone.
 
-**Submodules** keeps two commits apart, because conflating them is what makes submodule tools dangerous. The superproject records which commit a submodule *should* be at; the submodule's working tree is at whatever you left it at. A row says which of the two is out of step rather than showing one "out of date" badge that could mean either. **Update** moves the working tree to the pinned commit — it does not change what is pinned. Each submodule is acted on separately, so one whose remote is down does not hide the nine that worked.
+**Submodules** keeps two commits apart, because conflating them is what makes submodule tools dangerous. The superproject records which commit a submodule *should* be at; the submodule's working tree is at whatever you left it at. A row says which of the two is out of step rather than showing one "out of date" badge that could mean either. **Update** moves the working tree to the pinned commit — it does not change what is pinned. **Deinitialize** removes the checked-out working tree but leaves the `.gitmodules` declaration in place; uncommitted submodule contents cannot be recovered. Each submodule is acted on separately, so one whose remote is down does not hide the nine that worked.
 
 **LFS** needs Git LFS installed; Multi-Git will not install it, and says so plainly rather than showing an empty list that reads as "no large files here". A tracked file is committed as a small pointer, and the real bytes may or may not be on this machine — the list says which, and offers to fetch the ones that are not. Every transfer previews what it would move first. Locking is optional in the LFS spec, so a server without it is reported as a fact; force-releasing someone else's lock asks first and is never a silent retry.
 
@@ -533,7 +570,7 @@ The **Repository** button in the top toolbar opens one window holding the tools 
 
 **Notes** attaches text to a commit afterwards. The note lives in its own ref, so writing one does not rewrite history — and does not travel with an ordinary push, which is why fetching and pushing notes are separate actions here. Commits carrying a note are marked in the history list; open one to read or edit it.
 
-**Tools** configures external diff, merge, editor, terminal and file-manager programs. **Detect installed** fills in a definition for each tool found on your PATH, including the arguments it expects. Those arguments are a guess, so the first time each kind is used Multi-Git shows the exact command and asks — once per kind, not once per launch. An external merge tool never marks a file resolved on your behalf: Multi-Git re-reads Git's state afterwards rather than assuming.
+**Tools** stores definitions for external diff, merge, editor, terminal, and file-manager programs. **Detect installed** fills in a definition for each tool found on your PATH, including the arguments it expects. In 3.0 the conflict resolver can launch the configured merge tool and shows the exact command for first-use approval. The other definitions can be detected and edited here but are not yet connected to launch buttons in their normal workflows. An external merge tool never marks a file resolved on your behalf: Multi-Git re-reads Git's state afterwards rather than assuming.
 
 The same tab can add **Open in Multi-Git** to the Windows Explorer right-click menu. It writes two registry keys under your own user account — no administrator rights, no file associations — and shows you exactly which two before it writes or removes them.
 
@@ -571,10 +608,12 @@ Multi-Git has no required cloud account. Application state stays on your machine
 ```text
 ~/.multi-git-client-config.json   recent repositories, profiles, rules, settings,
                                   repository groups, agent definitions and launch
-                                  history, and which windows were open
+                                  history, external tools and approvals, saved bisect
+                                  commands, LFS/Explorer integration, and open windows
 ~/.multi-git-client-secrets.json  encrypted passphrases, if the vault is used
 <repository>/.git/multi-git/      the durable recovery journal
 <temporary directory>/multi-git-trash/  short-lived discarded-file snapshots
+browser localStorage              pane sizes and collapsed pane/section state
 ```
 
 Private key files remain at the paths you choose and are not copied into the configuration file. The app stores profile metadata and key paths, while the optional secrets file stores only encrypted passphrases.
@@ -587,7 +626,7 @@ Several further protections apply, on the principle that a repository's contents
 - File reads resolve symlinks before checking containment, so a link inside a repository cannot reach a file outside it.
 - Values that reach a Git or GitHub CLI argument vector are validated, and file paths are separated with `--`, so a branch, tag, or file name that looks like a command-line option is treated as data.
 - Reading a public key is limited to keys registered to a profile or living under `~/.ssh`.
-- Starting a program is not something the local API can do. Terminals, editors and coding agents are launched only through the desktop app's preload bridge, which validates every path and takes an agent id rather than an executable name.
+- The local API can invoke fixed-purpose helpers such as Git, `gh`, and OpenSSH. It may validate and store user-configured executable definitions, but it never directly executes an arbitrary command supplied by a request; desktop IPC launches saved agents and tools by id after validating their context.
 - A launched tool gets an allowlisted environment, not a copy of Multi-Git's — in particular it never inherits the askpass bridge that would answer with a stored passphrase.
 - Agent launch history records what was started and where, but never the prompt.
 
@@ -595,9 +634,13 @@ Several further protections apply, on the principle that a repository's contents
 
 See [GitHub Releases](https://github.com/AnthonyKopri/multi-git/releases) for installers, portable builds, and release notes.
 
-The running version is in the window title — `Multi-Git Client v2.3.0` — and in
+The running version is in the window title — `Multi-Git Client v3.0.0` — and in
 the browser tab in browser mode, so a bug report can name it without digging.
 
+- **v3.0.0:** major workflow expansion with native SSH-agent management, GitHub pull-request creation, precision staging and selective stashing, richer diffs, interactive rebase, commit signing, search and branch maintenance, durable recovery, worktrees and multi-window groups, coding-agent launchers, repository-wide remotes/submodules/LFS/patches/bisect/notes, external-tool definitions and Explorer integration, cancellable operations, responsive panes, Unicode repository paths, configuration migrations, and cross-platform CI.
+- **v2.2.1:** TypeScript application migration, modular server and renderer, hardened process and path handling, build fixes, dependency updates, and SSH/vault UI polish.
+- **v1.0.6:** new-repository wizard, first-run SSH setup, and release tooling.
+- **v1.0.5:** one-click ignore plus confirmed file discard.
 - **v1.0.4:** streamlined SSH key and vault setup, UI fixes, and executable icon fixes.
 - **v1.0.3:** redesigned UI/UX, pop-out Terminal Log, SSH/HTTPS origin switch, SSH config synchronization, commit history graph, and assorted UI fixes.
 - **v1.0.2:** simplified Remote Sync controls.
@@ -634,17 +677,17 @@ multi-git/
 |-- scripts/
 |   |-- build.mjs       # esbuild bundling and static asset copy
 |   |-- release.js      # Version bump and build driver
-|   `-- after-pack.js   # Windows executable icon post-processing
+|   `-- after-pack.js   # Windows executable icon and version metadata
 |-- out/                # Compiled output (generated, not committed)
 |-- package.json        # Scripts, dependencies, and Electron Builder config
 `-- LICENSE             # MIT license
 ```
 
-The whole application is TypeScript, compiled into `out/`. `public/` holds only the HTML, CSS, and the Terminal Log window script, which are copied alongside the bundle at build time.
+The application logic is predominantly TypeScript and is compiled into `out/`; the packaging scripts and Terminal Log window retain small JavaScript modules. `public/` holds the HTML, CSS, and Terminal Log window script that are copied alongside the bundle at build time.
 
 The UI talks to a localhost JSON API. Repository-scoped requests carry the selected path in the `x-repo-path` header, which one middleware validates; the app sends it base64-encoded, marked by `x-repo-path-encoding`, so a folder named in any script survives the trip. Git commands are executed as argument arrays with Node's `spawn`, never through a shell; values that could be read as options are validated and pathspecs are separated with `--`. A selected profile is applied per operation with `GIT_SSH_COMMAND`, and saved passphrases use a short-lived askpass bridge.
 
-Starting a program that is not Git — a terminal, an editor, a coding agent — is deliberately not on that API. Those go through the Electron preload bridge instead, which validates every path it is given and looks agents up by id in your saved configuration, so nothing reachable over the local port can name a program to run.
+The API exposes fixed-purpose operations that may invoke Git, GitHub/OpenSSH helpers, the default file opener, or a folder picker. It can validate and store executable definitions, but does not directly execute an arbitrary command supplied by a request. User-configured agents and external tools instead go through the Electron preload bridge, which validates context and resolves saved definitions by id; saved automated-bisect commands are likewise validated as argument vectors rather than shell strings.
 
 ## Developer Commands
 
@@ -804,7 +847,7 @@ npm start
 
 ### A risky action needs to be undone
 
-First check **Safety Net**. Checkpoint undo is available only during the current app/backend session, while discarded file copies last up to 24 hours. If neither entry exists, use Git reflog or your backup before making more changes.
+First check **Safety Net**. Checkpoint undo is available only during the current app/backend session, durable recovery points normally remain for 14 days, Git's reflog covers ref movement from inside and outside Multi-Git, and discarded file copies last up to 24 hours. If none contains what you need, use your backup before making more changes.
 
 ### Build output is large
 
