@@ -19,7 +19,12 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { withButtonBusy } from '../../ui/busy';
 import { registerHubTab } from '../repo-hub';
-import type { LfsLock, LfsObject, LfsStatus } from '../../../shared/lfs-types';
+import type {
+  LfsInstallAction,
+  LfsLock,
+  LfsObject,
+  LfsStatus
+} from '../../../shared/lfs-types';
 
 let ui: Elements;
 let status: LfsStatus | null = null;
@@ -61,6 +66,18 @@ function renderSummary(): void {
     return;
   }
 
+  // Surfaced ahead of everything else, and in both the installed and the
+  // not-installed case: hooks that slow every pull down for no benefit are
+  // something to be told about, not something to find by opening a tab you had
+  // no reason to open.
+  if (status.installation.redundant) {
+    ui.lfsSummary.replaceChildren(
+      el('span', { className: 'warn-state', text: 'LFS hooks installed but unused' }),
+      el('span', { text: 'They run on every pull. Open the LFS tab to remove them.' })
+    );
+    return;
+  }
+
   if (!status.availability.installed) {
     ui.lfsSummary.replaceChildren(
       el('span', { className: 'empty-state', text: 'Git LFS is not installed' })
@@ -95,7 +112,13 @@ async function renderPanel(panel: HTMLElement): Promise<void> {
   await refreshLfs();
 
   if (!status || !status.availability.installed) {
-    panel.replaceChildren(buildMissingNotice());
+    // Still offers the repository section: hooks left behind by a machine that
+    // did have LFS are the reason pulls are slow here, and they can be removed
+    // without the program.
+    panel.replaceChildren(
+      buildMissingNotice(),
+      ...(status?.installation.installed ? [buildInstallation()] : [])
+    );
     return;
   }
 
@@ -104,11 +127,134 @@ async function renderPanel(panel: HTMLElement): Promise<void> {
       className: 'modal-desc',
       text: `Git LFS ${status.availability.version ?? ''} keeps large files out of the repository itself. Each tracked file is committed as a pointer; the real bytes are fetched separately, which is why some may be listed here without being downloaded.`
     }),
+    buildInstallation(),
     buildPatterns(),
     buildTransfers(),
     buildObjects(),
     buildLocks()
   );
+}
+
+/**
+ * The repository section: is LFS wired in here, and should it be.
+ *
+ * Separate from the tracked-pattern list because they answer different
+ * questions. `git lfs install` writes four hooks that run on every pull, merge,
+ * checkout and commit whether or not a single file is tracked — and on an SSH
+ * remote those hooks shell out to ssh for an endpoint token, so a repository
+ * with no large files in it can still sit waiting on a passphrase prompt under
+ * a line that says Git LFS. Somewhere to see that, and a button to undo it, is
+ * the whole point of this section.
+ */
+function buildInstallation(): HTMLElement {
+  const installation = status?.installation;
+
+  if (!installation) {
+    return el('section');
+  }
+
+  const detail = installation.installed
+    ? [
+        installation.hooks.length > 0
+          ? `hooks: ${installation.hooks.join(', ')}`
+          : 'no hooks',
+        installation.localFilters ? 'repository-local filters set' : 'no repository-local filters'
+      ].join(' · ')
+    : 'No LFS hooks and no repository-local filters. Git runs here without involving LFS at all.';
+
+  const children: HTMLElement[] = [
+    el('div', {
+      className: 'section-header',
+      children: [
+        el('h4', {
+          text: `This repository — ${installation.installed ? 'LFS is installed' : 'LFS is not installed'}`
+        }),
+        installation.installed ? uninstallButton() : installButton()
+      ]
+    }),
+    el('p', { className: 'modal-desc', text: detail })
+  ];
+
+  if (installation.redundant) {
+    children.push(
+      el('div', {
+        className: 'inline-warning',
+        children: [
+          el('p', {
+            text: 'These hooks are doing nothing useful. No file in this repository is routed through LFS, and no LFS objects are present, yet the hooks still run on every pull, merge, checkout and commit.'
+          }),
+          el('p', {
+            text: 'On an SSH remote they also ask ssh for an LFS token, which is why a pull can appear to hang on Git LFS in a repository that has no large files. Removing them is safe and affects this repository only.'
+          })
+        ]
+      })
+    );
+  }
+
+  return el('section', { children });
+}
+
+function installButton(): HTMLButtonElement {
+  const button = el('button', {
+    className: 'btn btn-secondary btn-sm',
+    title: 'Run git lfs install --local, which writes this repository’s LFS hooks and filters',
+    children: [icon('add', 16), el('span', { text: 'Enable LFS here' })]
+  }) as HTMLButtonElement;
+
+  button.addEventListener('click', () => {
+    void withButtonBusy(button, () => changeInstallation('install'));
+  });
+
+  return button;
+}
+
+function uninstallButton(): HTMLButtonElement {
+  const button = el('button', {
+    className: 'btn btn-secondary btn-sm',
+    title: 'Run git lfs uninstall --local, which removes this repository’s LFS hooks and filters',
+    children: [icon('delete', 16), el('span', { text: 'Disable LFS here' })]
+  }) as HTMLButtonElement;
+
+  button.addEventListener('click', () => {
+    void withButtonBusy(button, () => changeInstallation('uninstall'));
+  });
+
+  return button;
+}
+
+async function changeInstallation(action: LfsInstallAction): Promise<void> {
+  const installation = status?.installation;
+
+  // Confirmed only when it could lose something. Removing hooks from a
+  // repository that genuinely routes files through LFS leaves those files
+  // checked out as pointer text, which is worth a sentence first; removing
+  // hooks that track nothing is not.
+  if (action === 'uninstall' && installation && !installation.redundant) {
+    const { confirmed } = await confirmDialog(
+      'This repository does route files through LFS. Removing the hooks means git will no longer replace pointers with the real files on checkout, and pushes will not upload new LFS objects.\n\nOnly this repository is affected; other repositories and the global configuration are left alone.',
+      { title: 'Disable Git LFS here', confirmLabel: 'Disable', danger: true }
+    );
+
+    if (!confirmed) {
+      return;
+    }
+  }
+
+  try {
+    const { installation: next } = await api.setLfsInstallation(action);
+
+    showToast(
+      next.installed
+        ? 'Git LFS is now installed in this repository.'
+        : 'Git LFS hooks and filters removed from this repository.',
+      'success'
+    );
+    logToTerminal(`git lfs ${action} --local`, 'cmd');
+
+    await refreshPanel();
+  } catch (error) {
+    showToast(errorMessage(error), 'error', 8000);
+  }
 }
 
 function buildMissingNotice(): HTMLElement {

@@ -4146,6 +4146,15 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   color: var(--text-muted);
 }
 
+/*
+ * Louder than the muted default, because it is the one line in this summary
+ * that asks the reader to go and change something.
+ */
+.lfs-summary .warn-state {
+  font-weight: 600;
+  color: var(--color-warning-text, #b45309);
+}
+
 /* ==========================================================================
    OPERATIONS BAR
    ========================================================================== */

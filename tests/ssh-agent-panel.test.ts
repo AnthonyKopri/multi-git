@@ -27,10 +27,17 @@ function agentState(overrides: Partial<SshAgentState> = {}): SshAgentState {
 const endpoints = vi.hoisted(() => ({
   getSshAgentStatus: vi.fn(),
   loadSshAgentKey: vi.fn(),
-  unloadSshAgentKey: vi.fn()
+  unloadSshAgentKey: vi.fn(),
+  loadAllSshAgentKeys: vi.fn()
 }));
 
-const state = vi.hoisted(() => ({ activeRepo: '/repo', activeProfileId: 'p1' }));
+const state = vi.hoisted(() => ({
+  activeRepo: '/repo',
+  activeProfileId: 'p1',
+  // The panel asks how many profiles exist before offering to load them all,
+  // so the fake store has to carry the list the real one does.
+  sshProfiles: [] as { id: string; label: string }[]
+}));
 
 vi.mock('../src/renderer/api/endpoints', () => endpoints);
 vi.mock('../src/renderer/ui/toast', () => ({ showToast: vi.fn() }));
@@ -57,6 +64,7 @@ beforeEach(async () => {
   endpoints.getSshAgentStatus.mockReset();
   endpoints.loadSshAgentKey.mockReset();
   endpoints.unloadSshAgentKey.mockReset();
+  endpoints.loadAllSshAgentKeys.mockReset();
 
   // The toast spy is module-level, so calls leak between tests and
   // `mock.calls[0]` would belong to whichever test ran first.
@@ -64,6 +72,7 @@ beforeEach(async () => {
   vi.mocked(showToast).mockClear();
 
   state.activeProfileId = 'p1';
+  state.sshProfiles = [];
   delete (window as { desktopApi?: unknown }).desktopApi;
 });
 
@@ -337,5 +346,101 @@ describe('unloading', () => {
     await Promise.resolve();
 
     expect(endpoints.unloadSshAgentKey).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Loading every profile's key at once.
+ *
+ * The button exists because the per-repository flow only ever loads the key for
+ * the repository in front of you, which leaves a terminal opened in a different
+ * one with no identity at all. What is pinned down here is the shape of that:
+ * it is offered only where it could work, and a partial result is reported as
+ * partial rather than as success.
+ */
+describe('loading every key', () => {
+  it('is hidden when no profiles are configured', async () => {
+    endpoints.getSshAgentStatus.mockResolvedValue({ success: true, agent: agentState() });
+
+    const panel = await mount();
+    await panel.refreshAgent();
+
+    expect(hidden('btn-load-all-keys')).toBe(true);
+  });
+
+  it('is hidden when the agent cannot be reached', async () => {
+    state.sshProfiles = [{ id: 'p1', label: 'Work' }];
+    endpoints.getSshAgentStatus.mockResolvedValue({
+      success: true,
+      agent: agentState({ availability: 'stopped' })
+    });
+
+    const panel = await mount();
+    await panel.refreshAgent();
+
+    // Nothing this button does can start a stopped service; Repair is the
+    // action that helps, and it is the one shown.
+    expect(hidden('btn-load-all-keys')).toBe(true);
+    expect(hidden('btn-repair-agent')).toBe(false);
+  });
+
+  it('is offered when there are profiles and a reachable agent', async () => {
+    state.sshProfiles = [{ id: 'p1', label: 'Work' }];
+    endpoints.getSshAgentStatus.mockResolvedValue({ success: true, agent: agentState() });
+
+    const panel = await mount();
+    await panel.refreshAgent();
+
+    expect(hidden('btn-load-all-keys')).toBe(false);
+  });
+
+  it('reports how many loaded, and how many still need a passphrase', async () => {
+    state.sshProfiles = [
+      { id: 'p1', label: 'Work' },
+      { id: 'p2', label: 'Personal' }
+    ];
+    endpoints.getSshAgentStatus.mockResolvedValue({ success: true, agent: agentState() });
+    endpoints.loadAllSshAgentKeys.mockResolvedValue({
+      success: false,
+      agent: agentState(),
+      entries: [
+        { profileId: 'p1', label: 'Work', outcome: 'loaded' },
+        { profileId: 'p2', label: 'Personal', outcome: 'passphrase-required' }
+      ]
+    });
+
+    const panel = await mount();
+    await panel.refreshAgent();
+
+    const { showToast } = await import('../src/renderer/ui/toast');
+
+    $('btn-load-all-keys').click();
+    await vi.waitFor(() => expect(showToast).toHaveBeenCalled());
+
+    const message = String(vi.mocked(showToast).mock.calls[0]?.[0]);
+    expect(message).toContain('1 key(s) loaded');
+    expect(message).toContain('1 need a passphrase');
+  });
+
+  it('surfaces an unreachable agent as the reason rather than a count', async () => {
+    state.sshProfiles = [{ id: 'p1', label: 'Work' }];
+    endpoints.getSshAgentStatus.mockResolvedValue({ success: true, agent: agentState() });
+    endpoints.loadAllSshAgentKeys.mockResolvedValue({
+      success: false,
+      agent: agentState({ availability: 'stopped' }),
+      entries: [],
+      error: 'The OpenSSH Authentication Agent service is not running.',
+      code: 'REPAIR_REQUIRED'
+    });
+
+    const panel = await mount();
+    await panel.refreshAgent();
+
+    const { showToast } = await import('../src/renderer/ui/toast');
+
+    $('btn-load-all-keys').click();
+    await vi.waitFor(() => expect(showToast).toHaveBeenCalled());
+
+    expect(String(vi.mocked(showToast).mock.calls[0]?.[0])).toContain('not running');
   });
 });

@@ -96,6 +96,38 @@ export type SshAgentErrorCode =
   | 'LOAD_FAILED'
   | 'NOT_SESSION_OWNED';
 
+/** Why one profile's key did or did not reach the agent in a bulk load. */
+export type SshAgentBulkOutcome =
+  /** It was already there — another window, another tool, or an earlier load. */
+  | 'already-loaded'
+  /** Loaded by this request. */
+  | 'loaded'
+  /** Passphrase-protected, and the vault is locked so the saved one is unreachable. */
+  | 'vault-locked'
+  /** Passphrase-protected, and nothing is saved for it. Needs the user to type it. */
+  | 'passphrase-required'
+  /** The key file is not where the profile says it is. */
+  | 'key-missing'
+  /** ssh-add refused it for some other reason. */
+  | 'failed';
+
+export interface SshAgentBulkEntry {
+  profileId: string;
+  label: string;
+  outcome: SshAgentBulkOutcome;
+  /** Present for the failing outcomes. Safe to show verbatim. */
+  error?: string;
+}
+
+export interface SshAgentBulkLoadResponse {
+  success: boolean;
+  agent: SshAgentState;
+  entries: SshAgentBulkEntry[];
+  /** Set when nothing could be attempted at all, such as an unreachable agent. */
+  error?: string;
+  code?: SshAgentErrorCode;
+}
+
 export interface SshAgentRepairResult {
   success: boolean;
   /** True when the user dismissed the elevation prompt. Not an error. */

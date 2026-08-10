@@ -338,3 +338,199 @@ describe('which profile a folder uses', () => {
     expect(session.profileForRepo(stranger)).toBeNull();
   });
 });
+
+/**
+ * Finding out a key needs a passphrase without waiting to find out.
+ *
+ * `ssh-add` given an encrypted key and no AskPass bridge does not fail — it
+ * waits for a prompt that a server process has no way to answer, and keeps
+ * waiting until the thirty-second timeout. That delay is indistinguishable,
+ * from the outside, from the application having hung, and it lands in exactly
+ * the moment someone has just pressed Push.
+ */
+describe('detecting an encrypted key before ssh-add blocks on it', () => {
+  /** A runner whose `ssh-keygen -y -P ''` refuses, as it does for a locked key. */
+  function agentWithEncryptedKey(): FakeRunner {
+    return agentAcceptingKey().on(command('ssh-keygen', '-y'), {
+      exitCode: 1,
+      stderr: 'Load key: incorrect passphrase supplied to decrypt private key'
+    });
+  }
+
+  /** Every `ssh-add` that was an attempt to load, rather than a list or a delete. */
+  function loadAttempts(runner: FakeRunner) {
+    return runner
+      .callsTo('ssh-add')
+      .filter((call) => !call.args.includes('-l') && !call.args.includes('-d'));
+  }
+
+  it('never runs ssh-add for an encrypted key with no passphrase to give it', async () => {
+    const { session } = await sessionWithProfile();
+    const runner = agentWithEncryptedKey();
+
+    const result = await session.applyProfile({ profileId: 'work', runner });
+
+    expect(result.success).toBe(false);
+    // The UI's cue to put a passphrase box in front of the user, now rather
+    // than after a timeout.
+    expect(result.code).toBe('PASSPHRASE_REQUIRED');
+    expect(loadAttempts(runner)).toHaveLength(0);
+  });
+
+  it('still runs ssh-add when a passphrase is supplied', async () => {
+    const { session } = await sessionWithProfile();
+    const runner = agentWithEncryptedKey();
+
+    const result = await session.applyProfile({
+      profileId: 'work',
+      passphrase: PASSPHRASE,
+      runner
+    });
+
+    expect(result.success).toBe(true);
+    expect(loadAttempts(runner)).toHaveLength(1);
+  });
+
+  it('asks ssh-keygen in a form that cannot prompt', async () => {
+    const { session } = await sessionWithProfile();
+    const runner = agentWithEncryptedKey();
+
+    await session.applyProfile({ profileId: 'work', runner });
+
+    const probe = runner.callsTo('ssh-keygen').find((call) => call.args.includes('-y'));
+
+    // `-P ''` is the whole point: it supplies a passphrase, so ssh-keygen
+    // answers either way instead of reaching for a terminal.
+    expect(probe?.args).toContain('-P');
+    expect(probe?.args).toContain('');
+  });
+});
+
+/**
+ * Loading every profile's key at once.
+ *
+ * The per-repository flow loads one key: the one for the repository in front of
+ * you. That leaves a terminal opened somewhere else, or an external agent
+ * running `git push`, with no identity at all — which is the thing loading keys
+ * into the machine's own agent was supposed to fix.
+ */
+describe('loading every profile key', () => {
+  /** A throwaway home holding two profiles. */
+  async function sessionWithTwoProfiles() {
+    const home = fs.mkdtempSync(path.join(workspace, 'home-multi-'));
+    const secondKey = path.join(workspace, 'id_ed25519_second');
+    fs.writeFileSync(secondKey, 'PRIVATE KEY BYTES');
+    fs.writeFileSync(`${secondKey}.pub`, 'ssh-ed25519 AAAAC3Nz second\n');
+
+    fs.writeFileSync(
+      path.join(home, '.multi-git-client-config.json'),
+      JSON.stringify({
+        configVersion: 2,
+        recentRepos: [],
+        sshProfiles: [
+          { id: 'work', label: 'Work', privateKeyPath: keyPath },
+          { id: 'personal', label: 'Personal', privateKeyPath: secondKey }
+        ],
+        accountRules: [],
+        repoSettings: {}
+      })
+    );
+
+    vi.resetModules();
+    vi.stubEnv('USERPROFILE', home);
+    vi.stubEnv('HOME', home);
+
+    return {
+      session: await import('../src/server/ssh/agent-session'),
+      vault: await import('../src/server/vault/vault')
+    };
+  }
+
+  /** An agent that accepts keys but whose keys all report as encrypted. */
+  function agentWithLockedKeys(): FakeRunner {
+    return agentAcceptingKey().on(command('ssh-keygen', '-y'), { exitCode: 1 });
+  }
+
+  it('loads the keys that need no passphrase', async () => {
+    const { session } = await sessionWithTwoProfiles();
+
+    const result = await session.loadAllProfileKeys({ runner: agentAcceptingKey() });
+
+    expect(result.success).toBe(true);
+    expect(result.entries).toHaveLength(2);
+    expect(
+      result.entries.every(
+        (entry) => entry.outcome === 'loaded' || entry.outcome === 'already-loaded'
+      )
+    ).toBe(true);
+  });
+
+  it('reports a locked key as needing a passphrase instead of attempting it', async () => {
+    const { session } = await sessionWithTwoProfiles();
+    const runner = agentWithLockedKeys();
+
+    const result = await session.loadAllProfileKeys({ runner });
+
+    // Partial, and said to be partial: that is what lets the UI ask for the
+    // ones it could not supply rather than claiming they are all in.
+    expect(result.success).toBe(false);
+    expect(result.entries.every((entry) => entry.outcome === 'passphrase-required')).toBe(true);
+
+    const loads = runner
+      .callsTo('ssh-add')
+      .filter((call) => !call.args.includes('-l') && !call.args.includes('-d'));
+    expect(loads).toHaveLength(0);
+  });
+
+  it('distinguishes a shut vault from a passphrase that was never saved', async () => {
+    const { session, vault } = await sessionWithTwoProfiles();
+    vault.unlockVault('master key');
+    vault.setStoredPassphrase('work', PASSPHRASE);
+    vault.lockVault();
+
+    const result = await session.loadAllProfileKeys({ runner: agentWithLockedKeys() });
+
+    const byId = new Map(result.entries.map((entry) => [entry.profileId, entry.outcome]));
+    // One is answerable by unlocking the vault; the other needs typing. They
+    // are different problems with different fixes.
+    expect(byId.get('work')).toBe('vault-locked');
+    expect(byId.get('personal')).toBe('passphrase-required');
+  });
+
+  it('uses a saved passphrase once the vault is open', async () => {
+    const { session, vault } = await sessionWithTwoProfiles();
+    vault.unlockVault('master key');
+    vault.setStoredPassphrase('work', PASSPHRASE);
+
+    const result = await session.loadAllProfileKeys({ runner: agentWithLockedKeys() });
+
+    const byId = new Map(result.entries.map((entry) => [entry.profileId, entry.outcome]));
+    expect(byId.get('work')).toBe('loaded');
+  });
+
+  it('refuses as a whole when no agent is reachable', async () => {
+    const { session } = await sessionWithTwoProfiles();
+
+    const unreachable = new FakeRunner()
+      .on(command('ssh-add', '-l'), { stdout: '', exitCode: 2 })
+      .on(command('sc.exe', 'query'), { stdout: 'STATE : 1 STOPPED' })
+      .on(command('sc.exe', 'qc'), { stdout: 'START_TYPE : 2 AUTO_START' });
+
+    const result = await session.loadAllProfileKeys({ runner: unreachable });
+
+    expect(result.success).toBe(false);
+    expect(result.entries).toEqual([]);
+    expect(result.code).toBeDefined();
+  });
+
+  it('does not touch any repository routing', async () => {
+    // Loading keys is a machine-level act. Which identity a repository uses is
+    // that repository's own setting, and a bulk load must not rewrite it.
+    const repo = createRepoWithHistory();
+    const { session } = await sessionWithTwoProfiles();
+
+    await session.loadAllProfileKeys({ runner: agentAcceptingKey() });
+
+    expect(() => git(repo, 'config', '--local', '--get', 'core.sshCommand')).toThrow();
+  });
+});

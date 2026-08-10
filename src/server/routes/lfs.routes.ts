@@ -21,6 +21,7 @@ import {
   readStatus,
   releaseLock,
   runTransfer,
+  setInstallation,
   trackPattern,
   untrackPattern
 } from '../git/lfs';
@@ -63,6 +64,27 @@ lfsRouter.get(
       operation.fail(error instanceof Error ? error.message : 'Could not read Git LFS state');
       throw error;
     }
+  })
+);
+
+/**
+ * Wires LFS into this repository, or takes it back out.
+ *
+ * Scoped to the repository at every layer: the server only ever passes
+ * `--local`, so neither direction can reach the global config and change what
+ * other repositories on this machine do.
+ */
+lfsRouter.post(
+  '/api/lfs/installation',
+  asyncRoute(async (req, res) => {
+    const repoPath = req.repoPath as string;
+    const action = (req.body ?? {})['action'];
+
+    if (action !== 'install' && action !== 'uninstall') {
+      throw new HttpError('Choose install or uninstall.', 400);
+    }
+
+    res.json({ success: true, installation: await setInstallation(repoPath, action) });
   })
 );
 

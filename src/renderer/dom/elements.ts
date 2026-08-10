@@ -368,6 +368,7 @@ export const ELEMENT_MAP = {
   agentStatusChip: 'agent-status-chip',
   btnRepairAgent: 'btn-repair-agent',
   btnUnloadKey: 'btn-unload-key',
+  btnLoadAllKeys: 'btn-load-all-keys',
   agentDiagnostic: 'agent-diagnostic',
 
   // Pull Request Creator

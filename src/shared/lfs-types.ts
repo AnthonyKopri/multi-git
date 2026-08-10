@@ -14,6 +14,37 @@ export interface LfsAvailability {
   configured: boolean;
 }
 
+/**
+ * Whether `git lfs install` has been run *in this repository*.
+ *
+ * A third question, separate from both "is the program on PATH" and "does this
+ * repository track anything". `git lfs install` writes four hooks and a set of
+ * `filter.lfs.*` entries, and it does that whether or not a single file is
+ * tracked. The hooks then run on every pull, merge, checkout and commit — and
+ * on an SSH remote `git lfs` shells out to `ssh` for an endpoint token, so a
+ * repository that tracks nothing can still sit waiting on an SSH passphrase
+ * prompt under a line that says Git LFS.
+ *
+ * That is the state `redundant` names: hooks installed, nothing tracked, all
+ * cost and no benefit.
+ */
+export interface LfsInstallation {
+  /** Any LFS hook or repository-local `filter.lfs.*` entry is present. */
+  installed: boolean;
+  /** Hook file names found in this repository's hooks directory. */
+  hooks: string[];
+  /** Repository-local `filter.lfs.*` config exists (as opposed to global). */
+  localFilters: boolean;
+  /**
+   * Installed here, yet nothing is tracked and no object is present.
+   *
+   * The hooks cost something on every pull and return nothing. Reported so the
+   * panel can offer to remove them rather than leaving the user to guess why
+   * pulls pause on a repository with no large files in it.
+   */
+  redundant: boolean;
+}
+
 export interface LfsObject {
   oid: string;
   /** Size in bytes, as recorded in the pointer. */
@@ -38,6 +69,8 @@ export interface LfsLock {
 
 export interface LfsStatus {
   availability: LfsAvailability;
+  /** Whether LFS is wired into this repository, and whether that earns its keep. */
+  installation: LfsInstallation;
   trackedPatterns: string[];
   objects: LfsObject[];
   locks: LfsLock[];
@@ -65,9 +98,19 @@ export type LfsErrorCode =
   /** The server refused, or does not implement, the lock API. */
   | 'LFS_LOCKS_UNAVAILABLE'
   /** The transfer itself failed, as distinct from an ordinary git failure. */
-  | 'LFS_TRANSFER_FAILED';
+  | 'LFS_TRANSFER_FAILED'
+  /** `git lfs install --local` or `uninstall --local` failed. */
+  | 'LFS_INSTALL_FAILED';
 
 export interface LfsStatusResponse {
   success: true;
   status: LfsStatus;
+}
+
+/** `install` writes the repository's hooks and filters; `uninstall` removes them. */
+export type LfsInstallAction = 'install' | 'uninstall';
+
+export interface LfsInstallResponse {
+  success: true;
+  installation: LfsInstallation;
 }

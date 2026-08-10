@@ -14,6 +14,7 @@ import {
   setStoredPassphrase
 } from '../vault/vault';
 import {
+  isKeyEncrypted,
   loadKeyIntoAgent,
   readAgentState,
   readKeyFingerprint,
@@ -23,7 +24,11 @@ import {
 import { clearRepoSshCommand, isMultiGitSshCommand, readRepoSshCommand, setRepoSshCommand } from './repo-routing';
 import type { ExecutableRunner } from '../process/runner';
 import type { SshProfile } from '../../shared/config-types';
-import type { SshAgentErrorCode, SshAgentState } from '../../shared/ssh-agent-types';
+import type {
+  SshAgentBulkEntry,
+  SshAgentErrorCode,
+  SshAgentState
+} from '../../shared/ssh-agent-types';
 
 /** The System profile: inherit whatever the environment already provides. */
 export const SYSTEM_PROFILE_ID = '';
@@ -251,6 +256,129 @@ export async function unloadProfileKey(
   }
 
   return { success: true, agent };
+}
+
+/**
+ * Loads every profile's key into the machine's own agent in one pass.
+ *
+ * The per-profile flow only ever loads the key for the repository in front of
+ * you, which is right for that flow and wrong for the thing people actually
+ * want when they sit down: every identity available to every terminal and every
+ * external tool for the rest of the session, without opening each repository in
+ * turn to make it happen.
+ *
+ * Nothing here prompts. A key whose passphrase is not already reachable — no
+ * vault, locked vault, nothing saved — is reported as needing one rather than
+ * being attempted, because an attempt would mean `ssh-add` waiting on a prompt
+ * that this process has no way to answer.
+ */
+export async function loadAllProfileKeys(
+  options: { runner?: ExecutableRunner | undefined } = {}
+): Promise<{
+  success: boolean;
+  agent: SshAgentState;
+  entries: SshAgentBulkEntry[];
+  error?: string;
+  code?: SshAgentErrorCode;
+}> {
+  const runner = options.runner;
+  const before = await agentStatus({ ...(runner ? { runner } : {}) });
+
+  if (before.availability !== 'ready') {
+    return {
+      success: false,
+      agent: before,
+      entries: [],
+      error: before.diagnostic ?? 'No SSH agent is available.',
+      code: before.repairRequiresElevation ? 'REPAIR_REQUIRED' : 'AGENT_UNAVAILABLE'
+    };
+  }
+
+  const loaded = new Set(before.keys.map((key) => key.fingerprint));
+  const entries: SshAgentBulkEntry[] = [];
+
+  for (const profile of readConfig().sshProfiles) {
+    entries.push(await loadOneForBulk(profile, loaded, runner));
+  }
+
+  const agent = await agentStatus({ ...(runner ? { runner } : {}) });
+
+  return {
+    // Anything that still needs a passphrase is a partial result, and saying
+    // so is what lets the UI ask for the ones that are missing.
+    success: entries.every(
+      (entry) => entry.outcome === 'loaded' || entry.outcome === 'already-loaded'
+    ),
+    agent,
+    entries
+  };
+}
+
+/** One profile's share of the bulk load. Never prompts, never throws. */
+async function loadOneForBulk(
+  profile: SshProfile,
+  loaded: Set<string>,
+  runner: ExecutableRunner | undefined
+): Promise<SshAgentBulkEntry> {
+  const base = { profileId: profile.id, label: profile.label };
+
+  const fingerprint = await readKeyFingerprint(profile.privateKeyPath, runner);
+
+  if (fingerprint && loaded.has(fingerprint)) {
+    return { ...base, outcome: 'already-loaded' };
+  }
+
+  const encrypted = await isKeyEncrypted(profile.privateKeyPath, runner);
+
+  if (encrypted) {
+    if (hasStoredPassphrase(profile.id) && !isUnlocked()) {
+      return { ...base, outcome: 'vault-locked' };
+    }
+
+    const stored = isUnlocked() ? getStoredPassphrase(profile.id) : null;
+
+    if (!stored) {
+      return { ...base, outcome: 'passphrase-required' };
+    }
+
+    const outcome = await loadKeyIntoAgent({
+      privateKeyPath: profile.privateKeyPath,
+      passphrase: stored,
+      ...(runner ? { runner } : {})
+    });
+
+    if (!outcome.loaded) {
+      return {
+        ...base,
+        outcome: 'failed',
+        error: outcome.error ?? 'The saved passphrase was not accepted for this key.'
+      };
+    }
+
+    if (outcome.fingerprint) {
+      loaded.add(outcome.fingerprint);
+    }
+    return { ...base, outcome: 'loaded' };
+  }
+
+  const outcome = await loadKeyIntoAgent({
+    privateKeyPath: profile.privateKeyPath,
+    ...(runner ? { runner } : {})
+  });
+
+  if (!outcome.loaded) {
+    const error = outcome.error ?? 'ssh-add could not load the key.';
+    return {
+      ...base,
+      outcome: /not found/i.test(error) ? 'key-missing' : 'failed',
+      error
+    };
+  }
+
+  if (outcome.fingerprint) {
+    loaded.add(outcome.fingerprint);
+  }
+  return { ...base, outcome: 'loaded' };
 }
 
 /**

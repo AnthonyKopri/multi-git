@@ -10,6 +10,9 @@
 // fails because the LFS server rejected an upload is a different problem with a
 // different fix from a push that fails because the branch moved, and reporting
 // the first as the second sends the user looking in the wrong place.
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { executableRunner, CommandSpawnError } from '../process/runner';
 import type { ExecutableRunner } from '../process/runner';
 import { tryGitCommand } from './run';
@@ -17,6 +20,8 @@ import { pathArg } from './args';
 import type {
   LfsAvailability,
   LfsErrorCode,
+  LfsInstallAction,
+  LfsInstallation,
   LfsLock,
   LfsObject,
   LfsStatus,
@@ -154,6 +159,224 @@ async function requireLfs(repoPath: string): Promise<LfsAvailability> {
   }
 
   return availability;
+}
+
+// ---------- repository installation ----------
+
+/**
+ * The hooks `git lfs install` writes.
+ *
+ * `post-commit` is in the list even though it does no network work: it is one
+ * of the four the installer writes, and a partial set is still an installation.
+ */
+const LFS_HOOKS = ['post-checkout', 'post-commit', 'post-merge', 'pre-push'] as const;
+
+/**
+ * Whether a hook file is LFS's rather than the user's own.
+ *
+ * Matched on the body rather than the name because all four are ordinary git
+ * hook names that a project may well use for something else. Deleting a
+ * hand-written `pre-push` because it shares a name with LFS's would be a far
+ * worse bug than failing to notice LFS is installed.
+ */
+function isLfsHook(hookPath: string): boolean {
+  try {
+    return /git[- ]lfs/.test(fs.readFileSync(hookPath, 'utf8'));
+  } catch {
+    // Unreadable, a directory, a dangling link. Not something to claim as ours.
+    return false;
+  }
+}
+
+/**
+ * The hooks directory git would actually use.
+ *
+ * `rev-parse --git-path` rather than `.git/hooks`: it honours `core.hooksPath`
+ * and resolves correctly inside a linked worktree, both of which put the hooks
+ * somewhere other than where the obvious guess would look.
+ */
+async function hooksDirectory(repoPath: string): Promise<string | null> {
+  const result = await tryGitCommand(repoPath, ['rev-parse', '--git-path', 'hooks']);
+  const relative = result?.stdout.trim();
+
+  if (!relative) {
+    return null;
+  }
+
+  return path.isAbsolute(relative) ? relative : path.join(repoPath, relative);
+}
+
+/**
+ * Whether LFS is wired into this repository, as opposed to merely present on
+ * the machine or actually used by the project.
+ *
+ * Git for Windows ships `filter.lfs.*` in its *system* config, so the presence
+ * of a filter proves nothing on its own — only a repository-local one was
+ * written by `git lfs install --local`. `--local` is therefore not optional
+ * here; without it every repository on a Windows box reads as installed.
+ */
+export async function readInstallation(repoPath: string): Promise<LfsInstallation> {
+  const directory = await hooksDirectory(repoPath);
+
+  const hooks = directory
+    ? LFS_HOOKS.filter((hook) => isLfsHook(path.join(directory, hook)))
+    : [];
+
+  const filters = await tryGitCommand(repoPath, [
+    'config',
+    '--local',
+    '--get-regexp',
+    '^filter\\.lfs\\.'
+  ]);
+  const localFilters = (filters?.stdout ?? '').trim() !== '';
+
+  const installed = hooks.length > 0 || localFilters;
+
+  if (!installed) {
+    return { installed, hooks: [], localFilters, redundant: false };
+  }
+
+  // Read from `.gitattributes` rather than from `git lfs track`, because the
+  // case this most needs to get right is a repository whose hooks outlived the
+  // program: `git lfs track` cannot run there, would answer "no patterns", and
+  // would make a repository that genuinely uses LFS look safe to strip.
+  const routed = await hasLfsAttributes(repoPath);
+
+  // Objects are consulted as well as attributes because a clone can hold LFS
+  // content whose `.gitattributes` entry has since been removed. Calling that
+  // redundant would offer to remove the hooks that still fetch it.
+  const objects = routed ? [] : await listObjects(repoPath);
+
+  return {
+    installed,
+    hooks: [...hooks],
+    localFilters,
+    redundant: !routed && objects.length === 0
+  };
+}
+
+/** Attribute files git knows about, root and nested. */
+const ATTRIBUTE_PATHSPECS = [':(glob).gitattributes', ':(glob)**/.gitattributes'] as const;
+
+/** How many attribute files are worth opening before taking the hint. */
+const ATTRIBUTE_FILE_LIMIT = 50;
+
+/**
+ * Whether anything in this repository is routed through the LFS filter.
+ *
+ * Deliberately reads the files instead of asking `git lfs`, so the answer holds
+ * on a machine where LFS is not installed — which is precisely when a stale set
+ * of hooks is doing the most damage and the least good.
+ */
+async function hasLfsAttributes(repoPath: string): Promise<boolean> {
+  // `.git/info/attributes` is not a tracked file, so ls-files will never
+  // return it, and it routes files just as effectively.
+  const infoPath = await tryGitCommand(repoPath, ['rev-parse', '--git-path', 'info/attributes']);
+  const infoRelative = infoPath?.stdout.trim();
+
+  if (infoRelative) {
+    const resolved = path.isAbsolute(infoRelative)
+      ? infoRelative
+      : path.join(repoPath, infoRelative);
+    if (mentionsLfsFilter(resolved)) {
+      return true;
+    }
+  }
+
+  // The working-tree root file, checked directly rather than through
+  // `ls-files`. Git honours `.gitattributes` whether or not it is committed, so
+  // a repository set up but not yet committed still routes its files — and
+  // reading only tracked files would call that repository redundant and offer
+  // to strip the hooks it is about to need.
+  if (mentionsLfsFilter(path.join(repoPath, '.gitattributes'))) {
+    return true;
+  }
+
+  const listed = await tryGitCommand(repoPath, ['ls-files', '-z', '--', ...ATTRIBUTE_PATHSPECS]);
+
+  const files = (listed?.stdout ?? '')
+    .split('\0')
+    .filter((entry) => entry !== '')
+    .slice(0, ATTRIBUTE_FILE_LIMIT);
+
+  return files.some((file) => mentionsLfsFilter(path.join(repoPath, file)));
+}
+
+/** `*.psd filter=lfs diff=lfs merge=lfs -text` — the filter is the part that matters. */
+function mentionsLfsFilter(attributesPath: string): boolean {
+  try {
+    return /filter\s*=\s*lfs/.test(fs.readFileSync(attributesPath, 'utf8'));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Runs `git lfs install --local` or `uninstall --local`.
+ *
+ * `--local` throughout, and deliberately: the unscoped forms write to the
+ * user's *global* config, so an "uninstall" meant to speed up one repository
+ * would quietly take LFS out of every other repository on the machine.
+ */
+export async function setInstallation(
+  repoPath: string,
+  action: LfsInstallAction
+): Promise<LfsInstallation> {
+  if (action === 'install') {
+    // Nothing can write LFS's hooks except LFS itself.
+    await requireLfs(repoPath);
+  }
+
+  const result = await runLfs(repoPath, [action, '--local'], { timeoutMs: 60_000 });
+
+  if (result.code === 0) {
+    return readInstallation(repoPath);
+  }
+
+  // The repository whose hooks outlived the program. `git lfs uninstall`
+  // cannot run, yet those hooks are exactly what is slowing every pull down,
+  // so the removal is done directly rather than left as advice.
+  if (action === 'uninstall' && result.spawnFailed) {
+    return removeInstallationWithoutLfs(repoPath);
+  }
+
+  throw new LfsError(
+    result.stderr.trim() || `git lfs ${action} --local failed.`,
+    'LFS_INSTALL_FAILED',
+    { statusCode: 500 }
+  );
+}
+
+/**
+ * Undoes `git lfs install --local` without `git lfs`.
+ *
+ * Only hooks whose body names LFS are deleted — the check `readInstallation`
+ * already applies — so a hand-written `pre-push` that happens to share a name
+ * is never removed. Config is unset with `--local`, which cannot reach the
+ * global or system filters other repositories rely on.
+ */
+async function removeInstallationWithoutLfs(repoPath: string): Promise<LfsInstallation> {
+  const directory = await hooksDirectory(repoPath);
+
+  if (directory) {
+    for (const hook of LFS_HOOKS) {
+      const hookPath = path.join(directory, hook);
+      if (isLfsHook(hookPath)) {
+        try {
+          fs.rmSync(hookPath);
+        } catch {
+          // Left in place, and reported as still installed by the re-read
+          // below rather than claimed as removed.
+        }
+      }
+    }
+  }
+
+  for (const key of ['filter.lfs.clean', 'filter.lfs.smudge', 'filter.lfs.process', 'filter.lfs.required']) {
+    await tryGitCommand(repoPath, ['config', '--local', '--unset-all', key]);
+  }
+
+  return readInstallation(repoPath);
 }
 
 // ---------- tracked patterns ----------
@@ -447,10 +670,20 @@ export async function readStatus(
   const availability = await readAvailability(repoPath);
 
   if (!availability.installed) {
-    return { availability, trackedPatterns: [], objects: [], locks: [] };
+    // The repository can still carry hooks from a machine that did have LFS,
+    // and those hooks are exactly what makes git slow here now — so this is
+    // read even when the program itself is gone.
+    return {
+      availability,
+      installation: await readInstallation(repoPath),
+      trackedPatterns: [],
+      objects: [],
+      locks: []
+    };
   }
 
-  const [trackedPatterns, objects, lockState] = await Promise.all([
+  const [installation, trackedPatterns, objects, lockState] = await Promise.all([
+    readInstallation(repoPath),
     readTrackedPatterns(repoPath),
     listObjects(repoPath),
     // Locks are the only part that reaches the network, and a server that is
@@ -460,6 +693,7 @@ export async function readStatus(
 
   return {
     availability,
+    installation,
     trackedPatterns,
     objects,
     locks: lockState.locks,

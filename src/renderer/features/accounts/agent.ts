@@ -41,6 +41,7 @@ export function initAgentPanel(elements: Elements): void {
 
   ui.btnRepairAgent.addEventListener('click', () => void repair());
   ui.btnUnloadKey.addEventListener('click', () => void unload());
+  ui.btnLoadAllKeys.addEventListener('click', () => void loadAll());
   // Imported lazily to keep this module free of a cycle: unlock.ts needs the
   // state this file exposes.
   ui.btnUnlockKey.addEventListener('click', () => {
@@ -197,6 +198,74 @@ async function unload(): Promise<void> {
   }
 }
 
+/**
+ * Puts every profile's key into the machine's agent.
+ *
+ * The keys Multi-Git loads one repository at a time are only ever the one for
+ * the repository in front of you. This is the other thing people want: every
+ * identity available to every terminal and every external tool for the rest of
+ * the session, in one press.
+ *
+ * The server never prompts, so what comes back is a list of what still needs a
+ * passphrase. Those are offered here, one at a time, because typing three
+ * passphrases into three dialogs you chose to open is fine and having three
+ * dialogs appear unbidden is not.
+ */
+async function loadAll(): Promise<void> {
+  const button = asButton(ui.btnLoadAllKeys);
+  button.disabled = true;
+
+  try {
+    const result = await api.loadAllSshAgentKeys();
+    latest = result.agent;
+    render(result.agent);
+
+    if (result.error) {
+      showToast(result.error, 'warn', 7000);
+      return;
+    }
+
+    const loaded = result.entries.filter((entry) => entry.outcome === 'loaded');
+    const already = result.entries.filter((entry) => entry.outcome === 'already-loaded');
+    const locked = result.entries.filter(
+      (entry) => entry.outcome === 'passphrase-required' || entry.outcome === 'vault-locked'
+    );
+    const failed = result.entries.filter(
+      (entry) => entry.outcome === 'failed' || entry.outcome === 'key-missing'
+    );
+
+    for (const entry of failed) {
+      logToTerminal(`SSH agent: "${entry.label}" — ${entry.error ?? 'could not be loaded.'}`, 'error');
+    }
+
+    if (result.entries.length === 0) {
+      showToast('No SSH profiles are configured yet.', 'info');
+      return;
+    }
+
+    showToast(
+      `${loaded.length} key(s) loaded, ${already.length} already there` +
+        (locked.length > 0 ? `, ${locked.length} need a passphrase` : '') +
+        (failed.length > 0 ? `, ${failed.length} failed` : '') +
+        '.',
+      failed.length > 0 ? 'warn' : 'success',
+      6000
+    );
+
+    if (locked.length > 0) {
+      const { promptForProfiles } = await import('./unlock');
+      await promptForProfiles(locked.map((entry) => entry.profileId));
+    }
+  } catch (error) {
+    if (!isStale(error)) {
+      showToast(errorMessage(error, 'Could not load the keys.'), 'error', 6000);
+    }
+  } finally {
+    button.disabled = false;
+    await refreshAgent();
+  }
+}
+
 function render(state: SshAgentState | null): void {
   const chip = ui.agentStatusChip;
 
@@ -206,6 +275,7 @@ function render(state: SshAgentState | null): void {
     setHidden(ui.btnRepairAgent, true);
     setHidden(ui.btnUnlockKey, true);
     setHidden(ui.btnUnloadKey, true);
+    setHidden(ui.btnLoadAllKeys, true);
     setHidden(ui.agentDiagnostic, true);
     return;
   }
@@ -231,6 +301,13 @@ function render(state: SshAgentState | null): void {
   );
 
   setHidden(ui.btnUnloadKey, !state.selectedKeyLoaded);
+
+  // Only where it can do anything: a reachable agent, and more than the one
+  // profile whose own Unlock button already covers this case.
+  setHidden(
+    ui.btnLoadAllKeys,
+    !(state.availability === 'ready' && getState().sshProfiles.length > 0)
+  );
 
   if (state.diagnostic) {
     ui.agentDiagnostic.textContent = state.diagnostic;
