@@ -474,6 +474,11 @@ describe('removing from the manager', () => {
     );
     await vi.waitFor(() => expect(dialogs.promptDialog).toHaveBeenCalled());
 
+    expect(dialogs.promptDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        label: expect.stringContaining('untracked files cannot be recovered')
+      })
+    );
     expect(endpoints.removeWorktree).not.toHaveBeenCalled();
   });
 });
