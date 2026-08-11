@@ -52,6 +52,7 @@ import * as patches from './features/patches';
 import * as bisect from './features/bisect';
 import * as notes from './features/notes';
 import * as tools from './features/tools';
+import * as updates from './features/updates';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -155,6 +156,7 @@ function closeTopmostLayer(): void {
     ui.cloneModal,
     ui.identityModal,
     ui.conflictModal,
+    ui.updateModal,
     ui.sshHealthModal,
     ui.sshModal
   ];
@@ -919,6 +921,9 @@ async function start(): Promise<void> {
   notes.initNotes(ui);
   notes.initDrawerControls();
   tools.initTools();
+  // Returns immediately in browser mode and on unpackaged or non-Windows
+  // builds, leaving the update icon and modal hidden.
+  updates.initUpdates(ui);
 
   wireHeader();
   wireWorkspaceTabs();

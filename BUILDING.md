@@ -295,6 +295,33 @@ upload, then runs `gh release upload` with these display labels:
 - `Portable Windows executable`
 - `SHA-256 checksums`
 
+### Verifying the release is discoverable
+
+After publishing, check that an installed copy will actually find it:
+
+```bash
+npm run release:verify
+```
+
+This queries the same GitHub API the in-app updater does and applies the same
+filters, then reports each check individually. Run it every time. The things
+that hide a release from the updater — a mistyped or miscased tag, a tag whose
+version disagrees with `package.json`, a release left as a draft or ticked as a
+pre-release, a missing artifact or checksum file — all fail *silently*: nothing
+errors, the release is simply invisible, and nobody updates. This is the only
+step that catches that.
+
+It exits non-zero when the release would not be offered, so it can gate a
+release script. To check a specific release:
+
+```bash
+npm run release:verify -- --tag Release_v3.0.0
+```
+
+When `dist/SHA256SUMS.txt` from the build is still present, it also compares the
+published checksums against it, which catches artifacts rebuilt between
+generating the manifest and uploading it.
+
 The upload command requires both executables, an existing release, and an
 authenticated GitHub CLI. It always uploads the installer, portable build, and
 their shared checksum file together, so the manifest always describes the full

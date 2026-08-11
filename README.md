@@ -40,6 +40,11 @@ Packaged releases are currently provided for Windows.
    - **`Multi-Git-Client-Portable-<version>.exe`** can be run without installation.
 4. Launch **Multi-Git Client**.
 
+Once installed, Multi-Git keeps itself current. It checks GitHub for a newer stable release shortly after launch, shows a one-time notice, and leaves an icon in the toolbar you can click at any time. Betas and prereleases are never offered. Nothing is downloaded until you choose **Download & install**, and every download is checked against the release's published SHA-256 checksum before it is allowed to run.
+
+- The **installer** build reinstalls in the background and reopens on the new version.
+- The **portable** build saves the new `.exe` next to the one you are running and opens it. Your current file is left in place, so you can go back to it by launching it again; delete it yourself when you no longer want it.
+
 The Windows packages are not currently code-signed, so Windows may show a SmartScreen warning. Only continue if the file came from this repository's official Releases page.
 
 Each release also includes `SHA256SUMS.txt`, a plain-text list of the expected
@@ -587,7 +592,9 @@ Click the terminal icon in the top toolbar to open the live log in a separate wi
 
 ## Local Data, Privacy, And Security
 
-Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, and the current UI loads its fonts and Material Symbols from Google Fonts when an internet connection is available.
+Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when the current UI loads its fonts and Material Symbols from Google Fonts, and — on packaged Windows builds — when the app asks GitHub whether a newer release exists.
+
+The update check is the only request Multi-Git makes that you did not start. It is an unauthenticated `GET` to `api.github.com` for this project's public release list, made once about ten seconds after launch and every six hours after that. It sends no account, no repository, and no identifying information beyond what any HTTPS request carries. Nothing is downloaded until you ask for it. Set `settings.checkForUpdates` to `false` in the configuration file to turn it off entirely.
 
 ```text
 ~/.multi-git-client-config.json   recent repositories, profiles, rules, settings,

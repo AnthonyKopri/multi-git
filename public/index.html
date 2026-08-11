@@ -180,6 +180,10 @@
         <button id="btn-repo-hub" class="btn btn-icon" type="button" title="Repository tools — remotes, submodules, LFS, patches, bisect, notes" aria-label="Repository tools">
           <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
         </button>
+        <button id="btn-update" class="btn btn-icon has-update hidden" type="button" title="An update is available" aria-label="An update is available">
+          <span class="material-symbols-outlined" aria-hidden="true">system_update_alt</span>
+          <span id="update-badge" class="count-badge count-ahead hidden"></span>
+        </button>
         <button id="btn-open-logs" class="btn btn-icon" title="Open terminal log window" aria-label="Open terminal log window">
           <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
         </button>
@@ -1899,6 +1903,29 @@
         <div class="form-actions">
           <button type="button" id="btn-ssh-health-dismiss" class="btn btn-secondary">Dismiss</button>
           <button type="button" id="btn-ssh-health-open" class="btn btn-primary">Open SSH Manager</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION UPDATE. Packaged Windows builds only; hidden everywhere else.
+       Deliberately contains no <a href>: createMainWindow sets no will-navigate
+       handler, so a link would carry this window itself off to github.com. -->
+  <div id="update-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2 id="update-modal-title">Update available</h2>
+      </div>
+      <div class="modal-body">
+        <p id="update-message" class="confirm-message"></p>
+        <pre id="update-notes" class="update-notes hidden"></pre>
+        <div id="update-progress" class="update-progress hidden">
+          <div id="update-progress-bar" class="update-progress-bar"></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-update-skip" class="btn btn-secondary">Skip this version</button>
+          <button type="button" id="btn-update-later" class="btn btn-secondary">Later</button>
+          <button type="button" id="btn-update-install" class="btn btn-primary">Download &amp; install</button>
         </div>
       </div>
     </div>

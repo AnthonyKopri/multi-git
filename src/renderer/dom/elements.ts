@@ -456,6 +456,20 @@ export const ELEMENT_MAP = {
   btnSshHealthDismiss: 'btn-ssh-health-dismiss',
   btnSshHealthOpen: 'btn-ssh-health-open',
 
+  // Application updates. The markup is in every build; the feature hides
+  // itself unless the desktop bridge says this is a packaged Windows app.
+  btnUpdate: 'btn-update',
+  updateBadge: 'update-badge',
+  updateModal: 'update-modal',
+  updateModalTitle: 'update-modal-title',
+  updateMessage: 'update-message',
+  updateNotes: 'update-notes',
+  updateProgress: 'update-progress',
+  updateProgressBar: 'update-progress-bar',
+  btnUpdateSkip: 'btn-update-skip',
+  btnUpdateLater: 'btn-update-later',
+  btnUpdateInstall: 'btn-update-install',
+
   // SSH config management toggle
   sshManageConfigCheckbox: 'ssh-manage-config-checkbox',
 

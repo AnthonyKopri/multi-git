@@ -19,7 +19,8 @@
     "release:installer": "node scripts/release.js --target installer",
     "release:portable": "node scripts/release.js --target portable",
     "release:upload": "node scripts/upload-release-assets.js",
-    "release:ship": "node scripts/ship.js"
+    "release:ship": "node scripts/ship.js",
+    "release:verify": "node scripts/verify-release.js"
   },
   "engines": {
     "node": ">=22.12.0"

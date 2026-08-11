@@ -12,6 +12,8 @@ import { launchAgent, openEditorAt, openTerminalAt } from '../server/agents/serv
 import { runBisect } from '../server/git/bisect';
 import { launchTool } from '../server/tools/launch';
 import * as shellIntegration from './shell-integration';
+import { createUpdateWiring, startUpdateChecks } from './update/wiring';
+import type { UpdateService } from './update/service';
 import { WindowRegistry, clampBoundsToDisplays, restorableWindows } from './window-registry';
 import type { ManagedWindow } from './window-registry';
 import {
@@ -27,6 +29,8 @@ let logWindow: BrowserWindow | null = null;
 let backendServer: Server | null = null;
 let serverUrl = 'http://localhost:3000';
 let windows: WindowRegistry | null = null;
+let updates: UpdateService | null = null;
+let stopUpdateChecks: (() => void) | null = null;
 
 /** True once quit has begun, so a closing window stops rewriting the record. */
 let quitting = false;
@@ -315,6 +319,36 @@ function registerIpcHandlers(): void {
     rememberShellIntegration(status.installed);
     return status;
   });
+
+  // Every update handler below ignores its arguments, like repairSshAgent and
+  // the two above. The release, its assets, the URLs and the download
+  // destination are resolved in src/main/update/service.ts and never named by
+  // the renderer — a channel that accepted any of them would be a
+  // download-and-execute primitive reachable from the page.
+  ipcMain.handle(IPC_CHANNELS.getUpdateState, () => updates?.getState() ?? null);
+  ipcMain.handle(IPC_CHANNELS.checkForUpdate, () => updates?.check() ?? null);
+  ipcMain.handle(IPC_CHANNELS.downloadUpdate, async () => {
+    await updates?.download();
+  });
+  ipcMain.handle(IPC_CHANNELS.installUpdate, async () => {
+    await updates?.install();
+  });
+  ipcMain.handle(IPC_CHANNELS.skipUpdateVersion, async () => {
+    await updates?.skipCurrent();
+  });
+}
+
+/**
+ * Windows that can show update UI.
+ *
+ * The Terminal Log window is excluded: it is created without a preload
+ * (src/main/windows.ts), so it has no bridge to receive on, and picking it as
+ * the popup's target would mean the popup silently going nowhere.
+ */
+function updateTargetWindows(): BrowserWindow[] {
+  return BrowserWindow.getAllWindows().filter(
+    (window) => window !== logWindow && !window.isDestroyed()
+  );
 }
 
 /** Keeps the configuration's record in step with what the registry says. */
@@ -340,6 +374,10 @@ async function startApp(): Promise<void> {
     if (!restoreWindows()) {
       openInitialWindow();
     }
+
+    // After the windows exist, so the first broadcast has somewhere to land.
+    updates = createUpdateWiring(updateTargetWindows);
+    stopUpdateChecks = startUpdateChecks(updates);
   } catch (error) {
     console.error('Failed to boot desktop app:', error);
     createStartupFailureWindow(error);
@@ -379,6 +417,9 @@ app.on('before-quit', () => {
   }
   saveWindowState();
   quitting = true;
+
+  stopUpdateChecks?.();
+  stopUpdateChecks = null;
 });
 
 app.on('quit', () => {

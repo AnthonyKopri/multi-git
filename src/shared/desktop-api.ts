@@ -15,6 +15,10 @@ import type { SshAgentRepairResult } from './ssh-agent-types';
 import type { AgentLaunchInput, AgentLaunchResult } from './agent-types';
 import type { BisectRunOutcome } from './bisect-types';
 import type { ExternalToolKind } from './config-types';
+import type { UpdateState } from './update-types';
+
+/** Removes a push-channel listener. Returned by every `on*` method below. */
+export type Unsubscribe = () => void;
 
 export interface DesktopApi {
   /** Opens the native folder picker. Resolves to '' when cancelled. */
@@ -86,6 +90,32 @@ export interface DesktopApi {
   shellIntegrationStatus: () => Promise<ShellIntegrationStatus>;
   installShellIntegration: () => Promise<ShellIntegrationStatus>;
   removeShellIntegration: () => Promise<ShellIntegrationStatus>;
+
+  /** Current update state, for a window that opened after the last broadcast. */
+  getUpdateState: () => Promise<UpdateState>;
+  /** Asks GitHub now, rather than waiting for the next scheduled check. */
+  checkForUpdate: () => Promise<UpdateState>;
+
+  /**
+   * The three below take no arguments, for the same reason `repairSshAgent`
+   * does. Each one ends in either a file written to disk or a program started,
+   * and the thing being downloaded or run is the release the main process
+   * already resolved and pinned. A channel that accepted a URL, a path, or a
+   * version from the page would be a download-and-execute primitive.
+   */
+  downloadUpdate: () => Promise<void>;
+  installUpdate: () => Promise<void>;
+  skipUpdateVersion: () => Promise<void>;
+
+  /** Fires on every state change, in every window, for the navbar icon. */
+  onUpdateState: (listener: (state: UpdateState) => void) => Unsubscribe;
+  /**
+   * Fires when this window is the one that should show the popup.
+   *
+   * The main process picks a single window and tells only that one, so three
+   * open repositories produce one popup rather than three.
+   */
+  onUpdatePopup: (listener: () => void) => Unsubscribe;
 }
 
 /** Mirrors src/main/shell-integration.ts, which the renderer cannot import. */
@@ -114,7 +144,16 @@ export const IPC_CHANNELS = {
   launchTool: 'tool:launch',
   shellIntegrationStatus: 'shell:context-menu-status',
   installShellIntegration: 'shell:install-context-menu',
-  removeShellIntegration: 'shell:remove-context-menu'
+  removeShellIntegration: 'shell:remove-context-menu',
+  getUpdateState: 'update:get-state',
+  checkForUpdate: 'update:check',
+  downloadUpdate: 'update:download',
+  installUpdate: 'update:install',
+  skipUpdateVersion: 'update:skip-version',
+  // The two below travel the other way, main to renderer. They are the only
+  // push channels in the app; everything else is invoke/handle.
+  updateState: 'update:state',
+  updatePopup: 'update:show-popup'
 } as const;
 
 declare global {

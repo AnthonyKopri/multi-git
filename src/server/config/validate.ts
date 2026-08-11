@@ -252,6 +252,17 @@ function validateSettings(raw: unknown): Partial<AppSettings> | undefined {
     settings.autoPull = source['autoPull'];
   }
 
+  if (typeof source['checkForUpdates'] === 'boolean') {
+    settings.checkForUpdates = source['checkForUpdates'];
+  }
+
+  // Compared against a version parsed out of a release tag, so anything that is
+  // not a plain version could only ever suppress nothing.
+  const skipped = source['skippedUpdateVersion'];
+  if (typeof skipped === 'string' && /^\d+\.\d+\.\d+$/.test(skipped)) {
+    settings.skippedUpdateVersion = skipped;
+  }
+
   // Becomes the default folder a worktree is created in, so it must be a plain
   // path: a newline or a null would be carried into a directory creation.
   const parentDir = source['worktreeParentDir'];

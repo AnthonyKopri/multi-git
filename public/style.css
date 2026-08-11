@@ -4386,3 +4386,53 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   font-family: 'JetBrains Mono', monospace;
   color: var(--color-primary);
 }
+
+/* ============ APPLICATION UPDATES ============ */
+/* The navbar button only appears once an update has been resolved, so it is
+   an accent rather than a neutral icon: it is always news. */
+.btn-icon.has-update {
+  color: var(--color-success);
+}
+.btn-icon.has-update:hover {
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+}
+.btn-icon.has-update.update-failed {
+  color: var(--color-warning);
+}
+.btn-icon.has-update.update-failed:hover {
+  border-color: var(--color-warning-border);
+}
+
+/* Release notes are remote text of unknown length, so the box scrolls rather
+   than growing the modal past the window. */
+.update-notes {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-tertiary, rgba(0, 0, 0, 0.2));
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.update-progress {
+  margin-top: 14px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--border-color);
+  overflow: hidden;
+}
+.update-progress-bar {
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--color-primary);
+  transition: width 0.2s ease-out;
+}

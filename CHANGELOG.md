@@ -89,6 +89,24 @@ or Security. Remove empty headings when preparing a release.
 
 ## [3.1.1] - 2026-08-11
 
+### Added
+
+- Check GitHub for a newer stable release on packaged Windows builds, announce
+  it once, and leave a toolbar icon that reopens the notice. Betas and
+  prereleases are excluded by the release tag format itself.
+- Download and install an update from inside the app. The installer build
+  reinstalls silently and relaunches; the portable build saves the new
+  executable beside the running one and opens it, leaving the old file in
+  place. Every download is verified against the release's published SHA-256
+  checksum before anything is run, and a mismatch is discarded.
+- Add the `settings.checkForUpdates` configuration option to turn the update
+  check off, and `settings.skippedUpdateVersion` to record a skipped release.
+- Add `npm run release:verify`, which checks a published GitHub release against
+  the same filters the updater applies and reports why it would be invisible.
+  The mistakes that hide a release — a mistyped tag, a tag that disagrees with
+  `package.json`, a draft or pre-release flag, a missing artifact or checksum
+  file — otherwise fail silently.
+
 ### Fixed
 
 - Avoid unnecessary Git LFS hooks when a repository does not use LFS.

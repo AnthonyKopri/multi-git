@@ -4,10 +4,38 @@
 // Nothing else crosses the boundary: nodeIntegration is off and
 // contextIsolation is on, so the page has no access to Node or Electron.
 import { contextBridge, ipcRenderer } from 'electron';
+import type { IpcRendererEvent } from 'electron';
 
 import { IPC_CHANNELS } from '../shared/desktop-api';
-import type { DesktopApi } from '../shared/desktop-api';
+import type { DesktopApi, Unsubscribe } from '../shared/desktop-api';
 import type { AgentLaunchInput, AgentLaunchResult } from '../shared/agent-types';
+import type { UpdateState } from '../shared/update-types';
+
+/**
+ * Bridges a main-to-renderer push onto a plain callback.
+ *
+ * The IpcRendererEvent never crosses. It carries `sender`, which is a live
+ * handle to ipcRenderer itself — handing the page that would give it `send` on
+ * every channel, which is the one thing this whole file exists to prevent. Only
+ * the structured payload is forwarded.
+ *
+ * A listener that throws is contained here so a bug in one renderer feature
+ * cannot take the channel down for the rest of the session.
+ */
+function subscribe<T>(channel: string, listener: (payload: T) => void): Unsubscribe {
+  const wrapped = (_event: IpcRendererEvent, payload: T): void => {
+    try {
+      listener(payload);
+    } catch {
+      // Delivery continues; the page's own error handling is its business.
+    }
+  };
+
+  ipcRenderer.on(channel, wrapped);
+  return () => {
+    ipcRenderer.removeListener(channel, wrapped);
+  };
+}
 
 const desktopApi: DesktopApi = {
   selectFolder: () => ipcRenderer.invoke(IPC_CHANNELS.selectFolder) as Promise<string>,
@@ -77,7 +105,20 @@ const desktopApi: DesktopApi = {
   removeShellIntegration: () =>
     ipcRenderer.invoke(IPC_CHANNELS.removeShellIntegration) as ReturnType<
       DesktopApi['removeShellIntegration']
-    >
+    >,
+
+  getUpdateState: () => ipcRenderer.invoke(IPC_CHANNELS.getUpdateState) as Promise<UpdateState>,
+  checkForUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.checkForUpdate) as Promise<UpdateState>,
+  // The three below forward no arguments, for the same reason repairSshAgent
+  // does. Each ends in a file being written or a program being started, and the
+  // release, the asset, the URL and the destination are all decided in the main
+  // process. Whatever the page passes is dropped here.
+  downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.downloadUpdate) as Promise<void>,
+  installUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.installUpdate) as Promise<void>,
+  skipUpdateVersion: () => ipcRenderer.invoke(IPC_CHANNELS.skipUpdateVersion) as Promise<void>,
+
+  onUpdateState: (listener) => subscribe<UpdateState>(IPC_CHANNELS.updateState, listener),
+  onUpdatePopup: (listener) => subscribe<void>(IPC_CHANNELS.updatePopup, () => listener())
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

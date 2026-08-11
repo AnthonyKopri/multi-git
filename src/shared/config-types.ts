@@ -68,6 +68,18 @@ export interface AppSettings {
    * Defaults to false; only ever a fast-forward. See `shouldAutoPull`.
    */
   autoPull?: boolean;
+  /**
+   * Whether the app asks GitHub whether a newer release exists.
+   *
+   * Defaults to true. This is the only request the app makes that the user did
+   * not initiate, so turning it off has to be possible.
+   */
+  checkForUpdates?: boolean;
+  /**
+   * A release the user chose to skip. Suppressed until a higher one appears,
+   * which happens on its own: a newer version no longer matches this string.
+   */
+  skippedUpdateVersion?: string;
 }
 
 /** A user-defined set of repositories that are fetched and opened together. */

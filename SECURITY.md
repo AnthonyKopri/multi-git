@@ -64,5 +64,13 @@ These are targets for a volunteer-maintained project, not guaranteed service-lev
 - Saved passphrases are encrypted with AES-256-GCM using a key derived with `scrypt`.
 - The derived vault key exists only in application memory while the vault is unlocked.
 - Private key files remain at their original paths and are not copied into the app configuration.
+- Updates are fetched over HTTPS from a fixed list of GitHub hosts, re-checked on every redirect, and verified against the release's published `SHA256SUMS.txt` before the downloaded file is given its final name or run. A mismatch is discarded and nothing is started.
+- The renderer cannot influence what is downloaded or run. The update IPC channels take no arguments; the release, its assets, the URLs and the destination are all resolved in the main process.
+
+### Update Integrity: What The Checksum Does And Does Not Cover
+
+Release binaries are **not** code-signed, and `SHA256SUMS.txt` is served unsigned from the same GitHub release as the binary it describes. The checksum therefore proves that the file you received is the file that release published — it detects a corrupted, truncated, or tampered *transfer*. It does not, and cannot, protect against a malicious or compromised release: anyone able to publish a release controls both the binary and its hash.
+
+Because the binaries are unsigned, Windows SmartScreen may warn when the downloaded installer runs, exactly as it does for a manually downloaded one.
 
 These controls reduce risk but do not make the application a replacement for operating-system security, full-disk encryption, backups, or careful key management.
