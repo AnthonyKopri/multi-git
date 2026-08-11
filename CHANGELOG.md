@@ -138,6 +138,7 @@ or Security. Remove empty headings when preparing a release.
 - Initial release.
 
 [Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.1.0...HEAD
+[3.1.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.1.0...Release_v3.1.1
 [3.1.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.0.0...Release_v3.1.0
 [3.0.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v2.2.1...Release_v3.0.0
 [2.2.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v1.0.6...Release_v2.2.1
