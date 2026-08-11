@@ -23,6 +23,7 @@ or Security. Remove empty headings when preparing a release.
 
 ### Security
 -->
+## [3.1.1] - 2026-08-11
 
 ### Fixed
 
