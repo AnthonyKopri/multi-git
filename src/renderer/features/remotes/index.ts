@@ -15,6 +15,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { withButtonBusy } from '../../ui/busy';
 import { registerHubTab } from '../repo-hub';
+import { refreshOrigin } from '../repo';
 import type { RemoteInfo } from '../../../shared/remote-types';
 
 let ui: Elements;
@@ -394,6 +395,14 @@ function buildEditor(): HTMLElement {
 
 /** Redraws the tab in place, after something changed what it shows. */
 async function refreshPanel(): Promise<void> {
+  // The remote that was just added, renamed, removed or pruned may be origin,
+  // and origin is not this panel's alone: the Publish button reads it to know
+  // whether the branch has anywhere to be published to, and the SSH/HTTPS chip
+  // reads it for the URL it offers to convert. Both take their copy from the
+  // store, which nothing here updated, so adding an origin by hand left the
+  // toolbar showing the state from before until the next full refresh.
+  await refreshOrigin();
+
   const panel = document.getElementById('hub-panel-remotes');
   if (panel) {
     await renderPanel(panel);

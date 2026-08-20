@@ -230,18 +230,25 @@ newRepoRouter.post(
       }
     }
 
-    // The commit comes before the remote so the very first push has something
-    // to send. A repository whose only branch is unborn cannot be published:
-    // git rejects the refspec, which is exactly the wall the wizard used to
-    // leave people at.
-    const commit = await createInitialCommit(resolved, {
-      message: INITIAL_COMMIT_MESSAGE,
-      author: commitAuthor(body)
-    });
+    // Only when the repository is being published. The commit exists to give
+    // the first push something to send — a branch with no commit has no
+    // refspec and git rejects it — so a repository that is staying local has
+    // no need of one, and its files are better left for the Staging Area to
+    // review a change at a time.
+    //
+    // Gated on the request rather than on the remote actually being created:
+    // if `gh` fails the user still asked to publish, and a repository with a
+    // commit is what lets them add a remote and press Publish.
+    const commit = createRemote
+      ? await createInitialCommit(resolved, {
+          message: INITIAL_COMMIT_MESSAGE,
+          author: commitAuthor(body)
+        })
+      : { committed: false as const, reason: '' };
 
     if (commit.committed) {
       steps.push(`Committed the initial contents as "${INITIAL_COMMIT_MESSAGE}"`);
-    } else {
+    } else if (commit.reason) {
       warnings.push(commit.reason);
     }
 

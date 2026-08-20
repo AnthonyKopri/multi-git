@@ -7,7 +7,7 @@ import { runGitCommand } from '../git/run';
 import { parseBlameOutput } from '../git/blame';
 import { resolveInsideRepo } from '../fs/paths';
 import { openPathInDefaultApp, pickFolderWithPowerShell } from '../os/reveal';
-import { requireRepoPath, resolveNewRepoTarget } from '../middleware/repo-path';
+import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 
 /** Repository-scoped file reads. */
@@ -145,22 +145,5 @@ folderRouter.get(
     }
 
     res.json({ success: true, path: await pickFolderWithPowerShell() });
-  })
-);
-
-folderRouter.post(
-  '/api/git/init',
-  asyncRoute(async (req, res) => {
-    const resolved = resolveNewRepoTarget((req.body as { repoPath?: unknown })?.repoPath);
-
-    if (!fs.existsSync(resolved)) {
-      fs.mkdirSync(resolved, { recursive: true });
-    }
-    if (fs.existsSync(`${resolved}/.git`)) {
-      throw new HttpError('A Git repository already exists in this folder', 400);
-    }
-
-    await runGitCommand(resolved, ['init']);
-    res.json({ success: true, message: 'Git repository initialized successfully' });
   })
 );
