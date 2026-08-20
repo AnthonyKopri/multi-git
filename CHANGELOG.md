@@ -12,7 +12,7 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
-# [3.1.2] - 2026-08-20
+## [3.1.2] - 2026-08-20
 
 ### Added
 
