@@ -10,19 +10,24 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 <!--
 Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
+-->
 
 ### Added
 
-### Changed
-
-### Deprecated
-
-### Removed
+- Show the Push button as **Publish** for a branch that has no upstream yet, so
+  the push that creates a branch on the remote is visibly a different action
+  from the ones after it.
 
 ### Fixed
 
-### Security
--->
+- Make a repository created by the New Repository wizard pushable straight
+  away. It now starts on `main`, commits the folder's contents, and pushes to
+  the new GitHub remote, instead of leaving an unborn branch that `git push`
+  rejects with "src refspec main does not match any".
+- Stop new repositories being created on `master`: the Git for Windows
+  installer sets `init.defaultBranch` in its system configuration, which is not
+  a choice the user made, so only a global setting is honoured now.
+
 ## [3.1.1] - 2026-08-11
 
 ### Fixed

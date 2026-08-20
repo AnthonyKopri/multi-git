@@ -82,7 +82,7 @@ Add Auto-Select Rules such as `github.com/company` → **Work** to make this aut
 3. Use the file's **diff icon** to review its changes before committing.
 4. Enter a commit message. Optionally select `feat`, `fix`, `docs`, or another template and add a scope.
 5. Click **Commit**, or press `Ctrl+Enter` in the message box.
-6. Click the **Push** icon in the top toolbar when you are ready to publish.
+6. Click the **Push** icon in the top toolbar when you are ready to send it to origin. On a branch the remote has never seen, that button reads **Publish** instead.
 
 The row and its action icons intentionally do different things: clicking the row toggles staging; clicking the diff icon opens **File Diff**; clicking the trash icon starts a confirmed discard.
 
@@ -95,11 +95,14 @@ The top toolbar contains the normal remote workflow:
 | **Fetch** | Downloads origin refs and prunes deleted remote refs without changing your files. | `git fetch --prune origin` |
 | **Pull** | Pulls the current branch from origin. | `git pull origin <branch>` |
 | **Push** | Pushes the current branch and establishes upstream tracking. | `git push -u origin <branch>` |
+| **Publish** | The same button, labelled and shaped differently while the branch has no upstream on origin yet. | `git push -u origin <branch>` |
 | **SSH / HTTPS** chip | Converts a compatible origin URL between GitHub-style SSH and HTTPS forms. | `git remote set-url origin …` |
 | **Terminal Log** | Opens a separate live window with commands and their output. | Read-only transparency view |
 | **Refresh** | Reloads status, branches, history, origin, stashes, tags, and Safety Net. | Multiple read-only Git queries |
 
 Ahead and behind badges appear in the branch header and on the push/pull controls. If a normal push is rejected as non-fast-forward, Multi-Git explains the risk and can retry using `--force-with-lease`; it does not silently force-push.
+
+A branch that has no upstream yet is a different action from the pushes that follow it: it creates the branch on the remote. The Push button says **Publish** and takes a labelled pill shape while that is true, and goes back to the plain Push icon once the branch is tracking one. It stays disabled, saying why, on a branch with no commits — git has no refspec to send there. Publish only appears when there is an `origin` to publish to.
 
 ## Feature Guide
 
@@ -126,11 +129,13 @@ Sizes and collapsed state live in browser storage. They are shared by windows in
 **New Repo** opens a setup dialog instead of only running `git init`:
 
 - **Repository folder.** Pick or type a path. A folder that does not exist yet is created. The hint below the field reports whether the folder is empty, already a Git repository, or already contains a `LICENSE` or `.gitignore`.
-- **Visibility.** Choose **Private** or **Public**. Multi-Git holds no API token, so visibility only reaches GitHub through the GitHub CLI. When `gh` is installed and signed in, tick **Create it on GitHub with this visibility** to have `gh repo create` make the remote and set `origin`; the remote is then switched to SSH to match how this app authenticates. Without `gh`, the repository is created locally and the dialog says so.
+- **Visibility.** Choose **Private** or **Public**. Multi-Git holds no API token, so visibility only reaches GitHub through the GitHub CLI. When `gh` is installed and signed in, tick **Create it on GitHub with this visibility** to have `gh repo create` make the remote and set `origin`; the remote is then switched to SSH to match how this app authenticates, and the first commit is pushed with the active SSH profile so nothing is left to do by hand. Without `gh`, the repository is created locally and the dialog says so.
 - **License.** Pick from MIT, Apache 2.0, GPL/AGPL/LGPL 3.0, MPL 2.0, BSD 2- and 3-Clause, ISC, or the Unlicense. Templates whose text carries placeholders show **Copyright year** and **Copyright holder** fields, pre-filled from the active profile or repository identity. A `LICENSE`, `LICENCE`, or `COPYING` file that already exists is never overwritten without a confirmation.
 - **.gitignore.** Choose a stack template (Node, Python, Rust, Go, Java, C/C++, .NET, Unity, Unreal, Godot), the **General** default that covers OS files, editors, and build output, or **Custom**, which writes a commented starter file and opens it in your default editor. An existing `.gitignore` also asks before being replaced.
 
-Every file the dialog writes, and anything it decided to keep, is reported in the Terminal Log.
+The repository is left ready to publish rather than only initialised: it starts on `main` — unless your own global `init.defaultBranch` says otherwise — and the folder's contents, including any files that were already there, become an **Initial commit**. Without that commit `git push` has no refspec to send and rejects the first push, which is the point of doing it here.
+
+Every file the dialog writes, and anything it decided to keep, is reported in the Terminal Log, along with any step it could not complete — an unset commit identity or an unreachable remote is a warning, never a half-created repository.
 
 ### Staging, diffs, and commits
 

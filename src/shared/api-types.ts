@@ -249,6 +249,12 @@ export interface CreatedRemote {
 export interface NewRepoResponse extends Ok {
   repoPath: string;
   visibility: 'private' | 'public';
+  /** Branch the repository was initialised on, already checked out. */
+  branch: string;
+  /** True when the wizard was able to make the repository's first commit. */
+  initialCommit: boolean;
+  /** True when that first commit reached origin and the upstream was set. */
+  pushed: boolean;
   licenseFile: string | null;
   gitignoreWritten: boolean;
   openCustomGitignore: boolean;

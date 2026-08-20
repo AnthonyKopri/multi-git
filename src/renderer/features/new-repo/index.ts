@@ -12,6 +12,9 @@ import { logToTerminal } from '../../ui/log';
 import { closeAllDropdowns } from '../../ui/dropdown';
 import { withButtonBusy } from '../../ui/busy';
 import { openRepository } from '../repo';
+import { activeProfile } from '../accounts';
+import { profileIdentity } from '../accounts/identity';
+import { ensureKeyUsable } from '../accounts/unlock';
 import type { NewRepoPreflightResponse } from '../../../shared/api-types';
 import type { LicenseSummary } from '../../../shared/template-types';
 
@@ -217,7 +220,11 @@ function renderFolderHint(info: NewRepoPreflightResponse): void {
 
   setFieldHint(
     ui.newRepoFolderHint,
-    info.isEmpty ? 'Empty folder, ready to initialise.' : 'Existing files are left untouched.'
+    info.isEmpty
+      ? 'Empty folder, ready to initialise.'
+      : // They are not moved or rewritten, but they do become the first
+        // commit, which is what makes the repository publishable.
+        'Existing files stay where they are and become the first commit.'
   );
 }
 
@@ -336,11 +343,22 @@ export async function submitNewRepo(): Promise<void> {
       if (createRemote) {
         const account = getState().githubCli?.account;
         const { confirmed } = await confirmDialog(
-          `Create the ${visibility} GitHub repository "${repoBaseName(repoPath)}"${account ? ` under ${account}` : ''} and set it as origin?`,
-          { title: 'Create repository on GitHub?', confirmLabel: 'Create' }
+          `Create the ${visibility} GitHub repository "${repoBaseName(repoPath)}"${account ? ` under ${account}` : ''}, then commit this folder's contents and push them to it?`,
+          { title: 'Create repository on GitHub?', confirmLabel: 'Create and Publish' }
         );
         if (!confirmed) {
           setFeedback('Cancelled. Nothing was created.', 'info');
+          return;
+        }
+
+        // The push at the end of the wizard authenticates with the same key
+        // every other network operation uses, so ask for it here rather than
+        // letting the push be the thing that discovers the key is locked.
+        if (!(await ensureKeyUsable({ reason: 'push' }))) {
+          setFeedback(
+            'Cancelled: the selected SSH key is not unlocked, so the first push could not be made.',
+            'error'
+          );
           return;
         }
       }
@@ -367,7 +385,14 @@ export async function submitNewRepo(): Promise<void> {
       }
 
       setFeedback('Creating the repository…', 'info');
-      logToTerminal(`git init "${repoPath}"`, 'cmd');
+      logToTerminal(
+        `git init "${repoPath}" && git add -A && git commit -m "Initial commit"` +
+          (createRemote ? ' && gh repo create && git push -u origin <branch>' : ''),
+        'cmd'
+      );
+
+      const profile = activeProfile();
+      const author = profileIdentity(profile);
 
       const data = await api.createNewRepo({
         repoPath,
@@ -379,7 +404,9 @@ export async function submitNewRepo(): Promise<void> {
         replaceLicense,
         replaceGitignore,
         createRemote,
-        useSshRemote: true
+        useSshRemote: true,
+        ...(author ? { authorName: author.name, authorEmail: author.email } : {}),
+        ...(profile ? { profileId: profile.id, sshKeyPath: profile.privateKeyPath } : {})
       });
 
       for (const step of data.steps) {
@@ -393,7 +420,12 @@ export async function submitNewRepo(): Promise<void> {
       }
 
       setHidden(ui.newRepoModal, true);
-      showToast(`Repository created at ${repoBaseName(data.repoPath)}.`, 'success');
+      showToast(
+        data.pushed
+          ? `Repository created at ${repoBaseName(data.repoPath)} and published to origin/${data.branch}.`
+          : `Repository created at ${repoBaseName(data.repoPath)}.`,
+        'success'
+      );
       if (data.warnings[0]) {
         showToast(data.warnings[0], 'warn', 8000);
       }

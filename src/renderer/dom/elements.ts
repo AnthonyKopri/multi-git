@@ -264,6 +264,8 @@ export const ELEMENT_MAP = {
   btnFetch: 'btn-fetch',
   btnPull: 'btn-pull',
   btnPush: 'btn-push',
+  /** Empty for Push; reads "Publish" for a branch with no upstream yet. */
+  pushLabel: 'push-label',
   pullCountBadge: 'pull-count-badge',
   pushCountBadge: 'push-count-badge',
   btnRemoteProtocol: 'btn-remote-protocol',

@@ -2,9 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 
-import { runGitCommand } from '../git/run';
+import { GitError } from '../git/run';
+import { createInitialCommit, initRepository, resolveInitialBranch } from '../git/bootstrap';
+import type { CommitAuthor } from '../git/bootstrap';
 import { createGithubRepository, detectGithubCli } from '../external/github-cli';
 import type { RepoVisibility } from '../external/github-cli';
+import { runSyncOperationWithProfile } from '../ssh/profiles';
 import { findGitignore, findLicense, listGitignores, listLicenses } from '../templates/catalogue';
 import { renderGitignore, renderLicense, sanitizePlaceholderValue } from '../templates/render';
 import { resolveNewRepoTarget } from '../middleware/repo-path';
@@ -18,6 +21,9 @@ export const newRepoRouter: Router = Router();
  */
 const LICENSE_FILE_PATTERN = /^(LICENSE|LICENCE|COPYING)(\.[A-Za-z0-9]+)?$/i;
 const LICENSE_YEAR_PATTERN = /^[0-9]{4}(\s*-\s*[0-9]{4})?$/;
+
+/** Subject of the commit the wizard makes, so a new repository is pushable. */
+const INITIAL_COMMIT_MESSAGE = 'Initial commit';
 
 function findExistingLicenseFile(folder: string): string | null {
   try {
@@ -77,6 +83,59 @@ newRepoRouter.post(
   })
 );
 
+/**
+ * The author for the first commit, when the client knows one.
+ *
+ * The wizard sends the identity of the account the repository is being created
+ * under, which is what lets the commit succeed on a machine whose global git
+ * config has never been filled in. Without it the commit is still attempted:
+ * a global identity is the ordinary case.
+ */
+function commitAuthor(body: Record<string, unknown>): CommitAuthor | null {
+  const name = typeof body['authorName'] === 'string' ? body['authorName'].trim() : '';
+  const email = typeof body['authorEmail'] === 'string' ? body['authorEmail'].trim() : '';
+
+  return name && email ? { name, email } : null;
+}
+
+/**
+ * The first `git push -u origin <branch>`, under the caller's SSH identity.
+ *
+ * Reports instead of throwing: the repository, its commit, and its remote all
+ * exist by this point, and losing that to a locked key or an unreachable host
+ * would be the worse outcome. The Publish button retries it.
+ */
+async function pushInitialBranch(
+  repoPath: string,
+  branch: string,
+  body: Record<string, unknown>
+): Promise<{ pushed: true } | { pushed: false; reason: string }> {
+  const profileId = typeof body['profileId'] === 'string' ? body['profileId'] : undefined;
+  const sshKeyPath = typeof body['sshKeyPath'] === 'string' ? body['sshKeyPath'] : undefined;
+
+  try {
+    await runSyncOperationWithProfile(
+      repoPath,
+      ['push', '-u', 'origin', branch],
+      profileId,
+      sshKeyPath
+    );
+    return { pushed: true };
+  } catch (error) {
+    const detail =
+      error instanceof GitError
+        ? error.displayMessage
+        : error instanceof Error
+          ? error.message
+          : 'Unknown error';
+
+    return {
+      pushed: false,
+      reason: `The repository and its remote were created, but the first push failed: ${detail.trim()} Use Publish to try again.`
+    };
+  }
+}
+
 newRepoRouter.post(
   '/api/git/new-repo',
   asyncRoute(async (req, res) => {
@@ -133,8 +192,9 @@ newRepoRouter.post(
       steps.push(`Created folder ${resolved}`);
     }
 
-    await runGitCommand(resolved, ['init']);
-    steps.push('Initialised an empty Git repository');
+    const branch = await resolveInitialBranch(resolved);
+    await initRepository(resolved, branch);
+    steps.push(`Initialised an empty Git repository on ${branch}`);
 
     let licenseFile: string | null = null;
     if (license) {
@@ -170,6 +230,21 @@ newRepoRouter.post(
       }
     }
 
+    // The commit comes before the remote so the very first push has something
+    // to send. A repository whose only branch is unborn cannot be published:
+    // git rejects the refspec, which is exactly the wall the wizard used to
+    // leave people at.
+    const commit = await createInitialCommit(resolved, {
+      message: INITIAL_COMMIT_MESSAGE,
+      author: commitAuthor(body)
+    });
+
+    if (commit.committed) {
+      steps.push(`Committed the initial contents as "${INITIAL_COMMIT_MESSAGE}"`);
+    } else {
+      warnings.push(commit.reason);
+    }
+
     let remote = null;
     if (createRemote) {
       // Never throws: a remote failure must not invalidate the local
@@ -188,10 +263,28 @@ newRepoRouter.post(
       }
     }
 
+    // Only with both halves in place: a remote to push to and a commit to
+    // push. Anything else is reported rather than attempted, because a failed
+    // push here reads as a failed repository creation.
+    let pushed = false;
+    if (remote && commit.committed) {
+      const outcome = await pushInitialBranch(resolved, branch, body);
+
+      if (outcome.pushed) {
+        pushed = true;
+        steps.push(`Pushed ${branch} to origin and set it as the upstream branch`);
+      } else {
+        warnings.push(outcome.reason);
+      }
+    }
+
     res.json({
       success: true,
       repoPath: resolved,
       visibility,
+      branch,
+      initialCommit: commit.committed,
+      pushed,
       licenseFile,
       gitignoreWritten,
       // Custom always ends in the editor, including when an existing

@@ -2,7 +2,8 @@
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
-import { getState } from '../../state/store';
+import { setHidden } from '../../dom/create';
+import { getState, subscribeTo } from '../../state/store';
 import { confirmDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
@@ -11,6 +12,7 @@ import { activeProfile } from '../accounts';
 import { ensureKeyUsable } from '../accounts/unlock';
 import { getAccountMismatch } from '../accounts/identity';
 import { refreshOrigin } from '../repo';
+import { pushButtonState } from './push-button';
 import type { SyncResponse } from '../../../shared/api-types';
 
 export type SyncAction = 'fetch' | 'pull' | 'push';
@@ -21,6 +23,40 @@ let refreshAll: () => Promise<void> = async () => {};
 export function initSync(elements: Elements, onChanged: () => Promise<void>): void {
   ui = elements;
   refreshAll = onChanged;
+
+  // Push and Publish are the same button in two states, and which one it is
+  // depends on the branch's upstream and on whether there is an origin at all.
+  // Subscribing keeps both sources in one place rather than making every
+  // caller that refreshes either remember to redraw the button.
+  subscribeTo(['status', 'origin'], renderPushButton);
+  renderPushButton();
+}
+
+/** Redraws the Push button as Push or Publish for the current branch. */
+export function renderPushButton(): void {
+  const button = ui.btnPush as HTMLButtonElement;
+
+  // A busy button owns its own icon: setButtonBusy stashed the real one and
+  // put a spinner in its place, and restoring it is that function's job.
+  if (button.dataset['busy'] === 'true') {
+    return;
+  }
+
+  const { status, origin } = getState();
+  const next = pushButtonState(status, origin);
+
+  button.classList.toggle('btn-publish', next.mode === 'publish');
+  button.disabled = next.disabled;
+  button.title = next.title;
+  button.setAttribute('aria-label', next.ariaLabel);
+
+  const icon = button.querySelector<HTMLElement>('.material-symbols-outlined');
+  if (icon) {
+    icon.textContent = next.icon;
+  }
+
+  ui.pushLabel.textContent = next.label;
+  setHidden(ui.pushLabel, next.label === '');
 }
 
 function buttonFor(action: SyncAction): HTMLElement {
@@ -79,6 +115,22 @@ export async function performSync(
 ): Promise<void> {
   const profile = activeProfile();
 
+  // "Publish failed" is what the user was told they were doing, so it is what
+  // every message about this run says.
+  const label =
+    action === 'push' && pushButtonState(getState().status, getState().origin).mode === 'publish'
+      ? 'Publish'
+      : titleCase(action);
+
+  if (action === 'push' && getState().status?.noCommits) {
+    showToast(
+      `Nothing to ${label.toLowerCase()} yet — this branch has no commits. Commit something first.`,
+      'warn',
+      7000
+    );
+    return;
+  }
+
   if (action === 'push' && !options.force && !(await confirmAccountForPush())) {
     return;
   }
@@ -91,9 +143,9 @@ export async function performSync(
     // same check as push: they authenticate with the same key, and prompting
     // for only one of the three would be arbitrary.
     if (!(await ensureKeyUsable({ reason: action }))) {
-      logToTerminal(`${titleCase(action)} cancelled: "${profile.label}" is not unlocked.`);
+      logToTerminal(`${label} cancelled: "${profile.label}" is not unlocked.`);
       showToast(
-        `${titleCase(action)} cancelled — "${profile.label}" is not unlocked. Use Unlock in the SSH key menu when you are ready.`,
+        `${label} cancelled — "${profile.label}" is not unlocked. Use Unlock in the SSH key menu when you are ready.`,
         'warn',
         7000
       );
@@ -125,7 +177,7 @@ export async function performSync(
 
     logSyncOutcome(action, data);
     showToast(
-      `${titleCase(action)} completed${profile ? ` with key "${profile.label}"` : ''}.`,
+      `${label} completed${profile ? ` with key "${profile.label}"` : ''}.`,
       'success'
     );
 
@@ -135,7 +187,7 @@ export async function performSync(
       return;
     }
 
-    const message = errorMessage(error, `${titleCase(action)} failed.`);
+    const message = errorMessage(error, `${label} failed.`);
     logToTerminal(message, 'error');
 
     // A rejected push is usually recoverable, and force-with-lease is the
@@ -155,9 +207,12 @@ export async function performSync(
       return;
     }
 
-    showToast(`${titleCase(action)} failed: ${message}`, 'error', 9000);
+    showToast(`${label} failed: ${message}`, 'error', 9000);
   } finally {
     setButtonBusy(button, false);
+    // The state that decides Push versus Publish changed while the button was
+    // busy, and a busy button ignores redraws. This is the one after it.
+    renderPushButton();
   }
 }
 

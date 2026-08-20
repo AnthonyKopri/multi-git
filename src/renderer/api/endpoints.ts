@@ -612,6 +612,12 @@ export interface NewRepoInput {
   replaceGitignore?: boolean;
   createRemote?: boolean;
   useSshRemote?: boolean;
+  /** Author of the first commit, when the active account carries an identity. */
+  authorName?: string;
+  authorEmail?: string;
+  /** SSH identity for the first push, same shape as the sync endpoints take. */
+  profileId?: string;
+  sshKeyPath?: string;
 }
 
 export const createNewRepo = (input: NewRepoInput) =>
