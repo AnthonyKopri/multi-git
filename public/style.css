@@ -449,6 +449,35 @@ select {
   pointer-events: none;
 }
 
+/*
+ * Publish: the Push button before a branch has an upstream.
+ *
+ * A different shape, not just a different tint. The first push creates the
+ * branch on the remote, and an icon identical to the one for every routine
+ * push afterwards gave no sign that this click does something else.
+ */
+.global-actions .btn-icon.btn-publish {
+  width: auto;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-glow);
+}
+.global-actions .btn-icon.btn-publish:hover:not(:disabled) {
+  color: white;
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary);
+}
+.btn-push-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 /* Remote protocol pill (SSH / HTTPS origin toggle) */
 .btn-chip {
   display: inline-flex;

@@ -521,6 +521,40 @@ describe('ignore', () => {
 });
 
 describe('the new repository wizard', () => {
+  /**
+   * Runs `body` with git's global and system configuration emptied.
+   *
+   * The wizard reads `init.defaultBranch` to decide what to call the first
+   * branch, so a developer who has set that would otherwise get a different
+   * answer from these assertions than CI does.
+   */
+  async function withPristineGitConfig<T>(body: () => Promise<T>): Promise<T> {
+    const empty = path.join(require('node:os').tmpdir(), 'multi-git-empty-gitconfig');
+    const previous = {
+      global: process.env['GIT_CONFIG_GLOBAL'],
+      system: process.env['GIT_CONFIG_SYSTEM']
+    };
+
+    fs.writeFileSync(empty, '', 'utf8');
+    process.env['GIT_CONFIG_GLOBAL'] = empty;
+    process.env['GIT_CONFIG_SYSTEM'] = empty;
+
+    try {
+      return await body();
+    } finally {
+      for (const [key, value] of [
+        ['GIT_CONFIG_GLOBAL', previous.global],
+        ['GIT_CONFIG_SYSTEM', previous.system]
+      ] as const) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    }
+  }
+
   it('reports what is already in the target folder', async () => {
     const repo = createRepoWithHistory();
     const { body } = await api().post('/api/git/new-repo/preflight').send({ repoPath: repo }).expect(200);
@@ -574,6 +608,100 @@ describe('the new repository wizard', () => {
 
       expect(body.warnings.join(' ')).toMatch(/Kept the existing LICENSE/);
       expect(fs.readFileSync(path.join(target, 'LICENSE'), 'utf8')).toBe('MY OWN LICENSE\n');
+    } finally {
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves a new repository committed on main, ready to be pushed', async () => {
+    // The whole point: `git init` alone leaves an unborn branch that git still
+    // calls master, and no commit for a refspec to name, so the first push is
+    // rejected. Everything here is what the user used to type by hand.
+    const parent = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'multi-git-wizard-'));
+    const target = path.join(parent, 'ready-to-push');
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, 'notes.txt'), 'already here\n', 'utf8');
+
+    try {
+      const body = await withPristineGitConfig(async () =>
+        (
+          await api()
+            .post('/api/git/new-repo')
+            .send({
+              repoPath: target,
+              licenseId: 'none',
+              gitignoreId: 'none',
+              authorName: 'Test User',
+              authorEmail: 'test@example.com'
+            })
+            .expect(200)
+        ).body
+      );
+
+      expect(body).toMatchObject({ branch: 'main', initialCommit: true, pushed: false });
+      expect(git(target, 'rev-parse', '--abbrev-ref', 'HEAD').trim()).toBe('main');
+      expect(git(target, 'log', '--oneline').trim()).toContain('Initial commit');
+
+      // The file that was already in the folder is in that commit.
+      expect(git(target, 'ls-tree', '--name-only', 'HEAD').split('\n')).toContain('notes.txt');
+    } finally {
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  it('commits the license and .gitignore it wrote, and nothing the .gitignore excludes', async () => {
+    const parent = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'multi-git-wizard-'));
+    const target = path.join(parent, 'with-templates');
+    fs.mkdirSync(path.join(target, 'node_modules'), { recursive: true });
+    fs.writeFileSync(path.join(target, 'node_modules', 'dep.js'), 'noise\n', 'utf8');
+    fs.writeFileSync(path.join(target, 'index.js'), 'console.log(1);\n', 'utf8');
+
+    try {
+      await api()
+        .post('/api/git/new-repo')
+        .send({
+          repoPath: target,
+          licenseId: 'mit',
+          licenseYear: '2026',
+          licenseHolder: 'Test Holder',
+          gitignoreId: 'node',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com'
+        })
+        .expect(200);
+
+      const tracked = git(target, 'ls-files').split('\n').map((line) => line.trim());
+
+      expect(tracked).toContain('LICENSE');
+      expect(tracked).toContain('.gitignore');
+      expect(tracked).toContain('index.js');
+      // The template is written before anything is staged, so the folder it
+      // ignores never reaches the commit it would otherwise dominate.
+      expect(tracked).not.toContain('node_modules/dep.js');
+    } finally {
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  it('says so when an empty folder leaves nothing to commit', async () => {
+    const parent = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'multi-git-wizard-'));
+    const target = path.join(parent, 'nothing-here');
+
+    try {
+      const body = await withPristineGitConfig(async () =>
+        (
+          await api()
+            .post('/api/git/new-repo')
+            .send({ repoPath: target, licenseId: 'none', gitignoreId: 'none' })
+            .expect(200)
+        ).body
+      );
+
+      expect(body.initialCommit).toBe(false);
+      expect(body.warnings.join(' ')).toMatch(/nothing to commit/i);
+      // Still a repository on main, so a commit made later publishes cleanly.
+      expect(body.branch).toBe('main');
+      expect(git(target, 'symbolic-ref', 'HEAD').trim()).toBe('refs/heads/main');
     } finally {
       fs.rmSync(parent, { recursive: true, force: true });
     }

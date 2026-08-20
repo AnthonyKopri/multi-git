@@ -12,9 +12,10 @@ import {
 } from '../src/renderer/features/conflicts/resolve-text';
 import { buildTree, indexTree, sortedChildren } from '../src/renderer/features/explorer/file-tree';
 import { diffEntriesFor, findDiffEntry } from '../src/renderer/features/staging/file-list';
+import { pushButtonState } from '../src/renderer/features/sync/push-button';
 import { profileColor, repoBaseName, statusLabel } from '../src/renderer/ui/format';
 import { PANE_SPECS, clampPaneSize } from '../src/renderer/ui/panes';
-import type { StatusResponse } from '../src/shared/api-types';
+import type { OriginResponse, StatusResponse } from '../src/shared/api-types';
 
 describe('applyCommitType', () => {
   it('prefixes an empty message', () => {
@@ -321,5 +322,79 @@ describe('clampPaneSize', () => {
     const commit = PANE_SPECS.commit;
     expect(clampPaneSize(commit, commit.min - 40, 1000)).toBe(commit.min);
     expect(clampPaneSize(commit, 300, 1000)).toBe(300);
+  });
+});
+
+describe('pushButtonState', () => {
+  function status(overrides: Partial<StatusResponse> = {}): StatusResponse {
+    return {
+      success: true,
+      branch: 'main',
+      tracking: 'origin/main',
+      ahead: 0,
+      behind: 0,
+      detached: false,
+      noCommits: false,
+      staged: [],
+      unstaged: [],
+      conflicts: [],
+      isMerging: false,
+      isRebasing: false,
+      ...overrides
+    };
+  }
+
+  const origin: OriginResponse = {
+    success: true,
+    remoteUrl: 'git@github.com:owner/repo.git',
+    protocol: 'ssh',
+    host: 'github.com',
+    canToggle: true,
+    suggestedUrl: 'https://github.com/owner/repo.git'
+  };
+
+  it('says Publish for a branch that has no upstream yet', () => {
+    const state = pushButtonState(status({ tracking: '' }), origin);
+
+    expect(state.mode).toBe('publish');
+    expect(state.label).toBe('Publish');
+    expect(state.disabled).toBe(false);
+  });
+
+  it('says Push once the branch is tracking one', () => {
+    const state = pushButtonState(status(), origin);
+
+    expect(state.mode).toBe('push');
+    // Push has always been an icon with no label, and stays that way.
+    expect(state.label).toBe('');
+  });
+
+  it('stays Push when there is no origin to publish to', () => {
+    // Publishing means creating the branch on a remote. Without one there is
+    // nothing this button could publish to.
+    expect(pushButtonState(status({ tracking: '' }), null).mode).toBe('push');
+    expect(
+      pushButtonState(status({ tracking: '' }), { ...origin, remoteUrl: '' }).mode
+    ).toBe('push');
+  });
+
+  it('stays Push on a detached HEAD, which has no upstream to set', () => {
+    expect(
+      pushButtonState(status({ tracking: '', detached: true, branch: '(detached)' }), origin).mode
+    ).toBe('push');
+  });
+
+  it('offers Publish but disables it until the first commit exists', () => {
+    // git rejects a refspec naming an unborn branch, so the button says why
+    // rather than letting the operation fail.
+    const state = pushButtonState(status({ tracking: '', noCommits: true }), origin);
+
+    expect(state.mode).toBe('publish');
+    expect(state.disabled).toBe(true);
+    expect(state.title).toMatch(/first commit/i);
+  });
+
+  it('falls back to Push before a repository is loaded', () => {
+    expect(pushButtonState(null, origin).mode).toBe('push');
   });
 });
