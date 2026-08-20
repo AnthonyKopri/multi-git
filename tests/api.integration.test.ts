@@ -613,12 +613,13 @@ describe('the new repository wizard', () => {
     }
   });
 
-  it('leaves a new repository committed on main, ready to be pushed', async () => {
-    // The whole point: `git init` alone leaves an unborn branch that git still
-    // calls master, and no commit for a refspec to name, so the first push is
-    // rejected. Everything here is what the user used to type by hand.
+  it('starts a local-only repository on main, with its files left to review', async () => {
+    // `git init` alone still leaves the branch git calls master. The branch is
+    // fixed for every repository; the commit is not, because a repository that
+    // is staying local has nothing to publish and its files belong in the
+    // Staging Area first.
     const parent = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'multi-git-wizard-'));
-    const target = path.join(parent, 'ready-to-push');
+    const target = path.join(parent, 'local-only');
     fs.mkdirSync(target, { recursive: true });
     fs.writeFileSync(path.join(target, 'notes.txt'), 'already here\n', 'utf8');
 
@@ -638,23 +639,21 @@ describe('the new repository wizard', () => {
         ).body
       );
 
-      expect(body).toMatchObject({ branch: 'main', initialCommit: true, pushed: false });
-      expect(git(target, 'rev-parse', '--abbrev-ref', 'HEAD').trim()).toBe('main');
-      expect(git(target, 'log', '--oneline').trim()).toContain('Initial commit');
+      expect(body).toMatchObject({ branch: 'main', initialCommit: false, pushed: false });
+      expect(body.warnings).toEqual([]);
+      expect(git(target, 'symbolic-ref', 'HEAD').trim()).toBe('refs/heads/main');
 
-      // The file that was already in the folder is in that commit.
-      expect(git(target, 'ls-tree', '--name-only', 'HEAD').split('\n')).toContain('notes.txt');
+      // Untouched: still there, still untracked, nothing staged on its behalf.
+      expect(fs.existsSync(path.join(target, 'notes.txt'))).toBe(true);
+      expect(git(target, 'ls-files').trim()).toBe('');
     } finally {
       fs.rmSync(parent, { recursive: true, force: true });
     }
   });
 
-  it('commits the license and .gitignore it wrote, and nothing the .gitignore excludes', async () => {
+  it('writes the license and .gitignore it was asked for', async () => {
     const parent = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'multi-git-wizard-'));
     const target = path.join(parent, 'with-templates');
-    fs.mkdirSync(path.join(target, 'node_modules'), { recursive: true });
-    fs.writeFileSync(path.join(target, 'node_modules', 'dep.js'), 'noise\n', 'utf8');
-    fs.writeFileSync(path.join(target, 'index.js'), 'console.log(1);\n', 'utf8');
 
     try {
       await api()
@@ -664,44 +663,12 @@ describe('the new repository wizard', () => {
           licenseId: 'mit',
           licenseYear: '2026',
           licenseHolder: 'Test Holder',
-          gitignoreId: 'node',
-          authorName: 'Test User',
-          authorEmail: 'test@example.com'
+          gitignoreId: 'node'
         })
         .expect(200);
 
-      const tracked = git(target, 'ls-files').split('\n').map((line) => line.trim());
-
-      expect(tracked).toContain('LICENSE');
-      expect(tracked).toContain('.gitignore');
-      expect(tracked).toContain('index.js');
-      // The template is written before anything is staged, so the folder it
-      // ignores never reaches the commit it would otherwise dominate.
-      expect(tracked).not.toContain('node_modules/dep.js');
-    } finally {
-      fs.rmSync(parent, { recursive: true, force: true });
-    }
-  });
-
-  it('says so when an empty folder leaves nothing to commit', async () => {
-    const parent = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'multi-git-wizard-'));
-    const target = path.join(parent, 'nothing-here');
-
-    try {
-      const body = await withPristineGitConfig(async () =>
-        (
-          await api()
-            .post('/api/git/new-repo')
-            .send({ repoPath: target, licenseId: 'none', gitignoreId: 'none' })
-            .expect(200)
-        ).body
-      );
-
-      expect(body.initialCommit).toBe(false);
-      expect(body.warnings.join(' ')).toMatch(/nothing to commit/i);
-      // Still a repository on main, so a commit made later publishes cleanly.
-      expect(body.branch).toBe('main');
-      expect(git(target, 'symbolic-ref', 'HEAD').trim()).toBe('refs/heads/main');
+      expect(fs.readFileSync(path.join(target, 'LICENSE'), 'utf8')).toContain('Test Holder');
+      expect(fs.readFileSync(path.join(target, '.gitignore'), 'utf8')).toContain('node_modules');
     } finally {
       fs.rmSync(parent, { recursive: true, force: true });
     }

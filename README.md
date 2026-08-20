@@ -133,7 +133,9 @@ Sizes and collapsed state live in browser storage. They are shared by windows in
 - **License.** Pick from MIT, Apache 2.0, GPL/AGPL/LGPL 3.0, MPL 2.0, BSD 2- and 3-Clause, ISC, or the Unlicense. Templates whose text carries placeholders show **Copyright year** and **Copyright holder** fields, pre-filled from the active profile or repository identity. A `LICENSE`, `LICENCE`, or `COPYING` file that already exists is never overwritten without a confirmation.
 - **.gitignore.** Choose a stack template (Node, Python, Rust, Go, Java, C/C++, .NET, Unity, Unreal, Godot), the **General** default that covers OS files, editors, and build output, or **Custom**, which writes a commented starter file and opens it in your default editor. An existing `.gitignore` also asks before being replaced.
 
-The repository is left ready to publish rather than only initialised: it starts on `main` — unless your own global `init.defaultBranch` says otherwise — and the folder's contents, including any files that were already there, become an **Initial commit**. Without that commit `git push` has no refspec to send and rejects the first push, which is the point of doing it here.
+Every new repository starts on `main`, unless your own global `init.defaultBranch` says otherwise. Git's fallback is still `master`, and the Git for Windows installer sets `init.defaultBranch` system-wide, so neither is treated as a choice you made.
+
+**Ticking "Create it on GitHub" also commits and pushes.** The folder's contents, including files that were already there, become an **Initial commit**, and that commit is pushed to the new remote with the SSH profile this repository uses. Without a commit `git push` has no refspec to send and rejects the first push, which is why publishing has to include one. Leave the box unticked and the wizard only initialises: your files stay untracked, ready to review in the Staging Area and commit when you choose.
 
 Every file the dialog writes, and anything it decided to keep, is reported in the Terminal Log, along with any step it could not complete — an unset commit identity or an unreachable remote is a warning, never a half-created repository.
 

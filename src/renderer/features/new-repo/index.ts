@@ -166,7 +166,9 @@ function renderGithubCliStatus(): void {
   const account = status.account ? ` as ${status.account}` : '';
   setFieldHint(
     ui.newRepoGhStatus,
-    `GitHub CLI is signed in${account}. Origin is switched to SSH after the repository is created.`,
+    // Says that ticking this commits, because that is the one thing here that
+    // writes history rather than files, and it is not obvious from the label.
+    `GitHub CLI is signed in${account}. Ticking this commits the folder's contents and pushes them; origin is switched to SSH first.`,
     'success'
   );
 }
@@ -220,11 +222,7 @@ function renderFolderHint(info: NewRepoPreflightResponse): void {
 
   setFieldHint(
     ui.newRepoFolderHint,
-    info.isEmpty
-      ? 'Empty folder, ready to initialise.'
-      : // They are not moved or rewritten, but they do become the first
-        // commit, which is what makes the repository publishable.
-        'Existing files stay where they are and become the first commit.'
+    info.isEmpty ? 'Empty folder, ready to initialise.' : 'Existing files are left untouched.'
   );
 }
 
@@ -386,8 +384,9 @@ export async function submitNewRepo(): Promise<void> {
 
       setFeedback('Creating the repository…', 'info');
       logToTerminal(
-        `git init "${repoPath}" && git add -A && git commit -m "Initial commit"` +
-          (createRemote ? ' && gh repo create && git push -u origin <branch>' : ''),
+        createRemote
+          ? `git init "${repoPath}" && git add -A && git commit -m "Initial commit" && gh repo create && git push -u origin <branch>`
+          : `git init "${repoPath}"`,
         'cmd'
       );
 

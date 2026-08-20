@@ -12,6 +12,25 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Changed
+
+- The New Repository wizard makes its initial commit only when "Create it on
+  GitHub" is ticked. The commit exists so the first push has something to send,
+  so a repository staying local no longer gets one and its files are left for
+  the Staging Area to review.
+
+### Removed
+
+- The unused `POST /api/git/init` endpoint. Nothing called it, and it still
+  created repositories the old way — on `master`, with no commit — so it was a
+  second copy of a bug that has been fixed everywhere else.
+
+### Fixed
+
+- Refresh origin after a remote is added, renamed, removed, or pruned from the
+  Remotes tab. Adding an origin by hand left the Publish button and the
+  SSH/HTTPS chip showing the state from before until the next full refresh.
+
 ## [3.1.2] - 2026-08-20
 
 ### Added

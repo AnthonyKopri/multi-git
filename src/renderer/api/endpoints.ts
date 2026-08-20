@@ -623,9 +623,6 @@ export interface NewRepoInput {
 export const createNewRepo = (input: NewRepoInput) =>
   api.post<Api.NewRepoResponse>('/api/git/new-repo', { ...global, body: input });
 
-export const initRepo = (repoPath: string) =>
-  api.post<Api.Ok & { message: string }>('/api/git/init', { ...global, body: { repoPath } });
-
 export const selectFolderViaServer = () =>
   api.get<Api.SelectFolderResponse>('/api/git/select-folder', global);
 
