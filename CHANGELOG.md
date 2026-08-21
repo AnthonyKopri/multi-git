@@ -12,6 +12,28 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Added
+
+- `npm run release:upload` now reads the release back after uploading and
+  reports each asset's size against the local file. GitHub's release editor
+  shows CLI-uploaded assets as "Upload failed" however completely they
+  uploaded, and deleting them on that advice breaks a working download.
+- `npm run release:upload` now closes the Unreleased section: its entries move
+  under a heading for the version just released, that version gains a compare
+  link, and `[Unreleased]` is re-based onto the new tag. The edit is left in the
+  working tree to review, `--dry-run` reports what it would do, and
+  `--no-changelog` skips it.
+
+### Fixed
+
+- Use the OpenSSH build that can actually reach the agent. Windows ships two
+  installs that do not share one: the System32 build talks to the OpenSSH
+  Authentication Agent service over a named pipe, while the MSYS build inside
+  Git for Windows looks for a Unix socket and sees no agent at all. Which one a
+  bare `ssh` found was decided by PATH order, so a key loaded into the agent
+  could still be asked for its passphrase on every push. Both `ssh` and
+  `ssh-add` are now named explicitly.
+
 ## [3.1.3] - 2026-08-20
 
 ### Changed
