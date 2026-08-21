@@ -12,6 +12,7 @@ const {
   writeChecksumManifest
 } = require('./release-assets');
 const { releaseChangelog } = require('./changelog');
+const { spawnSpec } = require('./command-path');
 
 const ROOT = path.join(__dirname, '..');
 const PACKAGE_JSON = path.join(ROOT, 'package.json');
@@ -83,7 +84,13 @@ function quoteForDisplay(value) {
  */
 function readGh(args) {
   return new Promise((resolve) => {
-    const child = spawn('gh', args, { cwd: ROOT, shell: false, windowsHide: true });
+    const spec = spawnSpec('gh', args);
+    const child = spawn(spec.file, spec.args, {
+      cwd: ROOT,
+      shell: false,
+      windowsHide: true,
+      ...spec.options
+    });
     let stdout = '';
 
     child.stdout.on('data', (chunk) => {
@@ -96,11 +103,15 @@ function readGh(args) {
 
 function runGh(args) {
   return new Promise((resolve, reject) => {
-    const child = spawn('gh', args, {
+    // On Windows `gh` may be a .cmd shim, which spawn cannot run by bare name.
+    const spec = spawnSpec('gh', args);
+
+    const child = spawn(spec.file, spec.args, {
       cwd: ROOT,
       stdio: 'inherit',
       shell: false,
-      windowsHide: true
+      windowsHide: true,
+      ...spec.options
     });
 
     child.on('error', (error) => {
