@@ -203,8 +203,17 @@ class Asker {
     }
   }
 
+  /**
+   * Closes the prompt, and forgets it.
+   *
+   * Forgetting is the point: step 1 closes this so `release.js` can own the
+   * terminal for its own questions, and every step after that has to be able
+   * to ask again. Leaving the closed interface in place made the next
+   * question throw "readline was closed" — after the build had succeeded.
+   */
   close() {
     this.rl?.close();
+    this.rl = null;
   }
 }
 
@@ -289,8 +298,6 @@ async function main() {
   try {
     await preflight();
 
-    const before = version();
-
     // 1. Build. release.js owns the version bump, the compile, electron-builder
     //    and the checksums; this only decides whether to start it.
     const bumpArgs = options.bump ? ['--bump', options.bump, '--target', 'both', '--yes'] : [];
@@ -320,7 +327,10 @@ async function main() {
 
     // 2. Commit the bump. release.js deliberately leaves it uncommitted so the
     //    build can be thrown away; that only works if something commits it later.
-    if (shipping !== before && (await isDirty(PACKAGE_JSON))) {
+    // Whether package.json is dirty, not whether this run is what changed it: a
+    // re-run after a failure has the bump already applied and still uncommitted,
+    // and skipping it there would strand exactly the step this exists for.
+    if (await isDirty(PACKAGE_JSON)) {
       switch (await asker.step(`Step 2/6 — Commit and push the version bump to ${shipping}.`)) {
         case 'quit':
           return say(`Stopped. ${shipping} is built but the bump is uncommitted.`);
@@ -337,7 +347,7 @@ async function main() {
           }
       }
     } else {
-      say('Step 2/6 — The version bump is already committed. Skipping.');
+      say(`Step 2/6 — Nothing uncommitted in package.json. Skipping.`);
     }
 
     // 3. The draft release. A draft first, because names and labels cannot be
@@ -446,4 +456,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, answerToAction, printHelp };
+module.exports = { parseArgs, answerToAction, printHelp, Asker };
