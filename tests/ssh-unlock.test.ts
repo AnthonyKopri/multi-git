@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { resetSessionOwnership } from '../src/server/ssh/agent';
-import { FakeRunner, command } from './helpers/fake-runner';
+import { FakeRunner, command, programName } from './helpers/fake-runner';
 import { cleanupRepos, createRepoWithHistory, git } from './helpers/temp-repo';
 
 const FINGERPRINT = 'SHA256:VGhpc0lzQVRlc3RGaW5nZXJwcmludFZhbHVlMDE=';
@@ -98,7 +98,7 @@ function agentAcceptingKey(): FakeRunner {
     .on(command('sc.exe', 'qc'), { stdout: 'START_TYPE : 2 AUTO_START' });
 
   runner.on(
-    (executable, args) => executable.endsWith('ssh-add') && !args.includes('-l') && !args.includes('-d'),
+    (executable, args) => programName(executable) === 'ssh-add' && !args.includes('-l') && !args.includes('-d'),
     () => {
       holds = true;
       return { exitCode: 0 };
@@ -111,7 +111,7 @@ function agentAcceptingKey(): FakeRunner {
 /** An agent whose `ssh-add` rejects whatever it is given. */
 function agentRejectingKey(): FakeRunner {
   return emptyAgent().on(
-    (executable, args) => executable.endsWith('ssh-add') && !args.includes('-l'),
+    (executable, args) => programName(executable) === 'ssh-add' && !args.includes('-l'),
     { exitCode: 1, stderr: 'Error loading key: incorrect passphrase supplied to decrypt private key' }
   );
 }

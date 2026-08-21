@@ -147,7 +147,11 @@ describe('buildSshCommand', () => {
     const command = buildSshCommand('C:\\Users\\jane\\.ssh\\id_ed25519');
 
     // Backslashes become forward slashes: ssh reads this as a shell word.
-    expect(command).toContain('ssh -i "C:/Users/jane/.ssh/id_ed25519"');
+    // The binary itself is resolved rather than left to PATH, so only the
+    // identity argument is asserted here; tests/openssh-path.test.ts covers
+    // which ssh gets named.
+    expect(command).toContain('-i "C:/Users/jane/.ssh/id_ed25519"');
+    expect(command.startsWith('ssh') || command.startsWith('"')).toBe(true);
     expect(command).toContain('IdentitiesOnly=yes');
     expect(command).toContain('StrictHostKeyChecking=accept-new');
   });

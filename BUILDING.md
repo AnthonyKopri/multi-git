@@ -270,6 +270,53 @@ Use `--dry-run` to print the exact `gh` command without writing or uploading:
 npm run release:upload -- --tag Release_v3.0.0 --dry-run
 ```
 
+### Checking what reached the release
+
+After uploading, the command reads the release back and prints each asset with
+the size GitHub reports, next to the size of the file on disk.
+
+This exists because GitHub's own release editor is misleading here: assets
+uploaded through the API or the CLI are shown on the **Edit release** page as
+*"Upload failed. Delete and try uploading this file again"*, no matter how
+completely they uploaded. Following that advice deletes a working download. The
+API's view of the release is the truth, and that is what this prints.
+
+If an asset is missing or short, the command says which one and leaves
+`CHANGELOG.md` alone — a changelog saying a version shipped is wrong if its
+assets did not arrive. If the release cannot be read back at all, that is
+reported and nothing fails: the upload has already succeeded by then.
+
+### Closing the Unreleased section
+
+After a successful upload, the command rewrites `CHANGELOG.md`:
+
+- everything under `## [Unreleased]` moves under a new `## [<version>] - <date>`
+  heading, so entries end up beneath the release that shipped them;
+- `[<version>]` gains a compare link from the previous release's tag to this
+  one, because a version with no link definition renders as literal brackets;
+- `[Unreleased]` is re-based onto the new tag, so it compares against the
+  release that just shipped rather than an older one.
+
+The guidance comment stays under `## [Unreleased]`, ready for the next release.
+The repository URL is read from the link definitions already in the file, so a
+fork gets its own links without editing anything here.
+
+The edit is left in the working tree; nothing is committed for you. Review it
+and commit it with the release.
+
+This runs after `gh release upload` succeeds, never before — a changelog saying
+a version shipped is wrong if its assets never reached the release. It is also
+safe to re-run: a version that already has a section, or an Unreleased section
+with nothing in it, is reported and left alone rather than duplicated. A failure
+here is a warning, not a failed release, since the release is already public by
+then.
+
+`--dry-run` reports what it would do. Pass `--no-changelog` to skip the step:
+
+```bash
+npm run release:upload -- --no-changelog
+```
+
 ## Build targets in detail
 
 `npm run release` is a wrapper. These call Electron Builder directly and never

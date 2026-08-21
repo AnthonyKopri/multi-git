@@ -15,7 +15,7 @@ import {
   setRepoSshCommand,
   SSH_COMMAND_KEY
 } from '../src/server/ssh/repo-routing';
-import { FakeRunner, command } from './helpers/fake-runner';
+import { FakeRunner, command, programName } from './helpers/fake-runner';
 import { cleanupRepos, createRepoWithHistory, git } from './helpers/temp-repo';
 
 const FINGERPRINT = 'SHA256:VGhpc0lzQVRlc3RGaW5nZXJwcmludFZhbHVlMDE=';
@@ -54,14 +54,14 @@ function agentAcceptingKey(): FakeRunner {
     .on(command('ssh-add', '-l'), listing)
     .on(
       (executable, args) =>
-        executable.endsWith('ssh-add') && !args.includes('-l') && !args.includes('-d'),
+        programName(executable) === 'ssh-add' && !args.includes('-l') && !args.includes('-d'),
       () => {
         holdsKey = true;
         return { exitCode: 0 };
       }
     )
     .on(
-      (executable, args) => executable.endsWith('ssh-add') && args.includes('-d'),
+      (executable, args) => programName(executable) === 'ssh-add' && args.includes('-d'),
       () => {
         holdsKey = false;
         return { exitCode: 0 };
@@ -166,7 +166,7 @@ describe('applyProfile', () => {
     const result = await session.applyProfile({ repoPath: repo, profileId: '', runner });
 
     expect(result.success).toBe(true);
-    expect(runner.calls.some((call) => call.args.includes('-l') === false && call.executable.endsWith('ssh-add'))).toBe(
+    expect(runner.calls.some((call) => call.args.includes('-l') === false && programName(call.executable) === 'ssh-add')).toBe(
       false
     );
   });
