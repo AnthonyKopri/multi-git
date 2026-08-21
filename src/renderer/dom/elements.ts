@@ -270,6 +270,9 @@ export const ELEMENT_MAP = {
   pushCountBadge: 'push-count-badge',
   btnRemoteProtocol: 'btn-remote-protocol',
   remoteProtocolLabel: 'remote-protocol-label',
+  /** Toolbar toggle for pulling a purely-behind branch after a fetch. */
+  btnAutoPull: 'btn-auto-pull',
+  autoPullLabel: 'auto-pull-label',
   btnOpenLogs: 'btn-open-logs',
   commitHistoryList: 'commit-history-list',
   btnUndoCommit: 'btn-undo-commit',

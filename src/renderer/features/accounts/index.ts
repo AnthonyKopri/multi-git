@@ -49,7 +49,10 @@ export function applyConfigSnapshot(config: ClientConfig): void {
     accountRules: config.accountRules,
     repoSettings: config.repoSettings,
     vaultStatus: config.vaultStatus,
-    manageSshConfig: config.settings.manageSshConfig !== false
+    manageSshConfig: config.settings.manageSshConfig !== false,
+    // Off unless it was turned on: nothing should start moving commits on its
+    // own because the setting happened to be absent.
+    autoPull: config.settings.autoPull === true
   });
 
   // A deleted profile must not stay selected.
@@ -333,7 +336,10 @@ export async function onManageSshConfigChanged(enabled: boolean): Promise<void> 
   }
 
   try {
-    const { config, warning } = await api.saveAppSettings(enabled, removeManagedBlock);
+    const { config, warning } = await api.saveAppSettings({
+      manageSshConfig: enabled,
+      removeManagedBlock
+    });
     applyConfigSnapshot(config);
 
     if (warning) {

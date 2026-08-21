@@ -63,6 +63,11 @@ export interface AppSettings {
    * Defaults to false: a prompt is the most sensitive thing in a launch.
    */
   storeAgentPrompts?: boolean;
+  /**
+   * Whether a fetch that finds the branch purely behind pulls on its own.
+   * Defaults to false; only ever a fast-forward. See `shouldAutoPull`.
+   */
+  autoPull?: boolean;
 }
 
 /** A user-defined set of repositories that are fetched and opened together. */
