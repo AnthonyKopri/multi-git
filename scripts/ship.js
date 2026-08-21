@@ -33,6 +33,7 @@ function parseArgs(argv) {
     yes: false,
     dryRun: false,
     publish: false,
+    changelog: true,
     help: false
   };
 
@@ -54,8 +55,11 @@ function parseArgs(argv) {
     else if (flag === '--yes' || flag === '-y') options.yes = true;
     else if (flag === '--dry-run') options.dryRun = true;
     else if (flag === '--publish') options.publish = true;
+    // Belongs to the upload step, which this passes it to. Accepted here so
+    // that the flag means the same thing whichever command is reached for.
+    else if (flag === '--no-changelog') options.changelog = false;
     else if (flag === '--help' || flag === '-h') options.help = true;
-    else throw new Error(`Unknown option: ${arg}`);
+    else throw new Error(`Unknown option: ${arg}. Run with --help for the list.`);
   }
 
   return options;
@@ -80,6 +84,7 @@ one of them fails.
   --tag <tag>       release tag (default: Release_v<version>)
   --repo, -R <repo> GitHub repository in OWNER/REPO form
   --publish         also publish the draft at the end
+  --no-changelog    upload without closing the Unreleased section
   --yes, -y         do not ask; run every step
   --dry-run         print what each step would run and change nothing
   --help, -h        show this message
@@ -215,6 +220,17 @@ async function currentBranch() {
   return (await readGit('branch', '--show-current') ?? '').trim();
 }
 
+/**
+ * The branch releases are cut from, as the remote reports it.
+ *
+ * Falls back to `main` when there is no `origin/HEAD` to ask, which is the
+ * case in a fresh clone that has never run `git remote set-head`.
+ */
+async function defaultBranch() {
+  const ref = (await readGit('symbolic-ref', '--short', 'refs/remotes/origin/HEAD') ?? '').trim();
+  return ref.replace(/^origin[/]/, '') || 'main';
+}
+
 /** True when a release for the tag already exists, so it is not created twice. */
 async function releaseExists(tag, repo) {
   const args = ['release', 'view', tag, '--json', 'tagName'];
@@ -226,11 +242,29 @@ async function preflight() {
   console.log('Checking the repository...\n');
 
   const branch = await currentBranch();
+  const expected = await defaultBranch();
+
   console.log(`  branch:  ${branch || '(detached)'}`);
   console.log(`  version: ${version()}`);
 
   const gh = await read('gh', ['auth', 'status']);
   console.log(`  gh:      ${gh === null ? 'not signed in — steps 3 to 6 will fail' : 'signed in'}`);
+
+  // A release cut from the wrong branch builds the wrong code and tags it as
+  // the real thing. Worth saying loudly, and worth saying before the build
+  // rather than after twenty minutes of electron-builder.
+  if (branch !== expected) {
+    console.log(
+      `
+  This is not ${expected}, which is where releases are cut from.
+` +
+        `  Building here would package whatever ${branch || 'this detached HEAD'} contains,
+` +
+        `  and steps 2 and 5 would push it there. Switch to ${expected} unless you
+` +
+        '  mean to release from here.'
+    );
+  }
 
   if (await isDirty()) {
     console.log(
@@ -333,9 +367,14 @@ async function main() {
     // 4. Upload. Also verifies what arrived and closes the changelog.
     const uploadArgs = ['--tag', tag];
     if (options.repo) uploadArgs.push('--repo', options.repo);
+    if (!options.changelog) uploadArgs.push('--no-changelog');
     if (options.dryRun) uploadArgs.push('--dry-run');
 
-    switch (await asker.step('Step 4/6 — Upload the assets, verify them, and close the changelog.')) {
+    const uploadLabel = options.changelog
+      ? 'Upload the assets, verify them, and close the changelog.'
+      : 'Upload the assets and verify them, leaving the changelog alone.';
+
+    switch (await asker.step(`Step 4/6 — ${uploadLabel}`)) {
       case 'quit':
         return say(`Stopped. ${tag} exists but has no assets.`);
       case 'skip':

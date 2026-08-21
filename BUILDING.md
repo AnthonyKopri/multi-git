@@ -254,6 +254,10 @@ Nothing here replaces the individual commands; each step spawns the documented
 one and passes its output straight through, so running them by hand still works
 exactly as described below.
 
+The check before step 1 says which branch you are on and warns if it is not the
+one releases are cut from — building elsewhere packages that branch's code and
+tags it as the release.
+
 A step that is already done is detected and skipped — a version already
 committed, a release that already exists, a changelog with nothing to move — so
 this is safe to re-run after a step fails partway through.
@@ -264,6 +268,7 @@ this is safe to re-run after a step fails partway through.
 | `--tag <tag>` | Release tag. Defaults to `Release_v<version>`. |
 | `--repo`, `-R` | GitHub repository in `OWNER/REPO` form. |
 | `--publish` | Publish the draft at the end. Off by default: publishing is the irreversible step. |
+| `--no-changelog` | Upload without closing the Unreleased section. Passed through to the upload step. |
 | `--yes`, `-y` | Do not ask; run every step. |
 | `--dry-run` | Print what each step would run and change nothing. |
 
