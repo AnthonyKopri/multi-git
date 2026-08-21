@@ -39,9 +39,19 @@ afterEach(() => {
   }
 });
 
-/** A directory holding the files named, returned as a PATH entry. */
+/**
+ * A directory holding the files named, returned as a PATH entry.
+ *
+ * `realpathSync.native` for the reason tests/helpers/temp-repo.ts spells out:
+ * GitHub's Windows runners have a `TEMP` of `C:\Users\RUNNER~1\...`, and the
+ * resolver under test expands that 8.3 short name to its long form. Without
+ * this the fixture hands back the short spelling and every path assertion
+ * fails there and nowhere else.
+ */
 function directoryWith(files: Record<string, string>): string {
-  scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-cmdpath-'));
+  scratch = fs.realpathSync.native(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-cmdpath-'))
+  );
 
   for (const [name, contents] of Object.entries(files)) {
     fs.writeFileSync(path.join(scratch, name), contents, 'utf8');
