@@ -14,6 +14,7 @@ interface ShipOptions {
   yes: boolean;
   dryRun: boolean;
   publish: boolean;
+  changelog: boolean;
   help: boolean;
 }
 
@@ -36,6 +37,7 @@ describe('parseArgs', () => {
       // Publishing is what makes a release public, so it never happens
       // because a flag was left off.
       publish: false,
+      changelog: true,
       help: false
     });
   });
@@ -54,10 +56,20 @@ describe('parseArgs', () => {
     });
   });
 
+  it('accepts the upload step’s own flag, so it means the same thing here', () => {
+    // Reaching for `--no-changelog` on the command that wraps the upload is
+    // the obvious thing to do, and it used to stop the release with
+    // "Unknown option".
+    expect(ship.parseArgs(['--no-changelog']).changelog).toBe(false);
+    expect(ship.parseArgs([]).changelog).toBe(true);
+  });
+
   it('refuses an unknown flag rather than ignoring it', () => {
     // A typo in a release command should stop the release, not run one that
     // silently means something else.
     expect(() => ship.parseArgs(['--publsh'])).toThrow('Unknown option');
+    // And says where the list is, rather than leaving it to be guessed.
+    expect(() => ship.parseArgs(['--publsh'])).toThrow('--help');
   });
 
   it('refuses a flag whose value was swallowed by the next flag', () => {
