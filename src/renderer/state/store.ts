@@ -49,6 +49,8 @@ export interface AppState {
   /** '' means System SSH. */
   activeProfileId: string;
   manageSshConfig: boolean;
+  /** Whether a fetch that leaves the branch purely behind pulls on its own. */
+  autoPull: boolean;
 
   // Repository state
   status: StatusResponse | null;
@@ -87,6 +89,7 @@ function initialState(): AppState {
     vaultStatus: { hasVault: false, unlocked: false },
     activeProfileId: '',
     manageSshConfig: true,
+    autoPull: false,
 
     status: null,
     branches: { local: [], remote: [] },

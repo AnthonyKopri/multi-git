@@ -248,6 +248,10 @@ function validateSettings(raw: unknown): Partial<AppSettings> | undefined {
     settings.storeAgentPrompts = source['storeAgentPrompts'];
   }
 
+  if (typeof source['autoPull'] === 'boolean') {
+    settings.autoPull = source['autoPull'];
+  }
+
   // Becomes the default folder a worktree is created in, so it must be a plain
   // path: a newline or a null would be carried into a directory creation.
   const parentDir = source['worktreeParentDir'];

@@ -192,6 +192,7 @@ function wireHeader(): void {
   ui.btnFetch.addEventListener('click', () => void sync.performSync('fetch'));
   ui.btnPull.addEventListener('click', () => void sync.performSync('pull'));
   ui.btnPush.addEventListener('click', () => void sync.performSync('push'));
+  ui.btnAutoPull.addEventListener('click', () => void sync.toggleAutoPull());
   ui.btnRemoteProtocol.addEventListener('click', () => void sync.toggleRemoteProtocol());
 
   ui.btnEditIdentity.addEventListener('click', () => workspace.openIdentityModal());

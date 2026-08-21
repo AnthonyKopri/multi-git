@@ -3,7 +3,7 @@ import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
 import { setHidden } from '../../dom/create';
-import { getState, subscribeTo } from '../../state/store';
+import { getState, subscribeTo, update } from '../../state/store';
 import { confirmDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
@@ -13,6 +13,7 @@ import { ensureKeyUsable } from '../accounts/unlock';
 import { getAccountMismatch } from '../accounts/identity';
 import { refreshOrigin } from '../repo';
 import { pushButtonState } from './push-button';
+import { autoPullBlockedReason, shouldAutoPull } from './auto-pull';
 import type { SyncResponse } from '../../../shared/api-types';
 
 export type SyncAction = 'fetch' | 'pull' | 'push';
@@ -30,6 +31,58 @@ export function initSync(elements: Elements, onChanged: () => Promise<void>): vo
   // caller that refreshes either remember to redraw the button.
   subscribeTo(['status', 'origin'], renderPushButton);
   renderPushButton();
+
+  subscribeTo(['status', 'activeRepo', 'autoPull'], renderAutoPullChip);
+  renderAutoPullChip();
+}
+
+/** Redraws the auto-pull toggle for the current setting and branch. */
+export function renderAutoPullChip(): void {
+  const button = ui.btnAutoPull as HTMLButtonElement;
+  const { activeRepo, autoPull, status } = getState();
+
+  setHidden(button, !activeRepo);
+  if (!activeRepo) {
+    return;
+  }
+
+  button.classList.toggle('chip-on', autoPull);
+  button.setAttribute('aria-pressed', String(autoPull));
+
+  if (!autoPull) {
+    button.title =
+      'Auto-pull is off. Turn it on to fast-forward automatically when a fetch finds this branch purely behind.';
+    return;
+  }
+
+  // When it is on, the useful thing to say is whether it would act right now,
+  // and if not, which condition is holding it back.
+  const blocked = autoPullBlockedReason(status);
+  button.title = blocked
+    ? `Auto-pull is on, but would not act right now: ${blocked}`
+    : 'Auto-pull is on. The next fetch will fast-forward this branch.';
+}
+
+/** Turns the setting on or off and remembers it. */
+export async function toggleAutoPull(): Promise<void> {
+  const next = !getState().autoPull;
+
+  try {
+    await api.saveAppSettings({ autoPull: next });
+    update({ autoPull: next });
+
+    logToTerminal(`Auto-pull ${next ? 'enabled' : 'disabled'}.`, 'info');
+    showToast(
+      next
+        ? 'Auto-pull on: a fetch will fast-forward this branch when it is purely behind.'
+        : 'Auto-pull off.',
+      'info'
+    );
+  } catch (error) {
+    const message = errorMessage(error, 'Could not save the auto-pull setting.');
+    logToTerminal(message, 'error');
+    showToast(message, 'error', 7000);
+  }
 }
 
 /** Redraws the Push button as Push or Publish for the current branch. */
@@ -182,6 +235,13 @@ export async function performSync(
     );
 
     await refreshAll();
+
+    // A fetch is the moment the app learns the remote moved, so it is the only
+    // place this is asked. A pull cannot trigger it again, so there is no loop.
+    if (action === 'fetch' && getState().autoPull && shouldAutoPull(getState().status)) {
+      logToTerminal('Auto-pull: this branch is purely behind, fast-forwarding.', 'info');
+      await performSync('pull');
+    }
   } catch (error) {
     if (isStale(error)) {
       return;

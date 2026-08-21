@@ -96,11 +96,14 @@ The top toolbar contains the normal remote workflow:
 | **Pull** | Pulls the current branch from origin. | `git pull origin <branch>` |
 | **Push** | Pushes the current branch and establishes upstream tracking. | `git push -u origin <branch>` |
 | **Publish** | The same button, labelled and shaped differently while the branch has no upstream on origin yet. | `git push -u origin <branch>` |
+| **Auto-pull** chip | Toggles whether a fetch that leaves this branch purely behind fast-forwards it on its own. | `git pull origin <branch>` |
 | **SSH / HTTPS** chip | Converts a compatible origin URL between GitHub-style SSH and HTTPS forms. | `git remote set-url origin …` |
 | **Terminal Log** | Opens a separate live window with commands and their output. | Read-only transparency view |
 | **Refresh** | Reloads status, branches, history, origin, stashes, tags, and Safety Net. | Multiple read-only Git queries |
 
 Ahead and behind badges appear in the branch header and on the push/pull controls. If a normal push is rejected as non-fast-forward, Multi-Git explains the risk and can retry using `--force-with-lease`; it does not silently force-push.
+
+**Auto-pull** is off until you turn it on, and it only ever fast-forwards. After a fetch, it pulls only when every one of these holds: the branch tracks an upstream, it is behind, it has no commits of its own, HEAD is not detached, no merge or rebase is in progress, nothing is conflicted, and no tracked file has uncommitted edits. Untracked files do not block it — they are not changes to the branch, and git refuses on its own in the one case where an incoming file would land on top of one. Nothing is ever merged or rebased without you asking, and a fetch is the only thing that can trigger it, so a pull cannot set off another. When it is on but a condition is not met, the chip's tooltip names the one holding it back.
 
 A branch that has no upstream yet is a different action from the pushes that follow it: it creates the branch on the remote. The Push button says **Publish** and takes a labelled pill shape while that is true, and goes back to the plain Push icon once the branch is tracking one. It stays disabled, saying why, on a branch with no commits — git has no refspec to send there. Publish only appears when there is an `origin` to publish to.
 

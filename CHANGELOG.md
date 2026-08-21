@@ -14,6 +14,10 @@ or Security. Remove empty headings when preparing a release.
 
 ### Added
 
+- An **Auto-pull** toggle in the toolbar. When it is on, a fetch that leaves the
+  current branch purely behind fast-forwards it automatically. It is off by
+  default and never merges or rebases: local commits, a dirty tree, a detached
+  HEAD, or an operation in progress all hold it back, and the chip says which.
 - `npm run release:upload` now reads the release back after uploading and
   reports each asset's size against the local file. GitHub's release editor
   shows CLI-uploaded assets as "Upload failed" however completely they
