@@ -40,6 +40,37 @@ function tagForVersion(source, version) {
   return match ? match[1] : null;
 }
 
+/**
+ * GitHub's own slug for a heading, so a link can point at one.
+ *
+ * Lowercase, drop everything that is not a word character, space, or hyphen,
+ * then spaces become hyphens. `## [3.2.0] - 2026-08-21` becomes
+ * `#320---2026-08-21`, which is what GitHub renders the anchor as.
+ */
+function headingAnchor(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+/**
+ * The anchor for a version's section, spelled the way the file spells it.
+ *
+ * Read from the file rather than assumed, because a re-run links to a section
+ * written on an earlier day, and guessing today's date there would produce a
+ * link to nothing. Falls back to the date given, for the section a release is
+ * about to add but has not written yet.
+ */
+function versionAnchor(source, version, date = today()) {
+  const escaped = version.replace(/[.]/g, '\\.');
+  const heading = new RegExp(`^## \\[${escaped}\\] - (\\d{4}-\\d{2}-\\d{2})`, 'm');
+  const found = heading.exec(source);
+
+  return headingAnchor('[' + version + '] - ' + (found ? found[1] : date));
+}
+
 /** True when a body holds something other than blank lines and guidance comments. */
 function hasEntries(body) {
   return body.replace(HTML_COMMENT, '').trim() !== '';
@@ -157,6 +188,8 @@ function withLinks(contents, { version, tag, previousVersion, source }) {
 module.exports = {
   UNRELEASED_HEADING,
   today,
+  headingAnchor,
+  versionAnchor,
   repoUrlFromLinks,
   tagForVersion,
   releaseChangelog

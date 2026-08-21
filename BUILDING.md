@@ -245,7 +245,8 @@ Runs the six steps below in order, stopping before each one to ask
 
 1. build the artifacts and checksums (`scripts/release.js`)
 2. commit and push the version bump
-3. create the GitHub release as a draft
+3. create the GitHub release as a draft, titled `Multi-Git v<version>` on a
+   `Release_v<version>` tag, with notes linking this version's changelog entry
 4. upload the assets, verify them, and close the changelog
 5. commit and push the changelog
 6. publish the draft — only with `--publish`

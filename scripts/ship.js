@@ -20,6 +20,7 @@ const readline = require('readline');
 
 const { releaseTag } = require('./release-assets');
 const { spawnSpec } = require('./command-path');
+const { versionAnchor, repoUrlFromLinks } = require('./changelog');
 
 const ROOT = path.join(__dirname, '..');
 const PACKAGE_JSON = path.join(ROOT, 'package.json');
@@ -247,6 +248,37 @@ async function releaseExists(tag, repo) {
   return (await read('gh', args)) !== null;
 }
 
+/**
+ * The body of the release, pointing at this version's changelog entry.
+ *
+ * Built rather than written, so it names the right version and the right
+ * anchor every time. The repository URL comes from the changelog's own link
+ * definitions, so a fork links to itself.
+ */
+function releaseNotes(shipping, branch) {
+  let source = '';
+  try {
+    source = fs.readFileSync(CHANGELOG, 'utf8');
+  } catch {
+    // No changelog to link to; the note below still stands on its own.
+  }
+
+  const repoUrl = repoUrlFromLinks(source);
+  const changelog = repoUrl
+    ? `[the ${shipping} entry in the changelog](${repoUrl}/blob/${branch}/CHANGELOG.md#${versionAnchor(source, shipping)})`
+    : 'CHANGELOG.md';
+
+  return [
+    `### What changed`,
+    ``,
+    `See ${changelog}.`,
+    ``,
+    `### Verifying your download`,
+    ``,
+    '`SHA256SUMS.txt` below lists the SHA-256 of each executable in this release.'
+  ].join('\n');
+}
+
 async function preflight() {
   console.log('Checking the repository...\n');
 
@@ -362,7 +394,18 @@ async function main() {
           say('Skipped. The upload needs a release to exist, so it will fail.');
           break;
         default: {
-          const args = ['release', 'create', tag, '--draft', '--title', tag, '--notes', 'See CHANGELOG.md'];
+          const args = [
+            'release',
+            'create',
+            tag,
+            '--draft',
+            // The tag is `Release_v3.2.0`; what people read is the title, and
+            // that is the product and its version.
+            '--title',
+            `Multi-Git v${shipping}`,
+            '--notes',
+            releaseNotes(shipping, await defaultBranch())
+          ];
           if (options.repo) args.push('--repo', options.repo);
 
           if (options.dryRun) {

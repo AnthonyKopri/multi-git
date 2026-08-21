@@ -14,6 +14,8 @@ interface ReleaseResult {
 
 interface ChangelogApi {
   today(now?: Date): string;
+  headingAnchor(text: string): string;
+  versionAnchor(source: string, version: string, date?: string): string;
   repoUrlFromLinks(source: string): string | null;
   tagForVersion(source: string, version: string): string | null;
   releaseChangelog(
@@ -215,5 +217,36 @@ describe('today', () => {
     // publishing it thinks it is.
     expect(changelog.today(new Date(2026, 7, 3))).toBe('2026-08-03');
     expect(changelog.today(new Date(2026, 11, 31))).toBe('2026-12-31');
+  });
+});
+
+describe('linking to a version', () => {
+  it('slugs a heading the way GitHub renders it', () => {
+    // `## [3.2.0] - 2026-08-21` becomes `#320---2026-08-21`: punctuation gone,
+    // each space a hyphen.
+    expect(changelog.headingAnchor('[3.2.0] - 2026-08-21')).toBe('320---2026-08-21');
+    expect(changelog.headingAnchor('Unreleased')).toBe('unreleased');
+  });
+
+  it('reads the date from the section that exists', () => {
+    // A re-run links to a section written on an earlier day, so the date has
+    // to come from the file rather than from today.
+    const source = sample(ENTRIES).replace('## [3.1.2] - 2026-08-20', '## [3.1.2] - 2026-01-02');
+
+    expect(changelog.versionAnchor(source, '3.1.2')).toBe('312---2026-01-02');
+  });
+
+  it('falls back to the date given for a section not written yet', () => {
+    // The release is created before its changelog section exists, so the
+    // anchor has to be predicted from the date that section will carry.
+    expect(changelog.versionAnchor(sample(ENTRIES), '3.2.0', '2026-08-21')).toBe(
+      '320---2026-08-21'
+    );
+  });
+
+  it('does not confuse one version for another that shares a prefix', () => {
+    const source = sample(ENTRIES).replace('## [3.1.2] - 2026-08-20', '## [3.1.20] - 2026-03-04');
+
+    expect(changelog.versionAnchor(source, '3.1.2', '2026-08-21')).toBe('312---2026-08-21');
   });
 });
