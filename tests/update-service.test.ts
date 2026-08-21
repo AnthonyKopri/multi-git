@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
 
 import { createUpdateService } from '../src/main/update/service';
 import type { UpdateServiceDeps, UpdateSettings } from '../src/main/update/service';
@@ -185,7 +186,9 @@ describe('downloading', () => {
     const state = await service.download();
 
     expect(state.phase).toBe('ready');
-    expect(h.commits).toEqual(['C:\\Temp\\multi-git-update\\Multi-Git-Client-Setup-3.2.0.exe']);
+    expect(h.commits).toEqual([
+      path.join('C:\\Temp', 'multi-git-update', 'Multi-Git-Client-Setup-3.2.0.exe')
+    ]);
     expect(h.discards).toEqual([]);
   });
 
@@ -216,7 +219,9 @@ describe('downloading', () => {
     await service.check();
     await service.download();
 
-    expect(h.commits).toEqual(['D:\\Tools\\MultiGit\\Multi-Git-Client-Portable-3.2.0.exe']);
+    expect(h.commits).toEqual([
+      path.join('D:\\Tools\\MultiGit', 'Multi-Git-Client-Portable-3.2.0.exe')
+    ]);
   });
 
   it('reports progress while it runs', async () => {
@@ -276,7 +281,7 @@ describe('installing', () => {
 
     expect(h.spawned).toEqual([
       {
-        file: 'C:\\Temp\\multi-git-update\\Multi-Git-Client-Setup-3.2.0.exe',
+        file: path.join('C:\\Temp', 'multi-git-update', 'Multi-Git-Client-Setup-3.2.0.exe'),
         args: ['/S', '--force-run']
       }
     ]);
@@ -292,7 +297,7 @@ describe('installing', () => {
     await service.install();
 
     expect(h.spawned).toEqual([
-      { file: 'D:\\Tools\\MultiGit\\Multi-Git-Client-Portable-3.2.0.exe', args: [] }
+      { file: path.join('D:\\Tools\\MultiGit', 'Multi-Git-Client-Portable-3.2.0.exe'), args: [] }
     ]);
   });
 
