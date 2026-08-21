@@ -12,8 +12,18 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [3.2.0] - 2026-08-21
+
 ### Added
 
+- Check GitHub Releases for a newer version on packaged Windows builds, and
+  offer to install it. The download is verified against the release's
+  `SHA256SUMS.txt` before anything is put in place, and a file that does not
+  match is discarded without ever being run. An installer build runs the new
+  installer silently and quits; a portable build is placed beside the running
+  executable. A release can be skipped, which suppresses it until a higher one
+  appears. This is the only request the app makes that you did not ask for, so
+  it can be turned off.
 - An **Auto-pull** toggle in the toolbar. When it is on, a fetch that leaves the
   current branch purely behind fast-forwards it automatically. It is off by
   default and never merges or rebases: local commits, a dirty tree, a detached
@@ -219,7 +229,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.1.0...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.2.0...HEAD
+[3.2.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.1.3...Release_v3.2.0
 [3.1.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.1.2...Release_v3.1.3
 [3.1.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.1.1...Release_v3.1.2
 [3.1.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.1.0...Release_v3.1.1
