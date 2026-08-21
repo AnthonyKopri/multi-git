@@ -18,9 +18,15 @@ interface ShipOptions {
   help: boolean;
 }
 
+interface AskerLike {
+  rl: { close: () => void } | null;
+  close(): void;
+}
+
 interface ShipApi {
   parseArgs(argv: string[]): ShipOptions;
   answerToAction(answer: unknown): 'run' | 'skip' | 'quit' | 'unclear';
+  Asker: new (options: { yes: boolean }) => AskerLike;
 }
 
 const require = createRequire(import.meta.url);
@@ -107,5 +113,35 @@ describe('answerToAction', () => {
   it('ignores surrounding whitespace and case', () => {
     expect(ship.answerToAction('  Q  ')).toBe('quit');
     expect(ship.answerToAction(' Skip ')).toBe('skip');
+  });
+});
+
+describe('the prompt across a step that owns the terminal', () => {
+  it('forgets a closed interface, so a later step can ask again', () => {
+    // Step 1 closes this so `release.js` can own the terminal for its own
+    // questions. Leaving the closed interface in place made every step after
+    // it throw "readline was closed" — after the build had already succeeded,
+    // which is the worst possible moment to lose the ability to ask.
+    const asker = new ship.Asker({ yes: false });
+    let closed = 0;
+    asker.rl = { close: () => { closed += 1; } };
+
+    asker.close();
+
+    expect(closed).toBe(1);
+    expect(asker.rl).toBeNull();
+  });
+
+  it('can be closed twice without complaining', () => {
+    // The steps close it on the way out of several branches, and main() closes
+    // it again in its finally.
+    const asker = new ship.Asker({ yes: false });
+    let closed = 0;
+    asker.rl = { close: () => { closed += 1; } };
+
+    asker.close();
+    asker.close();
+
+    expect(closed).toBe(1);
   });
 });
