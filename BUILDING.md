@@ -234,6 +234,45 @@ To rebuild without changing the version:
 node scripts/release.js --bump none --target both
 ```
 
+### The whole release in one command
+
+```bash
+npm run release:ship
+```
+
+Runs the six steps below in order, stopping before each one to ask
+`[Y]es / [s]kip / [q]uit`:
+
+1. build the artifacts and checksums (`scripts/release.js`)
+2. commit and push the version bump
+3. create the GitHub release as a draft
+4. upload the assets, verify them, and close the changelog
+5. commit and push the changelog
+6. publish the draft — only with `--publish`
+
+Nothing here replaces the individual commands; each step spawns the documented
+one and passes its output straight through, so running them by hand still works
+exactly as described below.
+
+A step that is already done is detected and skipped — a version already
+committed, a release that already exists, a changelog with nothing to move — so
+this is safe to re-run after a step fails partway through.
+
+| Flag | Effect |
+| --- | --- |
+| `--bump <spec>` | `patch`, `minor`, `major`, `x.y.z`, or `none`. Omitted, the build asks. |
+| `--tag <tag>` | Release tag. Defaults to `Release_v<version>`. |
+| `--repo`, `-R` | GitHub repository in `OWNER/REPO` form. |
+| `--publish` | Publish the draft at the end. Off by default: publishing is the irreversible step. |
+| `--yes`, `-y` | Do not ask; run every step. |
+| `--dry-run` | Print what each step would run and change nothing. |
+
+To see the whole thing without touching anything:
+
+```bash
+npm run release:ship -- --dry-run --yes
+```
+
 ### Uploading the assets and applying GitHub labels
 
 Create the GitHub release as a draft first, then upload the already-built

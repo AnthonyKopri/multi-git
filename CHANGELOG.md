@@ -18,6 +18,10 @@ or Security. Remove empty headings when preparing a release.
   current branch purely behind fast-forwards it automatically. It is off by
   default and never merges or rebases: local commits, a dirty tree, a detached
   HEAD, or an operation in progress all hold it back, and the chip says which.
+- `npm run release:ship` runs the whole release — build, commit the bump, create
+  the draft, upload and verify, close the changelog, optionally publish —
+  stopping before each step to ask. A step that is already done is skipped, so
+  it is safe to re-run after one fails.
 - `npm run release:upload` now reads the release back after uploading and
   reports each asset's size against the local file. GitHub's release editor
   shows CLI-uploaded assets as "Upload failed" however completely they
@@ -30,6 +34,12 @@ or Security. Remove empty headings when preparing a release.
 
 ### Fixed
 
+- Find command-line tools on Windows the way Windows does. `gh` is not a file
+  there — it is `gh.exe`, or a `gh.cmd` shim if it came from scoop or npm — and
+  spawning it by bare name failed on the shim, outright since the fix for
+  CVE-2024-27980. The release scripts now resolve through `PATH` and `PATHEXT`
+  and run a batch shim through `cmd.exe` with each argument escaped, rather than
+  turning on a shell and letting cmd re-parse every path and label.
 - Use the OpenSSH build that can actually reach the agent. Windows ships two
   installs that do not share one: the System32 build talks to the OpenSSH
   Authentication Agent service over a named pipe, while the MSYS build inside
