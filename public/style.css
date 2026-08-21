@@ -507,6 +507,17 @@ select {
   opacity: 0.55;
   cursor: default;
 }
+/* An app-level toggle drawn as a chip: dim when off, lit when on. */
+.btn-chip[aria-pressed='false'] {
+  opacity: 0.6;
+}
+.btn-chip.chip-on {
+  opacity: 1;
+  color: var(--color-info);
+  border-color: var(--color-info);
+  background: rgba(6, 182, 212, 0.12);
+}
+
 .btn-chip.protocol-ssh {
   color: var(--color-success);
   border-color: var(--color-success-border);

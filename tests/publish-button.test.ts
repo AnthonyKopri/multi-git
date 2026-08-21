@@ -35,7 +35,8 @@ const endpoints = vi.hoisted(() => ({
   getOrigin: vi.fn(),
   push: vi.fn(),
   pull: vi.fn(),
-  fetchRemote: vi.fn()
+  fetchRemote: vi.fn(),
+  saveAppSettings: vi.fn(async () => ({ success: true, config: {}, warning: null }))
 }));
 
 const dialogs = vi.hoisted(() => ({ confirmDialog: vi.fn(async () => ({ confirmed: true })) }));
@@ -211,5 +212,67 @@ describe('the Remotes tab', () => {
 
     expect(endpoints.removeRemote).toHaveBeenCalledWith('origin');
     expect(repo.refreshOrigin).toHaveBeenCalled();
+  });
+});
+
+describe('the auto-pull chip', () => {
+  let store: Store;
+
+  const chip = (): HTMLButtonElement =>
+    document.getElementById('btn-auto-pull') as HTMLButtonElement;
+
+  beforeEach(async () => {
+    ({ store } = await mount());
+  });
+
+  it('stays out of the toolbar until a repository is open', () => {
+    expect(chip().classList.contains('hidden')).toBe(true);
+
+    store.update({ activeRepo: 'D:/work/app' });
+
+    expect(chip().classList.contains('hidden')).toBe(false);
+  });
+
+  it('shows whether the setting is on', () => {
+    store.update({ activeRepo: 'D:/work/app', autoPull: false });
+    expect(chip().classList.contains('chip-on')).toBe(false);
+    expect(chip().getAttribute('aria-pressed')).toBe('false');
+
+    store.update({ autoPull: true });
+    expect(chip().classList.contains('chip-on')).toBe(true);
+    expect(chip().getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('says what is holding it back when it is on but would not act', () => {
+    // "On but nothing happened" is the confusing state, so the tooltip names
+    // the condition rather than leaving the user to guess.
+    store.update({
+      activeRepo: 'D:/work/app',
+      autoPull: true,
+      status: status({ tracking: 'origin/main', behind: 2, ahead: 1 })
+    });
+
+    expect(chip().title).toMatch(/would not act right now/);
+    expect(chip().title).toMatch(/commits of its own/);
+  });
+
+  it('says it will act when the branch is purely behind', () => {
+    store.update({
+      activeRepo: 'D:/work/app',
+      autoPull: true,
+      status: status({ tracking: 'origin/main', behind: 3 })
+    });
+
+    expect(chip().title).toMatch(/will fast-forward/);
+  });
+
+  it('saves the setting when clicked', async () => {
+    store.update({ activeRepo: 'D:/work/app', autoPull: false });
+
+    const sync = await import('../src/renderer/features/sync');
+    await sync.toggleAutoPull();
+
+    expect(endpoints.saveAppSettings).toHaveBeenCalledWith({ autoPull: true });
+    expect(chip().classList.contains('chip-on')).toBe(true);
   });
 });

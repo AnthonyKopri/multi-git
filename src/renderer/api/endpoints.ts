@@ -114,11 +114,18 @@ export const saveRepoSettings = (repoPath: string, warnBeforeDelete: boolean) =>
     body: { repoPath, warnBeforeDelete }
   });
 
-export const saveAppSettings = (manageSshConfig: boolean, removeManagedBlock: boolean) =>
-  api.post<Api.ConfigMutationResponse>('/api/config/settings', {
-    ...global,
-    body: { manageSshConfig, removeManagedBlock }
-  });
+/**
+ * Writes app settings. Only the fields present are changed, so a caller
+ * toggling one setting cannot reset another it did not mention.
+ */
+export interface AppSettingsInput {
+  manageSshConfig?: boolean;
+  autoPull?: boolean;
+  removeManagedBlock?: boolean;
+}
+
+export const saveAppSettings = (input: AppSettingsInput) =>
+  api.post<Api.ConfigMutationResponse>('/api/config/settings', { ...global, body: input });
 
 // ---------- SSH profiles ----------
 

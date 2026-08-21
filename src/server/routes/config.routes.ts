@@ -138,14 +138,31 @@ configRouter.delete('/api/config/repo', (req, res) => {
 });
 
 configRouter.post('/api/config/settings', (req, res) => {
-  const { manageSshConfig, removeManagedBlock: shouldRemoveBlock } = (req.body ?? {}) as {
+  const {
+    manageSshConfig,
+    autoPull,
+    removeManagedBlock: shouldRemoveBlock
+  } = (req.body ?? {}) as {
     manageSshConfig?: unknown;
+    autoPull?: unknown;
     removeManagedBlock?: unknown;
   };
 
   const config = readConfig();
-  const enabled = manageSshConfig !== false;
-  config.settings = { ...(config.settings ?? {}), manageSshConfig: enabled };
+  const settings = { ...(config.settings ?? {}) };
+
+  // Only what the request actually carried. A caller changing one setting must
+  // not silently reset another it never mentioned.
+  if (manageSshConfig !== undefined) {
+    settings.manageSshConfig = manageSshConfig !== false;
+  }
+  if (typeof autoPull === 'boolean') {
+    settings.autoPull = autoPull;
+  }
+
+  config.settings = settings;
+
+  const enabled = settings.manageSshConfig !== false;
 
   let warning: string | null = null;
   if (!enabled && shouldRemoveBlock) {
