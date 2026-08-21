@@ -29,12 +29,25 @@ interface Rule {
 }
 
 /**
+ * The program a command names, with no directory and no `.exe`.
+ *
+ * The product names OpenSSH tools by absolute path on Windows, because a bare
+ * `ssh` there resolves to whichever build PATH happens to reach first and only
+ * one of them can see the agent. A rule still wants to say `ssh-add`.
+ */
+export function programName(executable: string): string {
+  const base = executable.replace(/[\\\\/]/g, '/').split('/').pop() ?? executable;
+  return base.replace(/[.]exe$/i, '');
+}
+
+/**
  * Matches on the executable plus a subsequence of its arguments, so a rule
  * stays readable and does not break when an unrelated flag is added.
  */
 export function command(executable: string, ...argContains: string[]): Matcher {
   return (candidate, args) =>
-    candidate.endsWith(executable) && argContains.every((needle) => args.includes(needle));
+    programName(candidate) === programName(executable) &&
+    argContains.every((needle) => args.includes(needle));
 }
 
 export class FakeRunner implements ExecutableRunner {
@@ -55,7 +68,9 @@ export class FakeRunner implements ExecutableRunner {
 
   /** Every call made to `executable`, in order. */
   callsTo(executable: string): RecordedCall[] {
-    return this.calls.filter((call) => call.executable.endsWith(executable));
+    return this.calls.filter(
+      (call) => programName(call.executable) === programName(executable)
+    );
   }
 
   /**

@@ -20,6 +20,7 @@ import { executableRunner } from '../process/runner';
 import type { ExecutableRunner } from '../process/runner';
 import { createAskpassBridge } from './askpass';
 import { normalizeSshPath } from './keys';
+import { opensshBinary } from './openssh-path';
 import { readWindowsAgentService, repairNeedsElevation, WINDOWS_AGENT_SERVICE } from './agent-service';
 import type { WindowsServiceInfo } from './agent-service';
 import type {
@@ -159,7 +160,7 @@ interface AgentProbe {
 
 async function probeAgent(runner: ExecutableRunner): Promise<AgentProbe> {
   try {
-    const result = await runner.run('ssh-add', ['-l'], {
+    const result = await runner.run(opensshBinary('ssh-add'), ['-l'], {
       timeoutMs: AGENT_TIMEOUT_MS,
       // 1 = reachable but empty, 2 = could not connect. Both are answers.
       allowNonZero: [EXIT_NO_IDENTITIES, EXIT_CANNOT_CONNECT]
@@ -325,7 +326,7 @@ export async function loadKeyIntoAgent(options: LoadKeyOptions): Promise<LoadKey
   const bridge = options.passphrase ? createAskpassBridge(options.passphrase) : null;
 
   try {
-    const result = await runner.run('ssh-add', [keyPath], {
+    const result = await runner.run(opensshBinary('ssh-add'), [keyPath], {
       timeoutMs: LOAD_TIMEOUT_MS,
       env: { ...process.env, ...(bridge?.envOverrides ?? {}) },
       // Belt and braces: if the passphrase ever did reach output, it would be
@@ -405,7 +406,7 @@ export async function unloadKeyFromAgent(
   }
 
   try {
-    const result = await runner.run('ssh-add', ['-d', publicKeyPath], {
+    const result = await runner.run(opensshBinary('ssh-add'), ['-d', publicKeyPath], {
       timeoutMs: AGENT_TIMEOUT_MS,
       allowNonZero: [1, 2]
     });

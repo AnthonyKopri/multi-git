@@ -21,7 +21,7 @@ import {
 import { parseScField, parseServiceQuery, repairNeedsElevation, AGENT_REPAIR_COMMAND } from '../src/server/ssh/agent-service';
 import { buildRepoSshCommand, isMultiGitSshCommand } from '../src/server/ssh/repo-routing';
 import { normalizeSshPath } from '../src/server/ssh/keys';
-import { FakeRunner, command } from './helpers/fake-runner';
+import { FakeRunner, command, programName } from './helpers/fake-runner';
 
 const FINGERPRINT = 'SHA256:VGhpc0lzQVRlc3RGaW5nZXJwcmludFZhbHVlMDE=';
 const OTHER_FINGERPRINT = 'SHA256:QW5vdGhlckZpbmdlcnByaW50Rm9yQVRlc3RLZXkwMQ==';
@@ -308,7 +308,7 @@ describe('loadKeyIntoAgent', () => {
     const runner = new FakeRunner()
       .on(command('ssh-keygen', '-l'), { stdout: `256 ${FINGERPRINT} x (ED25519)` })
       .on(command('ssh-add', '-l'), { stdout: `256 ${OTHER_FINGERPRINT} other (ED25519)` })
-      .on((executable, args) => executable.endsWith('ssh-add') && !args.includes('-l'), {
+      .on((executable, args) => programName(executable) === 'ssh-add' && !args.includes('-l'), {
         exitCode: 0
       })
       .on(command('sc.exe'), { stdout: '' });
@@ -322,7 +322,7 @@ describe('loadKeyIntoAgent', () => {
 
   it('reports a wrong passphrase without echoing it', async () => {
     const runner = agentWith('').on(
-      (executable, args) => executable.endsWith('ssh-add') && !args.includes('-l'),
+      (executable, args) => programName(executable) === 'ssh-add' && !args.includes('-l'),
       { exitCode: 1, stderr: 'Error loading key: incorrect passphrase supplied' }
     );
 

@@ -1,5 +1,6 @@
 // Runs git, always as an argument vector with no shell involved.
 import { DEFAULT_TIMEOUT_MS, runProcess } from '../process/run';
+import { sshCommandPrefix } from '../ssh/openssh-path';
 
 export interface GitResult {
   stdout: string;
@@ -67,7 +68,11 @@ export interface GitCommandOptions {
 export function buildSshCommand(sshKeyPath: string, singlePasswordPrompt = false): string {
   const normalized = sshKeyPath.replace(/\\/g, '/');
   const options = [
-    `ssh -i "${normalized}"`,
+    // Named rather than left to PATH: on Windows a bare `ssh` often resolves
+    // to the MSYS build inside Git for Windows, which cannot see the agent
+    // this app loads keys into, and so asks for the passphrase of a key that
+    // is already unlocked and sitting in it.
+    `${sshCommandPrefix()} -i "${normalized}"`,
     '-o IdentitiesOnly=yes',
     '-o StrictHostKeyChecking=accept-new'
   ];
