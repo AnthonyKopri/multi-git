@@ -15,6 +15,16 @@ export interface Command {
   group: string;
   /** Extra words that should match, such as a synonym the user might type. */
   keywords?: string;
+  /**
+   * Section of the navbar menu this belongs in, when it belongs in one.
+   *
+   * The palette indexes everything; the menu shows the handful worth hunting
+   * for with a mouse. Naming the section on the command keeps both surfaces
+   * reading from this one list.
+   */
+  menu?: string;
+  /** Material symbol for the menu row. Unused by the palette. */
+  icon?: string;
   run: () => void;
 }
 

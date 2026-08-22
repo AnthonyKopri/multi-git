@@ -4465,3 +4465,98 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 .worktree-item.maintenance-dirty .worktree-name {
   color: var(--color-warning);
 }
+
+/* ============ NAVBAR MENU ============ */
+/* The strip along the top carries five controls now. Everything that used to
+   be a sixth, seventh or eighth icon lives here, either as a row rendered from
+   the command list or as the original button, unchanged apart from its shape:
+   an icon in a row becomes a row with an icon. */
+.app-menu {
+  min-width: 250px;
+}
+
+.app-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn-menu-row,
+.app-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.btn-menu-row {
+  justify-content: flex-start;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+}
+
+.btn-menu-row:hover,
+.app-menu-item:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.btn-menu-row .material-symbols-outlined,
+.app-menu-item .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Not the first group's heading: the list starts with one, and a rule above it
+   would draw a line against the top of the menu. */
+.app-menu .dropdown-title:not(:first-child) {
+  border-top: 1px solid var(--border-color);
+  margin-top: 6px;
+  padding-top: 10px;
+}
+
+/* ============ SETTINGS ============ */
+.settings-section {
+  margin-bottom: 20px;
+}
+
+.settings-row {
+  margin: 10px 0;
+}
+
+/* Indented under its control, so the explanation reads as belonging to the
+   checkbox above it rather than to the section. */
+.settings-row .modal-desc {
+  margin: 2px 0 0 26px;
+}
+
+.settings-field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-label {
+  font-size: 0.8125rem;
+  flex: 1 1 auto;
+}
+
+.settings-field {
+  flex: 0 0 auto;
+  width: 240px;
+}
+
+.settings-field[type='number'] {
+  width: 90px;
+  text-align: right;
+}
+
+.settings-field-row + .modal-desc {
+  margin-left: 0;
+}
