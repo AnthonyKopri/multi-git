@@ -313,7 +313,15 @@ export async function deleteAccountRule(id: string): Promise<void> {
 
 // ---------- ~/.ssh/config management toggle ----------
 
-export async function onManageSshConfigChanged(enabled: boolean): Promise<void> {
+/**
+ * Turns the managed `~/.ssh/config` block on or off.
+ *
+ * Returns the setting as it now stands, which is not always what was asked
+ * for: turning it off asks a question that can be declined, and a save can
+ * fail. Two windows carry this checkbox now, so each syncs its own control
+ * from the answer rather than this function reaching into one of them.
+ */
+export async function onManageSshConfigChanged(enabled: boolean): Promise<boolean> {
   let removeManagedBlock = false;
 
   if (!enabled) {
@@ -328,9 +336,8 @@ export async function onManageSshConfigChanged(enabled: boolean): Promise<void> 
     );
 
     if (!confirmed) {
-      // Put the checkbox back; the user cancelled.
-      asInput(ui.sshManageConfigCheckbox).checked = true;
-      return;
+      // Cancelled, so it is still managed.
+      return true;
     }
     removeManagedBlock = checked;
   }
@@ -353,9 +360,11 @@ export async function onManageSshConfigChanged(enabled: boolean): Promise<void> 
     if (enabled) {
       await applySshConfigForActiveProfile();
     }
+
+    return enabled;
   } catch (error) {
     showToast(errorMessage(error, 'Failed to save the setting.'), 'error');
-    asInput(ui.sshManageConfigCheckbox).checked = !enabled;
+    return !enabled;
   }
 }
 

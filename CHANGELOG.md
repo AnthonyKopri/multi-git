@@ -38,6 +38,35 @@ or Security. Remove empty headings when preparing a release.
   anything locked, and anything on a pinned branch are never offered, and the
   panel names them rather than leaving their absence unexplained.
 
+- A **Settings** window, reached from the toolbar menu or `Ctrl+K`. It holds
+  what is true of Multi-Git whatever repository is open: auto-pull, the
+  `~/.ssh/config` sync toggle, the stale-branch rules, how long Safety Net
+  recovery points are kept, the folder new worktrees are suggested in, whether
+  agent prompt text is kept, window restoration, and the update check. Seven of
+  those had no interface at all before and could only be changed by closing the
+  app and editing `~/.multi-git-client-config.json`. Every control writes as you
+  change it, and what is shown is always what was stored — a value the server
+  repaired comes back corrected rather than staying as typed.
+- A **menu** at the end of the toolbar, holding everything that used to be a
+  sixth, seventh or eighth icon. Its rows are drawn from the same command list
+  `Ctrl+K` searches, so the two cannot offer different things.
+
+### Changed
+
+- The toolbar is five controls instead of eight: fetch, pull, push, the
+  pull-request button and the auto-pull chip, plus the update icon when there is
+  news. Repository tools, the terminal log, refresh and the protocol chip moved
+  into the menu — the same elements, with the same shortcuts, so `F5` still
+  refreshes.
+- Sidebar sections other than **Branches** and **Merge / Rebase** now start
+  collapsed. Ten sections opening at once made the column a scroll before it was
+  a layout. A section you have opened or closed yourself keeps that state: the
+  default applies only where nothing has been remembered, and each section
+  declares its own in the markup.
+- `POST /api/config/settings` accepts every app setting, and validates them
+  through the same code the configuration file goes through rather than a second
+  copy of those rules.
+
 ### Fixed
 
 - The **Auto-pull** toggle no longer forgets itself when the app restarts. The

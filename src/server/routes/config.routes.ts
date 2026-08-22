@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { MAX_RECENT_REPOS, readConfig, writeConfig } from '../config/store';
 import { canonicalRepoKey } from '../config/repo-identity';
 import { sanitizeConfigForClient } from '../config/sanitize';
-import { validateStaleRules } from '../config/validate';
+import { validateSettings } from '../config/validate';
 import { removeManagedBlock } from '../ssh/config-block';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 import { getVaultStatus, lockVault, unlockVault } from '../vault/vault';
@@ -139,38 +139,20 @@ configRouter.delete('/api/config/repo', (req, res) => {
 });
 
 configRouter.post('/api/config/settings', (req, res) => {
-  const {
-    manageSshConfig,
-    autoPull,
-    staleRules,
-    removeManagedBlock: shouldRemoveBlock
-  } = (req.body ?? {}) as {
-    manageSshConfig?: unknown;
-    autoPull?: unknown;
-    staleRules?: unknown;
-    removeManagedBlock?: unknown;
-  };
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const { removeManagedBlock: shouldRemoveBlock } = body;
 
   const config = readConfig();
-  const settings = { ...(config.settings ?? {}) };
 
-  // Only what the request actually carried. A caller changing one setting must
-  // not silently reset another it never mentioned.
-  if (manageSshConfig !== undefined) {
-    settings.manageSshConfig = manageSshConfig !== false;
-  }
-  if (typeof autoPull === 'boolean') {
-    settings.autoPull = autoPull;
-  }
-  if (staleRules !== undefined) {
-    // Through the same validator the configuration file goes through, so a day
-    // count of zero or a missing switch is repaired here rather than written
-    // out and repaired on the next read.
-    const rules = validateStaleRules(staleRules);
-    if (rules !== undefined) {
-      settings.staleRules = rules;
-    }
-  }
+  // Through the same validator the configuration file goes through, rather
+  // than a second copy of those rules here: a stale-rule day count is clamped,
+  // a retention that is not a whole number of days is dropped, and a path
+  // carrying a newline never reaches a directory creation.
+  //
+  // Merged over what is stored, because the validator returns only the keys
+  // the request actually carried — which is what stops a caller changing one
+  // setting from silently resetting another it never mentioned.
+  const settings = { ...(config.settings ?? {}), ...(validateSettings(body) ?? {}) };
 
   config.settings = settings;
 
