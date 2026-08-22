@@ -50,26 +50,63 @@ describe('collapsible sidebar sections', () => {
     expect(named.length).toBeGreaterThanOrEqual(7);
   });
 
-  it('starts expanded and collapses when the heading is clicked', async () => {
+  it('collapses an expanded section when its heading is clicked', async () => {
     const sections = await mount();
 
-    expect(sections.isSectionCollapsed(section('stashes'))).toBe(false);
-    expect(toggleOf('stashes').getAttribute('aria-expanded')).toBe('true');
+    expect(sections.isSectionCollapsed(section('branches'))).toBe(false);
+    expect(toggleOf('branches').getAttribute('aria-expanded')).toBe('true');
+
+    toggleOf('branches').click();
+
+    expect(sections.isSectionCollapsed(section('branches'))).toBe(true);
+    expect(toggleOf('branches').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('expands a section that starts collapsed', async () => {
+    const sections = await mount();
+
+    expect(sections.isSectionCollapsed(section('stashes'))).toBe(true);
 
     toggleOf('stashes').click();
 
-    expect(sections.isSectionCollapsed(section('stashes'))).toBe(true);
-    expect(toggleOf('stashes').getAttribute('aria-expanded')).toBe('false');
+    expect(sections.isSectionCollapsed(section('stashes'))).toBe(false);
+    expect(toggleOf('stashes').getAttribute('aria-expanded')).toBe('true');
   });
 
   it('collapses only the section that was clicked', async () => {
     const sections = await mount();
 
-    toggleOf('tags').click();
+    toggleOf('integrate').click();
 
-    expect(sections.isSectionCollapsed(section('tags'))).toBe(true);
+    expect(sections.isSectionCollapsed(section('integrate'))).toBe(true);
     expect(sections.isSectionCollapsed(section('branches'))).toBe(false);
-    expect(sections.isSectionCollapsed(section('worktrees'))).toBe(false);
+  });
+
+  it('opens on a fresh profile with the two sections that declare no default', async () => {
+    const sections = await mount();
+
+    // Ten sections all opening at once is what made the sidebar a scroll. The
+    // markup decides which start open; this asserts the split rather than the
+    // mechanism, so moving a section between the two groups fails here.
+    const open = [...document.querySelectorAll<HTMLElement>('.sidebar-section[data-section]')]
+      .filter((element) => !sections.isSectionCollapsed(element))
+      .map((element) => element.dataset['section']);
+
+    expect(open).toEqual(['branches', 'integrate']);
+  });
+
+  it('lets a remembered choice beat the declared default, in both directions', async () => {
+    const first = await mount();
+
+    // Opened one that ships collapsed, closed one that ships open.
+    toggleOf('stashes').click();
+    toggleOf('branches').click();
+
+    const second = await mount();
+
+    expect(second.isSectionCollapsed(section('stashes'))).toBe(false);
+    expect(second.isSectionCollapsed(section('branches'))).toBe(true);
+    expect(first.isSectionCollapsed(section('tags'))).toBe(true);
   });
 
   it('leaves the section action button working, not swallowed by the toggle', async () => {
@@ -82,7 +119,11 @@ describe('collapsible sidebar sections', () => {
     expect(manage.closest('.section-toggle')).toBeNull();
     expect(manage.closest('.sidebar-section')).toBe(section('worktrees'));
 
-    let collapsedByManage = false;
+    // Opened first: this section ships collapsed, and the state to assert is
+    // that pressing Manage does not change it, not what it happens to be.
+    toggleOf('worktrees').click();
+
+    let collapsedByManage = true;
     manage.addEventListener('click', () => {
       collapsedByManage = section('worktrees').classList.contains('collapsed');
     });
@@ -93,6 +134,9 @@ describe('collapsible sidebar sections', () => {
 
   it('restores collapsed sections on the next load', async () => {
     const first = await mount();
+    // Already collapsed by default, so open it and shut it again to record a
+    // deliberate choice rather than an inherited one.
+    toggleOf('safety-net').click();
     toggleOf('safety-net').click();
     expect(first.isSectionCollapsed(section('safety-net'))).toBe(true);
 
@@ -100,7 +144,7 @@ describe('collapsible sidebar sections', () => {
 
     expect(second.isSectionCollapsed(section('safety-net'))).toBe(true);
     expect(toggleOf('safety-net').getAttribute('aria-expanded')).toBe('false');
-    // Everything else comes back expanded rather than inheriting the one state.
-    expect(second.isSectionCollapsed(section('tags'))).toBe(false);
+    // The others keep their own defaults rather than inheriting the one state.
+    expect(second.isSectionCollapsed(section('branches'))).toBe(false);
   });
 });

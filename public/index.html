@@ -152,12 +152,14 @@
 
       </div>
 
-      <!-- Global Controls -->
+      <!-- Global Controls
+           Five actions and a menu. Everything here used to be a button of its
+           own, and eight of them in a row is a strip nobody reads: the ones
+           worth a click without opening anything are fetch, pull, push and the
+           pull-request button, plus the auto-pull chip, which is a state as
+           much as a control. The rest moved into the menu, where they keep
+           their ids and their handlers. -->
       <div class="global-actions">
-        <button id="btn-remote-protocol" class="btn btn-chip hidden" type="button">
-          <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
-          <span id="remote-protocol-label">SSH</span>
-        </button>
         <button id="btn-auto-pull" class="btn btn-chip hidden" type="button" aria-pressed="false">
           <span class="material-symbols-outlined" aria-hidden="true">downloading</span>
           <span id="auto-pull-label">AUTO-PULL</span>
@@ -177,19 +179,48 @@
         <button id="btn-create-pr" class="btn btn-icon" title="Create pull request" aria-label="Create pull request">
           <span class="material-symbols-outlined" aria-hidden="true">call_merge</span>
         </button>
-        <button id="btn-repo-hub" class="btn btn-icon" type="button" title="Repository tools — remotes, submodules, LFS, patches, bisect, notes, maintenance" aria-label="Repository tools">
-          <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
-        </button>
         <button id="btn-update" class="btn btn-icon has-update hidden" type="button" title="An update is available" aria-label="An update is available">
           <span class="material-symbols-outlined" aria-hidden="true">system_update_alt</span>
           <span id="update-badge" class="count-badge count-ahead hidden"></span>
         </button>
-        <button id="btn-open-logs" class="btn btn-icon" title="Open terminal log window" aria-label="Open terminal log window">
-          <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
-        </button>
-        <button id="btn-refresh" class="btn btn-icon" title="Refresh status (F5)">
-          <span class="material-symbols-outlined">refresh</span>
-        </button>
+
+        <!-- Everything else. The rows above the divider are rendered from the
+             same command list the palette indexes, so the menu cannot drift
+             from Ctrl+K; the buttons below it are the real controls that moved
+             out of the strip, ids and handlers untouched. -->
+        <div class="segment-wrapper" id="app-menu-wrapper">
+          <button id="btn-app-menu" class="btn btn-icon" type="button" title="More — tools, maintenance, settings" aria-label="More" aria-haspopup="menu" aria-expanded="false">
+            <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+          </button>
+          <div id="app-menu-dropdown" class="header-dropdown header-dropdown-right app-menu hidden">
+            <ul id="app-menu-list" class="dropdown-list" role="menu">
+              <li class="dropdown-empty">Open a repository first</li>
+            </ul>
+            <div class="dropdown-divider"></div>
+            <div class="app-menu-actions">
+              <button id="btn-repo-hub" class="btn btn-menu-row" type="button" title="Remotes, submodules, LFS, patches, bisect, notes, maintenance">
+                <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
+                <span>Repository tools</span>
+              </button>
+              <button id="btn-remote-protocol" class="btn btn-menu-row hidden" type="button">
+                <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
+                <span>Remote protocol: <span id="remote-protocol-label">SSH</span></span>
+              </button>
+              <button id="btn-open-logs" class="btn btn-menu-row" type="button" title="Open terminal log window">
+                <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+                <span>Terminal Log</span>
+              </button>
+              <button id="btn-refresh" class="btn btn-menu-row" type="button" title="Refresh status (F5)">
+                <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                <span>Refresh</span>
+              </button>
+              <button id="btn-settings" class="btn btn-menu-row" type="button" title="Application settings">
+                <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                <span>Settings</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -260,7 +291,7 @@
         </div>
 
         <!-- Stashes section -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="stashes">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="stashes" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-stashes">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
@@ -280,7 +311,7 @@
         </div>
 
         <!-- Tags section -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="tags">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="tags" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-tags">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
@@ -295,7 +326,7 @@
         </div>
 
         <!-- Safety Net: operation checkpoints + recoverable discards -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="safety-net">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="safety-net" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-safety-net">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
@@ -327,7 +358,7 @@
         </div>
 
         <!-- Worktrees: the other working folders of this repository family -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="worktrees">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="worktrees" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-worktrees">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
@@ -348,7 +379,7 @@
              Deliberately thin: a count and a way into the Repository hub at the
              right tab. The full tools live there so the sidebar does not grow a
              section per Phase 4 feature. -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="remotes">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="remotes" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-remotes">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
@@ -365,7 +396,7 @@
           </div>
         </div>
 
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="submodules">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="submodules" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-submodules">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
@@ -382,7 +413,7 @@
           </div>
         </div>
 
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="lfs">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="lfs" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-lfs">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
@@ -400,7 +431,7 @@
         </div>
 
         <!-- Repository groups -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="groups">
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="groups" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-groups">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
@@ -1598,6 +1629,24 @@
           <li class="empty-state">No branches</li>
         </ul>
       </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS
+       App-wide preferences, as opposed to the Repository hub, which is
+       everything that acts on one repository. Several of these existed only in
+       ~/.multi-git-client-config.json until now, which meant the only way to
+       change them was to close the app and edit a file. The body is built by
+       the feature module, so a setting added later needs no markup here. -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button id="btn-close-settings" class="btn-close" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="settings-body"></div>
     </div>
   </div>
 

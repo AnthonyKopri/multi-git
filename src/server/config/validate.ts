@@ -261,7 +261,14 @@ export function validateStaleRules(raw: unknown): StaleRules | undefined {
   };
 }
 
-function validateSettings(raw: unknown): Partial<AppSettings> | undefined {
+/**
+ * Validates the app-wide settings block.
+ *
+ * Exported because `/api/config/settings` writes the same shape: a request is
+ * no more trusted than the file, and a second copy of these rules in the route
+ * would be a second place for them to drift.
+ */
+export function validateSettings(raw: unknown): Partial<AppSettings> | undefined {
   if (raw === undefined) {
     return undefined;
   }
