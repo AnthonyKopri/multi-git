@@ -8,7 +8,7 @@ import { Router } from 'express';
 import { refArg } from '../git/args';
 import { withRepoLock } from '../git/lock';
 import { runGitCommand, tryGitCommand } from '../git/run';
-import { readConfig, writeConfig } from '../config/store';
+import { pinnedBranchesFor, readConfig, staleRules, writeConfig } from '../config/store';
 import { canonicalRepoKey } from '../config/repo-identity';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
@@ -17,9 +17,6 @@ import { HttpError, asyncRoute } from '../middleware/error-handler';
 export const branchAdminRouter: Router = Router();
 
 branchAdminRouter.use(requireRepoPath);
-
-/** A branch is stale when nothing has landed on it for this long. */
-const STALE_AFTER_DAYS = 60;
 
 const DETAIL_FORMAT = [
   '%(refname:short)',
@@ -38,12 +35,6 @@ function parseTracking(value: string): { ahead: number; behind: number; gone: bo
     behind: Number.parseInt(/behind (\d+)/.exec(value)?.[1] ?? '0', 10) || 0,
     gone: value.includes('gone')
   };
-}
-
-function pinnedFor(repoPath: string): string[] {
-  const key = canonicalRepoKey(repoPath);
-  const pinned = readConfig().repoSettings[key]?.pinnedBranches;
-  return Array.isArray(pinned) ? pinned : [];
 }
 
 /**
@@ -69,8 +60,11 @@ branchAdminRouter.get(
         .filter(Boolean)
     );
 
-    const pinned = new Set(pinnedFor(repoPath));
-    const staleBefore = Date.now() - STALE_AFTER_DAYS * 24 * 60 * 60 * 1000;
+    const pinned = new Set(pinnedBranchesFor(repoPath));
+    // The same definition the Maintenance tab applies, so the two windows
+    // cannot call different branches stale while showing one repository.
+    const staleAfterDays = staleRules().inactiveDays;
+    const staleBefore = Date.now() - staleAfterDays * 24 * 60 * 60 * 1000;
 
     const branches = listed.stdout
       .split('\n')
@@ -98,7 +92,7 @@ branchAdminRouter.get(
         };
       });
 
-    res.json({ success: true, branches, staleAfterDays: STALE_AFTER_DAYS });
+    res.json({ success: true, branches, staleAfterDays });
   })
 );
 

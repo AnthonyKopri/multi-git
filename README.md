@@ -25,7 +25,7 @@
 | --- | --- |
 | **Multiple repositories and SSH identities**<br>Keep repository-specific SSH keys and commit identities separate, with origin rules and native-agent routing. | **Precision staging and richer diffs**<br>Stage, unstage, discard, or stash selected hunks and lines, with unified and side-by-side review. |
 | **Worktrees and multiple windows**<br>Work on several branches at once, restore repository windows, and fetch related repository groups together. | **Visual rebase and signed history**<br>Plan interactive rebases, split commits, and sign commits or tags with SSH or GPG. |
-| **Safety Net and recovery**<br>Recover checkpointed destructive operations through a durable journal alongside Git's reflog. | **GitHub PRs and Repository hub**<br>Create pull requests and manage remotes, submodules, LFS, patches, bisect sessions, and notes. |
+| **Safety Net and recovery**<br>Recover checkpointed destructive operations through a durable journal alongside Git's reflog. | **GitHub PRs and Repository hub**<br>Create pull requests and manage remotes, submodules, LFS, patches, bisect sessions, notes, and housekeeping. |
 
 ## Download and Install
 
@@ -304,8 +304,10 @@ to each side, and shows the changed files.
 
 `Ctrl+K` → "Branch maintenance" lists every local branch with what you need to
 decide its fate: where it tracks and how far it has diverged, whether it is
-already merged, whether anything has landed on it in the last 60 days, and
-whether its upstream has been deleted. Filter to just the merged, stale or
+already merged, whether anything has landed on it recently, and whether its
+upstream has been deleted. "Recently" is the same number of days the
+Maintenance tab uses — 60 unless you change it there — so the two windows
+cannot call different branches stale. Filter to just the merged, stale or
 orphaned ones, then pin, rename, re-point or select several and delete them at
 once. Pinned and current branches are never selectable for deletion, a pin
 follows its branch through a rename, and a bulk delete reports each branch's
@@ -543,7 +545,7 @@ What it does not do: install hooks, read the tool's session state, or claim to k
 
 ### The Repository hub
 
-The **Repository** button in the top toolbar opens one window holding the tools that act on the repository as a whole: **Remotes**, **Submodules**, **LFS**, **Patches**, **Bisect**, **Notes** and **Tools**. The sidebar keeps a short summary of the first three and jumps straight to the right tab.
+The **Repository** button in the top toolbar opens one window holding the tools that act on the repository as a whole: **Remotes**, **Submodules**, **LFS**, **Patches**, **Bisect**, **Notes**, **Maintenance** and **Tools**. The sidebar keeps a short summary of the first three and jumps straight to the right tab.
 
 **Remotes** shows more than a URL, because a remote is more than one. Fetch and push URLs are separate rows — a push URL that differs is the fork workflow, reading from upstream and writing to your own. Refspecs are shown rather than assumed, and prune says whether it was set on this remote or inherited from `fetch.prune`. **Test** reaches the remote with the account this repository uses and tells you whether a failure was the network or the key. Removing a remote or pruning its stale branches saves a recovery point first: a remote-tracking ref is the only local record that a branch existed once its remote is gone.
 
@@ -558,6 +560,14 @@ The tab also answers a third question the other two hide: whether `git lfs insta
 **Bisect** checks out the middle of a range and asks whether it is good or bad. Mark each step yourself, or save a test command and let its exit code decide — 0 good, 125 skip, anything else bad. The session lives in the repository, so it survives closing the app, and **Reset** works even on one left behind by a crash. Running a command is available in the desktop app only.
 
 **Notes** attaches text to a commit afterwards. The note lives in its own ref, so writing one does not rewrite history — and does not travel with an ordinary push, which is why fetching and pushing notes are separate actions here. Commits carrying a note are marked in the history list; open one to read or edit it.
+
+**Maintenance** is the housekeeping tab: the worktrees nobody came back to, and the branches that are already merged. It is deliberately the only place either can be cleared out in bulk.
+
+Stale is your definition, not the app's. Three signals can be ticked — no pull request was ever opened for the branch, no remote has a copy of it, nothing has landed on it for a number of days you choose — and they either must all hold or any one is enough. The rules are saved as a setting — `settings.staleRules` in the configuration file — and the panel reads the current one back as a sentence, so what the list means is never a guess. The pull-request signal asks GitHub through `gh`; when it cannot be asked — no GitHub origin, no CLI, not signed in — the answer is *unknown* rather than *no*, which means nothing is listed on the strength of a lookup that never happened. The tab says so, and says which rule to untick.
+
+Nothing is ever purged from a rule directly. The rules produce a list, every row carries the reasons it is on it, and only the rows you tick are removed. The main worktree, the folder this window is open on, anything locked, and anything on a pinned branch are never offered at all, and the panel names them so their absence is not a mystery. A worktree holding uncommitted work is listed but cannot be ticked until you turn on the option that includes it; doing so snapshots tracked work into the Safety Net first, and the confirmation still warns that untracked files cannot be recovered afterwards. Deleting each purged worktree's branch is on by default, but a branch Git would refuse to delete for not being merged is kept unless the confirmation's own checkbox says otherwise. A recovery point recording every branch tip is written before anything is removed, one worktree Git refuses does not stop the rest, and each outcome is reported separately.
+
+**Delete merged branches** is the other half: every branch already contained in the default branch, which is what `origin/HEAD` points at rather than whatever happens to be checked out. Deleting them loses nothing, so they are ticked to begin with. The current branch, pinned branches, and any branch checked out in a worktree are left out, each with its reason.
 
 **Tools** stores definitions for external diff, merge, editor, terminal, and file-manager programs. **Detect installed** fills in a definition for each tool found on your PATH, including the arguments it expects. In 3.0 the conflict resolver can launch the configured merge tool and shows the exact command for first-use approval. The other definitions can be detected and edited here but are not yet connected to launch buttons in their normal workflows. An external merge tool never marks a file resolved on your behalf: Multi-Git re-reads Git's state afterwards rather than assuming.
 
@@ -592,7 +602,7 @@ Click the terminal icon in the top toolbar to open the live log in a separate wi
 
 ## Local Data, Privacy, And Security
 
-Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when the current UI loads its fonts and Material Symbols from Google Fonts, and — on packaged Windows builds — when the app asks GitHub whether a newer release exists.
+Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when the current UI loads its fonts and Material Symbols from Google Fonts, when a window you opened asks `gh` about this repository's pull requests — the pull-request preflight and the Maintenance tab's survey both do — and, on packaged Windows builds, when the app asks GitHub whether a newer release exists.
 
 The update check is the only request Multi-Git makes that you did not start. It is an unauthenticated `GET` to `api.github.com` for this project's public release list, made once about ten seconds after launch and every six hours after that. It sends no account, no repository, and no identifying information beyond what any HTTPS request carries. Nothing is downloaded until you ask for it. Set `settings.checkForUpdates` to `false` in the configuration file to turn it off entirely.
 

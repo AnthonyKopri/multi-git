@@ -12,6 +12,40 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Added
+
+- A **Maintenance** tab in the Repository hub: purge the worktrees nobody came
+  back to, with their branches, and delete every branch already merged into the
+  default branch. Nothing is purged from a rule directly — the rules produce a
+  list, every row carries the reasons it is on it, and only ticked rows are
+  removed. A recovery point recording each branch tip is written first, one
+  worktree Git refuses does not stop the rest, and every outcome is reported
+  separately.
+- Stale is now a definition you choose rather than a constant. Tick any of three
+  signals — no pull request was ever opened for the branch, no remote has a copy
+  of it, nothing has landed on it for a number of days you set — and say whether
+  all of them must hold or any one is enough. It is stored as
+  `settings.staleRules`, and the Branch Maintenance window reads the same
+  definition, so the two can no longer disagree about which branches are stale.
+  A signal that cannot be answered — the pull-request one on a repository with
+  no GitHub origin, or with no `gh` signed in — counts as unknown rather than as
+  true, so nothing is ever offered for deletion on the strength of a lookup that
+  never happened, and the tab says which rule to untick.
+- Purging a worktree that holds uncommitted changes is a separate opt-in, and
+  snapshots tracked work into the Safety Net before the folder goes. Deleting a
+  branch Git refuses to delete for not being merged is another, asked for in the
+  confirmation itself. The main worktree, the folder the window is open on,
+  anything locked, and anything on a pinned branch are never offered, and the
+  panel names them rather than leaving their absence unexplained.
+
+### Fixed
+
+- The **Auto-pull** toggle no longer forgets itself when the app restarts. The
+  setting was stored and validated correctly, but the sanitised configuration
+  sent to the window left `autoPull` out, so the chip read it back as absent and
+  rendered off — and nothing pulled automatically — however the configuration
+  file read.
+
 ## [3.2.0] - 2026-08-21
 
 ### Added

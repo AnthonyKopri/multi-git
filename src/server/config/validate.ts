@@ -34,6 +34,12 @@ import type {
   WindowState
 } from '../../shared/config-types';
 import { EXTERNAL_TOOL_KINDS } from '../../shared/config-types';
+import {
+  DEFAULT_STALE_RULES,
+  MAX_INACTIVE_DAYS,
+  MIN_INACTIVE_DAYS
+} from '../../shared/maintenance-types';
+import type { StaleRules } from '../../shared/maintenance-types';
 
 import { canonicalRepoKey } from './repo-identity';
 
@@ -221,6 +227,40 @@ function validateSshConfigHosts(
   return hosts;
 }
 
+/**
+ * Validates the user's definition of a stale branch.
+ *
+ * Every field falls back to the shipped default rather than dropping the whole
+ * record: a hand-edited file with one bad day count should not silently revert
+ * the three switches beside it. The day count is clamped rather than rejected
+ * for the same reason — a rule of zero days would call every branch in the
+ * repository abandoned.
+ */
+export function validateStaleRules(raw: unknown): StaleRules | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const source = asRecord(raw);
+  const days = source['inactiveDays'];
+
+  const inactiveDays =
+    typeof days === 'number' && Number.isInteger(days)
+      ? Math.min(Math.max(days, MIN_INACTIVE_DAYS), MAX_INACTIVE_DAYS)
+      : DEFAULT_STALE_RULES.inactiveDays;
+
+  const boolean = (key: string, fallback: boolean): boolean =>
+    typeof source[key] === 'boolean' ? (source[key] as boolean) : fallback;
+
+  return {
+    inactiveDays,
+    requireNoPullRequest: boolean('requireNoPullRequest', DEFAULT_STALE_RULES.requireNoPullRequest),
+    requireUnpushed: boolean('requireUnpushed', DEFAULT_STALE_RULES.requireUnpushed),
+    requireInactive: boolean('requireInactive', DEFAULT_STALE_RULES.requireInactive),
+    match: source['match'] === 'any' ? 'any' : 'all'
+  };
+}
+
 function validateSettings(raw: unknown): Partial<AppSettings> | undefined {
   if (raw === undefined) {
     return undefined;
@@ -268,6 +308,11 @@ function validateSettings(raw: unknown): Partial<AppSettings> | undefined {
   const parentDir = source['worktreeParentDir'];
   if (isNonEmptyString(parentDir) && !/[\r\n\0]/.test(parentDir)) {
     settings.worktreeParentDir = parentDir;
+  }
+
+  const rules = validateStaleRules(source['staleRules']);
+  if (rules !== undefined) {
+    settings.staleRules = rules;
   }
 
   return settings;

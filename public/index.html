@@ -177,7 +177,7 @@
         <button id="btn-create-pr" class="btn btn-icon" title="Create pull request" aria-label="Create pull request">
           <span class="material-symbols-outlined" aria-hidden="true">call_merge</span>
         </button>
-        <button id="btn-repo-hub" class="btn btn-icon" type="button" title="Repository tools — remotes, submodules, LFS, patches, bisect, notes" aria-label="Repository tools">
+        <button id="btn-repo-hub" class="btn btn-icon" type="button" title="Repository tools — remotes, submodules, LFS, patches, bisect, notes, maintenance" aria-label="Repository tools">
           <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
         </button>
         <button id="btn-update" class="btn btn-icon has-update hidden" type="button" title="An update is available" aria-label="An update is available">
@@ -1668,6 +1668,10 @@
           <span class="material-symbols-outlined" aria-hidden="true">sticky_note_2</span>
           <span>Notes</span>
         </button>
+        <button type="button" class="hub-tab" role="tab" id="hub-tab-maintenance" data-hub-tab="maintenance" aria-selected="false" aria-controls="hub-panel-maintenance">
+          <span class="material-symbols-outlined" aria-hidden="true">mop</span>
+          <span>Maintenance</span>
+        </button>
         <button type="button" class="hub-tab" role="tab" id="hub-tab-tools" data-hub-tab="tools" aria-selected="false" aria-controls="hub-panel-tools">
           <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
           <span>Tools</span>
@@ -1681,6 +1685,7 @@
         <div class="hub-panel hidden" id="hub-panel-patches" role="tabpanel" aria-labelledby="hub-tab-patches"></div>
         <div class="hub-panel hidden" id="hub-panel-bisect" role="tabpanel" aria-labelledby="hub-tab-bisect"></div>
         <div class="hub-panel hidden" id="hub-panel-notes" role="tabpanel" aria-labelledby="hub-tab-notes"></div>
+        <div class="hub-panel hidden" id="hub-panel-maintenance" role="tabpanel" aria-labelledby="hub-tab-maintenance"></div>
         <div class="hub-panel hidden" id="hub-panel-tools" role="tabpanel" aria-labelledby="hub-tab-tools"></div>
       </div>
     </div>

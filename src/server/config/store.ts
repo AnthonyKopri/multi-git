@@ -17,7 +17,10 @@ import path from 'node:path';
 import { writeJsonAtomic } from '../fs/atomic';
 import { CURRENT_CONFIG_VERSION, migrateConfig } from './migrations';
 import { validateAppConfig } from './validate';
+import { canonicalRepoKey } from './repo-identity';
+import { DEFAULT_STALE_RULES } from '../../shared/maintenance-types';
 import type { AppConfig } from '../../shared/config-types';
+import type { StaleRules } from '../../shared/maintenance-types';
 
 export const CONFIG_FILE = path.join(os.homedir(), '.multi-git-client-config.json');
 
@@ -154,4 +157,21 @@ export function invalidateConfigCache(): void {
 
 export function isSshConfigManagementEnabled(config: AppConfig): boolean {
   return !config.settings || config.settings.manageSshConfig !== false;
+}
+
+/**
+ * What this installation means by "stale", with the shipped defaults filled in.
+ *
+ * One definition, read by everything that uses the word: the Branch
+ * Maintenance list and the Maintenance tab would otherwise disagree about
+ * which branches are stale while showing the same repository.
+ */
+export function staleRules(config: AppConfig = readConfig()): StaleRules {
+  return { ...DEFAULT_STALE_RULES, ...(config.settings?.staleRules ?? {}) };
+}
+
+/** Branches the user pinned in this repository, in the order they chose. */
+export function pinnedBranchesFor(repoPath: string, config: AppConfig = readConfig()): string[] {
+  const pinned = config.repoSettings[canonicalRepoKey(repoPath)]?.pinnedBranches;
+  return Array.isArray(pinned) ? pinned : [];
 }
