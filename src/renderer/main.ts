@@ -53,6 +53,8 @@ import * as bisect from './features/bisect';
 import * as notes from './features/notes';
 import * as tools from './features/tools';
 import * as maintenance from './features/maintenance';
+import * as settings from './features/settings';
+import * as appMenu from './features/app-menu';
 import * as updates from './features/updates';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
@@ -152,6 +154,7 @@ function closeTopmostLayer(): void {
     ui.agentsModal,
     ui.worktreeModal,
     ui.repoHubModal,
+    ui.settingsModal,
     ui.vaultSetupModal,
     ui.newRepoModal,
     ui.cloneModal,
@@ -768,7 +771,14 @@ function wireSshManager(): void {
   });
 
   ui.sshManageConfigCheckbox.addEventListener('change', (event) => {
-    void accounts.onManageSshConfigChanged((event.target as HTMLInputElement).checked);
+    const box = event.target as HTMLInputElement;
+    // The answer, not the request: declining the confirmation or a failed save
+    // both leave the setting where it was, and the checkbox has to follow.
+    void accounts
+      .onManageSshConfigChanged(box.checked)
+      .then((applied) => {
+        box.checked = applied;
+      });
   });
 }
 
@@ -797,13 +807,13 @@ function buildCommands(): palette.Command[] {
   const branch = (): string => getState().status?.branch ?? 'HEAD';
 
   return [
-    { id: 'search', group: 'Find', title: 'Search commits', keywords: 'log grep history', run: () => search.openSearch('commits') },
-    { id: 'compare', group: 'Find', title: 'Compare two refs', keywords: 'diff ahead behind', run: () => search.openSearch('compare') },
+    { id: 'search', menu: 'History', icon: 'search', group: 'Find', title: 'Search commits', keywords: 'log grep history', run: () => search.openSearch('commits') },
+    { id: 'compare', menu: 'History', icon: 'compare_arrows', group: 'Find', title: 'Compare two refs', keywords: 'diff ahead behind', run: () => search.openSearch('compare') },
     { id: 'compare-upstream', group: 'Find', title: 'Compare this branch with its upstream', keywords: 'ahead behind', run: () => search.openCompareWith(`origin/${branch()}`, branch()) },
     { id: 'signing', group: 'Accounts', title: 'Commit signing settings', keywords: 'gpg ssh sign verify', run: () => void signing.openSigningSettings() },
-    { id: 'rebase', group: 'History', title: 'Interactive rebase', keywords: 'squash reword reorder drop fixup split', run: () => void rebase.openRebase() },
-    { id: 'branches', group: 'Branch', title: 'Branch maintenance', keywords: 'prune stale merged rename pin delete', run: () => branchAdmin.openBranchAdmin() },
-    { id: 'recovery', group: 'Safety Net', title: 'Recovery points and reflog', keywords: 'undo restore reflog', run: () => recovery.openRecoveryBrowser() },
+    { id: 'rebase', menu: 'History', icon: 'swap_calls', group: 'History', title: 'Interactive rebase', keywords: 'squash reword reorder drop fixup split', run: () => void rebase.openRebase() },
+    { id: 'branches', menu: 'Repository', icon: 'call_split', group: 'Branch', title: 'Branch maintenance', keywords: 'prune stale merged rename pin delete', run: () => branchAdmin.openBranchAdmin() },
+    { id: 'recovery', menu: 'Safety Net', icon: 'history', group: 'Safety Net', title: 'Recovery points and reflog', keywords: 'undo restore reflog', run: () => recovery.openRecoveryBrowser() },
     { id: 'refresh', group: 'Repository', title: 'Refresh everything', keywords: 'reload', run: () => void refreshAll() },
     { id: 'open-repo', group: 'Repository', title: 'Open a repository', keywords: 'folder', run: () => void repo.browseAndOpen() },
     { id: 'clone', group: 'Repository', title: 'Clone a repository', run: () => repo.openCloneModal() },
@@ -821,22 +831,23 @@ function buildCommands(): palette.Command[] {
     { id: 'explorer-tab', group: 'View', title: 'Go to the Explorer', run: () => workspace.switchViewTab('explorer') },
     { id: 'ssh', group: 'Accounts', title: 'Manage SSH profiles', keywords: 'keys accounts', run: () => ssh.openSshModal() },
     { id: 'unlock-key', group: 'Accounts', title: 'Unlock the selected SSH key', keywords: 'passphrase vault agent load', run: () => void unlockSelectedKey() },
-    { id: 'worktrees', group: 'Worktrees', title: 'Manage worktrees', keywords: 'worktree create remove branch folder', run: () => worktrees.openWorktreeManager() },
+    { id: 'worktrees', menu: 'Repository', icon: 'account_tree', group: 'Worktrees', title: 'Manage worktrees', keywords: 'worktree create remove branch folder', run: () => worktrees.openWorktreeManager() },
     { id: 'new-window', group: 'Worktrees', title: 'Open this repository in a new window', keywords: 'window split', run: () => void openRepoInNewWindow(getState().activeRepo ?? '') },
-    { id: 'agent-launch', group: 'Worktrees', title: 'Launch a coding agent here', keywords: 'claude codex tool', run: () => void agents.launchAgentForActiveRepo() },
+    { id: 'agent-launch', menu: 'Repository', icon: 'smart_toy', group: 'Worktrees', title: 'Launch a coding agent here', keywords: 'claude codex tool', run: () => void agents.launchAgentForActiveRepo() },
     { id: 'agent-settings', group: 'Worktrees', title: 'Coding agent settings', keywords: 'claude codex configure', run: () => agents.openAgentManager() },
-    { id: 'group-new', group: 'Repository', title: 'Create a repository group', keywords: 'group fetch all', run: () => void groups.createGroup() },
+    { id: 'group-new', menu: 'Repository', icon: 'folder_copy', group: 'Repository', title: 'Create a repository group', keywords: 'group fetch all', run: () => void groups.createGroup() },
     { id: 'remotes', group: 'Repository', title: 'Manage remotes', keywords: 'origin url fetch push refspec prune', run: () => repoHub.openRepoHub('remotes') },
     { id: 'submodules', group: 'Repository', title: 'Manage submodules', keywords: 'gitmodules init update sync', run: () => repoHub.openRepoHub('submodules') },
     { id: 'lfs', group: 'Repository', title: 'Git LFS', keywords: 'large file storage pointer lock track', run: () => repoHub.openRepoHub('lfs') },
     { id: 'patches', group: 'Repository', title: 'Create or apply a patch', keywords: 'diff format-patch am apply mailbox', run: () => repoHub.openRepoHub('patches') },
     { id: 'bisect', group: 'History', title: 'Bisect', keywords: 'good bad regression find', run: () => repoHub.openRepoHub('bisect') },
     { id: 'notes', group: 'History', title: 'Git notes', keywords: 'annotate note ref', run: () => repoHub.openRepoHub('notes') },
-    { id: 'maintenance', group: 'Repository', title: 'Repository maintenance', keywords: 'stale worktrees purge merged branches cleanup abandoned', run: () => repoHub.openRepoHub('maintenance') },
+    { id: 'maintenance', menu: 'Repository', icon: 'mop', group: 'Repository', title: 'Repository maintenance', keywords: 'stale worktrees purge merged branches cleanup abandoned', run: () => repoHub.openRepoHub('maintenance') },
     { id: 'external-tools', group: 'Repository', title: 'External tool and Explorer settings', keywords: 'diff merge editor terminal explorer context menu', run: () => repoHub.openRepoHub('tools') },
     { id: 'toggle-sidebar', group: 'View', title: 'Show or hide the branches panel', keywords: 'collapse expand sidebar left panel', run: () => toggleSide('sidebar') },
     { id: 'toggle-history', group: 'View', title: 'Show or hide the commit history', keywords: 'collapse expand right panel', run: () => toggleSide('history') },
-    { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() }
+    { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() },
+    { id: 'settings', group: 'Accounts', title: 'Settings', keywords: 'preferences options auto-pull updates retention stale rules worktree folder', run: () => void settings.openSettings() }
   ];
 }
 
@@ -924,6 +935,10 @@ async function start(): Promise<void> {
   notes.initDrawerControls();
   tools.initTools();
   maintenance.initMaintenance(refreshAll);
+  settings.initSettings(ui);
+  // The same list the palette indexes, filtered by the `menu` field: two
+  // surfaces, one registry, so they cannot offer different things.
+  appMenu.initAppMenu(ui, buildCommands);
   // Returns immediately in browser mode and on unpackaged or non-Windows
   // builds, leaving the update icon and modal hidden.
   updates.initUpdates(ui);

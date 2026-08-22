@@ -102,9 +102,17 @@ The top toolbar contains the normal remote workflow:
 | **Push** | Pushes the current branch and establishes upstream tracking. | `git push -u origin <branch>` |
 | **Publish** | The same button, labelled and shaped differently while the branch has no upstream on origin yet. | `git push -u origin <branch>` |
 | **Auto-pull** chip | Toggles whether a fetch that leaves this branch purely behind fast-forwards it on its own. | `git pull origin <branch>` |
-| **SSH / HTTPS** chip | Converts a compatible origin URL between GitHub-style SSH and HTTPS forms. | `git remote set-url origin …` |
-| **Terminal Log** | Opens a separate live window with commands and their output. | Read-only transparency view |
-| **Refresh** | Reloads status, branches, history, origin, stashes, tags, and Safety Net. | Multiple read-only Git queries |
+| **Create pull request** | Opens the preflight, rather than sending anything immediately. | `gh pr create` |
+| **SSH / HTTPS** | In the menu. Converts a compatible origin URL between GitHub-style SSH and HTTPS forms. | `git remote set-url origin …` |
+| **Terminal Log** | In the menu. Opens a separate live window with commands and their output. | Read-only transparency view |
+| **Refresh** | In the menu, or `F5`. Reloads status, branches, history, origin, stashes, tags, and Safety Net. | Multiple read-only Git queries |
+
+Fetch, pull, push, the pull-request button and the auto-pull chip are the five
+controls in the strip itself. Everything else — repository tools, the terminal
+log, refresh, the protocol chip, settings, and a dozen actions that were
+previously only in the command palette — lives behind the **menu** button at
+the end of it. The menu is drawn from the same list `Ctrl+K` searches, so
+neither can offer something the other does not.
 
 Ahead and behind badges appear in the branch header and on the push/pull controls. If a normal push is rejected as non-fast-forward, Multi-Git explains the risk and can retry using `--force-with-lease`; it does not silently force-push.
 
@@ -119,16 +127,16 @@ A branch that has no upstream yet is a different action from the pushes that fol
 The application is organized around one active repository:
 
 - The **Repository**, **Branch**, and **SSH Key** header sections show the active context and open quick-switch menus.
-- The left column contains **Branches**, **Merge / Rebase**, **Stashes**, **Tags**, and **Safety Net**.
+- The left column contains **Branches**, **Merge / Rebase**, **Stashes**, **Tags**, **Safety Net**, **Worktrees**, **Remotes**, **Submodules**, **LFS**, and **Groups**. Branches and Merge / Rebase are open to begin with and the rest start collapsed, so the column is a screen of headings rather than a scroll; whatever you collapse or expand is remembered from then on.
 - The center contains **Staging Area**, **File Diff**, and **Workspace Explorer**.
 - The right-side **History** panel shows an expandable commit graph.
-- The top toolbar contains origin protocol, sync, log, and refresh controls.
+- The top toolbar carries fetch, pull, push and the pull-request button, with everything else behind the menu at its end.
 
 Use the repository dropdown to reopen recent projects, open another folder, create a repository, clone, or remove an entry from recents. Removing an entry only forgets it in Multi-Git; it does not delete the repository.
 
 ### Adjustable workspace
 
-Drag the dividers to resize the branch sidebar, History, Workspace Explorer tree, File Diff file list, and commit box. Double-click a divider to restore its default. The left and right panels can also be collapsed from their headers and reopened from the edge of the center workspace; `Ctrl+B` toggles Branches and `Ctrl+Shift+B` toggles History. Individual sidebar sections collapse from their headings.
+Drag the dividers to resize the branch sidebar, History, Workspace Explorer tree, File Diff file list, and commit box. Double-click a divider to restore its default. The left and right panels can also be collapsed from their headers and reopened from the edge of the center workspace; `Ctrl+B` toggles Branches and `Ctrl+Shift+B` toggles History. Individual sidebar sections collapse from their headings; a section you have opened or closed yourself keeps that state, in preference to the one it ships with.
 
 Sizes and collapsed state live in browser storage. They are shared by windows in the current desktop run and persist in browser mode when it returns to the same port; a new desktop launch uses a new local origin and starts from the defaults. When the window becomes narrow, the toolbar, repository rows, commit controls, and side-panel sections reflow or scroll so their actions remain reachable.
 
@@ -573,6 +581,18 @@ Nothing is ever purged from a rule directly. The rules produce a list, every row
 
 The same tab can add **Open in Multi-Git** to the Windows Explorer right-click menu. It writes two registry keys under your own user account — no administrator rights, no file associations — and shows you exactly which two before it writes or removes them.
 
+### Settings
+
+**Settings** in the toolbar menu holds what is true of Multi-Git whatever repository is open, as opposed to the Repository window, which is everything that acts on one repository. Several of these had no interface at all before and could only be changed by closing the app and editing `~/.multi-git-client-config.json`.
+
+- **Syncing** — auto-pull, and whether Multi-Git keeps its managed block in `~/.ssh/config`. Turning the second off still asks whether to remove the block it already wrote.
+- **What counts as a stale branch** — the same control the Maintenance tab shows, because it is the same setting; changing it in either place changes it in both.
+- **Safety Net** — how many days a recovery point is kept. 0 keeps them until you remove them by hand, and an empty box changes nothing rather than being read as 0.
+- **Worktrees and agents** — the folder new worktrees are suggested in, and whether the text of an agent prompt is kept in launch history.
+- **Application** — window restoration and the GitHub update check.
+
+Every control writes as you change it. There is no Save button, because a settings window with one has two states — what is shown and what is stored — and no way to tell which is in force. What is shown is always what was stored: a value the server repaired, such as a stale-rule day count of zero, comes back corrected rather than staying as typed.
+
 ### The operations bar
 
 A thin bar along the bottom of the window shows what Multi-Git is currently running: a clone, a fetch, an LFS transfer, a submodule update, a history search. Click it for the full list, with how long each has taken, a **Cancel** button for the ones that can be stopped, and copyable diagnostics with secrets already removed.
@@ -598,7 +618,7 @@ The explorer is deliberately read-only; edit files in your normal editor and ret
 
 ### Terminal Log
 
-Click the terminal icon in the top toolbar to open the live log in a separate window (or a named browser tab in browser mode). It shows the Git-shaped command, selected SSH context, command output, and errors for the current app session. The window is for visibility and troubleshooting; it is not an interactive shell.
+Choose **Terminal Log** from the toolbar menu to open the live log in a separate window (or a named browser tab in browser mode). It shows the Git-shaped command, selected SSH context, command output, and errors for the current app session. The window is for visibility and troubleshooting; it is not an interactive shell.
 
 ## Local Data, Privacy, And Security
 
@@ -842,7 +862,7 @@ Make sure OpenSSH supplies both `ssh` and `ssh-keygen` on `PATH`. Also confirm t
 
 ### An SSH profile does not affect pull or push
 
-Profiles apply only to SSH remotes. Check the **SSH / HTTPS** chip in the toolbar. For compatible GitHub-style remotes, click it to switch the origin to a form such as:
+Profiles apply only to SSH remotes. Check the **Remote protocol** row in the toolbar menu. For compatible GitHub-style remotes, click it to switch the origin to a form such as:
 
 ```text
 git@github.com:owner/repository.git

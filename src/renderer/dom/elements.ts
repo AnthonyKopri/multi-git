@@ -26,6 +26,16 @@ export const ELEMENT_MAP = {
   sidebarReveal: 'sidebar-reveal',
   historyReveal: 'history-reveal',
 
+  // The navbar overflow menu, and the app-wide settings it opens. The menu's
+  // rows are rendered from the command list, so only the shell is named here.
+  btnAppMenu: 'btn-app-menu',
+  appMenuDropdown: 'app-menu-dropdown',
+  appMenuList: 'app-menu-list',
+  btnSettings: 'btn-settings',
+  settingsModal: 'settings-modal',
+  settingsBody: 'settings-body',
+  btnCloseSettings: 'btn-close-settings',
+
   // Repository hub. The panels are found by id from the tab name, so they are
   // not listed individually.
   btnRepoHub: 'btn-repo-hub',

@@ -130,6 +130,13 @@ export interface AppSettingsInput {
   removeManagedBlock?: boolean;
   /** What counts as a stale branch, for the Maintenance tab and the branch list. */
   staleRules?: StaleRules;
+  /** Days a Safety Net recovery point is kept. 0 keeps them indefinitely. */
+  recoveryRetentionDays?: number;
+  restoreWindowsOnStartup?: boolean;
+  checkForUpdates?: boolean;
+  /** Folder new worktrees are suggested in. Empty restores the default. */
+  worktreeParentDir?: string;
+  storeAgentPrompts?: boolean;
 }
 
 export const saveAppSettings = (input: AppSettingsInput) =>
