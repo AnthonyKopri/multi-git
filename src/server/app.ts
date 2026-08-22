@@ -40,6 +40,7 @@ import { recoveryRouter } from './routes/recovery.routes';
 import { pullRequestsRouter } from './routes/pull-requests.routes';
 import { newRepoRouter } from './routes/new-repo.routes';
 import { worktreesRouter } from './routes/worktrees.routes';
+import { maintenanceRouter } from './routes/maintenance.routes';
 import { groupsRouter } from './routes/groups.routes';
 import { agentsRouter } from './routes/agents.routes';
 import { remotesRouter } from './routes/remotes.routes';
@@ -106,6 +107,7 @@ export function createApp(): Express {
   app.use(recoveryRouter);
   app.use(pullRequestsRouter);
   app.use(worktreesRouter);
+  app.use(maintenanceRouter);
   app.use(remotesRouter);
   app.use(submodulesRouter);
   app.use(lfsRouter);

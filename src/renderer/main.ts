@@ -52,6 +52,7 @@ import * as patches from './features/patches';
 import * as bisect from './features/bisect';
 import * as notes from './features/notes';
 import * as tools from './features/tools';
+import * as maintenance from './features/maintenance';
 import * as updates from './features/updates';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
@@ -831,6 +832,7 @@ function buildCommands(): palette.Command[] {
     { id: 'patches', group: 'Repository', title: 'Create or apply a patch', keywords: 'diff format-patch am apply mailbox', run: () => repoHub.openRepoHub('patches') },
     { id: 'bisect', group: 'History', title: 'Bisect', keywords: 'good bad regression find', run: () => repoHub.openRepoHub('bisect') },
     { id: 'notes', group: 'History', title: 'Git notes', keywords: 'annotate note ref', run: () => repoHub.openRepoHub('notes') },
+    { id: 'maintenance', group: 'Repository', title: 'Repository maintenance', keywords: 'stale worktrees purge merged branches cleanup abandoned', run: () => repoHub.openRepoHub('maintenance') },
     { id: 'external-tools', group: 'Repository', title: 'External tool and Explorer settings', keywords: 'diff merge editor terminal explorer context menu', run: () => repoHub.openRepoHub('tools') },
     { id: 'toggle-sidebar', group: 'View', title: 'Show or hide the branches panel', keywords: 'collapse expand sidebar left panel', run: () => toggleSide('sidebar') },
     { id: 'toggle-history', group: 'View', title: 'Show or hide the commit history', keywords: 'collapse expand right panel', run: () => toggleSide('history') },
@@ -921,6 +923,7 @@ async function start(): Promise<void> {
   notes.initNotes(ui);
   notes.initDrawerControls();
   tools.initTools();
+  maintenance.initMaintenance(refreshAll);
   // Returns immediately in browser mode and on unpackaged or non-Windows
   // builds, leaving the update icon and modal hidden.
   updates.initUpdates(ui);

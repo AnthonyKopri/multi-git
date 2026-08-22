@@ -1,6 +1,7 @@
 // Shapes of the on-disk configuration and of the sanitised copy sent to the
 // client. Secrets never appear in either: passphrases live in the separate
 // vault file, and the client only learns whether one is stored.
+import type { StaleRules } from './maintenance-types';
 
 export interface SshProfile {
   id: string;
@@ -80,6 +81,12 @@ export interface AppSettings {
    * which happens on its own: a newer version no longer matches this string.
    */
   skippedUpdateVersion?: string;
+  /**
+   * What this installation means by a stale branch. Read by the Maintenance
+   * tab and by the Branch Maintenance list, so the two cannot disagree.
+   * Absent means the shipped defaults.
+   */
+  staleRules?: StaleRules;
 }
 
 /** A user-defined set of repositories that are fetched and opened together. */

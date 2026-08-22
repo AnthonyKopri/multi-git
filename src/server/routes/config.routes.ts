@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { MAX_RECENT_REPOS, readConfig, writeConfig } from '../config/store';
 import { canonicalRepoKey } from '../config/repo-identity';
 import { sanitizeConfigForClient } from '../config/sanitize';
+import { validateStaleRules } from '../config/validate';
 import { removeManagedBlock } from '../ssh/config-block';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 import { getVaultStatus, lockVault, unlockVault } from '../vault/vault';
@@ -141,10 +142,12 @@ configRouter.post('/api/config/settings', (req, res) => {
   const {
     manageSshConfig,
     autoPull,
+    staleRules,
     removeManagedBlock: shouldRemoveBlock
   } = (req.body ?? {}) as {
     manageSshConfig?: unknown;
     autoPull?: unknown;
+    staleRules?: unknown;
     removeManagedBlock?: unknown;
   };
 
@@ -158,6 +161,15 @@ configRouter.post('/api/config/settings', (req, res) => {
   }
   if (typeof autoPull === 'boolean') {
     settings.autoPull = autoPull;
+  }
+  if (staleRules !== undefined) {
+    // Through the same validator the configuration file goes through, so a day
+    // count of zero or a missing switch is repaired here rather than written
+    // out and repaired on the next read.
+    const rules = validateStaleRules(staleRules);
+    if (rules !== undefined) {
+      settings.staleRules = rules;
+    }
   }
 
   config.settings = settings;

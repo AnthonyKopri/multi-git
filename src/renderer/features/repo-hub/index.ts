@@ -19,6 +19,7 @@ export type HubTab =
   | 'patches'
   | 'bisect'
   | 'notes'
+  | 'maintenance'
   | 'tools';
 
 export const HUB_TABS: readonly HubTab[] = [
@@ -28,6 +29,7 @@ export const HUB_TABS: readonly HubTab[] = [
   'patches',
   'bisect',
   'notes',
+  'maintenance',
   'tools'
 ];
 

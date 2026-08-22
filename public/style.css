@@ -4436,3 +4436,32 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   background-color: var(--color-primary);
   transition: width 0.2s ease-out;
 }
+
+/* ============ REPOSITORY MAINTENANCE ============ */
+/* The rule form is three checkbox rows that wrap rather than a labelled grid:
+   each rule is a sentence fragment, and lining them up in a column of labels
+   would break the sentence the panel is trying to read as. */
+.maintenance-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 8px 0;
+}
+
+/* Wide enough for four digits and no wider: it is a day count, and a full-width
+   field beside "Nothing has landed for" reads as a search box. */
+.stale-days {
+  width: 64px;
+  text-align: right;
+}
+
+.stale-match {
+  font-size: 0.75rem;
+}
+
+/* A row whose worktree holds uncommitted work. Marked rather than hidden: it is
+   still the answer to "what is stale", it just needs the second opt-in before
+   it can be ticked. */
+.worktree-item.maintenance-dirty .worktree-name {
+  color: var(--color-warning);
+}

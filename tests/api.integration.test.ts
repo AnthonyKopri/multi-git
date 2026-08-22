@@ -710,3 +710,50 @@ describe('the repository identity', () => {
     await api(repo).post('/api/git/identity').send({ name: 'Only Name' }).expect(400);
   });
 });
+
+describe('app settings', () => {
+  // Every one of these is a setting the client reads back to draw a control.
+  // A setting the server stores but never sends is worse than one it does not
+  // store: the file says the feature is on, and the UI says it is off.
+  it('sends a stored setting back to the client', async () => {
+    await api().post('/api/config/settings').send({ autoPull: true }).expect(200);
+
+    const { body } = await api().get('/api/config').expect(200);
+    expect(body.settings.autoPull).toBe(true);
+  });
+
+  it('reports auto-pull as off rather than leaving it absent', async () => {
+    await api().post('/api/config/settings').send({ autoPull: false }).expect(200);
+
+    const { body } = await api().get('/api/config').expect(200);
+
+    // Explicitly false, not undefined: the chip renders from this, and while
+    // the field was missing altogether the two were indistinguishable — which
+    // is what made a stored `true` come back as an off chip.
+    expect(body.settings.autoPull).toBe(false);
+  });
+
+  it('round-trips the stale rules, repairing an impossible day count', async () => {
+    await api()
+      .post('/api/config/settings')
+      .send({ staleRules: { inactiveDays: 0, requireUnpushed: true, match: 'any' } })
+      .expect(200);
+
+    const { body } = await api().get('/api/config').expect(200);
+
+    expect(body.settings.staleRules).toMatchObject({
+      // Clamped: a rule of zero days would call every branch abandoned.
+      inactiveDays: 1,
+      requireUnpushed: true,
+      match: 'any'
+    });
+  });
+
+  it('changes only the settings a request mentions', async () => {
+    await api().post('/api/config/settings').send({ autoPull: true }).expect(200);
+    await api().post('/api/config/settings').send({ manageSshConfig: true }).expect(200);
+
+    const { body } = await api().get('/api/config').expect(200);
+    expect(body.settings.autoPull).toBe(true);
+  });
+});

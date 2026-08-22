@@ -64,6 +64,12 @@ import type {
   SigningStatusResponse
 } from '../../shared/signing-types';
 import type {
+  MaintenanceSurveyResponse,
+  PurgeWorktreesInput,
+  PurgeWorktreesResult,
+  StaleRules
+} from '../../shared/maintenance-types';
+import type {
   CreateWorktreeInput,
   PrunePreviewResponse,
   RemoveWorktreeInput,
@@ -122,6 +128,8 @@ export interface AppSettingsInput {
   manageSshConfig?: boolean;
   autoPull?: boolean;
   removeManagedBlock?: boolean;
+  /** What counts as a stale branch, for the Maintenance tab and the branch list. */
+  staleRules?: StaleRules;
 }
 
 export const saveAppSettings = (input: AppSettingsInput) =>
@@ -716,6 +724,22 @@ export const previewWorktreePrune = () =>
 
 export const removeWorktree = (input: RemoveWorktreeInput) =>
   api.delete<RemoveWorktreeResult>('/api/worktrees', { body: input });
+
+// ---------- repository maintenance ----------
+
+/**
+ * The stale-worktree and merged-branch survey.
+ *
+ * It takes no rules: the definition of stale is an app setting, so the tab
+ * saves it and then asks, rather than the two disagreeing about what was just
+ * shown. Merged branches are deleted through `deleteBranches`, which already
+ * records a recovery point and reports each branch separately.
+ */
+export const getMaintenanceSurvey = () =>
+  api.get<MaintenanceSurveyResponse>('/api/maintenance/survey');
+
+export const purgeStaleWorktrees = (input: PurgeWorktreesInput) =>
+  api.post<PurgeWorktreesResult>('/api/maintenance/purge-worktrees', { body: input });
 
 // ---------- repository groups ----------
 
