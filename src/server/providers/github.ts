@@ -188,4 +188,3 @@ export function readPullRequestTemplate(repoPath: string): string | null {
 
   return null;
 }
-
