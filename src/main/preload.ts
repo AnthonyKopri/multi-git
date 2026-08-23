@@ -64,6 +64,10 @@ const desktopApi: DesktopApi = {
     ipcRenderer.invoke(IPC_CHANNELS.openShell, String(repoPath), String(kind)) as Promise<boolean>,
   availableShells: () =>
     ipcRenderer.invoke(IPC_CHANNELS.availableShells) as ReturnType<DesktopApi['availableShells']>,
+  installPrerequisite: (id) =>
+    ipcRenderer.invoke(IPC_CHANNELS.installPrerequisite, String(id)) as ReturnType<
+      DesktopApi['installPrerequisite']
+    >,
   openEditor: (repoPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.openEditor, String(repoPath)) as Promise<boolean>,
   // Carries an agent id, not an executable: the main process looks the

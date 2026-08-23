@@ -58,6 +58,7 @@ import * as settings from './features/settings';
 import * as appMenu from './features/app-menu';
 import * as updates from './features/updates';
 import * as terminal from './features/terminal';
+import * as setup from './features/setup';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -985,6 +986,7 @@ async function start(): Promise<void> {
   // Subscribes to the command stream, so the panel already holds what happened
   // during startup by the time anyone opens it.
   terminal.initTerminal(ui);
+  setup.initSetup(ui);
   patches.initPatches();
   bisect.initBisect({ refreshAll });
   notes.initNotes(ui);
@@ -1022,6 +1024,9 @@ async function start(): Promise<void> {
 
   // Fire and forget: neither a slow key check nor a title lookup should delay
   // the first paint.
+  // Asked once, before anything is attempted: a machine without git would
+  // otherwise learn about it as a spawn error at the first click.
+  void setup.refreshPrerequisites();
   void accounts.validateSshProfilesOnStartup();
   void applyAppTitle();
   void groups.refreshGroups();

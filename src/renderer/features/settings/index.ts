@@ -21,6 +21,7 @@ import { el, icon, setHidden } from '../../dom/create';
 import { showToast } from '../../ui/toast';
 import { withButtonBusy } from '../../ui/busy';
 import * as updates from '../updates';
+import { prerequisites, refreshPrerequisites } from '../setup';
 import { update } from '../../state/store';
 import { applyConfigSnapshot, onManageSshConfigChanged } from '../accounts';
 import { buildMatchSelect, buildStaleRulesForm } from '../maintenance/rules-form';
@@ -173,6 +174,86 @@ function section(title: string, children: (Node | null)[]): HTMLElement {
 }
 
 // ---------- the panel ----------
+
+/**
+ * The tools this application leans on, and how to get them.
+ *
+ * Here as well as on the welcome screen, because the welcome screen is only
+ * seen when no repository is open -- and the person who decides to start
+ * creating pull requests six months in has no reason to go back there.
+ */
+function buildIntegrations(): HTMLElement {
+  const report = prerequisites();
+
+  const rows: (Node | null)[] = [
+    el('p', {
+      className: 'modal-desc',
+      text: 'Multi-Git runs Git for everything. The GitHub CLI is optional and unlocks pull requests and publishing a new repository to GitHub.'
+    })
+  ];
+
+  for (const tool of report?.tools ?? []) {
+    const usable = tool.installed && tool.signedIn !== false;
+
+    rows.push(
+      el('div', {
+        className: 'settings-row',
+        children: [
+          el('div', {
+            className: 'settings-field-row',
+            children: [
+              el('span', {
+                className: 'settings-label',
+                text: tool.version ? `${tool.label} — ${tool.version}` : tool.label
+              }),
+              el('span', {
+                className: `setup-badge ${usable ? 'setup-badge-ok' : 'setup-badge-missing'}`,
+                text: usable ? 'Ready' : tool.installed ? 'Not signed in' : 'Not installed'
+              })
+            ]
+          }),
+          el('p', { className: 'modal-desc', text: tool.detail })
+        ]
+      })
+    );
+  }
+
+  const recheck = el('button', {
+    className: 'btn btn-secondary btn-sm',
+    text: 'Check again',
+    attrs: { type: 'button' }
+  });
+
+  recheck.addEventListener('click', () => {
+    void withButtonBusy(recheck, async () => {
+      await refreshPrerequisites();
+      // Redrawn from the new answer, so the badges here agree with the ones on
+      // the welcome screen.
+      render();
+    });
+  });
+
+  rows.push(
+    el('div', {
+      className: 'settings-row',
+      children: [
+        el('div', {
+          className: 'settings-field-row',
+          children: [
+            el('span', { className: 'settings-label', text: 'Re-check what is installed' }),
+            recheck
+          ]
+        }),
+        el('p', {
+          className: 'modal-desc',
+          text: 'Press this after installing something, or after signing in with gh auth login.'
+        })
+      ]
+    })
+  );
+
+  return section('Git and GitHub', rows);
+}
 
 function buildSync(current: AppSettings): HTMLElement {
   return section('Syncing', [
@@ -337,6 +418,7 @@ function render(): void {
         })
       ]
     }),
+    buildIntegrations(),
     buildSync(current),
     buildStale(current),
     buildSafetyNet(current),

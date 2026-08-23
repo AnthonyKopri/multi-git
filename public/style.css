@@ -4875,3 +4875,138 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   color: var(--color-primary);
   text-decoration: underline dotted;
 }
+
+/* ---------- First-run setup ----------
+   On the welcome card, above the recent list. Hidden entirely once everything
+   required is present, so a machine that is already set up never sees it. */
+.setup-panel {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 14px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.setup-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.setup-header > .material-symbols-outlined {
+  color: var(--color-warning);
+  font-size: 20px;
+  margin-top: 2px;
+}
+.setup-header h3 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.setup-header > button {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.setup-summary {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.setup-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+}
+.setup-item > .material-symbols-outlined {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.setup-item > button {
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Required and absent; optional and absent; present but unusable; done. Four
+   states, because collapsing them would lose the distinction that matters. */
+.setup-item-missing {
+  border-left-color: var(--color-danger);
+}
+.setup-item-missing > .material-symbols-outlined {
+  color: var(--color-danger);
+}
+.setup-item-optional {
+  border-left-color: var(--color-info);
+}
+.setup-item-optional > .material-symbols-outlined {
+  color: var(--color-info);
+}
+.setup-item-warn {
+  border-left-color: var(--color-warning);
+}
+.setup-item-warn > .material-symbols-outlined {
+  color: var(--color-warning);
+}
+.setup-item-ok {
+  border-left-color: var(--color-success);
+}
+.setup-item-ok > .material-symbols-outlined {
+  color: var(--color-success);
+}
+
+.setup-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.setup-item-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.setup-item-detail {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* The same states, as a chip, for the Settings window. */
+.setup-badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.setup-badge-ok {
+  background-color: color-mix(in srgb, var(--color-success) 18%, transparent);
+  color: var(--color-success);
+}
+.setup-badge-missing {
+  background-color: color-mix(in srgb, var(--color-warning) 18%, transparent);
+  color: var(--color-warning);
+}
+
+/* A control that needs the GitHub CLI and does not have it. Dimmed rather than
+   hidden, so the feature stays discoverable and the tooltip can say why. */
+.needs-github:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

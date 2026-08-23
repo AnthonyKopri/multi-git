@@ -14,6 +14,30 @@ or Security. Remove empty headings when preparing a release.
 
 ### Added
 
+- **A setup step on first run.** Multi-Git runs Git for everything it does, so on
+  a machine without it the app was a window with nothing behind it — and you
+  found that out at the first click, as a raw error from a failed process. The
+  welcome screen now checks once and says what is missing. **Install** runs the
+  official package through winget in a terminal window, so you can see progress
+  and answer the elevation prompt; where winget is not available it opens the
+  download page instead. Nothing appears on a machine that is already set up.
+- **Git is treated as required, and the GitHub CLI as optional.** Without Git,
+  Open, New and Clone are disabled with a reason rather than left to fail at the
+  first command. Without the GitHub CLI, everything else works and only the
+  features that genuinely need it — creating a pull request, publishing a new
+  repository to GitHub — are greyed out, with a tooltip saying why.
+- **Settings → Git and GitHub** shows what is installed, what is signed in, and
+  a **Check again** button. The welcome screen is only seen when no repository is
+  open, and someone who decides to start creating pull requests six months later
+  has no reason to go back there.
+- **Release notes are rendered as an announcement.** They arrive from GitHub, so
+  they went into the update window as plain text — which for anything longer than
+  a sentence meant raw Markdown in a small monospace box, cut off at two thousand
+  characters. They are now formatted, in a window with room, up to forty thousand.
+  Nothing is treated as markup: every element is constructed and every string
+  goes in as text, so the safety of the old approach is unchanged. Links show
+  their label rather than becoming clickable, because a link from remote text is
+  not a navigation this window should offer.
 - **Merge and rebase now show you what they would do, and ask.** Opening a pull
   request changes nothing on your machine and got a twenty-field preflight;
   merging and rebasing rewrite your history and got a dropdown and a button. No

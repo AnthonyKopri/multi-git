@@ -459,6 +459,13 @@ export const ELEMENT_MAP = {
   promptCheckboxLabel: 'prompt-checkbox-label',
   btnPromptCancel: 'btn-prompt-cancel',
   // The terminal panel: the log, where the work is.
+  // First-run setup, on the welcome screen.
+  setupPanel: 'setup-panel',
+  setupTitle: 'setup-title',
+  setupSummary: 'setup-summary',
+  setupList: 'setup-list',
+  btnSetupRecheck: 'btn-setup-recheck',
+
   terminalPanel: 'terminal-panel',
   terminalBody: 'terminal-body',
   terminalCount: 'terminal-count',

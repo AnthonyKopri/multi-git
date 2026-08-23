@@ -19,10 +19,25 @@ import {
   saveToolDefinition
 } from '../tools/definitions';
 import { readConfig } from '../config/store';
+import { detectPrerequisites } from '../tools/prerequisites';
 import { EXTERNAL_TOOL_KINDS } from '../../shared/config-types';
 import type { ExternalToolKind } from '../../shared/config-types';
 
 export const toolsRouter: Router = Router();
+
+/**
+ * Whether the tools this application needs are actually here.
+ *
+ * A read, and not repository-scoped: the answer is about the machine. Detecting
+ * is safe on the loopback port; installing is not, and lives behind the
+ * Electron bridge with everything else that starts a program.
+ */
+toolsRouter.get(
+  '/api/tools/prerequisites',
+  asyncRoute(async (_req, res) => {
+    res.json({ success: true, prerequisites: await detectPrerequisites() });
+  })
+);
 
 function rethrow(error: unknown): never {
   if (error instanceof ToolDefinitionError) {

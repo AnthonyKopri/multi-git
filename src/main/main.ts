@@ -10,6 +10,7 @@ import { readConfig, writeConfig } from '../server/config/store';
 import { resolveRepoPath } from '../server/middleware/repo-path';
 import {
   availableShells,
+  installPrerequisite,
   launchAgent,
   openEditorAt,
   openShellAt,
@@ -238,6 +239,12 @@ function registerIpcHandlers(): void {
   );
 
   ipcMain.handle(IPC_CHANNELS.availableShells, () => availableShells());
+
+  // The id is checked against a fixed table in the service; nothing the
+  // renderer sends reaches a command line unchecked.
+  ipcMain.handle(IPC_CHANNELS.installPrerequisite, (_event, id: unknown) =>
+    installPrerequisite(String(id))
+  );
 
   ipcMain.handle(IPC_CHANNELS.openEditor, (_event, repoPath: unknown) =>
     openEditorAt(validatedRepoPath(repoPath))

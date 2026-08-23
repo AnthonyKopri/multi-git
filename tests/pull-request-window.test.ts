@@ -45,7 +45,11 @@ vi.mock('../src/renderer/api/endpoints', () => endpoints);
 vi.mock('../src/renderer/ui/toast', () => ({ showToast: vi.fn(), initToasts: vi.fn() }));
 vi.mock('../src/renderer/ui/log', () => ({ logToTerminal: vi.fn() }));
 vi.mock('../src/renderer/state/store', () => ({
-  getState: () => ({ activeRepo: '/repo', activeProfileId: 'p1' })
+  // githubReady drives whether the toolbar's Create button is greyed out.
+  // Present here so these tests exercise the enabled path; the disabled one is
+  // covered by its own case below.
+  getState: () => ({ activeRepo: '/repo', activeProfileId: 'p1', githubReady: true }),
+  subscribeTo: () => () => {}
 }));
 vi.mock('../src/renderer/ui/busy', () => ({
   // Run the body directly: the busy wrapper is not what these test.
