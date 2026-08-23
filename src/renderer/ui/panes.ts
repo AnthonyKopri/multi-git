@@ -10,7 +10,7 @@
 // :root; the stylesheet reads those for the panel widths and heights. Sizes
 // are remembered per panel across sessions.
 
-export type PaneName = 'sidebar' | 'history' | 'tree' | 'diffFiles' | 'commit';
+export type PaneName = 'sidebar' | 'history' | 'tree' | 'diffFiles' | 'commit' | 'terminal';
 
 export interface PaneSpec {
   /** Custom property on :root that the stylesheet reads. */
@@ -77,6 +77,19 @@ export const PANE_SPECS: Record<PaneName, PaneSpec> = {
     max: 640,
     fallback: 260,
     reserve: 260
+  },
+  terminal: {
+    variable: '--terminal-panel-height',
+    axis: 'y',
+    direction: -1,
+    /**
+     * Enough for the header plus a few entries. Below this the panel is worth
+     * collapsing rather than shrinking, which is what the toggle is for.
+     */
+    min: 120,
+    max: 700,
+    fallback: 220,
+    reserve: 320
   },
   commit: {
     variable: '--commit-panel-height',

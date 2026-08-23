@@ -96,7 +96,6 @@ export function setFilenameWrapping(enabled: boolean): void {
 // ---------- operations ----------
 
 export async function stageFiles(files: string[]): Promise<void> {
-  logToTerminal(`git add ${files.join(' ')}`, 'cmd');
 
   try {
     await api.stage(files);
@@ -111,7 +110,6 @@ export async function stageFiles(files: string[]): Promise<void> {
 }
 
 export async function unstageFiles(files: string[]): Promise<void> {
-  logToTerminal(`git reset HEAD ${files.join(' ')}`, 'cmd');
 
   try {
     await api.unstage(files);
@@ -185,7 +183,6 @@ export async function discardChanges(filePath: string, isUntracked: boolean): Pr
     }
   }
 
-  logToTerminal(isUntracked ? `rm ${filePath}` : `git checkout -- ${filePath}`, 'cmd');
 
   try {
     await api.discard(filePath, isUntracked);
@@ -229,7 +226,6 @@ export async function discardAllChanges(): Promise<void> {
     return;
   }
 
-  logToTerminal(`git checkout -- .${checked ? ' && git clean -fd' : ''}`, 'cmd');
 
   try {
     await api.discardAll(checked);
@@ -375,7 +371,6 @@ export async function commitChanges(): Promise<void> {
     return;
   }
 
-  logToTerminal(`git commit ${amend ? '--amend ' : ''}-m "${message}"`, 'cmd');
   (ui.btnCommit as HTMLButtonElement).disabled = true;
 
   try {
@@ -412,7 +407,6 @@ export async function undoLastCommit(): Promise<void> {
     return;
   }
 
-  logToTerminal('git reset --soft HEAD~1', 'cmd');
 
   try {
     await api.undoCommit();

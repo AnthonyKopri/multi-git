@@ -8,7 +8,13 @@ import { repairSshAgentElevated } from './ssh-agent-elevation';
 import { IPC_CHANNELS } from '../shared/desktop-api';
 import { readConfig, writeConfig } from '../server/config/store';
 import { resolveRepoPath } from '../server/middleware/repo-path';
-import { launchAgent, openEditorAt, openTerminalAt } from '../server/agents/service';
+import {
+  availableShells,
+  launchAgent,
+  openEditorAt,
+  openShellAt,
+  openTerminalAt
+} from '../server/agents/service';
 import { runBisect } from '../server/git/bisect';
 import { launchTool } from '../server/tools/launch';
 import * as shellIntegration from './shell-integration';
@@ -224,6 +230,14 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.openTerminalHere, (_event, repoPath: unknown) =>
     openTerminalAt(validatedRepoPath(repoPath))
   );
+
+  // Launching a program is deliberately not on the loopback port: the same line
+  // tools.routes.ts draws, for the same reason.
+  ipcMain.handle(IPC_CHANNELS.openShell, (_event, repoPath: unknown, kind: unknown) =>
+    openShellAt(validatedRepoPath(repoPath), kind === 'git-bash' ? 'git-bash' : 'terminal')
+  );
+
+  ipcMain.handle(IPC_CHANNELS.availableShells, () => availableShells());
 
   ipcMain.handle(IPC_CHANNELS.openEditor, (_event, repoPath: unknown) =>
     openEditorAt(validatedRepoPath(repoPath))

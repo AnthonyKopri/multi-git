@@ -57,6 +57,7 @@ import * as maintenance from './features/maintenance';
 import * as settings from './features/settings';
 import * as appMenu from './features/app-menu';
 import * as updates from './features/updates';
+import * as terminal from './features/terminal';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -981,6 +982,9 @@ async function start(): Promise<void> {
   lfs.initLfs(ui);
   // Opens the operation stream, so the bar is live before anything is started.
   operationsBar.initOperations(ui);
+  // Subscribes to the command stream, so the panel already holds what happened
+  // during startup by the time anyone opens it.
+  terminal.initTerminal(ui);
   patches.initPatches();
   bisect.initBisect({ refreshAll });
   notes.initNotes(ui);

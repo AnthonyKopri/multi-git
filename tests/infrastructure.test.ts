@@ -296,19 +296,38 @@ describe('appendLog', () => {
   beforeEach(() => clearLogBuffer());
 
   it('normalises an unknown type to info', () => {
-    expect(appendLog('hello', 'not-a-type').type).toBe('info');
-    expect(appendLog('hello', 'error').type).toBe('error');
+    expect(appendLog({ text: 'hello', type: 'not-a-type' }).type).toBe('info');
+    expect(appendLog({ text: 'hello', type: 'error' }).type).toBe('error');
   });
 
   it('truncates a line past the cap so the buffer cannot grow without limit', () => {
-    const entry = appendLog('x'.repeat(LOG_TEXT_MAX * 2), 'info');
+    const entry = appendLog({ text: 'x'.repeat(LOG_TEXT_MAX * 2), type: 'info' });
 
     expect(entry.text.length).toBeLessThan(LOG_TEXT_MAX + 100);
     expect(entry.text).toContain('truncated');
   });
 
   it('leaves an ordinary line untouched', () => {
-    expect(appendLog('git status --porcelain', 'cmd').text).toBe('git status --porcelain');
+    expect(appendLog({ text: 'git status --porcelain', type: 'cmd' }).text).toBe(
+      'git status --porcelain'
+    );
+  });
+
+  it('numbers entries in the order they were recorded', () => {
+    // Readers order by this rather than by the timestamp: several lines can
+    // share a millisecond, and the order they were written in is the only
+    // record of what happened first.
+    const first = appendLog({ text: 'one' });
+    const second = appendLog({ text: 'two' });
+
+    expect(second.seq).toBeGreaterThan(first.seq);
+  });
+
+  it('keeps the repository a line belongs to', () => {
+    // Several windows share one buffer. Without this a line from one
+    // repository is indistinguishable from a line from another.
+    expect(appendLog({ text: 'x', repoPath: 'C:/work/api' }).repoPath).toBe('C:/work/api');
+    expect(appendLog({ text: 'x' }).repoPath).toBeUndefined();
   });
 });
 

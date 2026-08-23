@@ -223,10 +223,6 @@ export async function performSync(
     logToTerminal('Using system default SSH configuration', 'info');
   }
 
-  const flags = `${action === 'fetch' ? ' --prune' : ''}${options.force ? ' --force-with-lease' : ''}`;
-  const prefix = profile ? `GIT_SSH_COMMAND="ssh -i ${profile.privateKeyPath}..." ` : '';
-  logToTerminal(`${prefix}git ${action}${flags} origin`, 'cmd');
-
   const button = buttonFor(action);
   setButtonBusy(button, true);
 
@@ -311,7 +307,6 @@ export async function toggleRemoteProtocol(): Promise<void> {
 
   try {
     const data = await api.toggleOriginProtocol();
-    logToTerminal(`git remote set-url origin ${data.remoteUrl}`, 'cmd');
     logToTerminal(`Origin switched to ${target}: ${data.remoteUrl}`, 'success');
     showToast(`Origin remote switched to ${target}.`, 'success');
   } catch (error) {

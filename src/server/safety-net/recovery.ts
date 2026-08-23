@@ -20,6 +20,7 @@ import { writeJsonAtomic } from '../fs/atomic';
 import { tryGitCommand } from '../git/run';
 import { readConfig } from '../config/store';
 import type { RecoveryOperation, RecoveryPoint } from '../../shared/recovery-types';
+import { reportServerProblem } from '../logs';
 
 /** Default retention. Long enough to cover a weekend and a Monday morning. */
 export const DEFAULT_RETENTION_DAYS = 14;
@@ -72,7 +73,7 @@ function readJournal(file: string): RecoveryPoint[] {
     const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
     return Array.isArray(parsed) ? (parsed as RecoveryPoint[]) : [];
   } catch (error) {
-    console.warn('Could not read the recovery journal:', (error as Error).message);
+    reportServerProblem(`Could not read the recovery journal: ${(error as Error).message}`);
     return [];
   }
 }
@@ -82,7 +83,7 @@ function writeJournal(file: string, points: RecoveryPoint[]): void {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     writeJsonAtomic(file, points);
   } catch (error) {
-    console.warn('Could not write the recovery journal:', (error as Error).message);
+    reportServerProblem(`Could not write the recovery journal: ${(error as Error).message}`);
   }
 }
 
@@ -183,7 +184,7 @@ export async function captureRecoveryPoint(
     writeJournal(file, pruneRecoveryPoints([point, ...readJournal(file)], createdAt));
     return point;
   } catch (error) {
-    console.warn('Could not record a recovery point:', (error as Error).message);
+    reportServerProblem(`Could not record a recovery point: ${(error as Error).message}`);
     return null;
   }
 }

@@ -135,7 +135,6 @@ export async function inspectStash(ref: string): Promise<void> {
       { additions: 0, deletions: 0 }
     );
 
-    logToTerminal(`git stash show -p ${ref}`, 'cmd');
 
     await confirmDialog(
       `${ref} holds ${files.length} ${files.length === 1 ? 'file' : 'files'}, +${totals.additions} -${totals.deletions}:
@@ -163,7 +162,6 @@ export async function branchFromStash(ref: string): Promise<void> {
 
   try {
     await api.branchFromStash(ref, name.trim());
-    logToTerminal(`git stash branch ${name.trim()} ${ref}`, 'cmd');
     showToast(`Checked out ${name.trim()} with the stash applied.`, 'success');
     await refreshAll();
   } catch (error) {
@@ -186,7 +184,6 @@ export async function stashChanges(): Promise<void> {
     return;
   }
 
-  logToTerminal('git stash push -u', 'cmd');
 
   await withButtonBusy(ui.btnStashSave, async () => {
     try {
@@ -204,7 +201,6 @@ export async function stashChanges(): Promise<void> {
 }
 
 export async function applyStash(ref: string, pop: boolean, restoreIndex = false): Promise<void> {
-  logToTerminal(`git stash ${pop ? 'pop' : 'apply'}${restoreIndex ? ' --index' : ''} ${ref}`, 'cmd');
 
   try {
     await api.applyStash(ref, pop, restoreIndex);
@@ -266,7 +262,6 @@ export async function refreshTagList(): Promise<void> {
 
 export async function pushTag(name: string): Promise<void> {
   const profile = activeProfile();
-  logToTerminal(`git push origin refs/tags/${name}`, 'cmd');
 
   try {
     const result = await api.pushTag(name, profile?.id, profile?.privateKeyPath);
@@ -361,8 +356,7 @@ export async function undoOperation(checkpointId: string, label: string): Promis
   }
 
   try {
-    const result = await api.undoOperation(checkpointId);
-    logToTerminal(`git reset --hard ${result.restoredHead}`, 'cmd');
+    await api.undoOperation(checkpointId);
     showToast(`Undid "${label}".`, 'success');
     await refreshAll();
   } catch (error) {

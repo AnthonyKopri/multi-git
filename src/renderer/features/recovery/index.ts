@@ -203,7 +203,6 @@ async function branchFrom(oid: string): Promise<void> {
 
   try {
     await api.recoveryBranch(oid, name.trim());
-    logToTerminal(`git branch ${name.trim()} ${shortOid(oid)}`, 'cmd');
     showToast(`Created ${name.trim()} at ${shortOid(oid)}.`, 'success');
     await refreshAll();
     await refreshRecovery();
@@ -230,7 +229,6 @@ async function restorePoint(point: RecoveryPoint): Promise<void> {
 
   try {
     const result = await api.recoveryRestore(point.id, target);
-    logToTerminal(`git reset --hard ${result.shortOid}`, 'cmd');
     showToast(`Restored ${shortRef(target)} to ${result.shortOid}.`, 'success');
     await refreshAll();
     await refreshRecovery();
@@ -258,11 +256,11 @@ async function copyCommand(oid: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(command);
     showToast('Command copied.', 'success');
-    logToTerminal(command, 'cmd');
+    logToTerminal(command, 'info');
   } catch {
     // A clipboard a browser refused is not worth an error dialog; showing the
     // command is the point, and the log has it.
-    logToTerminal(command, 'cmd');
+    logToTerminal(command, 'info');
     showToast('Clipboard unavailable — the command is in the Terminal Log.', 'info', 6000);
   }
 }

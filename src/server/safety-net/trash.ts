@@ -10,6 +10,7 @@ import path from 'node:path';
 
 import { resolveInsideRepo } from '../fs/paths';
 import { writeJsonAtomic } from '../fs/atomic';
+import { reportServerProblem } from '../logs';
 
 export const TRASH_ROOT = path.join(os.tmpdir(), 'multi-git-trash');
 export const TRASH_TTL_MS = 24 * 60 * 60 * 1000;
@@ -52,7 +53,7 @@ export function readTrashIndex(trashDir: string): TrashEntry[] {
     const parsed: unknown = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
     return Array.isArray(parsed) ? (parsed as TrashEntry[]) : [];
   } catch (error) {
-    console.warn('Failed to read trash index:', (error as Error).message);
+    reportServerProblem(`Safety Net could not read its index: ${(error as Error).message}`);
     return [];
   }
 }
@@ -62,7 +63,7 @@ export function writeTrashIndex(trashDir: string, entries: TrashEntry[]): void {
     fs.mkdirSync(trashDir, { recursive: true });
     writeJsonAtomic(path.join(trashDir, 'index.json'), entries);
   } catch (error) {
-    console.warn('Failed to write trash index:', (error as Error).message);
+    reportServerProblem(`Safety Net could not write its index: ${(error as Error).message}`);
   }
 }
 
@@ -138,7 +139,7 @@ export function saveManyToTrash(repoPath: string, relativePaths: readonly string
 
       entries.unshift({ id, path: relativePath, savedAt: Date.now(), trashFile });
     } catch (error) {
-      console.warn(`Failed to save ${relativePath} to trash:`, (error as Error).message);
+      reportServerProblem(`Safety Net could not keep a copy of ${relativePath}: ${(error as Error).message}`);
     }
   }
 

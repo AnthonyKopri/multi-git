@@ -645,8 +645,16 @@ export const getAppInfo = () => api.get<Api.AppInfoResponse>('/api/app-info', gl
 
 // ---------- terminal log ----------
 
-export const postLog = (text: string, type: string) =>
-  api.post<Api.Ok>('/api/logs', { ...global, body: { text, type } });
+/**
+ * Sends a batch of narrative lines.
+ *
+ * A batch rather than a line: the server records them in array order, which is
+ * the only record of what happened first once several parallel refreshes are
+ * writing at once.
+ */
+export const postLogs = (
+  entries: readonly { text: string; type: string; repoPath?: string }[]
+) => api.post<Api.Ok>('/api/logs', { ...global, body: { entries } });
 
 // ---------- ssh agent ----------
 

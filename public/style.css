@@ -552,6 +552,7 @@ select {
   --tree-pane-width: 280px;
   --diff-files-width: 260px;
   --commit-panel-height: 148px;
+  --terminal-panel-height: 220px;
 }
 
 /* Drag handles between panels.
@@ -4598,4 +4599,210 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 
 .settings-field-row + .modal-desc {
   margin-left: 0;
+}
+
+/* ---------- Terminal panel ----------
+   Sits above the operations bar, outside <main> so it stays usable while a
+   modal blurs the body. Collapsed it is just its header; expanded it takes the
+   height the pane resizer remembers. */
+.terminal-panel {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: var(--terminal-panel-height, 220px);
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
+  z-index: 6;
+}
+.terminal-panel.is-collapsed {
+  height: auto;
+}
+.terminal-panel.is-collapsed .terminal-body,
+.terminal-panel.is-collapsed .pane-resizer {
+  display: none;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  flex: 0 0 auto;
+}
+
+.terminal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.terminal-toggle:hover {
+  background-color: var(--bg-card-hover);
+}
+.terminal-toggle .material-symbols-outlined {
+  font-size: 18px;
+}
+.terminal-caret {
+  transition: transform 0.15s ease;
+}
+.terminal-panel:not(.is-collapsed) .terminal-caret {
+  transform: rotate(180deg);
+}
+
+.terminal-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* Reads and All repos: quiet, because they are view settings rather than
+   actions, and the log is what the eye should land on. */
+.terminal-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.terminal-filter-toggle input {
+  margin: 0;
+}
+
+.terminal-find {
+  width: 140px;
+  padding: 3px 8px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+.terminal-find:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background-color: var(--bg-input-focus);
+}
+
+.terminal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 12px 10px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.terminal-empty {
+  padding: 12px 0;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.terminal-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 1px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.terminal-line:hover {
+  background-color: var(--bg-card-hover);
+}
+.terminal-line-error {
+  color: var(--color-danger);
+}
+.terminal-line-success {
+  color: var(--color-success);
+}
+.terminal-line-info {
+  color: var(--text-dim);
+}
+
+.terminal-prompt {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+.terminal-command {
+  color: var(--text-main);
+}
+
+/* The trailing facts about a run. Dim, so the command stays the thing you read. */
+.terminal-exit,
+.terminal-duration,
+.terminal-env {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+}
+.terminal-exit {
+  background-color: color-mix(in srgb, var(--color-danger) 18%, transparent);
+  color: var(--color-danger);
+}
+.terminal-duration {
+  color: var(--text-dim);
+}
+.terminal-env {
+  color: var(--text-dim);
+  border: 1px solid var(--border-color);
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Only on the line the pointer is over: a Copy button on every row would be a
+   column of buttons rather than a log. */
+.terminal-copy {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 6px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+  opacity: 0;
+}
+.terminal-line:hover .terminal-copy,
+.terminal-copy:focus-visible {
+  opacity: 1;
+}
+.terminal-copy:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* The horizontal grab strip, matching the vertical ones on the side panes. */
+.pane-resizer-horizontal {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 7;
+}
+.pane-resizer-horizontal:hover,
+.pane-resizer-horizontal:focus-visible {
+  background-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }

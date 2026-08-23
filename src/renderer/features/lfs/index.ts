@@ -249,7 +249,6 @@ async function changeInstallation(action: LfsInstallAction): Promise<void> {
         : 'Git LFS hooks and filters removed from this repository.',
       'success'
     );
-    logToTerminal(`git lfs ${action} --local`, 'cmd');
 
     await refreshPanel();
   } catch (error) {

@@ -345,7 +345,6 @@ export async function submitCreateWorktree(): Promise<void> {
       renderManager();
       resetCreateForm();
 
-      logToTerminal(`git worktree add ${result.path}`, 'cmd');
       showToast(`Worktree created at ${result.path}.`, 'success');
     } catch (error) {
       if (!isStale(error)) {
@@ -373,7 +372,6 @@ export async function repairWorktreeLinks(): Promise<void> {
     renderManager();
     await refreshPrunePreview();
 
-    logToTerminal('git worktree repair', 'cmd');
     showToast(
       result.stdout.trim() || result.stderr.trim() || 'Worktree links checked.',
       'success',
@@ -465,7 +463,6 @@ async function moveWorktree(worktree: WorktreeInfo): Promise<void> {
     renderSidebar();
     renderManager();
 
-    logToTerminal(`git worktree move ${worktree.path} ${destination.trim()}`, 'cmd');
     showToast('Worktree moved.', 'success');
 
     // The window showing it is now pointed at a folder that no longer exists.
@@ -535,7 +532,6 @@ async function performRemoval(input: {
     renderSidebar();
     renderManager();
 
-    logToTerminal(`git worktree remove ${input.force ? '--force ' : ''}${input.path}`, 'cmd');
     showToast(
       result.snapshotRef
         ? `Worktree removed. Its uncommitted work is in the Safety Net as ${result.snapshotRef.slice(0, 8)}.`
@@ -559,7 +555,7 @@ async function copyPath(worktreePath: string): Promise<void> {
     await navigator.clipboard.writeText(worktreePath);
     showToast('Path copied.', 'success');
   } catch {
-    logToTerminal(worktreePath, 'cmd');
+    logToTerminal(worktreePath, 'info');
     showToast('Clipboard unavailable — the path is in the Terminal Log.', 'info', 6000);
   }
 }
