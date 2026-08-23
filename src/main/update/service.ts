@@ -27,7 +27,15 @@ import type { InstallKind, UpdateState } from '../../shared/update-types';
 import { idleUpdateState } from '../../shared/update-types';
 
 /** Release notes are shown as text; a novel in the modal helps nobody. */
-const MAX_NOTES_CHARS = 2000;
+/**
+ * Longest release body kept.
+ *
+ * Two thousand was set when the notes were shown as raw text in a small box, and
+ * a real announcement runs several times that -- so the interesting half of it
+ * was cut off. They are rendered as prose in a scrolling panel now, and the cap
+ * is only here to stop an absurd body from being held in memory.
+ */
+const MAX_NOTES_CHARS = 40_000;
 
 export interface UpdateSettings {
   checkForUpdates: boolean;

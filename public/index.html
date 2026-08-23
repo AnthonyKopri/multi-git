@@ -2035,13 +2035,18 @@
        Deliberately contains no <a href>: createMainWindow sets no will-navigate
        handler, so a link would carry this window itself off to github.com. -->
   <div id="update-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
-    <div class="modal-card modal-small">
+    <!-- Wide, not small: a real release announcement needs the room, and 550px
+         of prose in a 180px box was why the notes were never worth reading. -->
+    <div class="modal-card modal-card-wide">
       <div class="modal-header">
         <h2 id="update-modal-title">Update available</h2>
       </div>
       <div class="modal-body">
         <p id="update-message" class="confirm-message"></p>
-        <pre id="update-notes" class="update-notes hidden"></pre>
+        <!-- A div, not a pre: the notes are rendered as prose now rather than
+             shown as raw Markdown. See ui/markdown.ts for why nothing here is
+             assigned as markup. -->
+        <div id="update-notes" class="update-notes hidden"></div>
         <div id="update-progress" class="update-progress hidden">
           <div id="update-progress-bar" class="update-progress-bar"></div>
         </div>
