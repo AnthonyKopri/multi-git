@@ -549,22 +549,6 @@ export async function startRebase(
   }
 }
 
-/** `git rebase -i` needs the environment; this is the shape callers use. */
-export async function runRebaseWithBridge(
-  repoPath: string,
-  args: readonly string[],
-  todoPath?: string
-): Promise<{ stdout: string; stderr: string }> {
-  const bridge = createEditorBridge();
-  try {
-    return await runGitCommand(repoPath, args, null, {
-      envOverrides: bridgeEnv(bridge, todoPath === undefined ? {} : { todoPath })
-    });
-  } finally {
-    removeEditorBridge(bridge);
-  }
-}
-
 export type RebaseStep = 'continue' | 'skip' | 'abort';
 
 export async function stepRebase(

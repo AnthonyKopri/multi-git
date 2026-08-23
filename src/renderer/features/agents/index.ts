@@ -22,6 +22,8 @@ import { formatRelativeTime } from '../../ui/format';
 import { withButtonBusy } from '../../ui/busy';
 import { ensureKeyUsable } from '../accounts/unlock';
 import type { AgentLaunchRecord, ExternalAgentDefinition } from '../../../shared/config-types';
+import { focusFirst } from '../../ui/focus';
+import { warnNoRepo } from '../../ui/no-repo';
 
 let ui: Elements;
 
@@ -166,6 +168,7 @@ function renderHistory(): void {
 
 export function openAgentManager(): void {
   setHidden(ui.agentsModal, false);
+  focusFirst(ui.agentsModal);
   resetAgentForm();
   void refreshAgents();
 
@@ -341,6 +344,7 @@ export async function launchAgentFor(worktreePath: string): Promise<void> {
   onLaunchAgentChanged();
 
   setHidden(ui.agentLaunchModal, false);
+  focusFirst(ui.agentLaunchModal);
 }
 
 /** Hides the prompt box for a tool that does not take one. */
@@ -411,7 +415,7 @@ export async function launchAgentForActiveRepo(): Promise<void> {
   const { activeRepo } = getState();
 
   if (!activeRepo) {
-    showToast('Open a repository first.', 'warn');
+    warnNoRepo('launch an agent here');
     return;
   }
 

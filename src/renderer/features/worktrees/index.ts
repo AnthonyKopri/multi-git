@@ -23,6 +23,7 @@ import { openRepoInNewWindow } from '../windows';
 import { launchAgentFor } from '../agents';
 import { openRepository } from '../repo';
 import type { WorktreeInfo } from '../../../shared/worktree-types';
+import { focusFirst } from '../../ui/focus';
 
 let ui: Elements;
 let refreshAll: () => Promise<void> = async () => {};
@@ -238,6 +239,7 @@ export async function refreshWorktrees(): Promise<void> {
 
 export function openWorktreeManager(): void {
   setHidden(ui.worktreeModal, false);
+  focusFirst(ui.worktreeModal);
   resetCreateForm();
   void refreshWorktrees();
   void refreshPrunePreview();

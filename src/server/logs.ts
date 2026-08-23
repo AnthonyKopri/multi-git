@@ -84,10 +84,6 @@ export function subscribe(res: Response): () => void {
   };
 }
 
-export function subscriberCount(): number {
-  return subscribers.size;
-}
-
 /** Empties the buffer. Used by tests. */
 export function clearLogBuffer(): void {
   buffer.length = 0;

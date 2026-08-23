@@ -137,26 +137,3 @@ export function getAccountMismatch(): AccountMismatch | null {
 
   return null;
 }
-
-/**
- * Asks the user to confirm when an account or identity mismatch is detected.
- * Returns true when the operation should go ahead.
- */
-export async function confirmDespiteMismatch(operation: string): Promise<boolean> {
-  const mismatch = getAccountMismatch();
-  if (!mismatch) {
-    return true;
-  }
-
-  const message =
-    mismatch.type === 'identity'
-      ? `This repository commits as ${mismatch.actual.name} <${mismatch.actual.email}>, but the selected account is ${mismatch.expected.name} <${mismatch.expected.email}>.`
-      : `An auto-select rule maps this remote to "${mismatch.ruleProfile.label}", but "${mismatch.profile?.label ?? 'System SSH'}" is selected.`;
-
-  const { confirmed } = await confirmDialog(message, {
-    title: `${operation} anyway?`,
-    confirmLabel: `${operation} anyway`
-  });
-
-  return confirmed;
-}

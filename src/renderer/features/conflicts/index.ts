@@ -8,6 +8,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { resolveConflictText, type ConflictChoice } from './resolve-text';
 import * as tools from '../tools';
+import { focusFirst } from '../../ui/focus';
 
 let ui: Elements;
 let refreshStatus: () => Promise<void> = async () => {};
@@ -66,6 +67,7 @@ export async function openConflictResolver(filePath: string): Promise<void> {
   ui.conflictFilePathBadge.textContent = filePath;
   textarea.value = 'Loading file content...';
   setHidden(ui.conflictModal, false);
+  focusFirst(ui.conflictModal);
 
   try {
     const { rawContent } = await api.getConflictFile(filePath);

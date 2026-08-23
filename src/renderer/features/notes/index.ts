@@ -28,11 +28,6 @@ export function initNotes(elements: Elements): void {
   registerHubTab('notes', { render: renderPanel });
 }
 
-/** The ref the rest of the app should read notes from. */
-export function currentNotesRef(): string | undefined {
-  return activeRef;
-}
-
 export function hasNote(commitHash: string): boolean {
   return annotated.has(commitHash);
 }

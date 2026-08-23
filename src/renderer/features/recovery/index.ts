@@ -17,6 +17,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { formatRelativeTime } from '../../ui/format';
 import type { RecoveryPoint, ReflogEntry } from '../../../shared/recovery-types';
+import { focusFirst } from '../../ui/focus';
 
 let ui: Elements;
 let refreshAll: () => Promise<void> = async () => {};
@@ -178,6 +179,7 @@ export async function refreshRecovery(): Promise<void> {
 
 export function openRecoveryBrowser(): void {
   setHidden(ui.recoveryModal, false);
+  focusFirst(ui.recoveryModal);
   void refreshRecovery();
 }
 

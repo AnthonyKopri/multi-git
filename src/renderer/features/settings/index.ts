@@ -19,6 +19,8 @@ import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import { el, icon, setHidden } from '../../dom/create';
 import { showToast } from '../../ui/toast';
+import { withButtonBusy } from '../../ui/busy';
+import * as updates from '../updates';
 import { update } from '../../state/store';
 import { applyConfigSnapshot, onManageSshConfigChanged } from '../accounts';
 import { buildMatchSelect, buildStaleRulesForm } from '../maintenance/rules-form';
@@ -26,6 +28,7 @@ import { DEFAULT_STALE_RULES } from '../../../shared/maintenance-types';
 import type { Elements } from '../../dom/elements';
 import type { AppSettings } from '../../../shared/config-types';
 import type { StaleRules } from '../../../shared/maintenance-types';
+import { focusFirst } from '../../ui/focus';
 
 let ui: Elements;
 let settings: AppSettings | null = null;
@@ -44,12 +47,9 @@ export function initSettings(elements: Elements): void {
   });
 }
 
-export function isSettingsOpen(): boolean {
-  return !ui.settingsModal.classList.contains('hidden');
-}
-
 export async function openSettings(): Promise<void> {
   setHidden(ui.settingsModal, false);
+  focusFirst(ui.settingsModal);
   await refresh();
 }
 
@@ -242,12 +242,15 @@ function buildWorktrees(current: AppSettings): HTMLElement {
       { type: 'text', placeholder: 'D:\\work' },
       (value) => void save({ worktreeParentDir: value })
     ),
-    toggle(
-      'Keep the text of agent prompts in launch history',
-      'Off by default. A prompt is the most sensitive part of a launch, so it is recorded only if you ask for it.',
-      current.storeAgentPrompts === true,
-      (value) => void save({ storeAgentPrompts: value })
-    )
+    // There is deliberately no control for keeping agent prompt text. Nothing
+    // records it: buildLaunchPlan builds the launch history entry from the
+    // arguments without the prompt, and recordLaunch takes no prompt parameter
+    // at all, so there is no path by which one could be written. A switch here
+    // could only have promised something the design refuses to do.
+    el('p', {
+      className: 'modal-desc',
+      text: 'The text of an agent prompt is never recorded. Launch history keeps the command and the folder, and nothing else.'
+    })
   ]);
 }
 
@@ -264,8 +267,53 @@ function buildApplication(current: AppSettings): HTMLElement {
       'The only request Multi-Git makes that you did not start. It sends no account and no repository, and nothing is downloaded until you ask for it.',
       current.checkForUpdates !== false,
       (value) => void save({ checkForUpdates: value })
-    )
+    ),
+    checkNowRow(current)
   ]);
+}
+
+/**
+ * An update check the user can start.
+ *
+ * The navbar icon only appears once there is a release to act on, so an app
+ * that is up to date offered no way to ask at all. Shown only where a check
+ * can actually happen: on a build that can update itself, and with the setting
+ * above switched on -- the service declines a check while it is off, and a
+ * button that quietly did nothing would be worse than no button.
+ */
+function checkNowRow(current: AppSettings): HTMLElement | null {
+  if (!updates.isSupported() || current.checkForUpdates === false) {
+    return null;
+  }
+
+  const button = el('button', {
+    className: 'btn btn-secondary btn-sm',
+    text: 'Check now',
+    attrs: { type: 'button' }
+  });
+
+  button.addEventListener('click', () => {
+    void withButtonBusy(button, async () => {
+      await updates.checkNow();
+    });
+  });
+
+  return el('div', {
+    className: 'settings-row',
+    children: [
+      el('div', {
+        className: 'settings-field-row',
+        children: [
+          el('span', { className: 'settings-label', text: 'Check for updates now' }),
+          button
+        ]
+      }),
+      el('p', {
+        className: 'modal-desc',
+        text: 'Asks GitHub once. Anything found opens the update window; nothing is downloaded until you choose to.'
+      })
+    ]
+  });
 }
 
 function render(): void {

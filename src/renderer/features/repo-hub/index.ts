@@ -10,7 +10,10 @@
 // the feature that owns it, which registers here.
 import { setHidden } from '../../dom/create';
 import { attachHorizontalWheel } from '../../ui/wheel-scroll';
+import { getState } from '../../state/store';
 import type { Elements } from '../../dom/elements';
+import { focusFirst } from '../../ui/focus';
+import { warnNoRepo } from '../../ui/no-repo';
 
 export type HubTab =
   | 'remotes'
@@ -122,10 +125,6 @@ export function isRepoHubOpen(): boolean {
   return !ui.repoHubModal.classList.contains('hidden');
 }
 
-export function currentHubTab(): HubTab {
-  return current;
-}
-
 /**
  * Shows a tab and asks its owner to draw it.
  *
@@ -159,9 +158,25 @@ export async function showTab(tab: HubTab): Promise<void> {
   }
 }
 
+/**
+ * Tabs that mean something with no repository open.
+ *
+ * External tools are a machine-level setting -- where the diff tool and the
+ * terminal live -- and its endpoints are not repository-scoped. The other seven
+ * read the repository on sight, so opening one without a repository fills the
+ * panel with failures instead of content.
+ */
+const APP_LEVEL_TABS: readonly HubTab[] = ['tools'];
+
 /** Opens the hub, optionally straight to a tab. */
 export function openRepoHub(tab: HubTab = current): void {
+  if (!getState().activeRepo && !APP_LEVEL_TABS.includes(tab)) {
+    warnNoRepo('use the repository tools');
+    return;
+  }
+
   setHidden(ui.repoHubModal, false);
+  focusFirst(ui.repoHubModal);
   void showTab(tab);
 }
 

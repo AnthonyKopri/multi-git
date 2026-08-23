@@ -17,6 +17,7 @@ import { repoBaseName } from '../../ui/format';
 import { openRepository } from '../repo';
 import { cancelOperation, subscribeToOperations } from '../../api/operations';
 import { isTerminalOperationState } from '../../../shared/operation-types';
+import { focusFirst } from '../../ui/focus';
 
 let ui: Elements;
 let groups: ClientRepoGroup[] = [];
@@ -209,6 +210,7 @@ export function openGroupEditor(groupId: string): void {
   );
 
   setHidden(ui.groupEditorModal, false);
+  focusFirst(ui.groupEditorModal);
 }
 
 export function closeGroupEditor(): void {

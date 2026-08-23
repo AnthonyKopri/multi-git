@@ -12,6 +12,7 @@ import { setHidden } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
 import { showToast } from '../../ui/toast';
 import type { UpdateState } from '../../../shared/update-types';
+import { focusFirst } from '../../ui/focus';
 import {
   badgeText,
   bodyText,
@@ -66,6 +67,7 @@ function render(): void {
 
 function openModal(): void {
   setHidden(ui.updateModal, false);
+  focusFirst(ui.updateModal);
 }
 
 function closeModal(): void {

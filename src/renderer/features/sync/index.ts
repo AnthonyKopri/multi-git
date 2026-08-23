@@ -11,6 +11,7 @@ import { setButtonBusy } from '../../ui/busy';
 import { activeProfile } from '../accounts';
 import { ensureKeyUsable } from '../accounts/unlock';
 import { getAccountMismatch } from '../accounts/identity';
+import { unlockSelectedKey } from '../accounts/unlock';
 import { refreshOrigin } from '../repo';
 import { pushButtonState } from './push-button';
 import { autoPullBlockedReason, shouldAutoPull } from './auto-pull';
@@ -197,10 +198,24 @@ export async function performSync(
     // for only one of the three would be arbitrary.
     if (!(await ensureKeyUsable({ reason: action }))) {
       logToTerminal(`${label} cancelled: "${profile.label}" is not unlocked.`);
+      // The remedy is offered rather than described. Naming a menu the user
+      // then has to go and find is work the application can do for them, and
+      // the button leads straight back to the operation they pressed.
       showToast(
-        `${label} cancelled — "${profile.label}" is not unlocked. Use Unlock in the SSH key menu when you are ready.`,
+        `${label} cancelled — "${profile.label}" is not unlocked.`,
         'warn',
-        7000
+        9000,
+        {
+          label: 'Unlock',
+          run: () => {
+            // Only retried once the key is actually usable. Going straight back
+            // into the sync after a failed unlock would put the same prompt in
+            // front of the user again, which reads as the button not working.
+            void unlockSelectedKey().then(
+              (unlocked) => (unlocked ? performSync(action, options) : undefined)
+            );
+          }
+        }
       );
       return;
     }

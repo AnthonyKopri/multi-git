@@ -14,6 +14,7 @@ import { el, fragment, setHidden } from '../../dom/create';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import type { SignatureInfo, SigningConfig, SigningMode } from '../../../shared/signing-types';
+import { focusFirst } from '../../ui/focus';
 
 interface BadgeLook {
   label: string;
@@ -39,6 +40,16 @@ let candidates: { profileId: string; label: string; publicKeyPath: string }[] = 
  * worth sending at all.
  */
 let signsByDefault = false;
+
+/**
+ * The same, for tags.
+ *
+ * Read from the repository rather than assumed, because git only honours
+ * `tag.gpgsign` on an annotated tag and this application creates a lightweight
+ * one unless told otherwise. Without sending the flag, ticking "Sign tags by
+ * default" changed a git setting that could never come into effect here.
+ */
+let signsTagsByDefault = false;
 
 export function initSigning(elements: Elements): void {
   ui = elements;
@@ -147,6 +158,7 @@ export async function openSigningSettings(): Promise<void> {
     renderDiagnostics(status.diagnostics);
 
     setHidden(ui.signingModal, false);
+  focusFirst(ui.signingModal);
   } catch (error) {
     if (!isStale(error)) {
       showToast(errorMessage(error, 'Could not read the signing settings.'), 'error');
@@ -206,6 +218,7 @@ export async function refreshCommitSignControl(): Promise<void> {
     const box = asInput(ui.commitSignCheckbox);
 
     signsByDefault = config.signCommitsByDefault;
+    signsTagsByDefault = config.signTagsByDefault;
     box.checked = config.signCommitsByDefault;
     box.disabled = config.mode === 'off';
     ui.commitSignRow.title =
@@ -228,6 +241,16 @@ export async function refreshCommitSignControl(): Promise<void> {
  * commit command identical to what a terminal would run, which is what makes
  * the Terminal Log worth reading.
  */
+/**
+ * Whether a tag created now should be signed.
+ *
+ * Sent explicitly rather than left to git: `-s` is what makes the tag
+ * annotated, and an annotated tag is the only kind `tag.gpgsign` applies to.
+ */
+export function tagsSignedByDefault(): boolean {
+  return signsTagsByDefault;
+}
+
 export function commitSignPreference(): boolean | undefined {
   const checked = asInput(ui.commitSignCheckbox).checked;
   return checked === signsByDefault ? undefined : checked;

@@ -22,10 +22,7 @@ export function sanitizeConfigForClient(config: AppConfig): ClientConfig {
       manageSshConfig: !config.settings || config.settings.manageSshConfig !== false,
       // Restoring is the default; the setting exists to turn it off.
       restoreWindowsOnStartup: config.settings?.restoreWindowsOnStartup !== false,
-      // Prompt text is the most sensitive part of a launch, so keeping it is
-      // opt-in and the client is told which way round it currently is.
-      storeAgentPrompts: config.settings?.storeAgentPrompts === true,
-      // Checking is the default; like the two above, the setting exists to
+      // Checking is the default; like the one above, the setting exists to
       // turn it off rather than to turn it on.
       checkForUpdates: config.settings?.checkForUpdates !== false,
       // Off unless it was turned on, and it has to survive a restart: the

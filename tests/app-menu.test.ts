@@ -191,3 +191,53 @@ describe('the controls that moved out of the toolbar', () => {
     expect($('btn-update').closest('#app-menu-dropdown')).toBeNull();
   });
 });
+
+describe('what the menu offers with no repository open', () => {
+  // The navbar sits outside the container that is blurred and made
+  // click-through while no repository is open, so the menu and Ctrl+K are both
+  // reachable in that state. They used to offer "Interactive rebase" there,
+  // which opened an empty modal and logged a failure -- and the empty state
+  // written for exactly this case could never appear, because the command list
+  // was the same length either way.
+  // buildCommands is what drops the repository-scoped entries -- the menu just
+  // renders what its provider hands over, which is why it is asked again on
+  // every open. With no repository the provider returns only the handful that
+  // work without one, and if none of those carries a `menu` group the list is
+  // empty. ui-contracts.test.ts holds buildCommands to applying the filter.
+  it('shows its empty state when the provider offers nothing', async () => {
+    await mount(() => []);
+    open();
+
+    expect(rowTitles()).toEqual([]);
+    expect($('app-menu-list').textContent).toContain('Open a repository first');
+  });
+
+  it('still offers the rows that work without one', async () => {
+    await mount(() => [
+      { id: 'ssh', group: 'Accounts', title: 'Manage SSH profiles', menu: 'Repository', run }
+    ]);
+
+    open();
+    expect(rowTitles()).toContain('Manage SSH profiles');
+  });
+});
+
+describe('group ordering', () => {
+  it('puts a group it does not know last, not first', async () => {
+    // GROUP_ORDER.indexOf returns -1 for an unlisted group, and a raw
+    // subtraction would sort it above everything. Adding a menu row is meant to
+    // be one word on a command that already exists, so the case where that word
+    // names a new group has to land somewhere sensible on its own.
+    await mount(() => [
+      { id: 'a', group: 'X', title: 'Brand new group', menu: 'Not In The List', run },
+      { id: 'b', group: 'Y', title: 'Known group', menu: 'Repository', run }
+    ]);
+
+    open();
+
+    const titles = [...$('app-menu-list').querySelectorAll<HTMLElement>('.dropdown-title')].map(
+      (node) => node.textContent?.trim() ?? ''
+    );
+    expect(titles).toEqual(['Repository', 'Not In The List']);
+  });
+});

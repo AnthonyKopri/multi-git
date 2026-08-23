@@ -37,7 +37,6 @@ function settings(overrides: Partial<AppSettings> = {}): AppSettings {
     autoPull: false,
     checkForUpdates: true,
     restoreWindowsOnStartup: true,
-    storeAgentPrompts: false,
     recoveryRetentionDays: 14,
     staleRules: { ...DEFAULT_STALE_RULES },
     ...overrides

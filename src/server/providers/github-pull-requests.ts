@@ -5,6 +5,21 @@
 // GitHub remote, where does HEAD point, has it been pushed, is there anything
 // to merge, does a PR already exist. The window renders that; it does not
 // re-derive it.
+//
+// The exact `gh` forms this module produces:
+//
+//   gh --version
+//   gh auth status
+//   gh api user --jq .login
+//   gh repo view --json nameWithOwner,isFork,parent,viewerPermission --jq …
+//   gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+//   gh pr list --head <ref> --state open --json url --jq .[0].url
+//   gh pr create --base <b> --head <ref> --title <t> --body-file -
+//                [--repo <owner/repo>] [--draft] [--no-maintainer-edit]
+//                [--reviewer <r>]... [--assignee <a>]... [--label <l>]...
+//
+// Every one is an argument vector through the shared runner. No shell, and the
+// body always arrives on stdin.
 import { tryGitCommand } from '../git/run';
 import { refArg } from '../git/args';
 import { getOriginRemoteUrl, runSyncOperationWithProfile } from '../ssh/profiles';
@@ -593,21 +608,3 @@ export async function createPullRequest(
     state: options.draft ? 'draft' : 'open'
   };
 }
-
-/**
- * Exact `gh` forms this module produces, for the handoff record:
- *
- *   gh --version
- *   gh auth status
- *   gh api user --jq .login
- *   gh repo view --json nameWithOwner,isFork,parent,viewerPermission --jq …
- *   gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
- *   gh pr list --head <ref> --state open --json url --jq .[0].url
- *   gh pr create --base <b> --head <ref> --title <t> --body-file -
- *                [--repo <owner/repo>] [--draft] [--no-maintainer-edit]
- *                [--reviewer <r>]... [--assignee <a>]... [--label <l>]...
- *
- * Every one is an argument vector through the shared runner. No shell, and the
- * body always arrives on stdin.
- */
-export const GH_COMMAND_FORMS = 'see the comment above this constant';

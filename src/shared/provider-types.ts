@@ -1,26 +1,17 @@
-// The contract a code-hosting provider implements. No provider implements it
-// yet — Phase 1 brings GitHub through the `gh` CLI, and Phase 5 the rest.
+// What the rest of the application needs to know about a code host.
 //
-// It exists now, empty, for one reason: the alternative is Phase 1 writing
-// GitHub-shaped functions straight into the routes, and Phase 5 then having to
-// extract an interface from working code while adding four providers to it.
-// Declaring the seam before the first implementation is what keeps `gh`
-// specifics from leaking into the request handlers.
+// This began as an interface plus a registry, declared ahead of any
+// implementation so that adding a second host would not mean extracting a seam
+// from working code. Nothing ever registered anything: GitHub is reached
+// directly through isGithubRemote and checkGithubAvailability, and the registry
+// sat empty from the day it was written until the day it was deleted. What is
+// left is what is actually used -- the identifier a pull request carries, and
+// the shape of "can this host be used right now".
 //
-// Capabilities are declared rather than discovered. Providers differ in what
-// they support, and a UI that offers a button the provider cannot honour is
-// worse than one that hides it.
+// Bring the seam back alongside the second host, where two real cases can
+// decide its shape instead of one guess.
 
 export type HostingProviderId = 'github' | 'gitlab' | 'bitbucket' | 'azure-devops' | 'gitea';
-
-export interface HostingProviderCapabilities {
-  createPullRequest: boolean;
-  listPullRequests: boolean;
-  reviewPullRequest: boolean;
-  /** CI status attached to a commit or pull request. */
-  commitChecks: boolean;
-  createRepository: boolean;
-}
 
 /** Why a provider cannot be used right now, if it cannot. */
 export type ProviderUnavailableReason = 'not-installed' | 'not-authenticated' | 'unsupported-host';
@@ -34,22 +25,4 @@ export interface ProviderAvailability {
   version?: string | null;
   /** Actionable text for the user, such as how to authenticate. */
   message?: string;
-}
-
-export interface HostingProvider {
-  readonly id: HostingProviderId;
-  /** Shown in the UI, such as "GitHub". */
-  readonly displayName: string;
-  readonly capabilities: HostingProviderCapabilities;
-
-  /**
-   * Whether this provider handles a remote.
-   *
-   * Takes the URL rather than a parsed host so a provider can recognise its
-   * own self-hosted deployments, which share no common host name.
-   */
-  handlesRemote(remoteUrl: string): boolean;
-
-  /** Checked before any operation is offered. Must not prompt or block long. */
-  checkAvailability(): Promise<ProviderAvailability>;
 }

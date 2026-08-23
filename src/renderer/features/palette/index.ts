@@ -25,6 +25,25 @@ export interface Command {
   menu?: string;
   /** Material symbol for the menu row. Unused by the palette. */
   icon?: string;
+  /**
+   * The keys that also run this, written as the user would say them.
+   *
+   * Shown beside the row in both surfaces. Kept on the command rather than in a
+   * table beside it so the hint cannot drift from the binding, and because the
+   * palette is where anyone would look to find out that these exist -- nothing
+   * else in the window teaches them.
+   */
+  shortcut?: string;
+  /**
+   * Set when the command cannot do anything without a repository open.
+   *
+   * The navbar sits outside the container that is blurred and made
+   * click-through while no repository is open, so the palette and the menu are
+   * both reachable in that state. Offering "Interactive rebase" there opened an
+   * empty modal and logged a failure, because every repository-scoped request
+   * is refused by the client before it is sent.
+   */
+  needsRepo?: boolean;
   run: () => void;
 }
 
@@ -98,7 +117,10 @@ function renderList(): void {
               data: { commandId: command.id },
               children: [
                 el('span', { className: 'palette-group', text: command.group }),
-                el('span', { className: 'palette-title', text: command.title })
+                el('span', { className: 'palette-title', text: command.title }),
+                command.shortcut === undefined
+                  ? null
+                  : el('span', { className: 'palette-shortcut', text: command.shortcut })
               ]
             });
             row.setAttribute('role', 'option');

@@ -16,6 +16,7 @@ import { initToasts } from './ui/toast';
 import { cancelOpenDialog, hasOpenDialog, initDialogs } from './ui/dialogs';
 import { closeAllDropdowns, initDropdowns, registerDropdown } from './ui/dropdown';
 import { initPanes, toggleSide } from './ui/panes';
+import { trapTab } from './ui/focus';
 import { initCollapsibleSections } from './ui/sections';
 import { attachHorizontalWheel } from './ui/wheel-scroll';
 import { logToTerminal, openLogWindow } from './ui/log';
@@ -110,6 +111,12 @@ async function refreshAll(): Promise<void> {
     await refreshStatus();
 
     await Promise.all([
+      // Application-wide settings belong to the whole install, not to this
+      // window, so another window can change one at any time. Auto-pull is the
+      // one that matters: the decision to fast-forward is made here, from the
+      // store, so a window that never re-read the config went on pulling after
+      // the setting was turned off somewhere else.
+      accounts.loadConfig(),
       branches.refreshBranchList(),
       history.refreshCommitHistory(),
       repo.refreshOrigin(),
@@ -122,7 +129,11 @@ async function refreshAll(): Promise<void> {
       remotes.refreshRemotes(),
       submodules.refreshSubmodules(),
       lfs.refreshLfs(),
-      notes.refreshNotesIndex()
+      notes.refreshNotesIndex(),
+      // The calls above redraw the sidebar summaries; the hub panels are drawn
+      // by their own tab owners and would otherwise keep showing whatever they
+      // held when the tab was opened. No-ops while the hub is closed.
+      repoHub.refreshRepoHub()
     ]);
   } catch (error) {
     if (!isStale(error)) {
@@ -146,6 +157,10 @@ function closeTopmostLayer(): void {
     ui.rebaseModal,
     ui.searchModal,
     ui.branchAdminModal,
+    // The pull-request creator listens for Escape itself, but nothing moves
+    // focus into it when it opens, so that listener never hears the key. It
+    // belongs in this list like every other modal.
+    ui.prModal,
     ui.recoveryModal,
     // Innermost first: the launch dialog and the group editor open on top of
     // the managers behind them, so Escape must close those before their parent.
@@ -802,53 +817,63 @@ function wireDiscovery(): void {
   });
 }
 
-/** Everything the palette can start. Destructive entries still confirm. */
+/**
+ * Everything the palette can start. Destructive entries still confirm.
+ *
+ * Rebuilt on every open rather than held, because what is worth offering
+ * depends on the state of the window -- which is what `needsRepo` filters on
+ * below. Both the palette and the navbar menu read this one list, so neither
+ * can offer something the other does not.
+ */
 function buildCommands(): palette.Command[] {
   const branch = (): string => getState().status?.branch ?? 'HEAD';
+  const hasRepo = getState().activeRepo !== null;
 
-  return [
-    { id: 'search', menu: 'History', icon: 'search', group: 'Find', title: 'Search commits', keywords: 'log grep history', run: () => search.openSearch('commits') },
-    { id: 'compare', menu: 'History', icon: 'compare_arrows', group: 'Find', title: 'Compare two refs', keywords: 'diff ahead behind', run: () => search.openSearch('compare') },
-    { id: 'compare-upstream', group: 'Find', title: 'Compare this branch with its upstream', keywords: 'ahead behind', run: () => search.openCompareWith(`origin/${branch()}`, branch()) },
-    { id: 'signing', group: 'Accounts', title: 'Commit signing settings', keywords: 'gpg ssh sign verify', run: () => void signing.openSigningSettings() },
-    { id: 'rebase', menu: 'History', icon: 'swap_calls', group: 'History', title: 'Interactive rebase', keywords: 'squash reword reorder drop fixup split', run: () => void rebase.openRebase() },
-    { id: 'branches', menu: 'Repository', icon: 'call_split', group: 'Branch', title: 'Branch maintenance', keywords: 'prune stale merged rename pin delete', run: () => branchAdmin.openBranchAdmin() },
-    { id: 'recovery', menu: 'Safety Net', icon: 'history', group: 'Safety Net', title: 'Recovery points and reflog', keywords: 'undo restore reflog', run: () => recovery.openRecoveryBrowser() },
-    { id: 'refresh', group: 'Repository', title: 'Refresh everything', keywords: 'reload', run: () => void refreshAll() },
+  const commands: palette.Command[] = [
+    { id: 'search', needsRepo: true, menu: 'History', icon: 'search', group: 'Find', title: 'Search commits', keywords: 'log grep history', run: () => search.openSearch('commits') },
+    { id: 'compare', needsRepo: true, menu: 'History', icon: 'compare_arrows', group: 'Find', title: 'Compare two refs', keywords: 'diff ahead behind', run: () => search.openSearch('compare') },
+    { id: 'compare-upstream', needsRepo: true, group: 'Find', title: 'Compare this branch with its upstream', keywords: 'ahead behind', run: () => search.openCompareWith(`origin/${branch()}`, branch()) },
+    { id: 'signing', needsRepo: true, group: 'Accounts', title: 'Commit signing settings', keywords: 'gpg ssh sign verify', run: () => void signing.openSigningSettings() },
+    { id: 'rebase', needsRepo: true, menu: 'History', icon: 'swap_calls', group: 'History', title: 'Interactive rebase', keywords: 'squash reword reorder drop fixup split', run: () => void rebase.openRebase() },
+    { id: 'branches', needsRepo: true, menu: 'Repository', icon: 'call_split', group: 'Branch', title: 'Branch maintenance', keywords: 'prune stale merged rename pin delete', run: () => branchAdmin.openBranchAdmin() },
+    { id: 'recovery', needsRepo: true, menu: 'Safety Net', icon: 'history', group: 'Safety Net', title: 'Recovery points and reflog', keywords: 'undo restore reflog', run: () => recovery.openRecoveryBrowser() },
+    { id: 'refresh', shortcut: 'F5', needsRepo: true, group: 'Repository', title: 'Refresh everything', keywords: 'reload', run: () => void refreshAll() },
     { id: 'open-repo', group: 'Repository', title: 'Open a repository', keywords: 'folder', run: () => void repo.browseAndOpen() },
     { id: 'clone', group: 'Repository', title: 'Clone a repository', run: () => repo.openCloneModal() },
     { id: 'new-repo', group: 'Repository', title: 'Create a repository', run: () => void newRepo.openNewRepoModal() },
-    { id: 'stage-all', group: 'Staging', title: 'Stage everything', run: () => void staging.stageFiles(['.']) },
-    { id: 'unstage-all', group: 'Staging', title: 'Unstage everything', run: () => void staging.unstageFiles(['.']) },
-    { id: 'discard-all', group: 'Staging', title: 'Discard all changes', keywords: 'revert reset working tree', run: () => void staging.discardAllChanges() },
-    { id: 'stash', group: 'Stash', title: 'Stash changes', run: () => void shelf.stashChanges() },
-    { id: 'fetch', group: 'Sync', title: 'Fetch', run: () => void sync.performSync('fetch') },
-    { id: 'pull', group: 'Sync', title: 'Pull', run: () => void sync.performSync('pull') },
-    { id: 'push', group: 'Sync', title: 'Push', run: () => void sync.performSync('push') },
-    { id: 'pull-request', group: 'Sync', title: 'Create a pull request', keywords: 'pr github', run: () => void pullRequest.openCreator() },
-    { id: 'diff-tab', group: 'View', title: 'Go to the File Diff tab', run: () => workspace.switchViewTab('diff') },
-    { id: 'staging-tab', group: 'View', title: 'Go to the Staging Area', run: () => workspace.switchViewTab('staging') },
-    { id: 'explorer-tab', group: 'View', title: 'Go to the Explorer', run: () => workspace.switchViewTab('explorer') },
+    { id: 'stage-all', needsRepo: true, group: 'Staging', title: 'Stage everything', run: () => void staging.stageFiles(['.']) },
+    { id: 'unstage-all', needsRepo: true, group: 'Staging', title: 'Unstage everything', run: () => void staging.unstageFiles(['.']) },
+    { id: 'discard-all', needsRepo: true, group: 'Staging', title: 'Discard all changes', keywords: 'revert reset working tree', run: () => void staging.discardAllChanges() },
+    { id: 'stash', needsRepo: true, group: 'Stash', title: 'Stash changes', run: () => void shelf.stashChanges() },
+    { id: 'fetch', needsRepo: true, group: 'Sync', title: 'Fetch', run: () => void sync.performSync('fetch') },
+    { id: 'pull', needsRepo: true, group: 'Sync', title: 'Pull', run: () => void sync.performSync('pull') },
+    { id: 'push', needsRepo: true, group: 'Sync', title: 'Push', run: () => void sync.performSync('push') },
+    { id: 'pull-request', needsRepo: true, group: 'Sync', title: 'Create a pull request', keywords: 'pr github', run: () => void pullRequest.openCreator() },
+    { id: 'diff-tab', needsRepo: true, group: 'View', title: 'Go to the File Diff tab', run: () => workspace.switchViewTab('diff') },
+    { id: 'staging-tab', needsRepo: true, group: 'View', title: 'Go to the Staging Area', run: () => workspace.switchViewTab('staging') },
+    { id: 'explorer-tab', needsRepo: true, group: 'View', title: 'Go to the Explorer', run: () => workspace.switchViewTab('explorer') },
     { id: 'ssh', group: 'Accounts', title: 'Manage SSH profiles', keywords: 'keys accounts', run: () => ssh.openSshModal() },
     { id: 'unlock-key', group: 'Accounts', title: 'Unlock the selected SSH key', keywords: 'passphrase vault agent load', run: () => void unlockSelectedKey() },
-    { id: 'worktrees', menu: 'Repository', icon: 'account_tree', group: 'Worktrees', title: 'Manage worktrees', keywords: 'worktree create remove branch folder', run: () => worktrees.openWorktreeManager() },
-    { id: 'new-window', group: 'Worktrees', title: 'Open this repository in a new window', keywords: 'window split', run: () => void openRepoInNewWindow(getState().activeRepo ?? '') },
-    { id: 'agent-launch', menu: 'Repository', icon: 'smart_toy', group: 'Worktrees', title: 'Launch a coding agent here', keywords: 'claude codex tool', run: () => void agents.launchAgentForActiveRepo() },
+    { id: 'worktrees', needsRepo: true, menu: 'Repository', icon: 'account_tree', group: 'Worktrees', title: 'Manage worktrees', keywords: 'worktree create remove branch folder', run: () => worktrees.openWorktreeManager() },
+    { id: 'new-window', needsRepo: true, group: 'Worktrees', title: 'Open this repository in a new window', keywords: 'window split', run: () => void openRepoInNewWindow(getState().activeRepo ?? '') },
+    { id: 'agent-launch', needsRepo: true, menu: 'Repository', icon: 'smart_toy', group: 'Worktrees', title: 'Launch a coding agent here', keywords: 'claude codex tool', run: () => void agents.launchAgentForActiveRepo() },
     { id: 'agent-settings', group: 'Worktrees', title: 'Coding agent settings', keywords: 'claude codex configure', run: () => agents.openAgentManager() },
     { id: 'group-new', menu: 'Repository', icon: 'folder_copy', group: 'Repository', title: 'Create a repository group', keywords: 'group fetch all', run: () => void groups.createGroup() },
-    { id: 'remotes', group: 'Repository', title: 'Manage remotes', keywords: 'origin url fetch push refspec prune', run: () => repoHub.openRepoHub('remotes') },
-    { id: 'submodules', group: 'Repository', title: 'Manage submodules', keywords: 'gitmodules init update sync', run: () => repoHub.openRepoHub('submodules') },
-    { id: 'lfs', group: 'Repository', title: 'Git LFS', keywords: 'large file storage pointer lock track', run: () => repoHub.openRepoHub('lfs') },
-    { id: 'patches', group: 'Repository', title: 'Create or apply a patch', keywords: 'diff format-patch am apply mailbox', run: () => repoHub.openRepoHub('patches') },
-    { id: 'bisect', group: 'History', title: 'Bisect', keywords: 'good bad regression find', run: () => repoHub.openRepoHub('bisect') },
-    { id: 'notes', group: 'History', title: 'Git notes', keywords: 'annotate note ref', run: () => repoHub.openRepoHub('notes') },
-    { id: 'maintenance', menu: 'Repository', icon: 'mop', group: 'Repository', title: 'Repository maintenance', keywords: 'stale worktrees purge merged branches cleanup abandoned', run: () => repoHub.openRepoHub('maintenance') },
+    { id: 'remotes', needsRepo: true, group: 'Repository', title: 'Manage remotes', keywords: 'origin url fetch push refspec prune', run: () => repoHub.openRepoHub('remotes') },
+    { id: 'submodules', needsRepo: true, group: 'Repository', title: 'Manage submodules', keywords: 'gitmodules init update sync', run: () => repoHub.openRepoHub('submodules') },
+    { id: 'lfs', needsRepo: true, group: 'Repository', title: 'Git LFS', keywords: 'large file storage pointer lock track', run: () => repoHub.openRepoHub('lfs') },
+    { id: 'patches', needsRepo: true, group: 'Repository', title: 'Create or apply a patch', keywords: 'diff format-patch am apply mailbox', run: () => repoHub.openRepoHub('patches') },
+    { id: 'bisect', needsRepo: true, group: 'History', title: 'Bisect', keywords: 'good bad regression find', run: () => repoHub.openRepoHub('bisect') },
+    { id: 'notes', needsRepo: true, group: 'History', title: 'Git notes', keywords: 'annotate note ref', run: () => repoHub.openRepoHub('notes') },
+    { id: 'maintenance', needsRepo: true, menu: 'Repository', icon: 'mop', group: 'Repository', title: 'Repository maintenance', keywords: 'stale worktrees purge merged branches cleanup abandoned', run: () => repoHub.openRepoHub('maintenance') },
     { id: 'external-tools', group: 'Repository', title: 'External tool and Explorer settings', keywords: 'diff merge editor terminal explorer context menu', run: () => repoHub.openRepoHub('tools') },
-    { id: 'toggle-sidebar', group: 'View', title: 'Show or hide the branches panel', keywords: 'collapse expand sidebar left panel', run: () => toggleSide('sidebar') },
-    { id: 'toggle-history', group: 'View', title: 'Show or hide the commit history', keywords: 'collapse expand right panel', run: () => toggleSide('history') },
+    { id: 'toggle-sidebar', shortcut: 'Ctrl+B', needsRepo: true, group: 'View', title: 'Show or hide the branches panel', keywords: 'collapse expand sidebar left panel', run: () => toggleSide('sidebar') },
+    { id: 'toggle-history', shortcut: 'Ctrl+Shift+B', needsRepo: true, group: 'View', title: 'Show or hide the commit history', keywords: 'collapse expand right panel', run: () => toggleSide('history') },
     { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() },
     { id: 'settings', group: 'Accounts', title: 'Settings', keywords: 'preferences options auto-pull updates retention stale rules worktree folder', run: () => void settings.openSettings() }
   ];
+
+  return commands.filter((command) => hasRepo || command.needsRepo !== true);
 }
 
 function wireGlobal(): void {
@@ -857,7 +882,13 @@ function wireGlobal(): void {
 
     // Ctrl+K / Cmd+K, the convention every palette uses. Ctrl+Shift+P too,
     // for anyone whose muscle memory came from an editor.
-    if ((key.ctrlKey || key.metaKey) && (key.key === 'k' || (key.shiftKey && key.key === 'P'))) {
+    // Compared case-insensitively: Caps Lock makes this 'K', and a shortcut
+    // that stops working because Caps Lock is on is a shortcut that looks
+    // broken. Ctrl+Shift+P is matched on the upper case Shift produces.
+    if (
+      (key.ctrlKey || key.metaKey) &&
+      (key.key.toLowerCase() === 'k' || (key.shiftKey && key.key.toLowerCase() === 'p'))
+    ) {
       event.preventDefault();
       palette.setCommands(buildCommands());
       palette.openPalette();
@@ -872,8 +903,26 @@ function wireGlobal(): void {
       return;
     }
 
+    // The Refresh row has advertised F5 since the toolbar was thinned into a
+    // menu, and nothing was listening. preventDefault matters: without it the
+    // renderer reloads, which throws away the whole window to redo the work
+    // this shortcut was asking for.
+    if (key.key === 'F5') {
+      event.preventDefault();
+      void refreshAll();
+      return;
+    }
+
     if (event.key === 'Escape') {
       closeTopmostLayer();
+      return;
+    }
+
+    // Last, so it never competes with a shortcut above it. The page behind an
+    // open modal is blurred and click-through, so a Tab that reached it would
+    // land on something the user can neither see properly nor click.
+    if (event.key === 'Tab' && trapTab(key)) {
+      event.preventDefault();
     }
   });
 
@@ -901,7 +950,10 @@ async function start(): Promise<void> {
   attachHorizontalWheel(ui.commitTemplateChips);
 
   accounts.initAccounts(ui);
-  repo.initRepo(ui, refreshAll);
+  // openIfRebasing rather than refreshAll: a rebase stopped at an `edit` step
+  // raises no conflict, so the banner stays quiet and nothing else in the
+  // window says the repository is halfway through a rewrite.
+  repo.initRepo(ui, { refreshAll, onOpened: () => void rebase.openIfRebasing() });
   newRepo.initNewRepo(ui);
   branches.initBranches(ui, refreshAll);
   shelf.initShelf(ui, refreshAll);

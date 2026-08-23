@@ -60,11 +60,6 @@ export interface AppSettings {
    */
   worktreeParentDir?: string;
   /**
-   * Whether the text of an initial agent prompt is kept in launch history.
-   * Defaults to false: a prompt is the most sensitive thing in a launch.
-   */
-  storeAgentPrompts?: boolean;
-  /**
    * Whether a fetch that finds the branch purely behind pulls on its own.
    * Defaults to false; only ever a fast-forward. See `shouldAutoPull`.
    */

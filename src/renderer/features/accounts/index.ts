@@ -270,11 +270,6 @@ export async function lockVault(): Promise<void> {
   }
 }
 
-/** Unlocks on demand; setting up a vault is the same call with a new key. */
-export async function ensureVaultUnlocked(): Promise<boolean> {
-  return getState().vaultStatus.unlocked || unlockVault();
-}
-
 // ---------- auto-select rules ----------
 
 export async function addAccountRule(): Promise<void> {

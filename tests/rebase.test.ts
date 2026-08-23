@@ -737,6 +737,18 @@ describe('long repository paths on Windows', () => {
       }
       expect(refused).toMatch(/Filename too long/i);
 
+      // Git creates .git/rebase-merge before it discovers it cannot write the
+      // file named after the commit range, and leaves it there when it gives
+      // up. Everything below would then meet a repository that reports a
+      // rebase already in progress -- which the start endpoint correctly
+      // refuses with 409 -- and the long-path handling under test would never
+      // be reached. Clearing it is part of the premise, not tidying up.
+      execFileSync('git', ['rebase', '--abort'], {
+        cwd: deep,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+
       clearRepoPathCache();
       clearRebaseCache();
 

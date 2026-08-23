@@ -136,7 +136,6 @@ export interface AppSettingsInput {
   checkForUpdates?: boolean;
   /** Folder new worktrees are suggested in. Empty restores the default. */
   worktreeParentDir?: string;
-  storeAgentPrompts?: boolean;
 }
 
 export const saveAppSettings = (input: AppSettingsInput) =>
@@ -247,11 +246,6 @@ export const getLastCommitMessage = () =>
   api.get<Api.LastCommitMessageResponse>('/api/git/last-commit-message');
 
 export const undoCommit = () => api.post<Api.GitOutput>('/api/git/undo-commit');
-
-export const getDiff = (path: string, staged: boolean, untracked: boolean) =>
-  api.get<Api.DiffResponse>('/api/git/diff', {
-    query: { path, staged: staged ? 'true' : 'false', untracked: untracked ? 'true' : 'false' }
-  });
 
 // ---------- precision staging ----------
 
@@ -516,9 +510,6 @@ export const saveSigningConfig = (input: SigningConfigInput) =>
 
 export const getCommitSignature = (hash: string) =>
   api.get<Api.Ok & { signature: SignatureInfo }>('/api/git/signature/commit', { query: { hash } });
-
-export const getTagSignature = (tag: string) =>
-  api.get<Api.Ok & { signature: SignatureInfo }>('/api/git/signature/tag', { query: { tag } });
 
 // ---------- interactive rebase ----------
 
@@ -902,9 +893,6 @@ export const previewLfsTransfer = (action: 'fetch' | 'pull' | 'prune') =>
 export const runLfsTransfer = (action: 'fetch' | 'pull' | 'prune') =>
   api.post<{ success: true; cancelled: boolean }>('/api/lfs/transfer', { body: { action } });
 
-export const getLfsLocks = () =>
-  api.get<{ success: true; locks: LfsLock[]; unavailable?: string }>('/api/lfs/locks');
-
 export const createLfsLock = (path: string) =>
   api.post<{ success: true; locks: LfsLock[]; unavailable?: string }>('/api/lfs/lock', {
     body: { path }
@@ -971,9 +959,6 @@ export const saveNote = (commit: string, message: string, ref?: string) =>
   api.post<{ success: true; note: string | null }>('/api/notes', {
     body: { commit, message, ref }
   });
-
-export const deleteNote = (commit: string, ref?: string) =>
-  api.delete<{ success: true }>('/api/notes', { body: { commit, ref } });
 
 export const syncNotes = (direction: 'fetch' | 'push', remote = 'origin', ref?: string) =>
   api.post<{ success: true }>('/api/notes/sync', { body: { direction, remote, ref } });

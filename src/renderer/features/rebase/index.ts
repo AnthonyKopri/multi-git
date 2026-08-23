@@ -13,6 +13,7 @@ import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import type { RebaseAction, RebasePlan, RebaseTodoItem } from '../../../shared/rebase-types';
+import { focusFirst } from '../../ui/focus';
 
 const ACTIONS: readonly RebaseAction[] = ['pick', 'reword', 'edit', 'squash', 'fixup', 'drop'];
 
@@ -199,6 +200,7 @@ async function refreshState(): Promise<boolean> {
 
 export async function openRebase(defaultOnto = ''): Promise<void> {
   setHidden(ui.rebaseModal, false);
+  focusFirst(ui.rebaseModal);
   setHidden(ui.rebasePublishedWarning, true);
   showValidation([]);
 

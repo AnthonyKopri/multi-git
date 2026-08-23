@@ -160,10 +160,15 @@ async function disableDeleteWarning(): Promise<void> {
 
 export async function discardChanges(filePath: string, isUntracked: boolean): Promise<void> {
   if (shouldWarnBeforeDelete()) {
+    // Not "permanently": /api/git/discard copies the file into Safety Net
+    // before it touches it, whether the file is tracked or not.
+    const recoverable =
+      '\n\nA copy goes to Safety Net first and can be restored there for 24 hours.';
+
     const { confirmed, checked } = await confirmDialog(
       isUntracked
-        ? `Permanently DELETE untracked file:\n${filePath}?`
-        : `Discard all local changes in:\n${filePath}?`,
+        ? `Delete untracked file:\n${filePath}?${recoverable}`
+        : `Discard all local changes in:\n${filePath}?${recoverable}`,
       {
         title: isUntracked ? 'Delete untracked file' : 'Discard changes',
         confirmLabel: isUntracked ? 'Delete' : 'Discard',
@@ -204,8 +209,15 @@ export async function discardAllChanges(): Promise<void> {
     return;
   }
 
+  // What this does is worth stating, because it used to say the opposite.
+  // /api/git/discard-all records a recovery point and copies every file it is
+  // about to touch into Safety Net first, making this the most recoverable
+  // destructive action in the application -- and it was the one telling people
+  // their work was gone for good.
   const { confirmed, checked } = await confirmDialog(
-    'Discard ALL unstaged changes in tracked files? This cannot be undone.',
+    'Discard ALL unstaged changes in tracked files?' +
+      '\n\nA copy of each affected file goes to Safety Net first, and a recovery point records where HEAD was.' +
+      ' Safety Net holds the 30 most recent files for 24 hours.',
     {
       title: 'Discard all changes',
       confirmLabel: 'Discard All',

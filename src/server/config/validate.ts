@@ -46,6 +46,12 @@ import { canonicalRepoKey } from './repo-identity';
 /** Launch history entries kept. Old enough to be useful, bounded enough to read. */
 export const MAX_AGENT_LAUNCHES = 50;
 
+/**
+ * Longest retention the Settings window offers, and the ceiling it is held to.
+ * Ten years; beyond that a recovery point is an archive, not a safety net.
+ */
+export const MAX_RETENTION_DAYS = 3650;
+
 export interface ConfigIssue {
   /** Dotted location, such as `sshProfiles[2].privateKeyPath`. */
   path: string;
@@ -280,19 +286,18 @@ export function validateSettings(raw: unknown): Partial<AppSettings> | undefined
     settings.manageSshConfig = source['manageSshConfig'];
   }
 
-  // A negative or fractional retention would produce expiry times nobody
-  // asked for, so only a whole number of days counts.
+  // A negative or fractional retention would produce expiry times nobody asked
+  // for, so only a whole number of days counts. Whole numbers above the ceiling
+  // are clamped rather than dropped: the Settings field offers 0-3650 and the
+  // window redraws from what comes back, so a value out of range has to have a
+  // defined answer instead of silently reverting to the previous one.
   const retention = source['recoveryRetentionDays'];
   if (typeof retention === 'number' && Number.isInteger(retention) && retention >= 0) {
-    settings.recoveryRetentionDays = retention;
+    settings.recoveryRetentionDays = Math.min(retention, MAX_RETENTION_DAYS);
   }
 
   if (typeof source['restoreWindowsOnStartup'] === 'boolean') {
     settings.restoreWindowsOnStartup = source['restoreWindowsOnStartup'];
-  }
-
-  if (typeof source['storeAgentPrompts'] === 'boolean') {
-    settings.storeAgentPrompts = source['storeAgentPrompts'];
   }
 
   if (typeof source['autoPull'] === 'boolean') {

@@ -42,8 +42,3 @@ export function withRepoLock<T>(repoPath: string, operation: () => Promise<T>): 
 
   return result;
 }
-
-/** Number of repositories with work queued. Used by tests. */
-export function pendingRepoCount(): number {
-  return queues.size;
-}

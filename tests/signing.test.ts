@@ -187,6 +187,30 @@ describe('reading a commit signature', () => {
     const { body } = await api(repo).get('/api/git/signature/tag').query({ tag: 'v1' }).expect(200);
     expect(body.signature.status).not.toBe('unsigned');
   });
+
+  ifSshSigning('signs a tag created with no message, which is the shape the UI sends', async () => {
+    // The tag drawer asks for a name and nothing else. Signing implies -a, and
+    // git refuses to sign an annotated tag with no message, so the route fills
+    // one in. Without the flag the tag is lightweight -- and tag.gpgsign, which
+    // the Signing window writes, only applies to annotated tags, so ticking
+    // "Sign tags by default" could never have taken effect through this path.
+    const repo = createRepoWithHistory();
+    configureSshSigning(repo, { allowedSigners: true });
+
+    await api(repo).post('/api/git/tag').send({ name: 'v2', sign: true }).expect(200);
+
+    const { body } = await api(repo).get('/api/git/signature/tag').query({ tag: 'v2' }).expect(200);
+    expect(body.signature.status).not.toBe('unsigned');
+  });
+
+  it('leaves a tag lightweight when signing was not asked for', async () => {
+    const repo = createRepoWithHistory();
+
+    await api(repo).post('/api/git/tag').send({ name: 'v3' }).expect(200);
+
+    const { body } = await api(repo).get('/api/git/signature/tag').query({ tag: 'v3' }).expect(200);
+    expect(body.signature.status).toBe('unsigned');
+  });
 });
 
 describe('signing configuration', () => {
