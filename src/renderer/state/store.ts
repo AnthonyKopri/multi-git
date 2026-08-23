@@ -75,6 +75,13 @@ export interface AppState {
 
   // Transient UI
   generatingSshKey: boolean;
+  /**
+   * Whether the GitHub CLI is installed and signed in.
+   *
+   * Features that need it read this rather than asking, so a disabled button
+   * and the setup panel cannot disagree about why.
+   */
+  githubReady: boolean;
 }
 
 function initialState(): AppState {
@@ -108,7 +115,10 @@ function initialState(): AppState {
     templateCatalogue: null,
     githubCli: null,
 
-    generatingSshKey: false
+    generatingSshKey: false,
+    // Assumed present until the check says otherwise, so a slow probe does not
+    // grey out a working feature for a moment on every launch.
+    githubReady: true
   };
 }
 

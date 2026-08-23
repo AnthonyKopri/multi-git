@@ -30,6 +30,8 @@ import { isMultiGitSshCommand, readRepoSshCommand } from '../ssh/repo-routing';
 import type { AgentLaunchInput, AgentLaunchResult, AgentSshReadiness } from '../../shared/agent-types';
 import { fallbackShellPlan, findGitBash, shellPlanFor } from '../tools/shells';
 import type { ShellKind } from '../tools/shells';
+import { buildLaunchEnv } from './launch';
+import type { InstallOutcome } from '../../shared/prerequisite-types';
 
 export interface LaunchDependencies {
   runner?: ExecutableRunner;
@@ -273,4 +275,112 @@ export async function openShellAt(
 /** Whether each shell can be offered here, so the UI need not guess. */
 export function availableShells(): { gitBash: boolean } {
   return { gitBash: findGitBash() !== null };
+}
+
+/**
+ * What each installable prerequisite is, to winget and to a browser.
+ *
+ * A fixed table, and the only thing that ever reaches the winget command line.
+ * Nothing the user types goes anywhere near it: the renderer sends an id from
+ * this set or the request is refused, so the `-Command` string below cannot be
+ * made to carry anything else.
+ */
+const PACKAGES: Readonly<Record<string, { id: string; label: string; page: string }>> = {
+  git: {
+    id: 'Git.Git',
+    label: 'Git for Windows',
+    page: 'https://git-scm.com/download/win'
+  },
+  // Git Bash is not separately installable; it arrives with Git for Windows, so
+  // it maps to the same package rather than pretending to be its own download.
+  'git-bash': {
+    id: 'Git.Git',
+    label: 'Git for Windows',
+    page: 'https://git-scm.com/download/win'
+  },
+  gh: {
+    id: 'GitHub.cli',
+    label: 'GitHub CLI',
+    page: 'https://cli.github.com'
+  }
+};
+
+/**
+ * Starts an installation, or opens the download page where it cannot.
+ *
+ * Visibly, in a terminal, rather than silently in the background. winget can
+ * ask for elevation, and a UAC prompt appearing with no window to explain it is
+ * alarming; a failure with no output is worse. The window stays open on
+ * `-NoExit` so whatever winget said is still there to read.
+ *
+ * Falls back to the download page when winget is absent -- older Windows 10, or
+ * an install with the App Installer removed -- which works everywhere.
+ */
+export async function installPrerequisite(
+  id: string,
+  dependencies: LaunchDependencies = {}
+): Promise<InstallOutcome> {
+  const pkg = PACKAGES[id];
+  if (!pkg) {
+    throw new AgentLaunchError(`${id} is not something this application can install.`);
+  }
+
+  const runner = dependencies.runner ?? executableRunner;
+  const launcher = dependencies.launcher ?? detachedLauncher;
+
+  if (process.platform !== 'win32' || (await resolveExecutable('winget.exe', runner)) === null) {
+    await openUrlExternally(pkg.page, launcher);
+    return { started: false, via: 'browser', url: pkg.page };
+  }
+
+  // `--id ... -e` pins the exact package rather than matching a search, and
+  // `--source winget` keeps it off any other configured feed. The id is from
+  // the table above and never from the caller.
+  const command = `winget install --id ${pkg.id} -e --source winget`;
+
+  await runLaunchPlan(
+    {
+      executable: 'powershell.exe',
+      args: ['-NoProfile', '-NoExit', '-Command', command],
+      cwd: process.env['USERPROFILE'] ?? process.cwd(),
+      env: buildLaunchEnv(process.env, undefined),
+      visible: true,
+      preview: `powershell -NoExit -Command ${command}`
+    },
+    launcher
+  );
+
+  return { started: true, via: 'winget' };
+}
+
+/** Opens a download page in the user's browser. */
+async function openUrlExternally(url: string, launcher: DetachedLauncher): Promise<void> {
+  if (process.platform === 'win32') {
+    // `start` needs a shell, so cmd is the launcher; the empty string is the
+    // window title `start` would otherwise take the URL for.
+    await runLaunchPlan(
+      {
+        executable: 'cmd.exe',
+        args: ['/c', 'start', '', url],
+        cwd: process.env['USERPROFILE'] ?? process.cwd(),
+        env: buildLaunchEnv(process.env, undefined),
+        visible: false,
+        preview: `start ${url}`
+      },
+      launcher
+    );
+    return;
+  }
+
+  await runLaunchPlan(
+    {
+      executable: process.platform === 'darwin' ? 'open' : 'xdg-open',
+      args: [url],
+      cwd: process.cwd(),
+      env: buildLaunchEnv(process.env, undefined),
+      visible: false,
+      preview: `open ${url}`
+    },
+    launcher
+  );
 }

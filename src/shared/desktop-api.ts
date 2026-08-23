@@ -16,6 +16,7 @@ import type { AgentLaunchInput, AgentLaunchResult } from './agent-types';
 import type { BisectRunOutcome } from './bisect-types';
 import type { ExternalToolKind } from './config-types';
 import type { UpdateState } from './update-types';
+import type { InstallOutcome, PrerequisiteId } from './prerequisite-types';
 
 /** Removes a push-channel listener. Returned by every `on*` method below. */
 export type Unsubscribe = () => void;
@@ -62,6 +63,13 @@ export interface DesktopApi {
   openShell: (repoPath: string, kind: 'git-bash' | 'terminal') => Promise<boolean>;
   /** Which shells this machine can offer, so the UI does not guess. */
   availableShells: () => Promise<{ gitBash: boolean }>;
+  /**
+   * Starts an installation, visibly.
+   *
+   * Resolves once the installer has been started, not once it has finished --
+   * the user drives it from there, and the app re-checks when they say so.
+   */
+  installPrerequisite: (id: PrerequisiteId) => Promise<InstallOutcome>;
   /** Opens the folder in the configured editor, or the system default. */
   openEditor: (repoPath: string) => Promise<boolean>;
   /** Starts a configured external agent in a worktree. */
@@ -145,6 +153,7 @@ export const IPC_CHANNELS = {
   openTerminalHere: 'tool:open-terminal',
   openShell: 'tool:open-shell',
   availableShells: 'tool:available-shells',
+  installPrerequisite: 'tool:install-prerequisite',
   openEditor: 'tool:open-editor',
   launchAgent: 'agent:launch',
   runBisect: 'bisect:run',

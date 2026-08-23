@@ -912,6 +912,25 @@
         </button>
       </div>
 
+      <!-- FIRST-RUN SETUP
+           Hidden once everything required is present, so a machine that is
+           already set up never sees it. When Git is missing the three buttons
+           above are disabled instead: every one of them would fail at the first
+           click, and failing at the first click teaches nobody anything. -->
+      <div id="setup-panel" class="setup-panel hidden">
+        <div class="setup-header">
+          <span class="material-symbols-outlined" aria-hidden="true">construction</span>
+          <div>
+            <h3 id="setup-title">Finish setting up</h3>
+            <p id="setup-summary" class="setup-summary"></p>
+          </div>
+          <button type="button" id="btn-setup-recheck" class="btn btn-secondary btn-sm">
+            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            <span>Check again</span>
+          </button>
+        </div>
+        <ul id="setup-list" class="setup-list"></ul>
+      </div>
       <!-- SSH keys are needed before the first clone, so the setup entry point
            has to be reachable while no repository is open yet. -->
       <div id="overlay-ssh-row" class="overlay-ssh-row" data-ssh-state="empty">

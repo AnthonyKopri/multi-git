@@ -89,6 +89,7 @@ import type {
 import type { DetectedTool } from '../../shared/tool-types';
 import type { DetectedAgent } from '../../shared/agent-types';
 import type { IntegrationKind, IntegrationPreflight } from '../../shared/integrate-types';
+import type { PrerequisiteReport } from '../../shared/prerequisite-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -983,6 +984,13 @@ export const syncNotes = (direction: 'fetch' | 'push', remote = 'origin', ref?: 
 export const getTools = () =>
   api.get<{ success: true; tools: ExternalToolDefinition[]; confirmed: Record<string, boolean> }>(
     '/api/tools',
+    global
+  );
+
+/** Whether Git, Git Bash and the GitHub CLI are present on this machine. */
+export const getPrerequisites = () =>
+  api.get<{ success: true; prerequisites: PrerequisiteReport }>(
+    '/api/tools/prerequisites',
     global
   );
 

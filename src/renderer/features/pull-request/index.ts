@@ -14,7 +14,7 @@ import { errorMessage, isStale } from '../../api/client';
 import { asButton, asInput, asSelect, asTextArea } from '../../dom/elements';
 import type { Elements } from '../../dom/elements';
 import { setHidden } from '../../dom/create';
-import { getState } from '../../state/store';
+import { getState, subscribeTo } from '../../state/store';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { withButtonBusy } from '../../ui/busy';
@@ -44,6 +44,12 @@ export function initPullRequests(
   onCreated = hooks.refreshStatus;
 
   ui.btnCreatePr.addEventListener('click', () => void openCreator());
+
+  // Disabled rather than left to fail. Without `gh` the preflight would open,
+  // run, and report that it cannot proceed -- a wasted click and a round trip
+  // to say something the app already knew.
+  subscribeTo(['githubReady'], renderGithubAvailability);
+  renderGithubAvailability();
   ui.btnClosePrModal.addEventListener('click', close);
   ui.btnPrCancel.addEventListener('click', close);
 
@@ -82,6 +88,23 @@ export function initPullRequests(
       close();
     }
   });
+}
+
+/**
+ * Greys out what needs the GitHub CLI, and says why.
+ *
+ * The reason goes in the tooltip rather than being left to a toast on click:
+ * a disabled control with no explanation is the most annoying kind.
+ */
+export function renderGithubAvailability(): void {
+  const ready = getState().githubReady;
+  const button = ui.btnCreatePr as HTMLButtonElement;
+
+  button.disabled = !ready;
+  button.title = ready
+    ? 'Create a pull request'
+    : 'Needs the GitHub CLI. Install or sign in from Settings.';
+  button.classList.toggle('needs-github', !ready);
 }
 
 function close(): void {
