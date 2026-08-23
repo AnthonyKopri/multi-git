@@ -388,7 +388,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  height: var(--navbar-height);
   padding: 0 24px;
   background-color: var(--bg-panel);
   border-bottom: 1px solid var(--border-color);
@@ -553,6 +553,9 @@ select {
   --diff-files-width: 260px;
   --commit-panel-height: 148px;
   --terminal-panel-height: 220px;
+  /* Named because the right-hand dock has to start below it. */
+  --navbar-height: 64px;
+  --dock-width: 480px;
 }
 
 /* Drag handles between panels.
@@ -5009,4 +5012,156 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 .needs-github:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ---------- Panels ----------
+   Seven surfaces are not modal questions. Repository tools, worktrees, rebase,
+   recovery, branch maintenance, search and agents are things you want open
+   *beside* the work, and as full-screen dimming overlays they made it
+   impossible to watch a rebase and read the conflict's diff at the same time,
+   or to manage remotes while looking at the history that sent you there.
+
+   They keep their markup and all their wiring. What changes is what the overlay
+   *is*: a dock down the right-hand side instead of a sheet over everything. The
+   backdrop and its pointer-events go, so the rest of the window stays live. */
+.modal-overlay.as-panel {
+  top: var(--navbar-height, 64px);
+  bottom: 0;
+  /* `left: auto` alone is not enough: the base rule pins left to 0, and an
+     unanchored fixed box falls back to its static position rather than the
+     right edge. Both sides have to be stated. */
+  left: auto;
+  right: 0;
+  width: var(--dock-width, 480px);
+  max-width: 100vw;
+  display: block;
+  padding: 0;
+  background-color: transparent;
+  backdrop-filter: none;
+  overflow: visible;
+  /* Behind the true modals, which still cover everything including this. */
+  z-index: 110;
+  /* The dock itself is only a frame; the card inside takes the clicks, so the
+     strip of window either side of it stays usable. */
+  pointer-events: none;
+}
+
+.modal-overlay.as-panel > .modal-card,
+.modal-overlay.as-panel > .modal-card-wide {
+  pointer-events: auto;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 16px;
+  border-radius: 0;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.28);
+}
+
+/* The main body gives up the width rather than being covered by it: a panel
+   that hides the history pane has only moved the problem. */
+body.dock-open .main-body,
+body.dock-open .operations-bar,
+body.dock-open .terminal-panel {
+  margin-right: var(--dock-width, 480px);
+}
+
+/* Grab strip down the dock's leading edge, matching the side panes. */
+.dock-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 6px;
+  cursor: ew-resize;
+  pointer-events: auto;
+  z-index: 1;
+}
+.dock-resizer:hover,
+.dock-resizer:focus-visible {
+  background-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+/* A close control that reads as "put this away" rather than "cancel". */
+.modal-overlay.as-panel .modal-header {
+  position: relative;
+}
+
+/* Narrow windows have no room to give away, so the dock covers instead of
+   pushing -- which is still better than dimming the whole application. */
+@media (max-width: 1100px) {
+  body.dock-open .main-body,
+  body.dock-open .operations-bar,
+  body.dock-open .terminal-panel {
+    margin-right: 0;
+  }
+}
+
+/* ---------- Sidebar launchers ----------
+   One way in to each Repository panel tab, replacing three accordions that each
+   duplicated the panel they linked to. A row is a label, a count and — only
+   where there is something worth knowing without opening anything — a note. */
+.tool-launchers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-launcher {
+  display: flex;
+  flex-direction: column;
+}
+
+.tool-launcher-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+.tool-launcher-btn:hover {
+  background-color: var(--bg-card-hover);
+}
+.tool-launcher-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+.tool-launcher-btn .material-symbols-outlined {
+  font-size: 17px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.tool-launcher-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Indented under its row, so it reads as belonging to it rather than as the
+   next entry in the list. */
+.tool-launcher-note {
+  padding: 0 8px 4px 33px;
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.tool-launcher-note-warn {
+  color: var(--color-warning);
 }

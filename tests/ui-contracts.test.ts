@@ -80,6 +80,63 @@ describe('the modal layer', () => {
   });
 });
 
+describe('which overlays dock and which cover', () => {
+  // Seven surfaces are things you want open beside the work rather than
+  // stacked on top of it: you cannot watch a rebase and read the conflict's
+  // diff at once if opening one dims and freezes everything else.
+  const PANELS = [
+    'rebase-modal',
+    'search-modal',
+    'branch-admin-modal',
+    'recovery-modal',
+    'agents-modal',
+    'worktree-modal',
+    'repo-hub-modal'
+  ];
+
+  function panelIds(): string[] {
+    return [...html.matchAll(/<div id="([a-z0-9-]+)" class="modal-overlay as-panel/g)].map(
+      (m) => m[1] as string
+    );
+  }
+
+  it('docks exactly the seven that belong beside the work', () => {
+    expect(panelIds().sort()).toEqual([...PANELS].sort());
+  });
+
+  it('leaves the genuine questions as modals', () => {
+    // Confirm, prompt, the passphrase dialogs and the wizards are all "answer
+    // this, then continue". A question you can ignore while clicking elsewhere
+    // is a worse question.
+    const docked = new Set(panelIds());
+
+    for (const id of ['confirm-modal', 'prompt-modal', 'vault-setup-modal', 'new-repo-modal', 'clone-modal', 'settings-modal']) {
+      expect(docked.has(id), `${id} should stay modal`).toBe(false);
+    }
+  });
+
+  it('closes a modal before a panel, whatever the list order', () => {
+    // A panel sits beside the work, so a modal opened while one is docked is
+    // unambiguously on top -- and Escape closing the panel underneath would be
+    // answering a question nobody asked.
+    const body = mainSource.slice(
+      mainSource.indexOf('function closeTopmostLayer'),
+      mainSource.indexOf('function wireHeader')
+    );
+
+    expect(body).toContain('isPanel(modal) === group');
+  });
+
+  it('lets Tab leave a panel, which is the point of docking one', () => {
+    const focus = fs.readFileSync(fromAppRoot('src', 'renderer', 'ui', 'focus.ts'), 'utf8');
+
+    expect(
+      focus.includes("!modal.classList.contains('as-panel')"),
+      'trapTab traps docked panels, so Tab cannot reach the work beside them'
+    ).toBe(true);
+  });
+});
+
 describe('advertised keyboard shortcuts', () => {
   /** Shortcuts named in a tooltip, as the user reads them. */
   function advertised(): string[] {
@@ -92,20 +149,48 @@ describe('advertised keyboard shortcuts', () => {
     const found = advertised();
     expect(found.length, 'no tooltip advertises a shortcut; the regex has drifted').toBeGreaterThan(0);
 
+    // Shortcuts now come from the command list: a command declares its keys
+    // once and the palette row, the menu row and the handler all read that one
+    // string. Two predate the registry and are still matched by hand, because
+    // neither is a command -- the palette cannot open itself, and the pane
+    // toggles are layout rather than an action.
+    const byHand = ['Ctrl+K', 'Ctrl+B', 'Ctrl+Shift+B'];
+
     for (const shortcut of new Set(found)) {
-      // A comparison against the key, not just the text appearing somewhere:
-      // `shortcut: 'F5'` in the command list mentions F5 without binding it,
-      // and matching on that would pass with no handler at all. F-keys are
-      // compared by name, Ctrl chords by the letter the handlers test.
-      const key = shortcut.startsWith('F')
-        ? shortcut
-        : (shortcut.split('+').pop() as string).toLowerCase();
+      if (byHand.includes(shortcut)) {
+        const key = (shortcut.split('+').pop() as string).toLowerCase();
+        expect(
+          mainSource.includes(`=== '${key}'`),
+          `${shortcut} is handled by hand but nothing compares against it`
+        ).toBe(true);
+        continue;
+      }
 
       expect(
-        mainSource.includes(`=== '${key}'`),
-        `${shortcut} is advertised in a tooltip but nothing in main.ts compares against it`
+        mainSource.includes(`shortcut: '${shortcut}'`),
+        `${shortcut} is advertised in a tooltip but no command declares it`
       ).toBe(true);
     }
+  });
+
+  it('runs the shortcut a command declares, rather than a second copy of it', () => {
+    // The point of moving these onto the commands: without this the hint and
+    // the binding are two strings that can drift, which is how F5 came to be
+    // printed in a tooltip, cited in a test comment, and bound to nothing.
+    expect(mainSource).toContain('matchesShortcut(command.shortcut, key)');
+    expect(mainSource).toContain('bound.run()');
+  });
+
+  it('does not fire a bare-key shortcut while the user is typing', () => {
+    const shortcuts = fs.readFileSync(
+      fromAppRoot('src', 'renderer', 'ui', 'shortcuts.ts'),
+      'utf8'
+    );
+
+    expect(mainSource).toContain('isTypingTarget(key)');
+    // A chord carrying Ctrl or Alt is not something anyone types into a commit
+    // message, so those must still fire.
+    expect(shortcuts).toContain('event.ctrlKey || event.metaKey || event.altKey');
   });
 });
 
@@ -123,9 +208,14 @@ describe('what the palette and the menu offer', () => {
 
     expect(build.length, 'buildCommands not found; the parser has drifted').toBeGreaterThan(500);
     expect(
-      build.includes('commands.filter((command) => hasRepo || command.needsRepo !== true)'),
+      build.includes('hasRepo || command.needsRepo !== true'),
       'buildCommands hands back every command regardless of whether a repository is open'
     ).toBe(true);
+
+    // The generated entries go through the same filter, so a branch cannot be
+    // offered on the welcome screen either.
+    expect(build).toContain('branchCommands()');
+    expect(build).toContain('repositoryCommands()');
 
     // And the flag is set on real entries, rather than declared and never used.
     expect((build.match(/needsRepo: true/g) ?? []).length).toBeGreaterThan(10);

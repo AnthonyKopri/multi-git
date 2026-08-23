@@ -131,8 +131,23 @@ function renderList(): void {
   );
 }
 
+/**
+ * Rows drawn at once.
+ *
+ * The list now includes every branch and every recent repository, so an empty
+ * query in a repository with eighty branches would otherwise draw a hundred and
+ * twenty rows nobody scrolls. The match itself is not capped -- typing narrows
+ * the whole set, and it is only the drawing that stops here.
+ *
+ * Comfortably above the number of fixed commands on purpose. A cap at or below
+ * it would put the ceiling exactly where the generated entries begin, so an
+ * unfiltered palette would never show a branch at all -- the category would
+ * look missing rather than merely further down.
+ */
+const MAX_VISIBLE = 60;
+
 function refilter(): void {
-  visible = rankCommands(asInput(ui.paletteInput).value, commands);
+  visible = rankCommands(asInput(ui.paletteInput).value, commands).slice(0, MAX_VISIBLE);
   highlighted = 0;
   renderList();
 }

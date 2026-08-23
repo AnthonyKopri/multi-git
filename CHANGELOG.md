@@ -79,7 +79,38 @@ or Security. Remove empty headings when preparing a release.
 - **Copy, on any recorded command.** It copies the argument vector, which is now
   the argument vector that ran.
 
+- **Seven windows became panels instead of covering the app.** Repository tools,
+  worktrees, rebase, recovery, branch maintenance, search and agents are things
+  you want open *beside* the work — but as full-screen overlays they dimmed and
+  froze everything, so you could not watch a rebase and read the conflict's diff
+  at the same time, or manage remotes while looking at the history that sent you
+  there. They now dock down the right-hand side, resizable and remembered, with
+  the rest of the window still live. The genuine questions — confirm, passphrase
+  prompts, the wizards — stay modal, because a question you can ignore while
+  clicking elsewhere is a worse question.
+- **Seven more keyboard shortcuts, and every one of them is taught.** `Ctrl+1`,
+  `Ctrl+2` and `Ctrl+3` for the three workspace tabs, `Ctrl+Shift+F` to search
+  commits, and `Ctrl+Alt+F` / `Ctrl+Alt+P` / `Ctrl+Alt+U` for fetch, pull and
+  push, plus `Ctrl+Alt+S` to stage everything. They are declared on the command
+  itself, so the hint in the palette, the row in the menu and the key that
+  actually fires are one string — which is how F5 came to be printed in a
+  tooltip and bound to nothing.
+- **`Ctrl+K` finds branches and repositories, not just commands.** It indexed
+  forty-one verbs and nothing else, so reaching a branch meant opening a dropdown
+  and reading. Type any part of the name instead — `rel40` finds `release-4.0`.
+
 ### Changed
+
+- **Remotes, submodules and LFS have one home instead of two.** Each used to be
+  an accordion in the sidebar *and* a tab in the Repository panel, with a Manage
+  button bridging them — a count-and-preview in one place and the real thing in
+  the other, so "where do I manage remotes?" answered "both, but only one of
+  them works". The sidebar is a launcher now, and the panel owns them. Nothing
+  the sidebar was the only place to say is lost: counts stay, and so do the
+  warnings — LFS hooks left installed but unused run on every pull, and a
+  submodule that is uninitialised or out of step is a broken build waiting to
+  happen. Patches, bisect, notes and maintenance gained launchers too, having
+  previously had no way in from the sidebar at all.
 
 - **Merge and rebase say that a recovery point is taken.** They always have
   taken one, and never mentioned it. A safety net nobody knows about buys no
