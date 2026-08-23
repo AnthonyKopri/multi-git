@@ -273,17 +273,24 @@
             </button>
           </div>
           <div class="section-body" id="section-integrate">
-            <p class="section-desc">Integrate another branch into current</p>
+            <p class="section-desc">Bring another branch into this one</p>
             <div class="integration-controls">
               <select id="integrate-branch-select" aria-label="Branch to merge or rebase">
                 <!-- Local + Remote branches -->
               </select>
               <div class="btn-group mt-2">
-                <button id="btn-merge" class="btn btn-secondary btn-sm">
-                  <span class="material-symbols-outlined">call_merge</span> Merge
+                <button id="btn-merge" class="btn btn-secondary btn-sm" type="button"
+                        title="Join the selected branch into this one, keeping both histories">
+                  <span class="material-symbols-outlined" aria-hidden="true">call_merge</span> Merge in
                 </button>
-                <button id="btn-rebase" class="btn btn-secondary btn-sm">
-                  <span class="material-symbols-outlined">swap_calls</span> Rebase
+                <!-- "Rebase onto" rather than "Rebase": it replays this branch on
+                     top of the selected one, and the direction is the thing a
+                     bare label leaves you to guess. It is also a different
+                     feature from the palette's Interactive rebase, which plans
+                     a range commit by commit -- two things sharing one word. -->
+                <button id="btn-rebase" class="btn btn-secondary btn-sm" type="button"
+                        title="Replay this branch on top of the selected one. Your commits get new object names.">
+                  <span class="material-symbols-outlined" aria-hidden="true">swap_calls</span> Rebase onto
                 </button>
               </div>
             </div>

@@ -16,6 +16,7 @@ import { refreshOrigin } from '../repo';
 import { pushButtonState } from './push-button';
 import { autoPullBlockedReason, shouldAutoPull } from './auto-pull';
 import type { SyncResponse } from '../../../shared/api-types';
+import { describePullStrategy } from '../../../shared/pull-strategy';
 
 export type SyncAction = 'fetch' | 'pull' | 'push';
 
@@ -147,6 +148,80 @@ async function confirmAccountForPush(): Promise<boolean> {
   return confirmed;
 }
 
+/**
+ * Confirms a pull whose outcome is not obvious.
+ *
+ * Only when it is not obvious: a fast-forward is the safest thing git does and
+ * asking about it every time would train people to click through the dialog
+ * that matters. What matters is the diverged case, where `pull.rebase` and
+ * `pull.ff` decide between a merge commit, a replay of your commits, and a flat
+ * refusal -- configuration this application never read and never showed, so
+ * pressing Pull could do any of three things to your history without saying
+ * which.
+ */
+async function confirmPullStrategy(): Promise<boolean> {
+  const { status } = getState();
+  const target = status?.tracking;
+
+  // Nothing tracked means nothing to reason about; the server will report what
+  // it finds.
+  if (!target || !status) {
+    return true;
+  }
+
+  let preflight;
+  try {
+    preflight = (await api.integrationPreflight('pull', target)).preflight;
+  } catch (error) {
+    if (isStale(error)) {
+      return false;
+    }
+    // Not knowing is not a reason to block a pull the user asked for.
+    return true;
+  }
+
+  const strategy = preflight.strategy;
+
+  // The two outcomes where nothing of yours can be disturbed.
+  if (strategy === undefined || strategy === 'fast-forward' || strategy === 'up-to-date') {
+    return true;
+  }
+
+  if (strategy === 'ff-only-blocked') {
+    // git will refuse. Better said now than reported afterwards as a failure.
+    showToast(describePullStrategy(strategy, preflight.incoming.length, preflight.outgoing.length), 'warn', 9000);
+    return false;
+  }
+
+  const lines = [
+    describePullStrategy(strategy, preflight.incoming.length, preflight.outgoing.length)
+  ];
+
+  if (preflight.incoming.length > 0) {
+    lines.push(
+      preflight.incoming
+        .slice(0, 5)
+        .map((commit) => `  • ${commit.subject}`)
+        .join('\n') +
+        (preflight.incoming.length > 5 ? `\n  • …and ${preflight.incoming.length - 5} more` : '')
+    );
+  }
+
+  if (preflight.recoveryPoint) {
+    lines.push('A recovery point is recorded first, so this can be undone from Safety Net.');
+  }
+
+  lines.push(...preflight.warnings.map((warning) => `Note: ${warning}`));
+
+  const { confirmed } = await confirmDialog(lines.join('\n\n'), {
+    title: strategy === 'rebase' ? 'Pull will rebase your commits' : 'Pull will create a merge commit',
+    confirmLabel: 'Pull',
+    danger: strategy === 'rebase'
+  });
+
+  return confirmed;
+}
+
 function logSyncOutcome(action: SyncAction, data: SyncResponse): void {
   if (data.stderr) {
     // git writes progress to stderr, so this is usually not an error.
@@ -161,6 +236,39 @@ function logSyncOutcome(action: SyncAction, data: SyncResponse): void {
   }
 
   logToTerminal(`${action.toUpperCase()} action complete.`, 'success');
+}
+
+/**
+ * What git said, where the user is looking.
+ *
+ * The outcome used to be a toast reading "Push completed" while git's own
+ * summary -- what moved, and by how much -- went to a log window you had to
+ * know to open. That summary is the informative half, and it belongs in front
+ * of the person who pressed the button.
+ */
+function syncSummary(action: SyncAction, data: SyncResponse): string {
+  // git reports a push on stderr and a pull on stdout, so both are candidates.
+  const reported = `${data.stderr ?? ''}\n${data.stdout ?? ''}`;
+
+  const interesting = reported
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(
+      (line) =>
+        line !== '' &&
+        // Progress counters and the remote's own chatter are noise here. The
+        // Terminal panel has all of it for anyone who wants the detail.
+        !/^(remote:|Receiving|Resolving|Counting|Compressing|Writing|Enumerating|Total|delta)/i.test(
+          line
+        )
+    );
+
+  // The lines git uses to say what actually changed.
+  const summary = interesting.find((line) =>
+    /Already up to date|Fast-forward|files? changed|->|new branch/i.test(line)
+  );
+
+  return summary ?? `${titleCase(action)} completed.`;
 }
 
 export async function performSync(
@@ -186,6 +294,13 @@ export async function performSync(
   }
 
   if (action === 'push' && !options.force && !(await confirmAccountForPush())) {
+    return;
+  }
+
+  // Only where the outcome is not obvious. A fast-forward is the safest thing
+  // git does, and asking about it every time would train people to click
+  // through the dialog that matters.
+  if (action === 'pull' && !(await confirmPullStrategy())) {
     return;
   }
 
@@ -240,10 +355,9 @@ export async function performSync(
           : await api.fetchRemote(input);
 
     logSyncOutcome(action, data);
-    showToast(
-      `${label} completed${profile ? ` with key "${profile.label}"` : ''}.`,
-      'success'
-    );
+    // git's own words rather than a generic acknowledgement: "Fast-forward" and
+    // "3 files changed" are what the user actually wanted to know.
+    showToast(syncSummary(action, data), 'success', 6000);
 
     await refreshAll();
 

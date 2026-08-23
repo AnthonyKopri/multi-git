@@ -835,7 +835,7 @@ function buildCommands(): palette.Command[] {
     { id: 'compare', needsRepo: true, menu: 'History', icon: 'compare_arrows', group: 'Find', title: 'Compare two refs', keywords: 'diff ahead behind', run: () => search.openSearch('compare') },
     { id: 'compare-upstream', needsRepo: true, group: 'Find', title: 'Compare this branch with its upstream', keywords: 'ahead behind', run: () => search.openCompareWith(`origin/${branch()}`, branch()) },
     { id: 'signing', needsRepo: true, group: 'Accounts', title: 'Commit signing settings', keywords: 'gpg ssh sign verify', run: () => void signing.openSigningSettings() },
-    { id: 'rebase', needsRepo: true, menu: 'History', icon: 'swap_calls', group: 'History', title: 'Interactive rebase', keywords: 'squash reword reorder drop fixup split', run: () => void rebase.openRebase() },
+    { id: 'rebase', needsRepo: true, menu: 'History', icon: 'swap_calls', group: 'History', title: 'Interactive rebase (plan commit by commit)', keywords: 'squash reword reorder drop fixup split', run: () => void rebase.openRebase() },
     { id: 'branches', needsRepo: true, menu: 'Repository', icon: 'call_split', group: 'Branch', title: 'Branch maintenance', keywords: 'prune stale merged rename pin delete', run: () => branchAdmin.openBranchAdmin() },
     { id: 'recovery', needsRepo: true, menu: 'Safety Net', icon: 'history', group: 'Safety Net', title: 'Recovery points and reflog', keywords: 'undo restore reflog', run: () => recovery.openRecoveryBrowser() },
     { id: 'refresh', shortcut: 'F5', needsRepo: true, group: 'Repository', title: 'Refresh everything', keywords: 'reload', run: () => void refreshAll() },
