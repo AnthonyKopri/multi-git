@@ -12,6 +12,8 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [4.0.0] - 2026-08-23
+
 ### Added
 
 - **A setup step on first run.** Multi-Git runs Git for everything it does, so on
@@ -521,7 +523,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.5.0...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.0.0...HEAD
+[4.0.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.5.0...Release_v4.0.0
 [3.5.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.4.0...Release_v3.5.0
 [3.4.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.3.0...Release_v3.4.0
 [3.3.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v3.2.0...Release_v3.3.0
