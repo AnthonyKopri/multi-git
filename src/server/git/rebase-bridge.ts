@@ -1,3 +1,4 @@
+import { reportServerProblem } from '../logs';
 // The two editors `git rebase -i` insists on opening.
 //
 // Git hands the todo list to GIT_SEQUENCE_EDITOR and each commit message to
@@ -92,7 +93,7 @@ export function removeEditorBridge(bridge: { directory: string } | null): void {
   try {
     fs.rmSync(bridge.directory, { recursive: true, force: true });
   } catch (error) {
-    console.warn('Could not remove the rebase bridge directory:', (error as Error).message);
+    reportServerProblem(`Could not remove the rebase bridge directory: ${(error as Error).message}`);
   }
 }
 

@@ -1,16 +1,24 @@
 // The Terminal Log stream.
 //
-// The renderer posts every log line here and the pop-out log window subscribes
-// over Server-Sent Events. A ring buffer lets a window opened later replay
-// recent history.
+// Commands are recorded here by the server, at the point they actually run, so
+// the log says what happened rather than what the renderer meant. The renderer
+// still posts the narrative lines -- why something was done, what it meant --
+// because the argument vector cannot say that.
+//
+// A ring buffer lets a window opened later replay recent history, and every
+// entry carries a sequence number so a reader can order what arrives.
 import type { Response } from 'express';
 
-export type LogType = 'error' | 'success' | 'cmd' | 'info';
+import type { LogCommand, LogEntry, LogType } from '../shared/log-types';
 
-export interface LogEntry {
-  ts: number;
-  type: LogType;
+export type { LogCommand, LogEntry, LogType } from '../shared/log-types';
+
+/** What a caller supplies. The sequence number and timestamp are added here. */
+export interface LogInput {
   text: string;
+  type?: unknown;
+  repoPath?: string | undefined;
+  command?: LogCommand | undefined;
 }
 
 const LOG_TYPES: readonly LogType[] = ['error', 'success', 'cmd', 'info'];
@@ -28,17 +36,25 @@ export const LOG_TEXT_MAX = 16 * 1024;
 
 const buffer: LogEntry[] = [];
 const subscribers = new Set<Response>();
+let nextSeq = 1;
 
 function normalizeType(value: unknown): LogType {
   return LOG_TYPES.includes(value as LogType) ? (value as LogType) : 'info';
 }
 
+function cap(text: string): string {
+  return text.length > LOG_TEXT_MAX ? `${text.slice(0, LOG_TEXT_MAX)}… (truncated)` : text;
+}
+
 /** Records a line and pushes it to every live subscriber. */
-export function appendLog(text: string, type: unknown): LogEntry {
+export function appendLog(input: LogInput): LogEntry {
   const entry: LogEntry = {
+    seq: nextSeq++,
     ts: Date.now(),
-    type: normalizeType(type),
-    text: text.length > LOG_TEXT_MAX ? `${text.slice(0, LOG_TEXT_MAX)}… (truncated)` : text
+    type: normalizeType(input.type),
+    text: cap(input.text),
+    ...(input.repoPath === undefined ? {} : { repoPath: input.repoPath }),
+    ...(input.command === undefined ? {} : { command: input.command })
   };
 
   buffer.push(entry);
@@ -84,7 +100,32 @@ export function subscribe(res: Response): () => void {
   };
 }
 
+/**
+ * Reports a server-side problem to the user as well as to the console.
+ *
+ * These used to go only to the Electron process's stdout, which nobody has
+ * open. Several of them are Safety Net failing quietly -- a recovery point that
+ * was not written, a file that did not reach the trash before it was discarded
+ * -- and an application that promises a safety net owes the user the news when
+ * it does not deliver one. The console call is kept for developers.
+ */
+export function reportServerProblem(text: string, repoPath?: string): void {
+  console.warn(text);
+
+  try {
+    appendLog({ text, type: 'error', ...(repoPath === undefined ? {} : { repoPath }) });
+  } catch {
+    // The console line above already happened; nothing further is owed.
+  }
+}
+
 /** Empties the buffer. Used by tests. */
 export function clearLogBuffer(): void {
   buffer.length = 0;
+  nextSeq = 1;
+}
+
+/** The buffer as it stands. Used by tests. */
+export function logBuffer(): readonly LogEntry[] {
+  return buffer;
 }

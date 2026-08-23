@@ -46,7 +46,13 @@
       <h3 style="display:inline;">Terminal Log</h3>
       <span id="log-status" class="log-status">connecting…</span>
     </div>
-    <button id="btn-clear-view" class="btn btn-text btn-sm">Clear view</button>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <label class="terminal-filter-toggle" title="Show the queries the app runs to read the repository">
+        <input type="checkbox" id="show-reads">
+        <span>Reads</span>
+      </label>
+      <button id="btn-clear-view" class="btn btn-text btn-sm">Clear view</button>
+    </div>
   </div>
   <div id="log-output" class="logger-body"></div>
 

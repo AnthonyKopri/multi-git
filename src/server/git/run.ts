@@ -1,6 +1,17 @@
 // Runs git, always as an argument vector with no shell involved.
+//
+// Every invocation is recorded to the Terminal Log from here, which is the one
+// place that knows what actually ran. The renderer used to compose those lines
+// from intent, so they read like git commands without being any -- elided key
+// paths, missing the `-c core.longpaths=true` a Windows rebase really carries,
+// and impossible to copy and run. Recording at the point of execution is the
+// only way the log can be trusted, which for this application is the point of
+// having one.
 import { DEFAULT_TIMEOUT_MS, runProcess } from '../process/run';
 import { sshCommandPrefix } from '../ssh/openssh-path';
+import { gitCommandKind } from './command-kind';
+import { appendLog } from '../logs';
+import type { LogCommand } from '../logs';
 
 export interface GitResult {
   stdout: string;
@@ -84,6 +95,72 @@ export function buildSshCommand(sshKeyPath: string, singlePasswordPrompt = false
   return options.join(' ');
 }
 
+/**
+ * Environment keys this application sets, and therefore the only ones worth
+ * showing back.
+ *
+ * The inherited environment is the user's own; repeating it would be noise at
+ * best. These four are what the app adds on your behalf, and they are exactly
+ * what you want to see when authentication misbehaves -- which key was pinned,
+ * and whether the askpass bridge was in play.
+ */
+const LOGGED_ENV_KEYS = ['GIT_SSH_COMMAND', 'SSH_ASKPASS', 'GIT_ASKPASS', 'GIT_TERMINAL_PROMPT'];
+
+/** The environment the app added, if any of it. */
+function addedEnv(env: NodeJS.ProcessEnv): Record<string, string> | undefined {
+  const added: Record<string, string> = {};
+
+  for (const key of LOGGED_ENV_KEYS) {
+    const value = env[key];
+    // Only when this run differs from the ambient environment: a GIT_ASKPASS
+    // the user exported themselves is not something this application did.
+    if (typeof value === 'string' && value !== '' && value !== process.env[key]) {
+      added[key] = value;
+    }
+  }
+
+  return Object.keys(added).length === 0 ? undefined : added;
+}
+
+/**
+ * Writes one invocation to the log.
+ *
+ * Never throws and never awaits: logging must not fail, delay, or change the
+ * command it describes.
+ */
+function recordCommand(
+  repoPath: string,
+  args: readonly string[],
+  env: NodeJS.ProcessEnv,
+  outcome: { durationMs: number; exitCode?: number }
+): void {
+  try {
+    const command: LogCommand = {
+      argv: ['git', ...args],
+      cwd: repoPath,
+      kind: gitCommandKind(args),
+      ...outcome
+    };
+
+    const added = addedEnv(env);
+    if (added) {
+      command.env = added;
+    }
+
+    appendLog({
+      // The text is the readable form; `command` carries the parts a reader
+      // needs to copy or filter by.
+      text: `git ${args.join(' ')}`,
+      type: outcome.exitCode === 0 ? 'cmd' : 'error',
+      repoPath,
+      command
+    });
+  } catch {
+    // A log that cannot be written is not a reason for a git command to fail.
+  }
+}
+
+
 /** Runs a git command, rejecting with a GitError on any non-zero exit. */
 export async function runGitCommand(
   repoPath: string,
@@ -101,6 +178,7 @@ export async function runGitCommand(
 
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const subcommand = args[0] ?? 'git';
+  const startedAt = Date.now();
 
   const result = await runProcess('git', args, {
     cwd: repoPath,
@@ -109,6 +187,11 @@ export async function runGitCommand(
     input: options.input,
     signal: options.signal,
     binaryStdout: options.binaryStdout
+  });
+
+  recordCommand(repoPath, args, env, {
+    durationMs: Date.now() - startedAt,
+    ...(result.code === null ? {} : { exitCode: result.code })
   });
 
   if (result.spawnError) {

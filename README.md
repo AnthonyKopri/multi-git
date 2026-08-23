@@ -104,7 +104,7 @@ The top toolbar contains the normal remote workflow:
 | **Auto-pull** chip | Toggles whether a fetch that leaves this branch purely behind fast-forwards it on its own. | `git pull origin <branch>` |
 | **Create pull request** | Opens the preflight, rather than sending anything immediately. | `gh pr create` |
 | **SSH / HTTPS** | In the menu. Converts a compatible origin URL between GitHub-style SSH and HTTPS forms. | `git remote set-url origin …` |
-| **Terminal Log** | In the menu. Opens a separate live window with commands and their output. | Read-only transparency view |
+| **Terminal** | The panel along the bottom, or a separate window from the menu. Every command the app runs, as it ran, with buttons to open Git Bash or a terminal here with this repository's SSH key. | Read-only record; the shells are yours |
 | **Refresh** | In the menu, or `F5`. Reloads status, branches, history, origin, stashes, tags, and Safety Net. | Multiple read-only Git queries |
 
 Fetch, pull, push, the pull-request button and the auto-pull chip are the five
@@ -153,7 +153,7 @@ Every new repository starts on `main`, unless your own global `init.defaultBranc
 
 **Ticking "Create it on GitHub" also commits and pushes.** The folder's contents, including files that were already there, become an **Initial commit**, and that commit is pushed to the new remote with the SSH profile this repository uses. Without a commit `git push` has no refspec to send and rejects the first push, which is why publishing has to include one. Leave the box unticked and the wizard only initialises: your files stay untracked, ready to review in the Staging Area and commit when you choose.
 
-Every file the dialog writes, and anything it decided to keep, is reported in the Terminal Log, along with any step it could not complete — an unset commit identity or an unreachable remote is a warning, never a half-created repository.
+Every file the dialog writes, and anything it decided to keep, is reported in the Terminal panel, along with any step it could not complete — an unset commit identity or an unreachable remote is a warning, never a half-created repository.
 
 ### Staging, diffs, and commits
 
@@ -616,9 +616,20 @@ The explorer is deliberately read-only; edit files in your normal editor and ret
 
 **Tags** lists local tags and their target commits. Use the actions beside a tag to inspect its commit, push that specific tag to origin with the active SSH profile, or delete the local tag. Create a new tag from a commit's History drawer. Deleting locally does not delete an already-pushed remote tag.
 
-### Terminal Log
+### Terminal
 
-Choose **Terminal Log** from the toolbar menu to open the live log in a separate window (or a named browser tab in browser mode). It shows the Git-shaped command, selected SSH context, command output, and errors for the current app session. The window is for visibility and troubleshooting; it is not an interactive shell.
+The **Terminal** panel runs along the bottom of the window, collapsed to its header until you open it. It is a record of what Multi-Git did, written by the part of the app that runs the commands — so each line is the real argument vector, with the working directory, the environment the app added on your behalf, the exit code and how long it took. You can copy any of them and run it yourself, because it is what ran.
+
+A single refresh runs more than forty Git commands and nearly all of them are questions, so those are folded away behind the **Reads** toggle rather than burying the command you came to look at. Lines are filtered to the repository this window has open; **All repos** shows everything, which is what you want when two windows are doing different things. The filter box searches the text.
+
+Two buttons hand the repository to a real shell:
+
+- **Git Bash** opens Git for Windows' shell in the repository. Shown only where it is installed.
+- **Terminal** opens Windows Terminal — or PowerShell where that is not present — in the repository. This is where `gh` lives, since `gh` is a command rather than a shell.
+
+Both carry the repository's SSH identity. That is the reason they exist rather than being a bookmark to the folder: Multi-Git writes `core.sshCommand` into each repository so Git finds the right key, but that setting names a bare `ssh`, and in Git Bash a bare `ssh` is the MSYS build inside Git for Windows, which cannot see the agent Multi-Git loads your keys into. Opened by hand, Git Bash asks for the passphrase of a key that is already unlocked. Opened from here, the shell is given a `GIT_SSH_COMMAND` naming the agent-capable build with the same key, so `git push` works with the right account and no prompt.
+
+The panel is a record, not an interactive shell — you read it here and type in a real terminal. **Open in a separate window** detaches the same live stream if you would rather keep it on another monitor.
 
 ## Local Data, Privacy, And Security
 

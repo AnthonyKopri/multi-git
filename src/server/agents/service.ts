@@ -28,6 +28,8 @@ import { detachedLauncher, executableRunner } from '../process/runner';
 import { ensureAgentForRepo, findProfile, profileForRepo } from '../ssh/agent-session';
 import { isMultiGitSshCommand, readRepoSshCommand } from '../ssh/repo-routing';
 import type { AgentLaunchInput, AgentLaunchResult, AgentSshReadiness } from '../../shared/agent-types';
+import { fallbackShellPlan, findGitBash, shellPlanFor } from '../tools/shells';
+import type { ShellKind } from '../tools/shells';
 
 export interface LaunchDependencies {
   runner?: ExecutableRunner;
@@ -220,4 +222,55 @@ export async function openEditorAt(
 
   await runLaunchPlan(editor, launcher);
   return true;
+}
+
+/**
+ * Opens a shell in a repository, carrying that repository's identity.
+ *
+ * Distinct from `openTerminalAt`, which is the plain "show me this folder"
+ * companion on a worktree row. This one exists because the shell is going to be
+ * used for git: it inherits the key the repository is pinned to, through an ssh
+ * that can actually reach the agent. See tools/shells.ts for why that second
+ * half is not automatic.
+ */
+export async function openShellAt(
+  repoPath: string,
+  kind: ShellKind,
+  dependencies: LaunchDependencies = {}
+): Promise<boolean> {
+  const runner = dependencies.runner ?? executableRunner;
+  const launcher = dependencies.launcher ?? detachedLauncher;
+
+  const target = path.resolve(repoPath);
+  if (!fs.existsSync(target)) {
+    throw new AgentLaunchError(`${target} no longer exists.`);
+  }
+
+  let plan;
+  try {
+    plan = await shellPlanFor(kind, target);
+  } catch (error) {
+    // Git for Windows missing is a thing the user can fix, and the message says
+    // where to get it.
+    throw new AgentLaunchError((error as Error).message);
+  }
+
+  // Same fallback as openTerminalAt: PowerShell has shipped with every
+  // supported version of Windows, so the button never simply does nothing.
+  if (
+    kind === 'terminal' &&
+    process.platform === 'win32' &&
+    (await resolveExecutable('wt.exe', runner)) === null
+  ) {
+    await runLaunchPlan(fallbackShellPlan(target, plan.env), launcher);
+    return true;
+  }
+
+  await runLaunchPlan(plan, launcher);
+  return true;
+}
+
+/** Whether each shell can be offered here, so the UI need not guess. */
+export function availableShells(): { gitBash: boolean } {
+  return { gitBash: findGitBash() !== null };
 }

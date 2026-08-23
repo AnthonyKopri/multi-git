@@ -55,6 +55,13 @@ export interface DesktopApi {
 
   /** Opens the platform terminal with the folder as its working directory. */
   openTerminalHere: (repoPath: string) => Promise<boolean>;
+  /**
+   * Opens a shell in the repository, carrying the key that repository is
+   * pinned to and an ssh that can reach the agent holding it.
+   */
+  openShell: (repoPath: string, kind: 'git-bash' | 'terminal') => Promise<boolean>;
+  /** Which shells this machine can offer, so the UI does not guess. */
+  availableShells: () => Promise<{ gitBash: boolean }>;
   /** Opens the folder in the configured editor, or the system default. */
   openEditor: (repoPath: string) => Promise<boolean>;
   /** Starts a configured external agent in a worktree. */
@@ -136,6 +143,8 @@ export const IPC_CHANNELS = {
   listRepoWindows: 'window:list-repos',
   claimRepoWindow: 'window:claim-repo',
   openTerminalHere: 'tool:open-terminal',
+  openShell: 'tool:open-shell',
+  availableShells: 'tool:available-shells',
   openEditor: 'tool:open-editor',
   launchAgent: 'agent:launch',
   runBisect: 'bisect:run',

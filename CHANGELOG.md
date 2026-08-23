@@ -12,6 +12,58 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Added
+
+- **A Terminal panel in the main window.** The log lived in a pop-out you had to
+  summon from a menu, which is the wrong place for the thing that tells you what
+  just happened to your repository. It now sits along the bottom, collapsed to
+  its header until you want it, resizable, and outside the blurred area so it
+  stays readable while a dialog is asking about the failure it just recorded. The
+  separate window still works and shows the same stream.
+- **Open Git Bash, or a terminal, in this repository — with its SSH identity.**
+  Two buttons in the Terminal panel. The point is not the shell, it is the
+  identity: `core.sshCommand` is written into the repository so git finds the
+  right key, but it names a bare `ssh`, and in Git Bash that is the MSYS build
+  shipped inside Git for Windows, which cannot see the named-pipe agent this app
+  loads keys into. The key is unlocked, sitting in the agent, and Git Bash asks
+  for its passphrase anyway. The shell is now handed a `GIT_SSH_COMMAND` naming
+  the agent-capable build with the same key, so `git push` there works with the
+  right account and no prompt. Git Bash is offered only where it is installed.
+- **Filtering in the log** — by repository, by whether a command read or changed
+  anything, and by free text. Every command is recorded; a single refresh runs
+  more than forty and nearly all are questions, so the queries are folded away
+  behind a **Reads** toggle rather than burying the one command you came to see.
+- **Copy, on any recorded command.** It copies the argument vector, which is now
+  the argument vector that ran.
+
+### Changed
+
+- **The Terminal Log shows what actually ran.** Every line describing a command
+  used to be composed in the renderer from what it *meant* to do, so the log read
+  like git without being it: `git add a b c` for an invocation of a different
+  shape, a key path elided to a literal `...`, and no sign of the
+  `-c core.longpaths=true` a Windows rebase really carries. None of it could be
+  copied and run. Commands are now recorded by the server at the point they
+  execute, with the real argument vector, the working directory, the environment
+  this app added, the exit code and the duration.
+- **Every line says which repository it came from.** Windows share one log, so
+  in an app built around having several repositories open at once there was no
+  way to tell whose line was whose. The panel shows this window's repository
+  unless you ask for all of them.
+- **Lines are sent in order, and kept if they fail.** Logging was one HTTP
+  request per line, so a refresh firing fourteen parallel requests could land
+  them in any order, and a request that failed dropped its line into the
+  developer console where nobody would see it. They are queued, batched in the
+  order they were written, and retried.
+
+### Fixed
+
+- **Safety Net now says when it could not protect you.** Failures to write a
+  recovery point, to keep a copy of a file before discarding it, or to list the
+  files a bulk discard was about to touch went only to the Electron process's
+  stdout. An application that promises a safety net owes you the news when it
+  does not deliver one, so these appear in the Terminal Log.
+
 ## [3.5.0] - 2026-08-23
 
 ### Fixed

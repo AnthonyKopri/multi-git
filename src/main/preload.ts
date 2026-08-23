@@ -60,6 +60,10 @@ const desktopApi: DesktopApi = {
 
   openTerminalHere: (repoPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.openTerminalHere, String(repoPath)) as Promise<boolean>,
+  openShell: (repoPath, kind) =>
+    ipcRenderer.invoke(IPC_CHANNELS.openShell, String(repoPath), String(kind)) as Promise<boolean>,
+  availableShells: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.availableShells) as ReturnType<DesktopApi['availableShells']>,
   openEditor: (repoPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.openEditor, String(repoPath)) as Promise<boolean>,
   // Carries an agent id, not an executable: the main process looks the

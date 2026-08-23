@@ -4,6 +4,7 @@
 import { applyManagedBlock } from './config-block';
 import { isSshConfigManagementEnabled, readConfig, writeConfig } from '../config/store';
 import { isValidSshConfigHost } from '../config/validate';
+import { reportServerProblem } from '../logs';
 
 export interface SshConfigSyncResult {
   /** Set when the user turned config management off. */
@@ -49,7 +50,7 @@ export function syncSshConfigForHost(host: string, keyPath: string | null): SshC
     writeConfig(config);
     return { updated: result.changed, host, warning: result.warning };
   } catch (error) {
-    console.error('Failed to update ~/.ssh/config:', error);
+    reportServerProblem(`Could not update ~/.ssh/config: ${(error as Error).message}`);
     return { error: `Could not update ~/.ssh/config: ${(error as Error).message}` };
   }
 }

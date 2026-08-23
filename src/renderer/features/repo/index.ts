@@ -263,7 +263,6 @@ export async function startClone(): Promise<void> {
   }
 
   setCloneFeedback('Cloning… this can take a while for large repositories.', 'info');
-  logToTerminal(`git clone ${url}`, 'cmd');
 
   await withButtonBusy(ui.btnStartClone, async () => {
     try {

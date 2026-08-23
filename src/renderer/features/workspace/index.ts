@@ -133,7 +133,6 @@ export async function saveIdentity(): Promise<void> {
 
   try {
     await api.setIdentity(name, email);
-    logToTerminal(`git config user.name "${name}" && git config user.email "${email}"`, 'cmd');
     showToast('Commit identity updated for this repository.', 'success');
 
     setHidden(ui.identityModal, true);

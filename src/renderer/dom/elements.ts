@@ -458,6 +458,19 @@ export const ELEMENT_MAP = {
   promptCheckbox: 'prompt-checkbox',
   promptCheckboxLabel: 'prompt-checkbox-label',
   btnPromptCancel: 'btn-prompt-cancel',
+  // The terminal panel: the log, where the work is.
+  terminalPanel: 'terminal-panel',
+  terminalBody: 'terminal-body',
+  terminalCount: 'terminal-count',
+  terminalFind: 'terminal-find',
+  terminalShowReads: 'terminal-show-reads',
+  terminalAllRepos: 'terminal-all-repos',
+  btnTerminalToggle: 'btn-terminal-toggle',
+  btnTerminalClear: 'btn-terminal-clear',
+  btnTerminalPopout: 'btn-terminal-popout',
+  btnOpenGitBash: 'btn-open-git-bash',
+  btnOpenShell: 'btn-open-shell',
+
   toastContainer: 'toast-container',
 
   // Startup SSH key health check

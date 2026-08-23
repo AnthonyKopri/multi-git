@@ -490,7 +490,6 @@ function logOutcomes(results: readonly PurgeOutcome[]): void {
       continue;
     }
 
-    logToTerminal(`git worktree remove ${outcome.path}`, 'cmd');
 
     if (outcome.snapshotRef) {
       logToTerminal(

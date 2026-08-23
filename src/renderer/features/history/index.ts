@@ -232,7 +232,6 @@ export async function showCommitFileDiff(hash: string, filePath: string): Promis
 /** Per-file history, rendered into the drawer's file list. */
 export async function showFileHistory(filePath: string): Promise<void> {
   ui.drawerFilesHeading.textContent = `History of ${filePath}`;
-  logToTerminal(`git log --follow -- ${filePath}`, 'cmd');
 
   try {
     const { commits } = await api.getFileHistory(filePath);
@@ -270,11 +269,8 @@ export async function showFileHistory(filePath: string): Promise<void> {
  */
 async function runHistoryAction(
   run: () => Promise<{ success: boolean; conflict?: boolean; error?: string }>,
-  command: string,
   successMessage: string
 ): Promise<void> {
-  logToTerminal(command, 'cmd');
-
   try {
     const result = await run();
 
@@ -318,7 +314,6 @@ export async function drawerCherryPick(): Promise<void> {
   const hash = drawerCommit.hash;
   await runHistoryAction(
     () => api.cherryPick(hash),
-    `git cherry-pick ${short}`,
     `Commit ${short} cherry-picked.`
   );
 }
@@ -340,7 +335,6 @@ export async function drawerRevert(): Promise<void> {
   const hash = drawerCommit.hash;
   await runHistoryAction(
     () => api.revert(hash),
-    `git revert --no-edit ${short}`,
     `Commit ${short} reverted.`
   );
 }
@@ -373,7 +367,6 @@ export async function drawerReset(): Promise<void> {
       await api.reset(hash, mode);
       return { success: true };
     },
-    `git reset --${mode} ${short}`,
     `Branch reset to ${short} (${mode}).`
   );
 }
@@ -398,7 +391,6 @@ export async function drawerCreateTag(): Promise<void> {
   // so the repository's own setting would never have taken effect.
   const sign = signing.tagsSignedByDefault();
 
-  logToTerminal(`git tag ${sign ? '-s ' : ''}${name} ${short}`, 'cmd');
 
   try {
     await api.createTag(name, drawerCommit.hash, undefined, sign);

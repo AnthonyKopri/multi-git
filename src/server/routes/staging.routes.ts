@@ -16,6 +16,7 @@ import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 import { isMerging, isRebasing } from './status.routes';
 import type { DiffLine } from '../../shared/git-types';
+import { reportServerProblem } from '../logs';
 
 export const stagingRouter: Router = Router();
 
@@ -175,7 +176,7 @@ stagingRouter.post(
           .filter((relativePath): relativePath is string => Boolean(relativePath))
       );
     } else {
-      console.warn('Could not snapshot files before discard-all');
+      reportServerProblem('Safety Net could not list the files to copy, so this discard is not recoverable.', repoPath);
     }
 
     await withRepoLock(repoPath, async () => {

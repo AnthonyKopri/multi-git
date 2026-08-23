@@ -18,6 +18,8 @@ import { StringDecoder } from 'node:string_decoder';
 
 import { killProcessTree, TREE_KILLABLE_SPAWN_OPTIONS } from './kill-tree';
 import { StreamRedactor, redactArgs, redactText } from './redact';
+import { appendLog } from '../logs';
+import { processCommandKind } from '../git/command-kind';
 
 /** 64 MiB. Larger than any diff a human reads, small enough to stay safe. */
 export const DEFAULT_MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
@@ -58,6 +60,37 @@ export interface CommandResult {
   cancelled: boolean;
   /** True when either stream hit `maxOutputBytes` and was cut short. */
   truncated: boolean;
+}
+
+/**
+ * Writes one invocation to the Terminal Log.
+ *
+ * This is the other half of the record: `gh`, `git lfs`, `ssh-add` and
+ * `ssh-keygen` come through here rather than through the git runner, and
+ * leaving them out would have made the log look complete while omitting exactly
+ * the commands people ask about when authentication misbehaves.
+ *
+ * `result.args` is already redacted by the runner, so a passphrase cannot reach
+ * the log through this path. Never throws and never awaits: recording must not
+ * fail, delay, or change the command it describes.
+ */
+function recordRun(result: CommandResult, cwd: string | undefined): void {
+  try {
+    appendLog({
+      text: `${result.executable} ${result.args.join(' ')}`.trim(),
+      type: result.exitCode === 0 ? 'cmd' : 'error',
+      ...(cwd === undefined ? {} : { repoPath: cwd }),
+      command: {
+        argv: [result.executable, ...result.args],
+        cwd: cwd ?? '',
+        kind: processCommandKind(result.executable, result.args),
+        durationMs: result.durationMs,
+        exitCode: result.exitCode
+      }
+    });
+  } catch {
+    // A log that cannot be written is not a reason for a command to fail.
+  }
 }
 
 /** The executable could not be started: not installed, or not on PATH. */
@@ -313,6 +346,8 @@ export function createExecutableRunner(): ExecutableRunner {
             cancelled,
             truncated: out.truncated || err.truncated
           };
+
+          recordRun(result, options.cwd);
 
           if (cancelled) {
             // The user asked for this. It is an outcome, not an error.

@@ -151,7 +151,6 @@ export async function refreshBranchList(): Promise<void> {
 }
 
 export async function switchBranch(branch: string, isRemote: boolean): Promise<void> {
-  logToTerminal(`git checkout ${branch}`, 'cmd');
 
   try {
     await api.checkout(branch, isRemote);
@@ -176,7 +175,6 @@ export async function createBranchFromInput(input: HTMLInputElement): Promise<vo
     return;
   }
 
-  logToTerminal(`git checkout -b ${branchName}`, 'cmd');
 
   try {
     await api.createBranch(branchName);
@@ -254,7 +252,6 @@ export async function runIntegration(type: 'merge' | 'rebase'): Promise<void> {
   }
 
   const button = type === 'merge' ? ui.btnMerge : ui.btnRebase;
-  logToTerminal(`git ${type} ${branch}`, 'cmd');
 
   await withButtonBusy(button, async () => {
     try {
@@ -293,7 +290,6 @@ export async function abortIntegration(): Promise<void> {
     return;
   }
 
-  logToTerminal(`git ${type} --abort`, 'cmd');
 
   try {
     await api.abortIntegration(type);
@@ -317,7 +313,6 @@ export async function continueIntegration(): Promise<void> {
     return;
   }
 
-  logToTerminal(type === 'rebase' ? 'git rebase --continue' : 'git commit --no-edit', 'cmd');
 
   try {
     await api.continueIntegration(type);

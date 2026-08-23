@@ -800,6 +800,68 @@
 
     </main>
 
+
+    <!-- TERMINAL PANEL
+         A sibling of <main> for the same reason the operations bar is one: the
+         main body is blurred and made pointer-events: none while a modal is up,
+         and a log you cannot scroll while reading a dialog about a failure is
+         the log you most needed. Collapsed to its header by default.
+
+         The pop-out window at /logs.html still works and shows the same stream.
+         This is the copy that lives where the work is. -->
+    <section id="terminal-panel" class="terminal-panel is-collapsed" aria-label="Terminal">
+      <div class="pane-resizer pane-resizer-horizontal" data-pane="terminal" role="separator"
+           aria-orientation="horizontal" aria-label="Resize the terminal" tabindex="0"></div>
+
+      <div class="terminal-header">
+        <button type="button" id="btn-terminal-toggle" class="terminal-toggle"
+                aria-expanded="false" aria-controls="terminal-body">
+          <span class="material-symbols-outlined terminal-caret" aria-hidden="true">expand_less</span>
+          <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+          <span>Terminal</span>
+          <span id="terminal-count" class="count-badge hidden"></span>
+        </button>
+
+        <div class="terminal-actions">
+          <!-- Hidden until the bridge says the machine has them; a button that
+               cannot work is worse than no button. -->
+          <button type="button" id="btn-open-git-bash" class="btn btn-text btn-sm hidden"
+                  title="Open Git Bash here, using this repository's SSH key">
+            <span class="material-symbols-outlined" aria-hidden="true">code</span>
+            <span>Git Bash</span>
+          </button>
+          <button type="button" id="btn-open-shell" class="btn btn-text btn-sm hidden"
+                  title="Open a terminal here for gh and anything else, using this repository's SSH key">
+            <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+            <span>Terminal</span>
+          </button>
+
+          <label class="terminal-filter-toggle" title="Show the queries the app runs to read the repository">
+            <input type="checkbox" id="terminal-show-reads">
+            <span>Reads</span>
+          </label>
+          <label class="terminal-filter-toggle" title="Show lines from every repository, not just this one">
+            <input type="checkbox" id="terminal-all-repos">
+            <span>All repos</span>
+          </label>
+
+          <input type="search" id="terminal-find" class="terminal-find" placeholder="Filter…"
+                 aria-label="Filter the terminal">
+
+          <button type="button" id="btn-terminal-popout" class="btn btn-icon btn-sm"
+                  title="Open in a separate window" aria-label="Open the terminal in a separate window">
+            <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+          </button>
+          <button type="button" id="btn-terminal-clear" class="btn btn-icon btn-sm"
+                  title="Clear this view" aria-label="Clear this view">
+            <span class="material-symbols-outlined" aria-hidden="true">playlist_remove</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="terminal-body" class="terminal-body" role="log" aria-live="off"></div>
+    </section>
+
     <!-- OPERATIONS BAR
          A sibling of <main>, not a child of it. The main body is blurred and
          made pointer-events: none while an operation blocks the app, so a bar

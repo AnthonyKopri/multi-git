@@ -246,7 +246,6 @@ async function startRebase(): Promise<void> {
 
   try {
     const result = await api.startRebase(plan);
-    logToTerminal(`git rebase -i ${plan.onto.substring(0, 8)}`, 'cmd');
 
     if (result.stopped) {
       showToast('Rebase stopped — see what it is waiting for.', 'info', 6000);
@@ -279,7 +278,6 @@ async function step(which: 'continue' | 'skip' | 'abort'): Promise<void> {
 
   try {
     const result = await api.stepRebase(which);
-    logToTerminal(`git rebase --${which}`, 'cmd');
 
     if (!result.status.inProgress) {
       showToast(which === 'abort' ? 'Rebase aborted.' : 'Rebase finished.', 'success');
@@ -306,7 +304,6 @@ async function split(): Promise<void> {
 
   try {
     await api.splitRebaseCommit();
-    logToTerminal('git reset HEAD^', 'cmd');
     showToast('Commit reset. Stage and commit each part, then continue.', 'info', 7000);
 
     await refreshAll();
