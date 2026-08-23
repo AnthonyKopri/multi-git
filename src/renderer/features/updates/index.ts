@@ -11,6 +11,7 @@
 import { setHidden } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
 import { showToast } from '../../ui/toast';
+import { renderMarkdown } from '../../ui/markdown';
 import type { UpdateState } from '../../../shared/update-types';
 import { focusFirst } from '../../ui/focus';
 import {
@@ -51,9 +52,12 @@ function render(): void {
   ui.updateModalTitle.textContent = headline(state);
   ui.updateMessage.textContent = bodyText(state);
 
-  // Release notes are remote text. textContent, never innerHTML.
+  // Release notes are remote text. Rendered through the Markdown subset in
+  // ui/markdown, which constructs every element and never assigns markup --
+  // the same guarantee textContent gave, with the announcement actually
+  // readable instead of a wall of hashes and asterisks.
   const notes = state.latest?.notes.trim() ?? '';
-  ui.updateNotes.textContent = notes;
+  ui.updateNotes.replaceChildren(notes === '' ? '' : renderMarkdown(notes));
   setHidden(ui.updateNotes, notes === '' || state.phase === 'error');
 
   const downloading = state.phase === 'downloading';

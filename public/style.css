@@ -4447,7 +4447,7 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 /* Release notes are remote text of unknown length, so the box scrolls rather
    than growing the modal past the window. */
 .update-notes {
-  max-height: 180px;
+  max-height: 46vh;
   overflow-y: auto;
   margin: 12px 0 0;
   padding: 10px 12px;
@@ -4805,4 +4805,73 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 .pane-resizer-horizontal:hover,
 .pane-resizer-horizontal:focus-visible {
   background-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+/* ---------- Rendered release notes ----------
+   Prose, not a code dump. Constructed element by element in ui/markdown.ts;
+   nothing here is ever assigned as markup. */
+.update-notes {
+  font-family: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--text-main);
+  white-space: normal;
+}
+.update-notes .md-heading {
+  margin: 14px 0 6px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.update-notes .md-heading:first-child {
+  margin-top: 0;
+}
+.update-notes h3.md-heading {
+  font-size: 0.9375rem;
+}
+.update-notes h4.md-heading {
+  font-size: 0.875rem;
+}
+.update-notes h5.md-heading,
+.update-notes h6.md-heading {
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+}
+.update-notes .md-paragraph {
+  margin: 0 0 8px;
+}
+.update-notes .md-list {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.update-notes .md-list li {
+  margin-bottom: 4px;
+}
+.update-notes .md-code {
+  margin: 8px 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  white-space: pre;
+}
+.update-notes code {
+  padding: 1px 4px;
+  background-color: var(--bg-input);
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+.update-notes .md-rule {
+  margin: 12px 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}
+/* A link's label, rendered as text. Underlined so it still reads as a
+   reference, without being something this window will navigate to. */
+.update-notes .md-link {
+  color: var(--color-primary);
+  text-decoration: underline dotted;
 }
