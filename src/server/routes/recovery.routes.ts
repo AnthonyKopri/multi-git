@@ -11,13 +11,12 @@ import { withRepoLock } from '../git/lock';
 import { runGitCommand, tryGitCommand } from '../git/run';
 import { readReflog } from '../git/reflog';
 import {
-  DEFAULT_RETENTION_DAYS,
   captureRecoveryPoint,
   findRecoveryPoint,
   forgetRecoveryPoint,
-  listRecoveryPoints
+  listRecoveryPoints,
+  retentionDays
 } from '../safety-net/recovery';
-import { readConfig } from '../config/store';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 import { isMerging, isRebasing } from './status.routes';
@@ -25,12 +24,6 @@ import { isMerging, isRebasing } from './status.routes';
 export const recoveryRouter: Router = Router();
 
 recoveryRouter.use(requireRepoPath);
-
-/** Retention in days. 0 disables expiry, which the UI states as "kept". */
-export function retentionDays(): number {
-  const configured = readConfig().settings?.recoveryRetentionDays;
-  return typeof configured === 'number' && configured >= 0 ? configured : DEFAULT_RETENTION_DAYS;
-}
 
 recoveryRouter.get(
   '/api/git/recovery',

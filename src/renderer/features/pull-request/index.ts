@@ -18,6 +18,8 @@ import { getState } from '../../state/store';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { withButtonBusy } from '../../ui/busy';
+import { focusFirst } from '../../ui/focus';
+import { warnNoRepo } from '../../ui/no-repo';
 import type {
   PullRequestCreateResult,
   PullRequestPreflight
@@ -112,12 +114,13 @@ function setFeedback(message: string, type: 'info' | 'error' | 'success' = 'info
 
 export async function openCreator(): Promise<void> {
   if (!getState().activeRepo) {
-    showToast('Open a repository first.', 'warn');
+    warnNoRepo('create a pull request');
     return;
   }
 
   reset();
   setHidden(ui.prModal, false);
+  focusFirst(ui.prModal);
   await refresh();
 }
 

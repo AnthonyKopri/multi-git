@@ -20,9 +20,24 @@ let ui: Elements;
 /** Set by the bootstrap so opening a repository can trigger a full refresh. */
 let refreshAll: () => Promise<void> = async () => {};
 
-export function initRepo(elements: Elements, onOpened: () => Promise<void>): void {
+/**
+ * Run once a repository is open and drawn, for anything that should react to
+ * the arrival of a repository rather than to a refresh.
+ *
+ * Separate from `refreshAll` because a refresh happens repeatedly and this must
+ * not: surfacing a rebase that is already running belongs here, where it fires
+ * once, and not in a refresh that would reopen the panel every five seconds
+ * after the user closed it.
+ */
+let onRepoOpened: () => void = () => {};
+
+export function initRepo(
+  elements: Elements,
+  handlers: { refreshAll: () => Promise<void>; onOpened: () => void }
+): void {
   ui = elements;
-  refreshAll = onOpened;
+  refreshAll = handlers.refreshAll;
+  onRepoOpened = handlers.onOpened;
 }
 
 export function renderRepoHeader(): void {
@@ -115,6 +130,8 @@ export async function openRepository(repoPath: string): Promise<void> {
     // that reopens on a locked key otherwise looks ready and fails at the
     // first push.
     void ensureKeyUsable({ reason: 'startup' });
+
+    onRepoOpened();
   } catch (error) {
     if (isStale(error)) {
       return;

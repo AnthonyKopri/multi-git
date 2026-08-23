@@ -28,7 +28,8 @@
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import { getState } from '../../state/store';
-import { confirmDialog, promptDialog } from '../../ui/dialogs';
+import { confirmDialog, promptWithCheckbox } from '../../ui/dialogs';
+import type { PromptOptions } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { agentState, loadSelectedKey, refreshAgent } from './agent';
@@ -56,6 +57,15 @@ const EXPLICIT_REASONS: ReadonlySet<UnlockReason> = new Set<UnlockReason>([
 
 /** The dialog in flight, so two callers share one prompt rather than stacking. */
 let inFlight: Promise<boolean> | null = null;
+/** How explicit the in-flight call was. See ensureKeyUsable. */
+let inFlightExplicit = false;
+/** Identifies the most recent call, so an earlier one cannot clear its slot. */
+let inFlightToken = 0;
+
+/** Whether this call came from the user pressing something. */
+function isExplicit(options: { reason: UnlockReason; force?: boolean }): boolean {
+  return options.force === true || EXPLICIT_REASONS.has(options.reason);
+}
 
 function reasonSentence(reason: UnlockReason): string {
   switch (reason) {
@@ -83,15 +93,44 @@ function reasonSentence(reason: UnlockReason): string {
  * not be loaded, and the caller decides whether that is fatal.
  */
 export function ensureKeyUsable(options: { reason: UnlockReason; force?: boolean }): Promise<boolean> {
-  if (inFlight) {
+  const explicit = isExplicit(options);
+
+  // Sharing is only safe when the call already running asks at least as much
+  // as this one would. Every non-explicit branch below returns false without a
+  // dialog, so a push that joined the startup check fired by openRepository
+  // would inherit that silence and be cancelled by a toast for a question the
+  // user was never asked -- which is exactly what this module exists to stop.
+  if (inFlight && (inFlightExplicit || !explicit)) {
     return inFlight;
   }
 
-  inFlight = run(options).finally(() => {
-    inFlight = null;
-  });
+  const previous = inFlight;
+  const token = ++inFlightToken;
 
-  return inFlight;
+  const next = (async (): Promise<boolean> => {
+    // An explicit caller that arrived during a background check waits for it
+    // to finish rather than joining it, then asks its own question. Two
+    // prompts never stack, and the second one is the one the user asked for.
+    if (previous) {
+      await previous.catch(() => undefined);
+    }
+
+    try {
+      return await run(options);
+    } finally {
+      // Only the most recent call clears the slot: an earlier one finishing
+      // must not declare the queue empty while its successor is still asking.
+      if (inFlightToken === token) {
+        inFlight = null;
+        inFlightExplicit = false;
+      }
+    }
+  })();
+
+  inFlight = next;
+  inFlightExplicit = explicit;
+
+  return next;
 }
 
 async function run(options: { reason: UnlockReason; force?: boolean }): Promise<boolean> {
@@ -106,7 +145,7 @@ async function run(options: { reason: UnlockReason; force?: boolean }): Promise<
     return true;
   }
 
-  const explicit = options.force === true || EXPLICIT_REASONS.has(options.reason);
+  const explicit = isExplicit(options);
 
   if (declined.has(activeProfileId) && !explicit) {
     return false;
@@ -245,10 +284,12 @@ async function askForPassphrase(profileLabel: string, reason: UnlockReason): Pro
   const { activeProfileId, activeRepo } = getState();
 
   const context = reasonSentence(reason);
-  const passphrase = await promptDialog({
+  const remember = rememberOffer(activeProfileId);
+  const { value: passphrase, checked: save } = await promptWithCheckbox({
     title: `Unlock "${profileLabel}"`,
     label: context ? `${context} Passphrase for this key` : 'Passphrase for this key',
-    type: 'password'
+    type: 'password',
+    ...remember
   });
 
   if (passphrase === null || passphrase === '') {
@@ -257,7 +298,10 @@ async function askForPassphrase(profileLabel: string, reason: UnlockReason): Pro
   }
 
   try {
-    const result = await api.loadSshAgentKey(activeRepo, activeProfileId, { passphrase });
+    const result = await api.loadSshAgentKey(activeRepo, activeProfileId, {
+      passphrase,
+      ...(save ? { savePassphrase: true } : {})
+    });
 
     if (!result.success) {
       showToast(
@@ -273,9 +317,13 @@ async function askForPassphrase(profileLabel: string, reason: UnlockReason): Pro
     }
 
     await refreshAgent();
-    showToast(`"${profileLabel}" is loaded in the SSH agent.`, 'success');
+    showToast(
+      save
+        ? `"${profileLabel}" is loaded, and its passphrase is saved in the vault.`
+        : `"${profileLabel}" is loaded in the SSH agent.`,
+      'success'
+    );
 
-    await offerToRemember(profileLabel, passphrase);
     return true;
   } catch (error) {
     if (!isStale(error)) {
@@ -288,51 +336,37 @@ async function askForPassphrase(profileLabel: string, reason: UnlockReason): Pro
 }
 
 /**
- * Offers to keep the passphrase, once it is known to be correct.
+ * The offer to keep the passphrase, as part of asking for it.
  *
- * Asked afterwards rather than as a checkbox on the prompt, so a passphrase is
- * never stored before it has actually loaded a key — a saved wrong value would
- * fail silently on every future launch, which is worse than not saving one.
+ * A checkbox on the prompt rather than a second dialog afterwards, because the
+ * server can only store a passphrase in the same call that proves it opens the
+ * key: once the key is in the agent, applyProfile returns early and there is
+ * nothing left to prove anything against. Asking afterwards meant the follow-up
+ * call stored nothing at all while the UI reported that it had.
  *
- * Only offered when the vault is open. A locked vault cannot receive it, and
- * asking would be offering something that will not happen.
+ * Nothing is stored before it works. The server writes to the vault only after
+ * ssh-add has actually loaded the key, so a wrong passphrase typed with the box
+ * ticked leaves the vault exactly as it was.
+ *
+ * No box when the vault is shut: it could not receive a passphrase, and
+ * offering would be promising something that will not happen.
  */
-async function offerToRemember(
-  profileLabel: string,
-  passphrase: string,
-  /** Defaults to the active profile, which is whose passphrase was asked for. */
-  targetProfileId?: string
-): Promise<void> {
-  const { vaultStatus, activeProfileId, activeRepo, sshProfiles } = getState();
+function rememberOffer(profileId: string): Pick<PromptOptions, 'checkboxLabel' | 'checkboxChecked'> {
+  const { vaultStatus, sshProfiles } = getState();
 
-  const profileId = targetProfileId ?? activeProfileId;
-  // A repository is named only when this is the repository's own profile.
-  // Saving a passphrase must never be the thing that repoints an unrelated
-  // repository at a different identity.
-  const repoPath = targetProfileId === undefined ? activeRepo : null;
-
-  const profile = sshProfiles.find((candidate) => candidate.id === profileId);
-  if (!vaultStatus.unlocked || profile?.hasSavedPassword) {
-    return;
+  if (!vaultStatus.unlocked) {
+    return {};
   }
 
-  const { confirmed } = await confirmDialog(
-    `Save the passphrase for "${profileLabel}" in the vault, so Multi-Git can load this key without asking again?\n\nIt is encrypted with your vault master key and never leaves this machine.`,
-    { title: 'Remember this passphrase', confirmLabel: 'Save it' }
-  );
+  // Reaching a passphrase prompt with one already saved means the saved one no
+  // longer opens the key. Replacing it is pre-ticked because keeping a value
+  // that is known not to work helps nobody, and the user already chose to store
+  // one for this profile.
+  const saved = sshProfiles.find((candidate) => candidate.id === profileId)?.hasSavedPassword;
 
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    await api.loadSshAgentKey(repoPath, profileId, { passphrase, savePassphrase: true });
-    showToast('Passphrase saved in the vault.', 'success');
-  } catch (error) {
-    if (!isStale(error)) {
-      showToast(errorMessage(error, 'Could not save the passphrase.'), 'warn', 6000);
-    }
-  }
+  return saved === true
+    ? { checkboxLabel: 'Replace the saved passphrase for this key', checkboxChecked: true }
+    : { checkboxLabel: 'Remember this passphrase, encrypted in the vault', checkboxChecked: false };
 }
 
 /**
@@ -356,10 +390,11 @@ export async function promptForProfiles(profileIds: readonly string[]): Promise<
       continue;
     }
 
-    const passphrase = await promptDialog({
+    const { value: passphrase, checked: save } = await promptWithCheckbox({
       title: `Unlock "${profile.label}"`,
       label: 'Passphrase for this key',
-      type: 'password'
+      type: 'password',
+      ...rememberOffer(profileId)
     });
 
     if (passphrase === null || passphrase === '') {
@@ -367,7 +402,10 @@ export async function promptForProfiles(profileIds: readonly string[]): Promise<
     }
 
     try {
-      const result = await api.loadSshAgentKey(null, profileId, { passphrase });
+      const result = await api.loadSshAgentKey(null, profileId, {
+        passphrase,
+        ...(save ? { savePassphrase: true } : {})
+      });
 
       if (!result.success) {
         showToast(
@@ -380,8 +418,12 @@ export async function promptForProfiles(profileIds: readonly string[]): Promise<
         continue;
       }
 
-      showToast(`"${profile.label}" is loaded in the SSH agent.`, 'success');
-      await offerToRemember(profile.label, passphrase, profileId);
+      showToast(
+        save
+          ? `"${profile.label}" is loaded, and its passphrase is saved in the vault.`
+          : `"${profile.label}" is loaded in the SSH agent.`,
+        'success'
+      );
     } catch (error) {
       if (!isStale(error)) {
         showToast(errorMessage(error, `Could not load "${profile.label}".`), 'error', 6000);
@@ -398,10 +440,13 @@ export async function promptForProfiles(profileIds: readonly string[]): Promise<
  * Explicit, so it ignores an earlier refusal — pressing a button that says
  * Unlock and having nothing happen would be the worst possible answer.
  */
-export async function unlockSelectedKey(): Promise<void> {
+export async function unlockSelectedKey(): Promise<boolean> {
   declined.delete(getState().activeProfileId);
 
-  if (await ensureKeyUsable({ reason: 'manual', force: true })) {
-    await loadSelectedKey(getState().activeProfileId);
+  if (!(await ensureKeyUsable({ reason: 'manual', force: true }))) {
+    return false;
   }
+
+  await loadSelectedKey(getState().activeProfileId);
+  return true;
 }

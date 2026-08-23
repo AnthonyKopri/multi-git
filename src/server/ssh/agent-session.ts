@@ -124,6 +124,12 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
 
   const before = await agentStatus({ profileId, ...(runner ? { runner } : {}) });
 
+  // Already in the agent: nothing to load, and nothing to prove a passphrase
+  // against either. `savePassphrase` is deliberately not honoured here, because
+  // the vault must never take a value that has not just opened the key -- so a
+  // caller that wants one stored has to ask on the call that does the loading,
+  // which is what the passphrase prompt now does. Storing on a second call
+  // after the key was already in was the shape that quietly stored nothing.
   if (before.selectedKeyLoaded) {
     return { success: true, agent: before, routingChanged };
   }
@@ -179,9 +185,23 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
       // Three different situations, three different things for the UI to do:
       // ask for the passphrase, say the one just given was wrong and ask
       // again, or report a failure that typing will not solve.
-      code: supplied !== null
+      //
+      // The question is whether a passphrase was actually handed to ssh-add,
+      // not where it came from. A stored one that no longer works is just as
+      // rejected as a mistyped one: the key's passphrase can be changed
+      // outside this app at any time, and calling that untypeable would leave
+      // the saved value retried on every launch with no way to correct it --
+      // the silent failure the savePassphrase guard above exists to prevent.
+      // Asking sends the answer back through savePassphrase, which overwrites
+      // the stale entry, so the vault heals itself.
+      //
+      // With nothing tried, only the agent knows whether typing would help,
+      // which is what needsPassphrase reports. Guessing from "is anything
+      // saved for this profile" used to send an unencrypted key that failed
+      // for a permissions reason to a passphrase box it had no use for.
+      code: passphrase !== null
         ? 'PASSPHRASE_REJECTED'
-        : !passphrase && hasStoredPassphrase(profile.id) === false
+        : outcome.needsPassphrase === true
           ? 'PASSPHRASE_REQUIRED'
           : 'LOAD_FAILED',
       routingChanged

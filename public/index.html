@@ -867,10 +867,10 @@
   </div>
 
   <!-- SSH CONFIGURATION MODAL -->
-  <div id="ssh-modal" class="modal-overlay hidden">
+  <div id="ssh-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ssh-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>SSH Profile Manager</h2>
+        <h2 id="ssh-modal-title">SSH Profile Manager</h2>
         <button id="btn-close-ssh-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1116,10 +1116,10 @@
   </div>
 
   <!-- VAULT FIRST-TIME SETUP DIALOG -->
-  <div id="vault-setup-modal" class="modal-overlay hidden">
+  <div id="vault-setup-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="vault-setup-modal-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
-        <h2>Set Up Passphrase Vault</h2>
+        <h2 id="vault-setup-modal-title">Set Up Passphrase Vault</h2>
       </div>
       <div class="modal-body">
         <p class="modal-desc">The vault encrypts SSH passphrases saved on this computer. It is optional and is only needed when you choose to save a passphrase with an SSH profile.</p>
@@ -1157,10 +1157,10 @@
   </div>
 
   <!-- MERGE CONFLICT RESOLUTION MODAL -->
-  <div id="conflict-modal" class="modal-overlay hidden">
+  <div id="conflict-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="conflict-modal-title">
     <div class="modal-card modal-large">
       <div class="modal-header">
-        <h2>Resolve Merge Conflict</h2>
+        <h2 id="conflict-modal-title">Resolve Merge Conflict</h2>
         <span id="conflict-file-path-badge" class="badge badge-warning">file.txt</span>
         <button id="btn-close-conflict-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
@@ -1206,10 +1206,10 @@
   </div>
 
   <!-- CLONE REPOSITORY MODAL -->
-  <div id="clone-modal" class="modal-overlay hidden">
+  <div id="clone-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="clone-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Clone Repository</h2>
+        <h2 id="clone-modal-title">Clone Repository</h2>
         <button id="btn-close-clone-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1264,10 +1264,10 @@
     body, two branch selectors, a commit summary and a warning list, and a
     cramped one would make people write worse pull requests.
   -->
-  <div id="pr-modal" class="modal-overlay hidden">
+  <div id="pr-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pr-modal-title">
     <div class="modal-card modal-card-wide">
       <div class="modal-header">
-        <h2>Create Pull Request</h2>
+        <h2 id="pr-modal-title">Create Pull Request</h2>
         <button id="btn-close-pr-modal" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
@@ -1349,10 +1349,10 @@
   </div>
 
   <!-- NEW REPOSITORY MODAL -->
-  <div id="new-repo-modal" class="modal-overlay hidden">
+  <div id="new-repo-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-repo-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>New Repository</h2>
+        <h2 id="new-repo-modal-title">New Repository</h2>
         <button id="btn-close-new-repo-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1430,10 +1430,10 @@
   </div>
 
   <!-- GIT IDENTITY MODAL -->
-  <div id="identity-modal" class="modal-overlay hidden">
+  <div id="identity-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="identity-modal-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
-        <h2>Commit Identity</h2>
+        <h2 id="identity-modal-title">Commit Identity</h2>
         <button id="btn-close-identity-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1459,10 +1459,10 @@
   </div>
 
   <!-- SIGNING -->
-  <div id="signing-modal" class="modal-overlay hidden">
+  <div id="signing-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="signing-modal-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
-        <h2>Commit Signing</h2>
+        <h2 id="signing-modal-title">Commit Signing</h2>
         <button id="btn-close-signing-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1501,10 +1501,10 @@
   </div>
 
   <!-- INTERACTIVE REBASE -->
-  <div id="rebase-modal" class="modal-overlay hidden">
+  <div id="rebase-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rebase-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Interactive Rebase</h2>
+        <h2 id="rebase-modal-title">Interactive Rebase</h2>
         <button id="btn-close-rebase-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1543,7 +1543,7 @@
   </div>
 
   <!-- COMMAND PALETTE -->
-  <div id="palette-modal" class="modal-overlay hidden">
+  <div id="palette-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="palette-input">
     <div class="modal-card modal-small palette-card">
       <div class="palette-search">
         <span class="material-symbols-outlined">search</span>
@@ -1557,10 +1557,10 @@
   </div>
 
   <!-- SEARCH AND COMPARE -->
-  <div id="search-modal" class="modal-overlay hidden">
+  <div id="search-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="search-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Search and Compare</h2>
+        <h2 id="search-modal-title">Search and Compare</h2>
         <button id="btn-close-search-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1608,10 +1608,10 @@
   </div>
 
   <!-- BRANCH MAINTENANCE -->
-  <div id="branch-admin-modal" class="modal-overlay hidden">
+  <div id="branch-admin-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="branch-admin-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Branch Maintenance</h2>
+        <h2 id="branch-admin-modal-title">Branch Maintenance</h2>
         <button id="btn-close-branch-admin" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1638,10 +1638,10 @@
        ~/.multi-git-client-config.json until now, which meant the only way to
        change them was to close the app and edit a file. The body is built by
        the feature module, so a setting added later needs no markup here. -->
-  <div id="settings-modal" class="modal-overlay hidden">
+  <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Settings</h2>
+        <h2 id="settings-modal-title">Settings</h2>
         <button id="btn-close-settings" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1651,10 +1651,10 @@
   </div>
 
   <!-- RECOVERY BROWSER -->
-  <div id="recovery-modal" class="modal-overlay hidden">
+  <div id="recovery-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="recovery-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Recovery</h2>
+        <h2 id="recovery-modal-title">Recovery</h2>
         <button id="btn-close-recovery-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1683,10 +1683,10 @@
        The six Phase 4 toolsets behind one window, so the sidebar does not grow
        a section each. Every tab's content is owned by its own feature module;
        this markup is only the shell and the strip that switches between them. -->
-  <div id="repo-hub-modal" class="modal-overlay hidden">
+  <div id="repo-hub-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="repo-hub-modal-title">
     <div class="modal-card modal-card-wide repo-hub-card">
       <div class="modal-header">
-        <h2>Repository</h2>
+        <h2 id="repo-hub-modal-title">Repository</h2>
         <button id="btn-close-repo-hub" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1741,10 +1741,10 @@
   </div>
 
   <!-- WORKTREE MANAGER -->
-  <div id="worktree-modal" class="modal-overlay hidden">
+  <div id="worktree-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="worktree-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Worktrees</h2>
+        <h2 id="worktree-modal-title">Worktrees</h2>
         <button id="btn-close-worktree-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1809,10 +1809,10 @@
   </div>
 
   <!-- EXTERNAL AGENTS -->
-  <div id="agents-modal" class="modal-overlay hidden">
+  <div id="agents-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="agents-modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Coding agents</h2>
+        <h2 id="agents-modal-title">Coding agents</h2>
         <button id="btn-close-agents-modal" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1877,10 +1877,10 @@
   </div>
 
   <!-- LAUNCH AN AGENT -->
-  <div id="agent-launch-modal" class="modal-overlay hidden">
+  <div id="agent-launch-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="agent-launch-modal-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
-        <h2>Launch a coding agent</h2>
+        <h2 id="agent-launch-modal-title">Launch a coding agent</h2>
         <button id="btn-close-agent-launch" class="btn-close">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1906,7 +1906,7 @@
   </div>
 
   <!-- GROUP MEMBERSHIP EDITOR -->
-  <div id="group-editor-modal" class="modal-overlay hidden">
+  <div id="group-editor-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="group-editor-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
         <h2 id="group-editor-title">Repositories in this group</h2>
@@ -1926,7 +1926,7 @@
   </div>
 
   <!-- GENERIC CONFIRM DIALOG -->
-  <div id="confirm-modal" class="modal-overlay hidden">
+  <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
         <h2 id="confirm-title">Are you sure?</h2>
@@ -1946,10 +1946,10 @@
   </div>
 
   <!-- SSH KEY HEALTH WARNING (startup validation) -->
-  <div id="ssh-health-modal" class="modal-overlay hidden">
+  <div id="ssh-health-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ssh-health-modal-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
-        <h2>SSH key problems detected</h2>
+        <h2 id="ssh-health-modal-title">SSH key problems detected</h2>
       </div>
       <div class="modal-body">
         <p class="confirm-message">The following SSH profiles have keys that are missing or unreadable. Pushes and pulls using them will fail until they are fixed.</p>
@@ -1965,7 +1965,7 @@
   <!-- APPLICATION UPDATE. Packaged Windows builds only; hidden everywhere else.
        Deliberately contains no <a href>: createMainWindow sets no will-navigate
        handler, so a link would carry this window itself off to github.com. -->
-  <div id="update-modal" class="modal-overlay hidden">
+  <div id="update-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
         <h2 id="update-modal-title">Update available</h2>
@@ -1986,7 +1986,7 @@
   </div>
 
   <!-- GENERIC TEXT/PASSWORD PROMPT DIALOG -->
-  <div id="prompt-modal" class="modal-overlay hidden">
+  <div id="prompt-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="prompt-title">
     <div class="modal-card modal-small">
       <div class="modal-header">
         <h2 id="prompt-title">Input required</h2>
@@ -2002,6 +2002,10 @@
               </button>
             </div>
           </div>
+          <label id="prompt-checkbox-row" class="amend-row hidden">
+            <input type="checkbox" id="prompt-checkbox">
+            <span id="prompt-checkbox-label"></span>
+          </label>
           <div class="form-actions">
             <button type="button" id="btn-prompt-cancel" class="btn btn-secondary">Cancel</button>
             <button type="submit" id="btn-prompt-ok" class="btn btn-primary">OK</button>
@@ -2012,7 +2016,7 @@
   </div>
 
   <!-- TOAST NOTIFICATIONS -->
-  <div id="toast-container" class="toast-container"></div>
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-relevant="additions"></div>
 
   <script src="app.js"></script>
 </body>

@@ -1274,6 +1274,21 @@ body.pane-resizing-y * {
 .palette-title {
   font-size: 0.8125rem;
 }
+
+/* Keys that also run the row, pushed to the trailing edge. The palette is the
+   only place these are ever taught, so they are shown rather than hidden in a
+   tooltip. */
+.palette-shortcut,
+.app-menu-shortcut {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
 .palette-footer {
   padding: 8px 16px;
   border-top: 1px solid var(--border-color);
@@ -3174,6 +3189,30 @@ body.pane-resizing-y * {
 .toast-warn .material-symbols-outlined { color: var(--color-warning); }
 .toast-info { border-left-color: var(--color-info); }
 .toast-info .material-symbols-outlined { color: var(--color-info); }
+
+/* The remedy the toast is describing, offered rather than only named. Pushed
+   to the trailing edge so the text still reads as one line of prose. */
+.toast-action {
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: center;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-action:hover {
+  background-color: var(--bg-card-hover);
+}
+.toast-action:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
 
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(30px); }

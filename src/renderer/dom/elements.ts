@@ -19,12 +19,10 @@ export const ELEMENT_MAP = {
   btnManageSsh: 'btn-manage-ssh',
   btnRefresh: 'btn-refresh',
 
-  // Collapsing the side panels. Each side has a quiet button in its own header
-  // and an emphasized replacement beside the centre tabs when it is hidden.
-  btnToggleSidebar: 'btn-toggle-sidebar',
-  btnToggleHistory: 'btn-toggle-history',
-  sidebarReveal: 'sidebar-reveal',
-  historyReveal: 'history-reveal',
+  // The four controls that collapse and restore the side panels are not named
+  // here. ui/panes.ts owns them, finds them by the ids in its own PANE_SPECS and
+  // wires them itself, so a second name for them would be a second place to keep
+  // in step for nothing.
 
   // The navbar overflow menu, and the app-wide settings it opens. The menu's
   // rows are rendered from the command list, so only the shell is named here.
@@ -282,7 +280,6 @@ export const ELEMENT_MAP = {
   remoteProtocolLabel: 'remote-protocol-label',
   /** Toolbar toggle for pulling a purely-behind branch after a fetch. */
   btnAutoPull: 'btn-auto-pull',
-  autoPullLabel: 'auto-pull-label',
   btnOpenLogs: 'btn-open-logs',
   commitHistoryList: 'commit-history-list',
   btnUndoCommit: 'btn-undo-commit',
@@ -457,6 +454,9 @@ export const ELEMENT_MAP = {
   promptLabel: 'prompt-label',
   promptInput: 'prompt-input',
   btnPromptReveal: 'btn-prompt-reveal',
+  promptCheckboxRow: 'prompt-checkbox-row',
+  promptCheckbox: 'prompt-checkbox',
+  promptCheckboxLabel: 'prompt-checkbox-label',
   btnPromptCancel: 'btn-prompt-cancel',
   toastContainer: 'toast-container',
 

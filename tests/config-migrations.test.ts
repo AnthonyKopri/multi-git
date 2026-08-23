@@ -7,6 +7,7 @@ import { CURRENT_CONFIG_VERSION, migrateConfig } from '../src/server/config/migr
 import { prepareConfig } from '../src/server/config/store';
 import {
   MAX_AGENT_LAUNCHES,
+  MAX_RETENTION_DAYS,
   isValidSshConfigHost,
   sanitizeEnvOverrides,
   validateAppConfig
@@ -413,6 +414,10 @@ describe('validating the Phase 3 sections', () => {
       settings: {
         manageSshConfig: true,
         restoreWindowsOnStartup: false,
+        // Retired: nothing ever read it, and nothing records prompt text. A
+        // config still carrying it is read without complaint and loses it on
+        // the next write, which is what the validator does with every key it
+        // does not know.
         storeAgentPrompts: true,
         worktreeParentDir: 'D:\\trees'
       }
@@ -420,9 +425,9 @@ describe('validating the Phase 3 sections', () => {
 
     expect(config.settings).toMatchObject({
       restoreWindowsOnStartup: false,
-      storeAgentPrompts: true,
       worktreeParentDir: 'D:\\trees'
     });
+    expect(config.settings).not.toHaveProperty('storeAgentPrompts');
 
     const { config: rejected } = validateAppConfig({
       configVersion: 2,
@@ -802,6 +807,20 @@ describe('validateAppConfig', () => {
     });
     expect(validateAppConfig({ settings: { recoveryRetentionDays: -5 } }).config.settings).toEqual({});
     expect(validateAppConfig({ settings: { recoveryRetentionDays: 1.5 } }).config.settings).toEqual({});
+  });
+
+  it('clamps a retention above the ceiling instead of dropping it', () => {
+    // The Settings field offers 0-3650 and redraws from whatever comes back, so
+    // a value past the end has to have a defined answer. Dropping it left the
+    // window redrawing the previous value as though the new one had been
+    // accepted.
+    expect(
+      validateAppConfig({ settings: { recoveryRetentionDays: 99_999 } }).config.settings
+    ).toEqual({ recoveryRetentionDays: MAX_RETENTION_DAYS });
+
+    expect(
+      validateAppConfig({ settings: { recoveryRetentionDays: MAX_RETENTION_DAYS } }).config.settings
+    ).toEqual({ recoveryRetentionDays: MAX_RETENTION_DAYS });
   });
 });
 

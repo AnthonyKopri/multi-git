@@ -10,7 +10,7 @@ import { explainSigningFailure } from '../git/signing';
 import { parseGitDiffText } from '../git/diff';
 import { unquoteGitPath } from '../git/status';
 import { resolveInsideRepo } from '../fs/paths';
-import { saveToTrash } from '../safety-net/trash';
+import { saveManyToTrash, saveToTrash } from '../safety-net/trash';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
@@ -167,12 +167,13 @@ stagingRouter.post(
       '--exclude-standard'
     ]);
     if (listing) {
-      for (const line of listing.stdout.split('\n')) {
-        const relativePath = unquoteGitPath(line);
-        if (relativePath) {
-          saveToTrash(repoPath, relativePath);
-        }
-      }
+      saveManyToTrash(
+        repoPath,
+        listing.stdout
+          .split('\n')
+          .map((line) => unquoteGitPath(line))
+          .filter((relativePath): relativePath is string => Boolean(relativePath))
+      );
     } else {
       console.warn('Could not snapshot files before discard-all');
     }

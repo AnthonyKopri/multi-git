@@ -97,24 +97,53 @@ export function pruneTrash(entries: TrashEntry[], now = Date.now()): TrashEntry[
  * snapshot must not prevent the discard the user asked for.
  */
 export function saveToTrash(repoPath: string, relativePath: string): void {
-  try {
-    const fullPath = resolveInsideRepo(repoPath, relativePath);
-    if (!fullPath || !fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
-      return;
+  saveManyToTrash(repoPath, [relativePath]);
+}
+
+/**
+ * The same, for a whole set at once.
+ *
+ * A bulk discard used to call saveToTrash per file, and each call read the
+ * index, pruned it and wrote it back — so discarding five hundred files meant
+ * five hundred read/prune/write cycles, and the prune inside the loop deleted
+ * snapshots taken moments earlier as the quota filled. Reading once and writing
+ * once at the end keeps the newest TRASH_MAX_ENTRIES of the batch, which is
+ * what the quota is supposed to mean.
+ */
+export function saveManyToTrash(repoPath: string, relativePaths: readonly string[]): void {
+  if (relativePaths.length === 0) {
+    return;
+  }
+
+  const trashDir = repoTrashDir(repoPath);
+  let entries: TrashEntry[] | null = null;
+
+  for (const relativePath of relativePaths) {
+    try {
+      const fullPath = resolveInsideRepo(repoPath, relativePath);
+      if (!fullPath || !fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
+        continue;
+      }
+
+      // Deferred until there is something worth saving, so a discard that
+      // touches nothing does not create a trash directory for this repository.
+      if (entries === null) {
+        fs.mkdirSync(trashDir, { recursive: true });
+        entries = readTrashIndex(trashDir);
+      }
+
+      const id = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+      const trashFile = path.join(trashDir, `${id}.bin`);
+      fs.copyFileSync(fullPath, trashFile);
+
+      entries.unshift({ id, path: relativePath, savedAt: Date.now(), trashFile });
+    } catch (error) {
+      console.warn(`Failed to save ${relativePath} to trash:`, (error as Error).message);
     }
+  }
 
-    const trashDir = repoTrashDir(repoPath);
-    fs.mkdirSync(trashDir, { recursive: true });
-
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-    const trashFile = path.join(trashDir, `${id}.bin`);
-    fs.copyFileSync(fullPath, trashFile);
-
-    const entries = readTrashIndex(trashDir);
-    entries.unshift({ id, path: relativePath, savedAt: Date.now(), trashFile });
+  if (entries !== null) {
     writeTrashIndex(trashDir, pruneTrash(entries));
-  } catch (error) {
-    console.warn(`Failed to save ${relativePath} to trash:`, (error as Error).message);
   }
 }
 
@@ -123,8 +152,4 @@ export function listTrash(repoPath: string): TrashEntry[] {
   const entries = pruneTrash(readTrashIndex(trashDir));
   writeTrashIndex(trashDir, entries);
   return entries;
-}
-
-export function findTrashEntry(repoPath: string, id: string): TrashEntry | null {
-  return readTrashIndex(repoTrashDir(repoPath)).find((entry) => entry.id === id) ?? null;
 }

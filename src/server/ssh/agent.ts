@@ -289,6 +289,15 @@ export interface LoadKeyOutcome {
   loaded: boolean;
   fingerprint: string | null;
   error?: string;
+  /**
+   * Set when the key is encrypted and nothing was supplied to open it.
+   *
+   * The caller has to tell "ask for a passphrase" apart from "this failed for
+   * a reason typing cannot fix", and the error string is not something to
+   * branch on. Only this path sets it, so its absence means the failure was
+   * something else.
+   */
+  needsPassphrase?: boolean;
 }
 
 /**
@@ -317,6 +326,7 @@ export async function loadKeyIntoAgent(options: LoadKeyOptions): Promise<LoadKey
     return {
       loaded: false,
       fingerprint: expected,
+      needsPassphrase: true,
       error: 'This key is protected by a passphrase, and none was supplied.'
     };
   }
@@ -339,6 +349,14 @@ export async function loadKeyIntoAgent(options: LoadKeyOptions): Promise<LoadKey
       return {
         loaded: false,
         fingerprint: expected,
+        // The encryption probe above is the reliable signal, but it fails open
+        // when ssh-keygen is missing or the key is unreadable. In that case the
+        // only thing left saying "this needs a passphrase" is what ssh-add
+        // complained about, so it is worth reading rather than losing the
+        // passphrase prompt to a degraded environment.
+        ...(!options.passphrase && /passphrase/i.test(result.stderr)
+          ? { needsPassphrase: true }
+          : {}),
         error: result.stderr.trim() || 'ssh-add could not load the key.'
       };
     }

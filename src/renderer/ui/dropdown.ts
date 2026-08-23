@@ -54,7 +54,3 @@ export function registerDropdown(
 export function initDropdowns(): void {
   document.addEventListener('click', closeAllDropdowns);
 }
-
-export function isAnyDropdownOpen(): boolean {
-  return registry.some(({ menu }) => !menu.classList.contains('hidden'));
-}

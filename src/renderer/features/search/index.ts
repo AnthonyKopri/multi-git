@@ -8,7 +8,6 @@ import { errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
 import { asInput } from '../../dom/elements';
 import { el, fragment, setHidden } from '../../dom/create';
-import { showToast } from '../../ui/toast';
 import type { Commit } from '../../../shared/git-types';
 
 let ui: Elements;
@@ -217,14 +216,4 @@ export function wireSearch(): void {
   }
 
   ui.btnCloseSearchModal.addEventListener('click', () => closeSearch());
-}
-
-/** Copies a hash to the clipboard, which is what most searches end in. */
-export async function copyHash(hash: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(hash);
-    showToast('Commit hash copied.', 'success');
-  } catch {
-    showToast('Clipboard unavailable.', 'info');
-  }
 }

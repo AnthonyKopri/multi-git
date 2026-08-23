@@ -15,11 +15,7 @@ import { executableRunner } from '../process/runner';
 import type { ExecutableRunner } from '../process/runner';
 import { CommandFailedError, CommandSpawnError } from '../process/runner';
 import { parseRemoteUrl } from '../git/remote';
-import type {
-  HostingProvider,
-  HostingProviderCapabilities,
-  ProviderAvailability
-} from '../../shared/provider-types';
+import type { ProviderAvailability } from '../../shared/provider-types';
 
 const GH_TIMEOUT_MS = 60_000;
 
@@ -28,14 +24,6 @@ const GH_ENV: NodeJS.ProcessEnv = {
   NO_COLOR: '1',
   GH_PROMPT_DISABLED: '1',
   GH_NO_UPDATE_NOTIFIER: '1'
-};
-
-export const GITHUB_CAPABILITIES: HostingProviderCapabilities = {
-  createPullRequest: true,
-  listPullRequests: false,
-  reviewPullRequest: false,
-  commitChecks: false,
-  createRepository: true
 };
 
 /** Recognises github.com and GitHub Enterprise hosts. */
@@ -201,10 +189,3 @@ export function readPullRequestTemplate(repoPath: string): string | null {
   return null;
 }
 
-export const githubProvider: HostingProvider = {
-  id: 'github',
-  displayName: 'GitHub',
-  capabilities: GITHUB_CAPABILITIES,
-  handlesRemote: isGithubRemote,
-  checkAvailability: () => checkGithubAvailability()
-};

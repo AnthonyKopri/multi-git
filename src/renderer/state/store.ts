@@ -169,11 +169,6 @@ export function subscribeTo(keys: readonly StateKey[], listener: Listener): () =
   });
 }
 
-/** Resets everything. Used when closing a repository and by tests. */
-export function resetState(): void {
-  state = initialState();
-}
-
 // ---------- selectors ----------
 
 export function activeProfile(): ClientSshProfile | null {

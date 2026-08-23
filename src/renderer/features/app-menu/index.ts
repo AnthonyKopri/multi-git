@@ -82,7 +82,10 @@ function menuRow(command: Command): HTMLLIElement {
     attrs: { role: 'menuitem', tabindex: '-1' },
     children: [
       command.icon === undefined ? null : icon(command.icon, 16),
-      el('span', { text: command.title })
+      el('span', { text: command.title }),
+      command.shortcut === undefined
+        ? null
+        : el('span', { className: 'app-menu-shortcut', text: command.shortcut })
     ]
   }) as HTMLLIElement;
 
@@ -100,8 +103,17 @@ function render(): void {
     return;
   }
 
+  // A group GROUP_ORDER does not list sorts last rather than first, which is
+  // where a raw indexOf of -1 would put it. Adding a menu row is meant to be a
+  // word on an existing command, so the case where that word names a new group
+  // has to land somewhere sensible on its own.
+  const rank = (group: string): number => {
+    const index = GROUP_ORDER.indexOf(group);
+    return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+  };
+
   const groups = [...new Set(rows.map((command) => command.menu as string))].sort(
-    (left, right) => GROUP_ORDER.indexOf(left) - GROUP_ORDER.indexOf(right)
+    (left, right) => rank(left) - rank(right)
   );
 
   ui.appMenuList.replaceChildren(

@@ -12,6 +12,86 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **Pushing with a locked key asks for it, every time.** An unlock check runs on
+  its own when a repository opens, and pressing Push while that was still
+  running joined it instead of asking a question of its own. Because the
+  background check never prompts, the push was cancelled by a toast for a
+  question the user was never asked. An explicit fetch, pull or push now always
+  gets its own prompt.
+- **"Remember this passphrase" now remembers it.** It was asked after the key had
+  already been loaded, and the request to store it was answered by the branch
+  that returns early because there is nothing left to load — so nothing was ever
+  written to the vault while the app reported that it had been. The choice is now
+  a checkbox on the passphrase prompt itself, and travels with the one request
+  that can prove the passphrase before storing it. Nothing is stored unless the
+  key actually opened.
+- **A saved passphrase that stopped working can be corrected.** Changing a key's
+  passphrase outside Multi-Git left the saved copy being retried on every launch,
+  reported as a failure that typing could not fix. It is now treated as what it
+  is — a rejected passphrase — so the app asks for the new one and replaces the
+  stale entry.
+- **Sign tags by default now signs tags.** Git honours `tag.gpgsign` only for
+  annotated tags, and the tag drawer created lightweight ones, so the setting
+  could never take effect through the interface that offered it.
+- **A repository opened mid-rebase says so.** A rebase stopped at an `edit` step
+  raises no conflict, so nothing in the window mentioned it. The rebase progress
+  panel now opens by itself.
+- **The Repository tools window keeps up with the repository.** Its panels are
+  drawn by the features that own them and were never redrawn by a refresh, so an
+  open tab kept showing whatever it held when it was opened.
+- **F5 refreshes.** The Refresh row has named the key since the toolbar became a
+  menu, and nothing was listening for it.
+- **Escape closes the Create Pull Request window.** It listened for the key
+  itself, but nothing moved focus into it, so the listener never heard one.
+- **`Ctrl+K` works with Caps Lock on.**
+- **Auto-pull stops in every window when it is turned off.** The setting belongs
+  to the application, but each window decided from a copy read when it opened, so
+  a second window carried on fast-forwarding until it was reopened.
+- **A retention longer than the field allows is clamped, not ignored.** The
+  Settings field offers up to 3650 days and redraws from what the server stored,
+  so a larger number silently reverted to the previous value.
+
+### Changed
+
+- **The discard warnings describe what actually happens.** Discarding a file said
+  "permanently", and discarding everything said it could not be undone. Both are
+  copied into Safety Net first, and discarding everything also records a recovery
+  point — it is the most recoverable destructive action in the application, and it
+  was the one warning people their work was gone for good. Both now say what is
+  kept, and for how long.
+- **Neither the menu nor `Ctrl+K` offers what it cannot do.** With no repository
+  open they listed rebase, maintenance and worktrees, which opened an empty window
+  and logged a failure. Both now show only what works, from the same one list.
+- **A bulk discard writes its Safety Net index once** rather than once per file,
+  and no longer deletes snapshots it took moments earlier while the quota filled.
+
+### Added
+
+- **Check now**, in Settings, beside the update toggle. The update icon only
+  appears once there is something to install, so an up-to-date app offered no way
+  to ask. Shown only where a check can actually happen.
+- **Every window takes focus when it opens, and Tab stays inside it.** Twelve of
+  them left focus on the page behind, which is blurred and cannot be clicked, so
+  reaching a control meant using the mouse first.
+- **Keyboard shortcuts are shown** beside the rows that have them, in both the
+  menu and `Ctrl+K`. Nothing taught them before.
+- **Messages offer the fix they describe.** A push cancelled by a locked key
+  carries an Unlock button that returns to the push; being told to open a
+  repository first carries the folder picker.
+- Windows announce themselves to screen readers, and so do the notifications the
+  app reports almost every outcome through.
+
+### Removed
+
+- The **Keep the text of agent prompts in launch history** setting. Nothing read
+  it, and nothing could: launch history is built from the command without the
+  prompt, and the function that records it takes no prompt to record. The setting
+  promised something the design deliberately refuses to do. Prompt text is still
+  never written anywhere, which Settings now states plainly instead of offering a
+  switch for it.
+
 ## [3.4.0] - 2026-08-22
 
 ### Added

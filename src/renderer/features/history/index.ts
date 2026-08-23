@@ -393,11 +393,16 @@ export async function drawerCreateTag(): Promise<void> {
     return;
   }
 
-  logToTerminal(`git tag ${name} ${short}`, 'cmd');
+  // `-s` rather than leaving it to git: tag.gpgsign only applies to annotated
+  // tags, and a tag created here is lightweight unless the flag says otherwise,
+  // so the repository's own setting would never have taken effect.
+  const sign = signing.tagsSignedByDefault();
+
+  logToTerminal(`git tag ${sign ? '-s ' : ''}${name} ${short}`, 'cmd');
 
   try {
-    await api.createTag(name, drawerCommit.hash);
-    showToast(`Tag ${name} created.`, 'success');
+    await api.createTag(name, drawerCommit.hash, undefined, sign);
+    showToast(sign ? `Tag ${name} created and signed.` : `Tag ${name} created.`, 'success');
     await refreshAll();
   } catch (error) {
     if (!isStale(error)) {

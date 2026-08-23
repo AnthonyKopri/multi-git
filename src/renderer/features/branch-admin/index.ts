@@ -13,6 +13,7 @@ import { el, fragment, icon, setHidden } from '../../dom/create';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
+import { focusFirst } from '../../ui/focus';
 
 let ui: Elements;
 let refreshAll: () => Promise<void> = async () => {};
@@ -144,6 +145,7 @@ export async function refreshBranchAdmin(): Promise<void> {
 
 export function openBranchAdmin(): void {
   setHidden(ui.branchAdminModal, false);
+  focusFirst(ui.branchAdminModal);
   void refreshBranchAdmin();
 }
 

@@ -151,6 +151,35 @@ describe('the three states a locked key can be in', () => {
     // "that was not it, ask again".
     expect(result.code).toBe('PASSPHRASE_REJECTED');
   });
+
+  it('treats a saved passphrase that no longer works as rejected, not as a dead end', async () => {
+    // The key's passphrase can be changed outside this app at any time. Calling
+    // that a plain failure left the stale value being retried on every launch
+    // with nothing in the UI offering to correct it, because only the two
+    // passphrase codes reach a prompt.
+    const { session } = await sessionWithProfile({ savedPassphrase: true });
+
+    const result = await session.applyProfile({ profileId: 'work', runner: agentRejectingKey() });
+
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('PASSPHRASE_REJECTED');
+  });
+
+  it('does not send a key that failed for another reason to a passphrase box', async () => {
+    // Nothing was tried, the key is not encrypted, and ssh-add said nothing
+    // about a passphrase -- so typing one would not help and the UI should not
+    // ask for one.
+    const { session } = await sessionWithProfile();
+    const runner = emptyAgent().on(
+      (executable, args) => programName(executable) === 'ssh-add' && !args.includes('-l'),
+      { exitCode: 1, stderr: 'Permissions 0644 for the private key are too open.' }
+    );
+
+    const result = await session.applyProfile({ profileId: 'work', runner });
+
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('LOAD_FAILED');
+  });
 });
 
 describe('supplying a passphrase', () => {
@@ -250,6 +279,34 @@ describe('remembering a passphrase', () => {
     });
 
     expect(vault.hasStoredPassphrase('work')).toBe(false);
+  });
+
+  it('stores it on the call that loads the key, which is the only one that can', async () => {
+    // applyProfile returns early once the key is in the agent, so a second call
+    // made afterwards to save the passphrase reaches nothing that could store
+    // it. The prompt therefore carries the intent into the loading call.
+    const { session, vault } = await sessionWithProfile();
+    vault.unlockVault('master key');
+    const runner = agentAcceptingKey();
+
+    await session.applyProfile({
+      profileId: 'work',
+      passphrase: PASSPHRASE,
+      savePassphrase: true,
+      runner
+    });
+    expect(vault.getStoredPassphrase('work')).toBe(PASSPHRASE);
+
+    // The same request once the key is already held stores nothing, which is
+    // why asking after a successful load was the wrong shape.
+    vault.setStoredPassphrase('work', 'stale');
+    await session.applyProfile({
+      profileId: 'work',
+      passphrase: PASSPHRASE,
+      savePassphrase: true,
+      runner
+    });
+    expect(vault.getStoredPassphrase('work')).toBe('stale');
   });
 
   it('does not store a passphrase that did not work', async () => {

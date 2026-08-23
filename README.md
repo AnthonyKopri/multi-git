@@ -588,8 +588,8 @@ The same tab can add **Open in Multi-Git** to the Windows Explorer right-click m
 - **Syncing** — auto-pull, and whether Multi-Git keeps its managed block in `~/.ssh/config`. Turning the second off still asks whether to remove the block it already wrote.
 - **What counts as a stale branch** — the same control the Maintenance tab shows, because it is the same setting; changing it in either place changes it in both.
 - **Safety Net** — how many days a recovery point is kept. 0 keeps them until you remove them by hand, and an empty box changes nothing rather than being read as 0.
-- **Worktrees and agents** — the folder new worktrees are suggested in, and whether the text of an agent prompt is kept in launch history.
-- **Application** — window restoration and the GitHub update check.
+- **Worktrees and agents** — the folder new worktrees are suggested in. The text of an agent prompt is never recorded: launch history keeps the command and the folder, and nothing else.
+- **Application** — window restoration, the GitHub update check, and a **Check now** button for asking on demand.
 
 Every control writes as you change it. There is no Save button, because a settings window with one has two states — what is shown and what is stored — and no way to tell which is in force. What is shown is always what was stored: a value the server repaired, such as a stale-rule day count of zero, comes back corrected rather than staying as typed.
 

@@ -476,6 +476,43 @@ describe('safety net', () => {
     expect(fs.readFileSync(path.join(repo, 'src/app.txt'), 'utf8')).toContain('about to be lost');
   });
 
+  it('keeps a copy of everything a bulk discard touches', async () => {
+    // The confirmation for this used to say it could not be undone, which was
+    // the opposite of what the route does. Whatever the dialog claims, this is
+    // the claim that has to hold.
+    const repo = createRepoWithHistory();
+    writeFile(repo, 'src/app.txt', 'alpha\nmodified\n');
+    writeFile(repo, 'brand-new.txt', 'untracked work\n');
+
+    await api(repo).post('/api/git/discard-all').send({ deleteUntracked: true }).expect(200);
+
+    const trash = await api(repo).get('/api/git/trash').expect(200);
+    const saved = (trash.body.entries as { path: string }[]).map((e) => e.path);
+
+    expect(saved).toContain('src/app.txt');
+    expect(saved).toContain('brand-new.txt');
+  });
+
+  it('keeps a copy of an untracked file it deletes one at a time', async () => {
+    const repo = createRepoWithHistory();
+    writeFile(repo, 'stray.txt', 'not committed anywhere\n');
+
+    await api(repo)
+      .post('/api/git/discard')
+      .send({ filePath: 'stray.txt', isUntracked: true })
+      .expect(200);
+    expect(fs.existsSync(path.join(repo, 'stray.txt'))).toBe(false);
+
+    const trash = await api(repo).get('/api/git/trash').expect(200);
+    const entry = (trash.body.entries as { path: string; id: string }[]).find(
+      (e) => e.path === 'stray.txt'
+    );
+    expect(entry, 'an untracked file deleted from the UI left no way back').toBeTruthy();
+
+    await api(repo).post('/api/git/trash/restore').send({ id: (entry as { id: string }).id }).expect(200);
+    expect(fs.readFileSync(path.join(repo, 'stray.txt'), 'utf8')).toContain('not committed anywhere');
+  });
+
   it('checkpoints a merge and undoes it', async () => {
     const repo = createRepoWithHistory();
     git(repo, 'checkout', '-b', 'side');

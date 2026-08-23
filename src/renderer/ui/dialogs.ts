@@ -26,11 +26,21 @@ export interface PromptOptions {
   title?: string;
   label?: string;
   type?: 'password' | 'text';
+  /** Shows a checkbox under the field. Omit for a plain prompt. */
+  checkboxLabel?: string;
+  checkboxChecked?: boolean;
+}
+
+export interface PromptResult {
+  /** What was typed, or null when the dialog was cancelled. */
+  value: string | null;
+  /** State of the optional checkbox, false when it was not shown. */
+  checked: boolean;
 }
 
 let elements: Elements | null = null;
 let confirmResolve: ((result: ConfirmResult) => void) | null = null;
-let promptResolve: ((value: string | null) => void) | null = null;
+let promptResolve: ((result: PromptResult) => void) | null = null;
 
 function required(): Elements {
   if (!elements) {
@@ -114,15 +124,33 @@ export function settleConfirm(confirmed: boolean): void {
   resolve({ confirmed, checked: asInput(ui.confirmCheckbox).checked });
 }
 
-export function promptDialog(options: PromptOptions = {}): Promise<string | null> {
+/**
+ * Asks for a value, and optionally for a decision to go with it.
+ *
+ * The checkbox exists so a prompt can carry an intent that has to travel with
+ * the value in the same request — remembering a passphrase is the case that
+ * needs it, because the server can only store one in the call that proves it
+ * opens the key. `promptDialog` below is the plain form, unchanged, because
+ * sixteen callers want a string and nothing else.
+ */
+export function promptWithCheckbox(options: PromptOptions = {}): Promise<PromptResult> {
   const ui = required();
 
   return new Promise((resolve) => {
-    promptResolve?.(null);
+    promptResolve?.({ value: null, checked: false });
     promptResolve = resolve;
 
     ui.promptTitle.textContent = options.title ?? 'Input required';
     ui.promptLabel.textContent = options.label ?? 'Value';
+
+    if (options.checkboxLabel) {
+      ui.promptCheckboxLabel.textContent = options.checkboxLabel;
+      asInput(ui.promptCheckbox).checked = Boolean(options.checkboxChecked);
+      setHidden(ui.promptCheckboxRow, false);
+    } else {
+      asInput(ui.promptCheckbox).checked = false;
+      setHidden(ui.promptCheckboxRow, true);
+    }
 
     const input = asInput(ui.promptInput);
     const isPassword = (options.type ?? 'password') === 'password';
@@ -142,6 +170,11 @@ export function promptDialog(options: PromptOptions = {}): Promise<string | null
   });
 }
 
+/** Asks for a value. Resolves to null when the dialog is cancelled. */
+export function promptDialog(options: PromptOptions = {}): Promise<string | null> {
+  return promptWithCheckbox(options).then((result) => result.value);
+}
+
 export function settlePrompt(value: string | null): void {
   if (!promptResolve) {
     return;
@@ -150,8 +183,9 @@ export function settlePrompt(value: string | null): void {
   const resolve = promptResolve;
   promptResolve = null;
 
-  setHidden(required().promptModal, true);
-  resolve(value);
+  const ui = required();
+  setHidden(ui.promptModal, true);
+  resolve({ value, checked: asInput(ui.promptCheckbox).checked });
 }
 
 /** True when a dialog is open, so Escape knows what to close first. */

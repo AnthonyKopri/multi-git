@@ -52,19 +52,6 @@ export function setActiveRepo(repoPath: string | null): void {
   controller = new AbortController();
 }
 
-export function getActiveRepo(): string | null {
-  return activeRepoPath;
-}
-
-/** The generation a caller can compare against to detect a stale result. */
-export function currentGeneration(): number {
-  return generation;
-}
-
-export function isCurrentGeneration(captured: number): boolean {
-  return captured === generation;
-}
-
 export interface RequestOptions {
   /** Sent as a JSON body. */
   body?: unknown;
