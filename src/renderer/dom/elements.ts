@@ -40,11 +40,15 @@ export const ELEMENT_MAP = {
   repoHubModal: 'repo-hub-modal',
   repoHubTabs: 'repo-hub-tabs',
   btnCloseRepoHub: 'btn-close-repo-hub',
+  // The sidebar launchers into the Repository panel. A count and, where there
+  // is something worth saying without opening anything, a note. The preview
+  // lists that used to sit here duplicated the panel that owns them.
   remoteCount: 'remote-count',
-  remoteSummaryList: 'remote-summary-list',
+  remoteNote: 'remote-note',
   submoduleCount: 'submodule-count',
-  submoduleSummaryList: 'submodule-summary-list',
-  lfsSummary: 'lfs-summary',
+  submoduleNote: 'submodule-note',
+  lfsCount: 'lfs-count',
+  lfsNote: 'lfs-note',
 
   // External merge, in the conflict editor
   btnExternalMerge: 'btn-external-merge',

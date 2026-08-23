@@ -7,7 +7,7 @@
 // of step rather than showing one "out of date" badge that could mean either.
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale, setActiveRepo } from '../../api/client';
-import { el, fragment, icon, setHidden } from '../../dom/create';
+import { el, icon, setHidden } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
 import { getState } from '../../state/store';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
@@ -51,26 +51,31 @@ export async function refreshSubmodules(): Promise<void> {
   renderSummary();
 }
 
+/**
+ * The sidebar launcher's count and note.
+ *
+ * The list of submodules used to sit here as well as in the panel that manages
+ * them. What is worth seeing without opening anything is the count, and whether
+ * any of them need attention -- an uninitialised or out-of-step submodule is a
+ * broken build waiting to happen, and finding that out should not require
+ * opening a tab.
+ */
 function renderSummary(): void {
   ui.submoduleCount.textContent = submodules.length === 0 ? '' : String(submodules.length);
   setHidden(ui.submoduleCount, submodules.length === 0);
 
-  ui.submoduleSummaryList.replaceChildren(
-    submodules.length === 0
-      ? el('li', { className: 'empty-state', text: 'No submodules' })
-      : fragment(
-          submodules.map((submodule) =>
-            el('li', {
-              className: 'stash-item',
-              title: submodule.url,
-              children: [
-                el('span', { className: 'worktree-name', text: submodule.path }),
-                el('span', { className: 'worktree-meta', text: describe(submodule) })
-              ]
-            })
-          )
-        )
-  );
+  const needingAttention = submodules.filter(
+    (submodule) => !submodule.initialized || submodule.missingCommit
+  ).length;
+
+  const note =
+    needingAttention === 0
+      ? ''
+      : `${needingAttention} need${needingAttention === 1 ? 's' : ''} attention`;
+
+  ui.submoduleNote.textContent = note;
+  ui.submoduleNote.classList.toggle('tool-launcher-note-warn', note !== '');
+  setHidden(ui.submoduleNote, note === '');
 }
 
 /** One line saying which of the two commits is the one out of step. */

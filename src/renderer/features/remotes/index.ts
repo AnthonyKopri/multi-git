@@ -7,7 +7,7 @@
 // it writes.
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
-import { el, fragment, icon, setHidden } from '../../dom/create';
+import { el, icon, setHidden } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
 import { getState } from '../../state/store';
 import { confirmDialog } from '../../ui/dialogs';
@@ -55,26 +55,23 @@ export async function refreshRemotes(): Promise<void> {
   renderSummary();
 }
 
+/**
+ * The sidebar launcher's count and note.
+ *
+ * A list of remotes used to sit here as well as in the panel that manages them.
+ * The count is what is worth seeing without opening anything; the host is what
+ * makes a single remote identifiable, and there is usually only one.
+ */
 function renderSummary(): void {
   ui.remoteCount.textContent = remotes.length === 0 ? '' : String(remotes.length);
   setHidden(ui.remoteCount, remotes.length === 0);
 
-  ui.remoteSummaryList.replaceChildren(
-    remotes.length === 0
-      ? el('li', { className: 'empty-state', text: 'No remotes' })
-      : fragment(
-          remotes.map((remote) =>
-            el('li', {
-              className: 'stash-item',
-              title: remote.fetchUrl,
-              children: [
-                el('span', { className: 'worktree-name', text: remote.name }),
-                el('span', { className: 'worktree-meta', text: hostOf(remote.fetchUrl) })
-              ]
-            })
-          )
-        )
-  );
+  const first = remotes[0];
+  const note =
+    remotes.length === 1 && first ? hostOf(first.fetchUrl) : remotes.length === 0 ? 'None' : '';
+
+  ui.remoteNote.textContent = note;
+  setHidden(ui.remoteNote, note === '');
 }
 
 /** The recognisable part of a URL, for a line that has no room for all of it. */

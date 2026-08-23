@@ -17,9 +17,12 @@ import { cancelOpenDialog, hasOpenDialog, initDialogs } from './ui/dialogs';
 import { closeAllDropdowns, initDropdowns, registerDropdown } from './ui/dropdown';
 import { initPanes, toggleSide } from './ui/panes';
 import { trapTab } from './ui/focus';
+import { initDock, isPanel } from './ui/dock';
+import { isTypingTarget, matchesShortcut } from './ui/shortcuts';
 import { initCollapsibleSections } from './ui/sections';
 import { attachHorizontalWheel } from './ui/wheel-scroll';
 import { logToTerminal, openLogWindow } from './ui/log';
+import { repoBaseName } from './ui/format';
 
 import * as accounts from './features/accounts';
 import * as branches from './features/branches';
@@ -182,10 +185,16 @@ function closeTopmostLayer(): void {
     ui.sshModal
   ];
 
-  for (const modal of modals) {
-    if (!modal.classList.contains('hidden')) {
-      setHidden(modal, true);
-      return;
+  // True modals before docked panels, whatever their order in the list above.
+  // A panel is beside the work rather than over it, so a modal opened while one
+  // is docked is unambiguously the thing on top -- and Escape closing the panel
+  // underneath it would be answering a question nobody asked.
+  for (const group of [false, true]) {
+    for (const modal of modals) {
+      if (isPanel(modal) === group && !modal.classList.contains('hidden')) {
+        setHidden(modal, true);
+        return;
+      }
     }
   }
 
@@ -832,7 +841,7 @@ function buildCommands(): palette.Command[] {
   const hasRepo = getState().activeRepo !== null;
 
   const commands: palette.Command[] = [
-    { id: 'search', needsRepo: true, menu: 'History', icon: 'search', group: 'Find', title: 'Search commits', keywords: 'log grep history', run: () => search.openSearch('commits') },
+    { id: 'search', shortcut: 'Ctrl+Shift+F', needsRepo: true, menu: 'History', icon: 'search', group: 'Find', title: 'Search commits', keywords: 'log grep history', run: () => search.openSearch('commits') },
     { id: 'compare', needsRepo: true, menu: 'History', icon: 'compare_arrows', group: 'Find', title: 'Compare two refs', keywords: 'diff ahead behind', run: () => search.openSearch('compare') },
     { id: 'compare-upstream', needsRepo: true, group: 'Find', title: 'Compare this branch with its upstream', keywords: 'ahead behind', run: () => search.openCompareWith(`origin/${branch()}`, branch()) },
     { id: 'signing', needsRepo: true, group: 'Accounts', title: 'Commit signing settings', keywords: 'gpg ssh sign verify', run: () => void signing.openSigningSettings() },
@@ -843,17 +852,17 @@ function buildCommands(): palette.Command[] {
     { id: 'open-repo', group: 'Repository', title: 'Open a repository', keywords: 'folder', run: () => void repo.browseAndOpen() },
     { id: 'clone', group: 'Repository', title: 'Clone a repository', run: () => repo.openCloneModal() },
     { id: 'new-repo', group: 'Repository', title: 'Create a repository', run: () => void newRepo.openNewRepoModal() },
-    { id: 'stage-all', needsRepo: true, group: 'Staging', title: 'Stage everything', run: () => void staging.stageFiles(['.']) },
+    { id: 'stage-all', shortcut: 'Ctrl+Alt+S', needsRepo: true, group: 'Staging', title: 'Stage everything', run: () => void staging.stageFiles(['.']) },
     { id: 'unstage-all', needsRepo: true, group: 'Staging', title: 'Unstage everything', run: () => void staging.unstageFiles(['.']) },
     { id: 'discard-all', needsRepo: true, group: 'Staging', title: 'Discard all changes', keywords: 'revert reset working tree', run: () => void staging.discardAllChanges() },
     { id: 'stash', needsRepo: true, group: 'Stash', title: 'Stash changes', run: () => void shelf.stashChanges() },
-    { id: 'fetch', needsRepo: true, group: 'Sync', title: 'Fetch', run: () => void sync.performSync('fetch') },
-    { id: 'pull', needsRepo: true, group: 'Sync', title: 'Pull', run: () => void sync.performSync('pull') },
-    { id: 'push', needsRepo: true, group: 'Sync', title: 'Push', run: () => void sync.performSync('push') },
+    { id: 'fetch', shortcut: 'Ctrl+Alt+F', needsRepo: true, group: 'Sync', title: 'Fetch', run: () => void sync.performSync('fetch') },
+    { id: 'pull', shortcut: 'Ctrl+Alt+P', needsRepo: true, group: 'Sync', title: 'Pull', run: () => void sync.performSync('pull') },
+    { id: 'push', shortcut: 'Ctrl+Alt+U', needsRepo: true, group: 'Sync', title: 'Push', run: () => void sync.performSync('push') },
     { id: 'pull-request', needsRepo: true, group: 'Sync', title: 'Create a pull request', keywords: 'pr github', run: () => void pullRequest.openCreator() },
-    { id: 'diff-tab', needsRepo: true, group: 'View', title: 'Go to the File Diff tab', run: () => workspace.switchViewTab('diff') },
-    { id: 'staging-tab', needsRepo: true, group: 'View', title: 'Go to the Staging Area', run: () => workspace.switchViewTab('staging') },
-    { id: 'explorer-tab', needsRepo: true, group: 'View', title: 'Go to the Explorer', run: () => workspace.switchViewTab('explorer') },
+    { id: 'diff-tab', shortcut: 'Ctrl+2', needsRepo: true, group: 'View', title: 'Go to the File Diff tab', run: () => workspace.switchViewTab('diff') },
+    { id: 'staging-tab', shortcut: 'Ctrl+1', needsRepo: true, group: 'View', title: 'Go to the Staging Area', run: () => workspace.switchViewTab('staging') },
+    { id: 'explorer-tab', shortcut: 'Ctrl+3', needsRepo: true, group: 'View', title: 'Go to the Explorer', run: () => workspace.switchViewTab('explorer') },
     { id: 'ssh', group: 'Accounts', title: 'Manage SSH profiles', keywords: 'keys accounts', run: () => ssh.openSshModal() },
     { id: 'unlock-key', group: 'Accounts', title: 'Unlock the selected SSH key', keywords: 'passphrase vault agent load', run: () => void unlockSelectedKey() },
     { id: 'worktrees', needsRepo: true, menu: 'Repository', icon: 'account_tree', group: 'Worktrees', title: 'Manage worktrees', keywords: 'worktree create remove branch folder', run: () => worktrees.openWorktreeManager() },
@@ -875,7 +884,54 @@ function buildCommands(): palette.Command[] {
     { id: 'settings', group: 'Accounts', title: 'Settings', keywords: 'preferences options auto-pull updates retention stale rules worktree folder', run: () => void settings.openSettings() }
   ];
 
-  return commands.filter((command) => hasRepo || command.needsRepo !== true);
+  return [...commands, ...branchCommands(), ...repositoryCommands()].filter(
+    (command) => hasRepo || command.needsRepo !== true
+  );
+}
+
+/**
+ * The branches in this repository, as things to switch to.
+ *
+ * The palette indexed forty-one verbs and nothing else, so "get me to
+ * release-4.0" meant opening the branch dropdown and reading. A branch is a
+ * place you go, which is exactly what a palette is for -- and typing part of
+ * the name is faster than finding it in a list of eighty.
+ */
+function branchCommands(): palette.Command[] {
+  const state = getState();
+
+  return state.branches.local
+    .filter((branch) => branch !== state.status?.branch)
+    .map((branch) => ({
+      id: `branch:${branch}`,
+      needsRepo: true,
+      group: 'Branch',
+      title: `Switch to ${branch}`,
+      keywords: `checkout ${branch}`,
+      run: () => void branches.switchBranch(branch, false)
+    }));
+}
+
+/**
+ * The repositories you have open recently.
+ *
+ * Reaching one meant the dropdown in the header, which is the same problem: a
+ * name you already know, in a list you have to look through.
+ */
+function repositoryCommands(): palette.Command[] {
+  const { recentRepos, activeRepo } = getState();
+
+  return recentRepos
+    .filter((path) => path !== activeRepo)
+    .map((path) => ({
+      id: `repo:${path}`,
+      group: 'Repository',
+      title: `Open ${repoBaseName(path)}`,
+      // The full path is searchable without being the label, so two checkouts
+      // of the same project can still be told apart.
+      keywords: path,
+      run: () => void repo.openRepository(path)
+    }));
 }
 
 function wireGlobal(): void {
@@ -905,14 +961,26 @@ function wireGlobal(): void {
       return;
     }
 
-    // The Refresh row has advertised F5 since the toolbar was thinned into a
-    // menu, and nothing was listening. preventDefault matters: without it the
-    // renderer reloads, which throws away the whole window to redo the work
-    // this shortcut was asking for.
-    if (key.key === 'F5') {
-      event.preventDefault();
-      void refreshAll();
-      return;
+    // Everything else comes from the command list itself. A command declares
+    // its keys once, and the palette row, the menu row and this handler all
+    // read that one string -- so a shortcut cannot be advertised without being
+    // bound, which is the state F5 was in for two releases.
+    //
+    // After the two above because those are not commands: the palette cannot
+    // open itself, and the pane toggles predate the registry.
+    if (!isTypingTarget(key)) {
+      const bound = buildCommands().find(
+        (command) => command.shortcut !== undefined && matchesShortcut(command.shortcut, key)
+      );
+
+      if (bound) {
+        // preventDefault matters for F5 in particular: without it the renderer
+        // reloads, throwing away the whole window to redo the work the shortcut
+        // was asking for.
+        event.preventDefault();
+        bound.run();
+        return;
+      }
     }
 
     if (event.key === 'Escape') {
@@ -943,6 +1011,9 @@ async function start(): Promise<void> {
   ui = resolveElements();
 
   initToasts(ui.toastContainer);
+  // Before anything can open a panel, so the first one to open already has its
+  // width and its resizer.
+  initDock();
   initDialogs(ui);
   initDropdowns();
   initPanes();

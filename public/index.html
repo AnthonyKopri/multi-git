@@ -164,14 +164,14 @@
           <span class="material-symbols-outlined" aria-hidden="true">downloading</span>
           <span id="auto-pull-label">AUTO-PULL</span>
         </button>
-        <button id="btn-fetch" class="btn btn-icon" title="Fetch" aria-label="Fetch">
+        <button id="btn-fetch" class="btn btn-icon" title="Fetch (Ctrl+Alt+F)" aria-label="Fetch">
           <span class="material-symbols-outlined" aria-hidden="true">sync</span>
         </button>
-        <button id="btn-pull" class="btn btn-icon" title="Pull" aria-label="Pull">
+        <button id="btn-pull" class="btn btn-icon" title="Pull (Ctrl+Alt+P)" aria-label="Pull">
           <span class="material-symbols-outlined" aria-hidden="true">download</span>
           <span id="pull-count-badge" class="count-badge count-behind hidden"></span>
         </button>
-        <button id="btn-push" class="btn btn-icon" title="Push" aria-label="Push">
+        <button id="btn-push" class="btn btn-icon" title="Push (Ctrl+Alt+U)" aria-label="Push">
           <span class="material-symbols-outlined" aria-hidden="true">upload</span>
           <span id="push-label" class="btn-push-label hidden"></span>
           <span id="push-count-badge" class="count-badge count-ahead hidden"></span>
@@ -386,54 +386,82 @@
              Deliberately thin: a count and a way into the Repository hub at the
              right tab. The full tools live there so the sidebar does not grow a
              section per Phase 4 feature. -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="remotes" data-default="collapsed">
-          <div class="section-header">
-            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-remotes">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
-              <h3>Remotes <span id="remote-count" class="count-badge hidden"></span></h3>
-            </button>
-            <button id="btn-remotes-manage" class="btn btn-text btn-sm" type="button" data-hub-tab="remotes" title="Add, edit and test remotes">
-              <span>Manage</span>
-            </button>
-          </div>
-          <div class="section-body" id="section-remotes">
-            <ul id="remote-summary-list" class="stash-list-ul">
-              <li class="empty-state">No remotes</li>
-            </ul>
-          </div>
-        </div>
+        <!-- Repository tools
+             Remotes, submodules and LFS each used to be an accordion here *and*
+             a tab in the Repository panel, with a Manage button bridging them --
+             a count-and-preview in one place and the real thing in the other, so
+             "where do I manage remotes?" answered "both, but only one of them
+             works". The hub owns them now and this is the way in.
 
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="submodules" data-default="collapsed">
+             What is not dropped is anything the sidebar was the only place to
+             say. A count is worth seeing without opening anything, and so is a
+             warning: LFS hooks left installed but unused run on every pull, and
+             finding that out requires opening a tab you had no reason to open. -->
+        <div class="sidebar-section border-t mt-4 pt-4" data-section="repo-tools" data-default="collapsed">
           <div class="section-header">
-            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-submodules">
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-repo-tools">
               <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
-              <h3>Submodules <span id="submodule-count" class="count-badge hidden"></span></h3>
-            </button>
-            <button id="btn-submodules-manage" class="btn btn-text btn-sm" type="button" data-hub-tab="submodules" title="Initialize, update and sync submodules">
-              <span>Manage</span>
+              <h3>Repository tools</h3>
             </button>
           </div>
-          <div class="section-body" id="section-submodules">
-            <ul id="submodule-summary-list" class="stash-list-ul">
-              <li class="empty-state">No submodules</li>
+          <div class="section-body" id="section-repo-tools">
+            <ul class="tool-launchers">
+              <li class="tool-launcher">
+                <button type="button" class="tool-launcher-btn" data-hub-tab="remotes"
+                        title="Add, edit and test remotes">
+                  <span class="material-symbols-outlined" aria-hidden="true">cloud</span>
+                  <span class="tool-launcher-name">Remotes</span>
+                  <span id="remote-count" class="count-badge hidden"></span>
+                </button>
+                <span id="remote-note" class="tool-launcher-note hidden"></span>
+              </li>
+              <li class="tool-launcher">
+                <button type="button" class="tool-launcher-btn" data-hub-tab="submodules"
+                        title="Initialize, update and sync submodules">
+                  <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+                  <span class="tool-launcher-name">Submodules</span>
+                  <span id="submodule-count" class="count-badge hidden"></span>
+                </button>
+                <span id="submodule-note" class="tool-launcher-note hidden"></span>
+              </li>
+              <li class="tool-launcher">
+                <button type="button" class="tool-launcher-btn" data-hub-tab="lfs"
+                        title="Tracked patterns, objects and locks">
+                  <span class="material-symbols-outlined" aria-hidden="true">database</span>
+                  <span class="tool-launcher-name">Git LFS</span>
+                  <span id="lfs-count" class="count-badge hidden"></span>
+                </button>
+                <span id="lfs-note" class="tool-launcher-note hidden"></span>
+              </li>
+              <li class="tool-launcher">
+                <button type="button" class="tool-launcher-btn" data-hub-tab="patches"
+                        title="Create or apply a patch">
+                  <span class="material-symbols-outlined" aria-hidden="true">difference</span>
+                  <span class="tool-launcher-name">Patches</span>
+                </button>
+              </li>
+              <li class="tool-launcher">
+                <button type="button" class="tool-launcher-btn" data-hub-tab="bisect"
+                        title="Find the commit that introduced a problem">
+                  <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
+                  <span class="tool-launcher-name">Bisect</span>
+                </button>
+              </li>
+              <li class="tool-launcher">
+                <button type="button" class="tool-launcher-btn" data-hub-tab="notes"
+                        title="Annotate commits without rewriting them">
+                  <span class="material-symbols-outlined" aria-hidden="true">sticky_note_2</span>
+                  <span class="tool-launcher-name">Notes</span>
+                </button>
+              </li>
+              <li class="tool-launcher">
+                <button type="button" class="tool-launcher-btn" data-hub-tab="maintenance"
+                        title="Purge stale worktrees and merged branches">
+                  <span class="material-symbols-outlined" aria-hidden="true">mop</span>
+                  <span class="tool-launcher-name">Maintenance</span>
+                </button>
+              </li>
             </ul>
-          </div>
-        </div>
-
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="lfs" data-default="collapsed">
-          <div class="section-header">
-            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-lfs">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
-              <h3>Git LFS</h3>
-            </button>
-            <button id="btn-lfs-manage" class="btn btn-text btn-sm" type="button" data-hub-tab="lfs" title="Tracked patterns, objects and locks">
-              <span>Manage</span>
-            </button>
-          </div>
-          <div class="section-body" id="section-lfs">
-            <div id="lfs-summary" class="lfs-summary">
-              <span class="empty-state">Not checked yet</span>
-            </div>
           </div>
         </div>
 
@@ -467,15 +495,15 @@
           <button type="button" id="sidebar-reveal" class="pane-toggle pane-toggle-reveal pane-reveal-left" aria-expanded="false" aria-controls="sidebar-panel" title="Show branches panel (Ctrl+B)" aria-label="Show branches panel">
             <span class="material-symbols-outlined" aria-hidden="true">left_panel_open</span>
           </button>
-          <button id="tab-staging" class="tab-btn active">
+          <button id="tab-staging" class="tab-btn active" title="Staging Area (Ctrl+1)">
             <span class="material-symbols-outlined" style="font-size: 16px;">rule</span>
             <span>Staging Area</span>
           </button>
-          <button id="tab-diff" class="tab-btn">
+          <button id="tab-diff" class="tab-btn" title="File Diff (Ctrl+2)">
             <span class="material-symbols-outlined" style="font-size: 16px;">difference</span>
             <span>File Diff</span>
           </button>
-          <button id="tab-explorer" class="tab-btn">
+          <button id="tab-explorer" class="tab-btn" title="Workspace Explorer (Ctrl+3)">
             <span class="material-symbols-outlined" style="font-size: 16px;">folder_zip</span>
             <span>Workspace Explorer</span>
           </button>
@@ -1589,7 +1617,7 @@
   </div>
 
   <!-- INTERACTIVE REBASE -->
-  <div id="rebase-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rebase-modal-title">
+  <div id="rebase-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="rebase-modal-title">
     <div class="modal-card">
       <div class="modal-header">
         <h2 id="rebase-modal-title">Interactive Rebase</h2>
@@ -1645,7 +1673,7 @@
   </div>
 
   <!-- SEARCH AND COMPARE -->
-  <div id="search-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="search-modal-title">
+  <div id="search-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="search-modal-title">
     <div class="modal-card">
       <div class="modal-header">
         <h2 id="search-modal-title">Search and Compare</h2>
@@ -1696,7 +1724,7 @@
   </div>
 
   <!-- BRANCH MAINTENANCE -->
-  <div id="branch-admin-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="branch-admin-modal-title">
+  <div id="branch-admin-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="branch-admin-modal-title">
     <div class="modal-card">
       <div class="modal-header">
         <h2 id="branch-admin-modal-title">Branch Maintenance</h2>
@@ -1739,7 +1767,7 @@
   </div>
 
   <!-- RECOVERY BROWSER -->
-  <div id="recovery-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="recovery-modal-title">
+  <div id="recovery-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="recovery-modal-title">
     <div class="modal-card">
       <div class="modal-header">
         <h2 id="recovery-modal-title">Recovery</h2>
@@ -1771,7 +1799,7 @@
        The six Phase 4 toolsets behind one window, so the sidebar does not grow
        a section each. Every tab's content is owned by its own feature module;
        this markup is only the shell and the strip that switches between them. -->
-  <div id="repo-hub-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="repo-hub-modal-title">
+  <div id="repo-hub-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="repo-hub-modal-title">
     <div class="modal-card modal-card-wide repo-hub-card">
       <div class="modal-header">
         <h2 id="repo-hub-modal-title">Repository</h2>
@@ -1829,7 +1857,7 @@
   </div>
 
   <!-- WORKTREE MANAGER -->
-  <div id="worktree-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="worktree-modal-title">
+  <div id="worktree-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="worktree-modal-title">
     <div class="modal-card">
       <div class="modal-header">
         <h2 id="worktree-modal-title">Worktrees</h2>
@@ -1897,7 +1925,7 @@
   </div>
 
   <!-- EXTERNAL AGENTS -->
-  <div id="agents-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="agents-modal-title">
+  <div id="agents-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="agents-modal-title">
     <div class="modal-card">
       <div class="modal-header">
         <h2 id="agents-modal-title">Coding agents</h2>

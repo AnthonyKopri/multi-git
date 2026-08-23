@@ -11,7 +11,7 @@
 // files", which is a different and much more misleading answer.
 import * as api from '../../api/endpoints';
 import { ApiError, errorMessage, isStale } from '../../api/client';
-import { el, icon } from '../../dom/create';
+import { el, icon, setHidden } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
 import { getState } from '../../state/store';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
@@ -60,9 +60,29 @@ export async function refreshLfs(): Promise<void> {
   renderSummary();
 }
 
+/**
+ * The sidebar launcher's count and note.
+ *
+ * The section used to carry a summary block duplicating what the LFS tab shows
+ * in full. That list is gone -- the hub owns it -- but the two things the
+ * sidebar was the only place to say are kept: how many files are tracked,
+ * without opening anything, and the warning below.
+ */
 function renderSummary(): void {
+  const setNote = (text: string, warn = false): void => {
+    ui.lfsNote.textContent = text;
+    ui.lfsNote.classList.toggle('tool-launcher-note-warn', warn);
+    setHidden(ui.lfsNote, text === '');
+  };
+
+  const setCount = (value: string): void => {
+    ui.lfsCount.textContent = value;
+    setHidden(ui.lfsCount, value === '');
+  };
+
   if (!status) {
-    ui.lfsSummary.replaceChildren(el('span', { className: 'empty-state', text: 'Not available' }));
+    setCount('');
+    setNote('');
     return;
   }
 
@@ -71,38 +91,33 @@ function renderSummary(): void {
   // something to be told about, not something to find by opening a tab you had
   // no reason to open.
   if (status.installation.redundant) {
-    ui.lfsSummary.replaceChildren(
-      el('span', { className: 'warn-state', text: 'LFS hooks installed but unused' }),
-      el('span', { text: 'They run on every pull. Open the LFS tab to remove them.' })
-    );
+    setCount('');
+    setNote('Hooks installed but unused — they run on every pull', true);
     return;
   }
 
   if (!status.availability.installed) {
-    ui.lfsSummary.replaceChildren(
-      el('span', { className: 'empty-state', text: 'Git LFS is not installed' })
-    );
+    setCount('');
+    setNote('Git LFS is not installed');
     return;
   }
 
   if (!status.availability.configured) {
-    ui.lfsSummary.replaceChildren(
-      el('span', { className: 'empty-state', text: 'Not used by this repository' })
-    );
+    setCount('');
+    setNote('Not used by this repository');
     return;
   }
 
   const missing = status.objects.filter((object) => !object.present).length;
 
-  ui.lfsSummary.replaceChildren(
-    el('span', { text: `${status.objects.length} tracked file(s)` }),
-    el('span', {
-      text:
-        missing === 0
-          ? 'all objects downloaded'
-          : `${missing} not downloaded (pointer only)`
-    }),
-    ...(status.locks.length > 0 ? [el('span', { text: `${status.locks.length} lock(s)` })] : [])
+  setCount(status.objects.length === 0 ? '' : String(status.objects.length));
+  setNote(
+    missing === 0
+      ? status.locks.length > 0
+        ? `${status.locks.length} lock(s)`
+        : ''
+      : `${missing} not downloaded (pointer only)`,
+    missing > 0
   );
 }
 
