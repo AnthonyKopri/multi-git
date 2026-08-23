@@ -88,6 +88,7 @@ import type {
 } from '../../shared/config-types';
 import type { DetectedTool } from '../../shared/tool-types';
 import type { DetectedAgent } from '../../shared/agent-types';
+import type { IntegrationKind, IntegrationPreflight } from '../../shared/integrate-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -318,6 +319,12 @@ export const createBranch = (branchName: string) =>
 
 export const deleteBranch = (branch: string, force: boolean) =>
   api.post<Api.GitOutput>('/api/git/delete-branch', { body: { branch, force } });
+
+/** What an integration would do. A read: it changes nothing. */
+export const integrationPreflight = (kind: IntegrationKind, target: string) =>
+  api.get<{ success: true; preflight: IntegrationPreflight }>('/api/git/integrate/preflight', {
+    query: { kind, target }
+  });
 
 export const merge = (branch: string) =>
   api.post<Api.IntegrationResponse>('/api/git/merge', { body: { branch } });

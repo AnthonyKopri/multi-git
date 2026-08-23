@@ -14,6 +14,25 @@ or Security. Remove empty headings when preparing a release.
 
 ### Added
 
+- **Merge and rebase now show you what they would do, and ask.** Opening a pull
+  request changes nothing on your machine and got a twenty-field preflight;
+  merging and rebasing rewrite your history and got a dropdown and a button. No
+  preview, no confirmation, no indication of what was coming — while discarding
+  a single file asked you to confirm. The risk model was the wrong way round.
+  Both now show the commits that would arrive with their subjects, how many
+  files they touch, whether the branch can simply move forward, and what it
+  costs your own commits.
+- **Pull says which kind of pull it is.** The server runs a bare
+  `git pull origin <branch>`, so whether you get a fast-forward, a merge commit,
+  or your commits replayed is decided by `pull.rebase` and `pull.ff` — git
+  configuration this app never read and never showed. Those are read now and
+  resolved before anything runs. A fast-forward proceeds without interruption,
+  because it is the safest thing git does and asking every time would train
+  people to click through the dialog that matters; a merge or a rebase says so
+  first; and a `pull.ff=only` refusal is predicted rather than reported
+  afterwards as a failure.
+
+
 - **A Terminal panel in the main window.** The log lived in a pop-out you had to
   summon from a menu, which is the wrong place for the thing that tells you what
   just happened to your repository. It now sits along the bottom, collapsed to
@@ -37,6 +56,21 @@ or Security. Remove empty headings when preparing a release.
   the argument vector that ran.
 
 ### Changed
+
+- **Merge and rebase say that a recovery point is taken.** They always have
+  taken one, and never mentioned it. A safety net nobody knows about buys no
+  confidence.
+- **Fetch, pull and push report what git said.** The outcome was a toast reading
+  "Push completed" while git's own summary — "Fast-forward", "3 files changed",
+  the ref update — went to a log window you had to know to open. That summary is
+  the informative half, and it now appears where the button was pressed.
+- **The two different features called "Rebase" no longer share a name.** The
+  sidebar button is **Rebase onto**, which says the direction it works in; the
+  palette's is **Interactive rebase (plan commit by commit)**. They do different
+  things and had the same label.
+- **Merge is labelled "Merge in"**, and the section says "Bring another branch
+  into this one" — the old wording left the direction to be guessed.
+
 
 - **The Terminal Log shows what actually ran.** Every line describing a command
   used to be composed in the renderer from what it *meant* to do, so the log read

@@ -9,6 +9,7 @@ import { confirmDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { withButtonBusy } from '../../ui/busy';
+import type { IntegrationPreflight } from '../../../shared/integrate-types';
 
 let ui: Elements;
 let refreshAll: () => Promise<void> = async () => {};
@@ -244,6 +245,105 @@ export async function deleteBranch(branch: string): Promise<void> {
 
 // ---------- merge and rebase ----------
 
+/**
+ * What the preflight says, as the sentences a confirmation is made of.
+ *
+ * Ordered by what decides the answer: whether it can proceed at all, then what
+ * arrives, then what it costs your history, then the safety net. A user who
+ * reads only the first line should still have learned the important thing.
+ */
+function preflightSentences(preflight: IntegrationPreflight, type: 'merge' | 'rebase'): string[] {
+  const lines: string[] = [];
+  const { incoming, outgoing, changedFiles, fastForward } = preflight;
+
+  if (incoming.length === 0) {
+    lines.push(`${preflight.target} has nothing that ${type === 'merge' ? 'is not already here' : 'this branch is missing'}.`);
+  } else {
+    const files = changedFiles === 0 ? '' : `, touching ${plural(changedFiles, 'file')}`;
+    lines.push(`${plural(incoming.length, 'commit')} from ${preflight.target}${files}.`);
+
+    // The subjects, not just the count: "3 commits" tells you nothing about
+    // whether you meant to take them.
+    lines.push(
+      incoming
+        .slice(0, 5)
+        .map((commit) => `  • ${commit.subject}`)
+        .join('\n') + (incoming.length > 5 ? `\n  • …and ${incoming.length - 5} more` : '')
+    );
+  }
+
+  if (type === 'merge') {
+    lines.push(
+      fastForward
+        ? 'This is a fast-forward: your branch moves forward and nothing is merged or rewritten.'
+        : `Your ${plural(outgoing.length, 'commit')} and theirs both stay, joined by a merge commit.`
+    );
+  } else if (outgoing.length > 0) {
+    lines.push(
+      `Your ${plural(outgoing.length, 'commit')} will be replayed on top and get new object names.`
+    );
+  }
+
+  if (preflight.recoveryPoint) {
+    // It has always been taken and never mentioned. Saying so is what turns a
+    // safety net into confidence.
+    lines.push('A recovery point is recorded first, so this can be undone from Safety Net.');
+  }
+
+  lines.push(...preflight.warnings.map((warning) => `Note: ${warning}`));
+
+  return lines;
+}
+
+function plural(n: number, noun: string): string {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`;
+}
+
+/**
+ * Shows what the integration would do, and asks.
+ *
+ * The preflight is a read, so this costs a few queries and changes nothing --
+ * which is what makes it safe to run just because a button was pressed. A
+ * preflight that cannot be fetched is not a reason to block the operation; the
+ * question is asked without the detail instead.
+ */
+async function confirmIntegration(
+  type: 'merge' | 'rebase',
+  branch: string,
+  button: HTMLElement
+): Promise<boolean> {
+  let preflight: IntegrationPreflight | null = null;
+
+  try {
+    preflight = (await withButtonBusy(button, () => api.integrationPreflight(type, branch)))
+      .preflight;
+  } catch (error) {
+    if (isStale(error)) {
+      return false;
+    }
+    logToTerminal(`Could not read what this ${type} would do: ${errorMessage(error)}`, 'error');
+  }
+
+  if (preflight?.blocked) {
+    showToast(preflight.blocked, 'warn', 8000);
+    return false;
+  }
+
+  const verb = type === 'merge' ? 'Merge' : 'Rebase onto';
+  const body = preflight
+    ? preflightSentences(preflight, type).join('\n\n')
+    : `The details could not be read, so this is going ahead on what you asked for alone.`;
+
+  const { confirmed } = await confirmDialog(body, {
+    title: `${verb} ${branch}?`,
+    confirmLabel: verb,
+    // A rebase rewrites; a fast-forward merge is the safest thing git does.
+    danger: type === 'rebase' || preflight?.fastForward === false
+  });
+
+  return confirmed;
+}
+
 export async function runIntegration(type: 'merge' | 'rebase'): Promise<void> {
   const branch = asSelect(ui.integrateBranchSelect).value;
   if (!branch) {
@@ -252,6 +352,13 @@ export async function runIntegration(type: 'merge' | 'rebase'): Promise<void> {
   }
 
   const button = type === 'merge' ? ui.btnMerge : ui.btnRebase;
+
+  // Asked before anything moves. Merging and rebasing rewrite history and used
+  // to happen on one click from a dropdown, while discarding a single file
+  // asked twice -- the risk model was the wrong way round.
+  if (!(await confirmIntegration(type, branch, button))) {
+    return;
+  }
 
   await withButtonBusy(button, async () => {
     try {

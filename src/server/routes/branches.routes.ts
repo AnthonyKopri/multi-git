@@ -6,7 +6,9 @@ import { GitError, runGitCommand, tryGitCommand } from '../git/run';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import type { RecoveryOperation } from '../../shared/recovery-types';
 import { requireRepoPath } from '../middleware/repo-path';
-import { asyncRoute } from '../middleware/error-handler';
+import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { integrationPreflight, targetExists } from '../git/integrate-preflight';
+import type { IntegrationKind } from '../../shared/integrate-types';
 
 export const branchesRouter: Router = Router();
 
@@ -157,6 +159,41 @@ async function runIntegration(
     };
   }
 }
+
+/**
+ * What an integration would do, before it does it.
+ *
+ * A read: every command behind this only asks questions, so opening a dialog
+ * costs a few queries and changes nothing.
+ */
+branchesRouter.get(
+  '/api/git/integrate/preflight',
+  asyncRoute(async (req, res) => {
+    const repoPath = req.repoPath as string;
+    const kind = String(req.query['kind'] ?? '');
+    const target = String(req.query['target'] ?? '');
+
+    if (!['merge', 'rebase', 'pull', 'push'].includes(kind)) {
+      throw new HttpError('Which kind of integration?', 400);
+    }
+    if (target === '') {
+      throw new HttpError('Which branch?', 400);
+    }
+
+    if (!(await targetExists(repoPath, target))) {
+      throw new HttpError(`${target} is not a branch or commit in this repository.`, 404);
+    }
+
+    res.json({
+      success: true,
+      preflight: await integrationPreflight({
+        repoPath,
+        kind: kind as IntegrationKind,
+        target
+      })
+    });
+  })
+);
 
 branchesRouter.post(
   '/api/git/merge',
