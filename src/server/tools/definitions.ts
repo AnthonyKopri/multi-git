@@ -165,8 +165,10 @@ export async function resolveExecutable(
 export async function detectTools(
   runner: ExecutableRunner = executableRunner
 ): Promise<DetectedTool[]> {
+  const executableIdentity = (executable: string): string =>
+    process.platform === 'win32' ? executable.toLowerCase() : executable;
   const configured = new Set(
-    listToolDefinitions().map((tool) => `${tool.kind}:${tool.executable.toLowerCase()}`)
+    listToolDefinitions().map((tool) => `${tool.kind}:${executableIdentity(tool.executable)}`)
   );
   const detected: DetectedTool[] = [];
   // One lookup per executable, not per definition: `code` appears three times.
@@ -185,7 +187,7 @@ export async function detectTools(
     detected.push({
       ...known,
       resolvedPath,
-      configured: configured.has(`${known.kind}:${known.executable.toLowerCase()}`)
+      configured: configured.has(`${known.kind}:${executableIdentity(known.executable)}`)
     });
   }
 

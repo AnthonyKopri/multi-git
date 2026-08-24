@@ -17,6 +17,7 @@ const path = require('path');
 const {
   RELEASE_ASSETS,
   CHECKSUM_BASENAME,
+  MACOS_CHECKSUM_BASENAME,
   releaseTag
 } = require('./release-assets');
 
@@ -229,70 +230,93 @@ async function verify(options) {
     report.pass('The release is not marked as a pre-release.');
   }
 
-  // 4. Assets, by the exact names the updater looks for.
+  // 4. Assets, by the exact names each native updater looks for.
   const names = assetNames(release);
-  const expected = {
-    installer: RELEASE_ASSETS.installer.basename(version),
-    portable: RELEASE_ASSETS.portable.basename(version)
-  };
+  const expectedGroups = [
+    {
+      platform: 'Windows',
+      manifestBasename: CHECKSUM_BASENAME,
+      basenames: [
+        RELEASE_ASSETS.installer.basename(version),
+        RELEASE_ASSETS.portable.basename(version)
+      ],
+      upload: 'npm run release:upload'
+    },
+    {
+      platform: 'macOS',
+      manifestBasename: MACOS_CHECKSUM_BASENAME,
+      basenames: [
+        RELEASE_ASSETS.macDmgArm64.basename(version),
+        RELEASE_ASSETS.macZipArm64.basename(version),
+        RELEASE_ASSETS.macDmgX64.basename(version),
+        RELEASE_ASSETS.macZipX64.basename(version)
+      ],
+      upload: 'the macOS release workflow'
+    }
+  ];
 
-  for (const [kind, basename] of Object.entries(expected)) {
-    if (names.has(basename)) {
-      report.pass(`${basename} is attached.`);
+  for (const group of expectedGroups) {
+    for (const basename of group.basenames) {
+      if (names.has(basename)) {
+        report.pass(`${basename} is attached.`);
+      } else {
+        report.fail(
+          `${basename} is missing, so some ${group.platform} users will not be offered this release.`,
+          `Upload with ${group.upload}, which attaches that platform's builds together.`
+        );
+      }
+    }
+
+    if (names.has(group.manifestBasename)) {
+      report.pass(`${group.manifestBasename} is attached.`);
     } else {
       report.fail(
-        `${basename} is missing, so ${kind} users will not be offered this release.`,
-        'Upload with "npm run release:upload", which always attaches both builds together.'
+        `${group.manifestBasename} is missing, so ${group.platform} downloads cannot be verified.`,
+        `Upload with ${group.upload}, which regenerates it from the files it uploads.`
       );
     }
   }
 
-  if (names.has(CHECKSUM_BASENAME)) {
-    report.pass(`${CHECKSUM_BASENAME} is attached.`);
-  } else {
-    report.fail(
-      `${CHECKSUM_BASENAME} is missing, so the release cannot be verified and is skipped entirely.`,
-      'Upload with "npm run release:upload", which regenerates it from the files it uploads.'
+  // 5. Each manifest actually describes its own platform's packages. Separate
+  //    manifests let native Windows and macOS builds be assembled independently.
+  for (const group of expectedGroups) {
+    const checksumAsset = (release.assets ?? []).find(
+      (asset) => asset.name === group.manifestBasename
     );
-  }
+    if (!checksumAsset) {
+      continue;
+    }
 
-  // 5. The manifest actually describes these binaries. Catches a stale
-  //    SHA256SUMS.txt uploaded after the binaries were rebuilt.
-  const checksumAsset = (release.assets ?? []).find((asset) => asset.name === CHECKSUM_BASENAME);
-  if (checksumAsset) {
     const manifest = parseChecksumManifest(await getText(checksumAsset.browser_download_url));
-
-    for (const basename of Object.values(expected)) {
+    for (const basename of group.basenames) {
       if (manifest.has(basename)) {
-        report.pass(`${CHECKSUM_BASENAME} lists ${basename}.`);
+        report.pass(`${group.manifestBasename} lists ${basename}.`);
       } else {
         report.fail(
-          `${CHECKSUM_BASENAME} has no entry for ${basename}, so the download is refused.`,
-          'Re-run "npm run release:upload" against the built artifacts.'
+          `${group.manifestBasename} has no entry for ${basename}, so the download is refused.`,
+          `Re-run ${group.upload} against the built artifacts.`
         );
       }
     }
 
-    // If the artifacts that produced this release are still here, the published
-    // manifest and the local one must agree. They will not if anything was
-    // rebuilt between generating the checksums and uploading them.
-    const localManifest = path.join(DEFAULT_OUTPUT_DIR, CHECKSUM_BASENAME);
-    if (fs.existsSync(localManifest)) {
-      const local = parseChecksumManifest(fs.readFileSync(localManifest, 'utf8'));
-      const drifted = [...local].filter(
-        ([basename, digest]) => manifest.has(basename) && manifest.get(basename) !== digest
-      );
+    const localManifest = path.join(DEFAULT_OUTPUT_DIR, group.manifestBasename);
+    if (!fs.existsSync(localManifest)) {
+      continue;
+    }
+    const local = parseChecksumManifest(fs.readFileSync(localManifest, 'utf8'));
+    const drifted = [...local].filter(
+      ([basename, digest]) => manifest.has(basename) && manifest.get(basename) !== digest
+    );
 
-      if (drifted.length > 0) {
-        report.fail(
-          `The published checksums differ from dist/${CHECKSUM_BASENAME} for: ${drifted
-            .map(([basename]) => basename)
-            .join(', ')}.`,
-          'The uploaded binaries are not the ones built here. Rebuild and re-upload together.'
-        );
-      } else {
-        report.pass(`The published checksums match dist/${CHECKSUM_BASENAME}.`);
-      }
+    if (drifted.length > 0) {
+      report.fail(
+        `The published checksums differ from dist/${group.manifestBasename} for: ${drifted
+          .map(([basename]) => basename)
+          .join(', ')}.`,
+        'The uploaded packages are not the ones built here. Rebuild and re-upload together.'
+      );
+    } else {
+      report.pass(`The published checksums match dist/${group.manifestBasename}.`);
     }
   }
 
@@ -339,12 +363,17 @@ function highestOffer(releases, version) {
 
     const candidate = match.slice(1, 4).join('.');
     const names = assetNames(release);
-    const hasBoth =
+    const hasAllPlatforms =
       names.has(RELEASE_ASSETS.installer.basename(candidate)) &&
       names.has(RELEASE_ASSETS.portable.basename(candidate)) &&
-      names.has(CHECKSUM_BASENAME);
+      names.has(RELEASE_ASSETS.macDmgArm64.basename(candidate)) &&
+      names.has(RELEASE_ASSETS.macZipArm64.basename(candidate)) &&
+      names.has(RELEASE_ASSETS.macDmgX64.basename(candidate)) &&
+      names.has(RELEASE_ASSETS.macZipX64.basename(candidate)) &&
+      names.has(CHECKSUM_BASENAME) &&
+      names.has(MACOS_CHECKSUM_BASENAME);
 
-    if (!hasBoth) {
+    if (!hasAllPlatforms) {
       continue;
     }
 

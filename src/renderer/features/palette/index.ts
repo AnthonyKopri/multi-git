@@ -7,6 +7,7 @@
 import type { Elements } from '../../dom/elements';
 import { asInput } from '../../dom/elements';
 import { el, fragment, setHidden } from '../../dom/create';
+import { displayShortcut } from '../../ui/shortcuts';
 
 export interface Command {
   id: string;
@@ -120,7 +121,10 @@ function renderList(): void {
                 el('span', { className: 'palette-title', text: command.title }),
                 command.shortcut === undefined
                   ? null
-                  : el('span', { className: 'palette-shortcut', text: command.shortcut })
+                  : el('span', {
+                      className: 'palette-shortcut',
+                      text: displayShortcut(command.shortcut)
+                    })
               ]
             });
             row.setAttribute('role', 'option');

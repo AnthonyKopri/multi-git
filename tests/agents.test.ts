@@ -13,10 +13,16 @@ import path from 'node:path';
 
 import {
   INHERITED_ENV_KEYS,
+  MAC_TERMINAL_BRIDGE_TTL_MS,
   POWERSHELL_BRIDGE_SCRIPT,
   buildLaunchEnv,
   buildLaunchPlan,
-  escapeForWindowsTerminal
+  escapeForWindowsTerminal,
+  macTerminalShellPlan,
+  quotePosixShell,
+  renderMacTerminalScript,
+  runLaunchPlan,
+  terminalPlanFor
 } from '../src/server/agents/launch';
 import {
   AgentDefinitionError,
@@ -25,6 +31,7 @@ import {
   resolveExecutable
 } from '../src/server/agents/definitions';
 import { createDetachedLauncher } from '../src/server/process/runner';
+import { buildShellLaunchEnv } from '../src/server/tools/shells';
 import { FakeRunner } from './helpers/fake-runner';
 import { createTempDir, cleanupRepos } from './helpers/temp-repo';
 import type { ExternalAgentDefinition } from '../src/shared/config-types';
@@ -53,7 +60,8 @@ describe('building the launch plan', () => {
     const plan = buildLaunchPlan({
       definition: definition({ args: ['--resume'] }),
       worktreePath: '/work/app.worktrees/login',
-      parentEnv: {}
+      parentEnv: {},
+      platform: 'linux'
     });
 
     expect(plan.executable).toBe('claude');
@@ -70,7 +78,8 @@ describe('building the launch plan', () => {
       definition: definition(),
       worktreePath: '/work/app',
       initialPrompt: nasty,
-      parentEnv: {}
+      parentEnv: {},
+      platform: 'linux'
     });
 
     // One element, byte for byte. There is no command line for any of those
@@ -83,7 +92,8 @@ describe('building the launch plan', () => {
       definition: definition({ promptMode: 'none', args: ['--chat'] }),
       worktreePath: '/work/app',
       initialPrompt: 'do the thing',
-      parentEnv: {}
+      parentEnv: {},
+      platform: 'linux'
     });
 
     expect(plan.args).toEqual(['--chat']);
@@ -94,7 +104,8 @@ describe('building the launch plan', () => {
       definition: definition(),
       worktreePath: '/work/app',
       initialPrompt: 'a secret internal design document',
-      parentEnv: {}
+      parentEnv: {},
+      platform: 'linux'
     });
 
     expect(plan.preview).not.toContain('secret');
@@ -176,6 +187,157 @@ describe('building the launch plan', () => {
       }
     });
   });
+
+  describe('through Terminal.app', () => {
+    const prompt = `fix quotes '; touch /tmp/not-a-command; echo '$HOME`;
+    const plan = () =>
+      buildLaunchPlan({
+        definition: definition({ terminal: 'macos-terminal', args: ['--model', 'opus'] }),
+        worktreePath: "/Users/jane/Work Jane's/app",
+        initialPrompt: prompt,
+        parentEnv: {
+          PATH: '/opt/homebrew/bin:/usr/bin',
+          HOME: '/Users/jane',
+          SSH_AUTH_SOCK: "/private/tmp/socket'one"
+        },
+        platform: 'darwin'
+      });
+
+    it('opens a private command bridge instead of detaching the TTY program', () => {
+      const built = plan();
+      expect(built.executable).toBe('/usr/bin/open');
+      expect(built.args).toEqual([]);
+      expect(built.macTerminalCommand).toEqual({
+        executable: 'claude',
+        args: ['--model', 'opus', prompt]
+      });
+    });
+
+    it('quotes the cwd, environment, executable and every argument as data', () => {
+      const script = renderMacTerminalScript(plan());
+
+      expect(script).toContain(`export PATH=${quotePosixShell('/opt/homebrew/bin:/usr/bin')}`);
+      expect(script).toContain(`export SSH_AUTH_SOCK=${quotePosixShell("/private/tmp/socket'one")}`);
+      expect(script).toContain(`cd -- ${quotePosixShell("/Users/jane/Work Jane's/app")}`);
+      expect(script).toContain(
+        `exec -- ${['claude', '--model', 'opus', prompt].map(quotePosixShell).join(' ')}`
+      );
+      expect(script).toContain('rm -f -- "$0"');
+    });
+
+    it('repairs definitions seeded as direct by an older macOS build', () => {
+      const built = buildLaunchPlan({
+        definition: definition({ terminal: 'direct' }),
+        worktreePath: '/Users/jane/repo',
+        parentEnv: {},
+        platform: 'darwin'
+      });
+      expect(built.macTerminalCommand?.executable).toBe('claude');
+    });
+
+    it('opens an ordinary Mac terminal through the bridge with a login shell', () => {
+      const built = terminalPlanFor(
+        "/Users/jane/Work Jane's/app",
+        {
+          PATH: '/opt/homebrew/bin:/usr/bin',
+          HOME: '/Users/jane',
+          SHELL: '/bin/zsh',
+          SSH_AUTH_SOCK: '/private/tmp/agent.sock'
+        },
+        'darwin'
+      );
+
+      expect(built.executable).toBe('/usr/bin/open');
+      expect(built.args).toEqual([]);
+      expect(built.macTerminalCommand).toEqual({ executable: '/bin/zsh', args: ['-l'] });
+      const script = renderMacTerminalScript(built);
+      expect(script).toContain('export SSH_AUTH_SOCK=');
+      expect(script).toContain(`cd -- ${quotePosixShell("/Users/jane/Work Jane's/app")}`);
+      expect(script).toContain("exec -- '/bin/zsh' '-l'");
+    });
+
+    it('preserves trusted repository routing in a bridged Terminal.app shell', () => {
+      const env = buildShellLaunchEnv(
+        {
+          PATH: '/usr/bin',
+          HOME: '/Users/jane',
+          SHELL: '/bin/zsh',
+          SSH_AUTH_SOCK: '/private/tmp/agent.sock'
+        },
+        'ssh -i "/Users/jane/.ssh/id_work" -o IdentitiesOnly=yes'
+      );
+      const script = renderMacTerminalScript(macTerminalShellPlan('/Users/jane/repo', env));
+
+      expect(script).toContain('export GIT_SSH_COMMAND=');
+      expect(script).toContain('id_work');
+      expect(script).toContain('export SSH_AUTH_SOCK=');
+    });
+
+    it('uses zsh when an inherited shell is not an executable absolute path', () => {
+      const built = macTerminalShellPlan('/Users/jane/repo', { SHELL: 'relative-shell' });
+      expect(built.macTerminalCommand).toEqual({ executable: '/bin/zsh', args: ['-l'] });
+    });
+
+    it('creates a private bridge, addresses Terminal by bundle id, and expires residue', async () => {
+      vi.useFakeTimers();
+      let bridgePath = '';
+      try {
+        const plan = buildLaunchPlan({
+          definition: definition({ terminal: 'macos-terminal' }),
+          worktreePath: createTempDir('multi-git-mac-bridge-worktree-'),
+          initialPrompt: 'private prompt',
+          parentEnv: { HOME: '/Users/jane' },
+          platform: 'darwin'
+        });
+        const result = await runLaunchPlan(plan, {
+          launch: async (executable, args, options) => {
+            expect(executable).toBe('/usr/bin/open');
+            expect(args.slice(0, 2)).toEqual(['-b', 'com.apple.Terminal']);
+            expect(options?.visible).toBe(false);
+            bridgePath = args[2] as string;
+            if (process.platform !== 'win32') {
+              expect(fs.statSync(bridgePath).mode & 0o777).toBe(0o700);
+            }
+            expect(fs.readFileSync(bridgePath, 'utf8')).toContain('private prompt');
+            return { pid: 42 };
+          }
+        });
+
+        expect(result.pid).toBe(42);
+        expect(fs.existsSync(bridgePath)).toBe(true);
+        await vi.advanceTimersByTimeAsync(MAC_TERMINAL_BRIDGE_TTL_MS);
+        expect(fs.existsSync(bridgePath)).toBe(false);
+      } finally {
+        vi.useRealTimers();
+        if (bridgePath) {
+          fs.rmSync(path.dirname(bridgePath), { recursive: true, force: true });
+        }
+      }
+    });
+
+    it('removes the bridge immediately when Terminal cannot be launched', async () => {
+      const plan = buildLaunchPlan({
+        definition: definition({ terminal: 'macos-terminal' }),
+        worktreePath: createTempDir('multi-git-mac-bridge-error-'),
+        initialPrompt: 'do not leave this behind',
+        parentEnv: {},
+        platform: 'darwin'
+      });
+      let bridgePath = '';
+
+      await expect(
+        runLaunchPlan(plan, {
+          launch: async (_executable, args) => {
+            bridgePath = args[2] as string;
+            throw new Error('Launch Services unavailable');
+          }
+        })
+      ).rejects.toThrow('Launch Services unavailable');
+
+      expect(bridgePath).not.toBe('');
+      expect(fs.existsSync(bridgePath)).toBe(false);
+    });
+  });
 });
 
 describe('the environment a launched tool gets', () => {
@@ -238,6 +400,24 @@ describe('the environment a launched tool gets', () => {
   it('refuses an override that would re-add a denied variable', () => {
     const env = buildLaunchEnv(parent, { GIT_SSH_COMMAND: 'ssh -i /tmp/other' });
     expect(env['GIT_SSH_COMMAND']).toBeUndefined();
+  });
+});
+
+describe('the environment a repository shell gets', () => {
+  it('carries the trusted repository identity without leaking the app askpass bridge', () => {
+    const env = buildShellLaunchEnv(
+      {
+        PATH: '/usr/bin',
+        HOME: '/Users/jane',
+        SSH_AUTH_SOCK: '/private/tmp/agent.sock',
+        SSH_ASKPASS: '/tmp/multi-git-secret-askpass'
+      },
+      'ssh -i "/Users/jane/.ssh/id_work" -o IdentitiesOnly=yes'
+    );
+
+    expect(env['GIT_SSH_COMMAND']).toContain('id_work');
+    expect(env['SSH_AUTH_SOCK']).toBe('/private/tmp/agent.sock');
+    expect(env['SSH_ASKPASS']).toBeUndefined();
   });
 });
 
@@ -334,7 +514,9 @@ describe('detecting an installed tool', () => {
       promptMode: 'argument'
     });
     expect(seeded.id).not.toBe('claude');
-    expect(seeded.terminal).toBe(isWindows ? 'windows-terminal' : 'direct');
+    expect(seeded.terminal).toBe(
+      isWindows ? 'windows-terminal' : process.platform === 'darwin' ? 'macos-terminal' : 'direct'
+    );
   });
 });
 
@@ -509,7 +691,7 @@ describe('launching, end to end against a fake launcher', () => {
 
     const result = await service.launchAgent(
       { repoPath: worktree, worktreePath: worktree, agentId: 'claude', initialPrompt: 'hello' },
-      { runner, launcher: launcherRecording(record) }
+      { runner, launcher: launcherRecording(record), platform: 'linux' }
     );
 
     expect(result.launched).toBe(true);

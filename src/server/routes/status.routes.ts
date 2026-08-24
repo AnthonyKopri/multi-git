@@ -98,12 +98,14 @@ statusRouter.get(
 
     // Independent queries: run them together rather than back to back.
     const [tracked, untracked] = await Promise.all([
-      runGitCommand(repoPath, ['ls-files']),
-      runGitCommand(repoPath, ['ls-files', '--others', '--exclude-standard'])
+      runGitCommand(repoPath, ['ls-files', '-z']),
+      runGitCommand(repoPath, ['ls-files', '-z', '--others', '--exclude-standard'])
     ]);
 
-    const toList = (output: string): string[] =>
-      output.split('\n').map((entry) => entry.trim()).filter(Boolean);
+    // `-z` disables Git's C/octal path quoting and makes NUL the separator.
+    // Splitting on newlines and trimming corrupts valid Unicode, whitespace,
+    // and newline-containing filenames on POSIX filesystems.
+    const toList = (output: string): string[] => output.split('\0').filter((entry) => entry !== '');
 
     res.json({
       success: true,

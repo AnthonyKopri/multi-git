@@ -1,7 +1,7 @@
 // Electron lifecycle: start the local backend, then show the windows.
 import fs from 'node:fs';
 import type { Server } from 'node:http';
-import { BrowserWindow, app, dialog, ipcMain, screen } from 'electron';
+import { BrowserWindow, Menu, app, dialog, ipcMain, screen } from 'electron';
 
 import { startServer } from '../server/index';
 import { repairSshAgentElevated } from './ssh-agent-elevation';
@@ -31,6 +31,29 @@ import {
 } from './windows';
 import type { AgentLaunchInput } from '../shared/agent-types';
 import type { ExternalToolKind } from '../shared/config-types';
+import { bootstrapMacOSPath } from './macos-environment';
+import { ExternalRepoOpenQueue } from './external-open';
+import { macApplicationMenuTemplate } from './application-menu';
+
+// Finder does not launch applications through the user's shell, so Homebrew
+// and per-user tools would otherwise disappear from PATH in the packaged app.
+// Do this before the backend starts: every Git/SSH/GPG/tool process inherits
+// the repaired environment from here.
+bootstrapMacOSPath();
+
+const ownsSingleInstance = app.requestSingleInstanceLock();
+const externalRepoOpens = new ExternalRepoOpenQueue(resolveRepoPath);
+
+if (!ownsSingleInstance) {
+  // Explorer/Finder may start another executable even while this app is open.
+  // Electron forwards its argv to the lock owner; this copy must never start a
+  // second backend or a second set of windows.
+  app.quit();
+} else {
+  // The initial Explorer command arrives in argv. On macOS later Finder opens
+  // use `open-file` below instead.
+  externalRepoOpens.enqueueCommandLine(process.argv, app.isPackaged);
+}
 
 let logWindow: BrowserWindow | null = null;
 let backendServer: Server | null = null;
@@ -379,6 +402,10 @@ function rememberShellIntegration(installed: boolean): void {
 }
 
 async function startApp(): Promise<void> {
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(Menu.buildFromTemplate(macApplicationMenuTemplate()));
+  }
+
   registerIpcHandlers();
 
   try {
@@ -392,7 +419,12 @@ async function startApp(): Promise<void> {
 
     windows = createRegistry();
 
-    if (!restoreWindows()) {
+    const restored = restoreWindows();
+    const externallyOpened = externalRepoOpens.attach((repoPath) => {
+      windows?.openOrFocus(repoPath);
+    });
+
+    if (!restored && externallyOpened === 0) {
       openInitialWindow();
     }
 
@@ -405,9 +437,22 @@ async function startApp(): Promise<void> {
   }
 }
 
-app.on('ready', () => {
-  void startApp();
-});
+if (ownsSingleInstance) {
+  app.on('second-instance', (_event, commandLine, workingDirectory) => {
+    externalRepoOpens.enqueueCommandLine(commandLine, app.isPackaged, workingDirectory);
+  });
+
+  // macOS may deliver this before `ready`; the queue deliberately exists
+  // before either event is registered so no Finder request gets lost.
+  app.on('open-file', (event, filePath) => {
+    event.preventDefault();
+    externalRepoOpens.enqueue(filePath);
+  });
+
+  app.on('ready', () => {
+    void startApp();
+  });
+}
 
 app.on('window-all-closed', () => {
   // The log window is a companion of the repository windows, not a reason to

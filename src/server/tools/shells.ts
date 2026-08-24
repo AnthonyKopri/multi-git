@@ -26,7 +26,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { buildLaunchEnv } from '../agents/launch';
+import { buildLaunchEnv, macTerminalShellPlan } from '../agents/launch';
 import type { LaunchPlan } from '../agents/launch';
 import { readRepoSshCommand } from '../ssh/repo-routing';
 import { sshCommandPrefix } from '../ssh/openssh-path';
@@ -97,10 +97,28 @@ export async function sshCommandForShell(repoPath: string): Promise<string | nul
 export async function shellEnvFor(repoPath: string): Promise<NodeJS.ProcessEnv> {
   const sshCommand = await sshCommandForShell(repoPath);
 
-  return buildLaunchEnv(
-    process.env,
-    sshCommand === null ? undefined : { GIT_SSH_COMMAND: sshCommand }
-  );
+  return buildShellLaunchEnv(process.env, sshCommand);
+}
+
+/**
+ * Builds the environment for the trusted repository-shell path.
+ *
+ * Agent-defined overrides may never set GIT_SSH_COMMAND, but this value was
+ * read from the repository and, on Windows, only has its ssh executable
+ * replaced with the agent-capable system copy. Adding it after the generic
+ * allowlist keeps that trust boundary intact while actually carrying the
+ * identity the shell feature promises.
+ */
+export function buildShellLaunchEnv(
+  parentEnv: NodeJS.ProcessEnv,
+  sshCommand: string | null
+): NodeJS.ProcessEnv {
+  const env = buildLaunchEnv(parentEnv, undefined);
+  if (sshCommand !== null) {
+    env['GIT_SSH_COMMAND'] = sshCommand;
+  }
+
+  return env;
 }
 
 /** What to spawn to put a shell in this repository. */
@@ -143,14 +161,7 @@ function terminalPlan(repoPath: string, env: NodeJS.ProcessEnv): LaunchPlan {
   }
 
   if (process.platform === 'darwin') {
-    return {
-      executable: 'open',
-      args: ['-a', 'Terminal', repoPath],
-      cwd: repoPath,
-      env,
-      visible: true,
-      preview: `open -a Terminal "${repoPath}"`
-    };
+    return macTerminalShellPlan(repoPath, env);
   }
 
   return {

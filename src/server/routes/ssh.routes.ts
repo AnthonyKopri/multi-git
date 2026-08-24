@@ -416,7 +416,11 @@ sshRouter.post(
 
     const sshHome = path.join(os.homedir(), '.ssh');
     const relative = path.relative(sshHome, target);
-    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    if (
+      relative === '..' ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative)
+    ) {
       throw new HttpError('Opening locations is restricted to your ~/.ssh directory.', 400);
     }
 

@@ -20,6 +20,7 @@ import { closeAllDropdowns, registerDropdown } from '../../ui/dropdown';
 import { el, fragment, icon } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
 import type { Command } from '../palette';
+import { displayShortcut } from '../../ui/shortcuts';
 
 /** Groups in the order they appear. A command's `menu` names one of these. */
 const GROUP_ORDER: readonly string[] = ['Repository', 'History', 'Safety Net'];
@@ -85,7 +86,10 @@ function menuRow(command: Command): HTMLLIElement {
       el('span', { text: command.title }),
       command.shortcut === undefined
         ? null
-        : el('span', { className: 'app-menu-shortcut', text: command.shortcut })
+        : el('span', {
+            className: 'app-menu-shortcut',
+            text: displayShortcut(command.shortcut)
+          })
     ]
   }) as HTMLLIElement;
 

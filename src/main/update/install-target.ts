@@ -16,9 +16,16 @@ export interface InstallEnvironment {
 }
 
 export function detectInstallKind(environment: InstallEnvironment): InstallKind {
-  // Only Windows artifacts are published, and an unpackaged run is a checkout
-  // that npm, not an installer, is responsible for.
-  if (environment.platform !== 'win32' || !environment.isPackaged) {
+  // An unpackaged run is a checkout that npm, not an installer, owns.
+  if (!environment.isPackaged) {
+    return 'unsupported';
+  }
+
+  if (environment.platform === 'darwin') {
+    return 'macos';
+  }
+
+  if (environment.platform !== 'win32') {
     return 'unsupported';
   }
 
@@ -32,6 +39,9 @@ export function detectInstallKind(environment: InstallEnvironment): InstallKind 
 export function portableDirectory(
   environment: InstallEnvironment
 ): string | null {
+  if (environment.platform !== 'win32' || !environment.isPackaged) {
+    return null;
+  }
   const dir = environment.env['PORTABLE_EXECUTABLE_DIR'];
   return typeof dir === 'string' && dir.trim() !== '' ? dir : null;
 }
@@ -54,6 +64,12 @@ export function installCommand(kind: InstallKind, filePath: string): InstallComm
   }
   if (kind === 'portable') {
     return { file: filePath, args: [] };
+  }
+  if (kind === 'macos') {
+    // A signed DMG cannot replace the running .app in place. Mount it with
+    // Launch Services; Finder presents the ordinary drag-to-Applications
+    // install, which also works when this copy lives somewhere else.
+    return { file: '/usr/bin/open', args: [filePath] };
   }
   throw new Error('This build does not install updates.');
 }

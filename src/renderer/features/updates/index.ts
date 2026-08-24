@@ -4,9 +4,9 @@
 // an update comes from or where it lands — it asks for "the update" the main
 // process already resolved. See src/shared/desktop-api.ts.
 //
-// In browser mode, on anything but Windows, and in an unpackaged dev run there
-// is no bridge or the bridge reports `supported: false`, and this module
-// registers nothing and shows nothing.
+// Browser mode has no bridge. Unsupported platforms and unpackaged dev runs
+// still have the desktop bridge, but report `supported: false`; the navbar
+// stays hidden and an explicit Settings check explains why it cannot run.
 
 import { setHidden } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
@@ -113,6 +113,17 @@ export async function checkNow(): Promise<void> {
     return;
   }
   try {
+    if (!current) {
+      const state = await window.desktopApi?.getUpdateState?.();
+      if (state) {
+        current = state;
+        render();
+      }
+    }
+    if (current?.supported === false) {
+      showToast('Update checks require an installed, packaged build.', 'info', 6000);
+      return;
+    }
     await window.desktopApi?.checkForUpdate?.();
   } catch {
     showToast('Could not check for updates.', 'error', 6000);
@@ -122,8 +133,8 @@ export async function checkNow(): Promise<void> {
 export function initUpdates(elements: Elements): void {
   ui = elements;
 
-  // The single early return that covers browser mode, macOS and Linux, and a
-  // dev run from a checkout: no listeners, no requests, nothing shown.
+  // Browser mode has no update bridge: no listeners, no requests, nothing
+  // shown. Desktop source runs continue so their unsupported state can render.
   if (!isSupported()) {
     return;
   }

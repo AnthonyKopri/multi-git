@@ -34,7 +34,7 @@ export const TREE_KILLABLE_SPAWN_OPTIONS: { detached: boolean } = {
 /** How long a POSIX tree gets to exit on SIGTERM before SIGKILL. */
 export const KILL_GRACE_MS = 3000;
 
-function killWindowsTree(pid: number): void {
+function killWindowsTree(child: ChildProcess, pid: number): void {
   // /T includes the child tree, /F skips the polite close request that a
   // console process without a message loop never receives.
   const killer = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], {
@@ -42,9 +42,27 @@ function killWindowsTree(pid: number): void {
     stdio: 'ignore'
   });
 
-  // taskkill failing is not actionable here: the usual cause is that the
-  // process already exited, which is the outcome we wanted.
-  killer.on('error', () => {});
+  // Some managed Windows environments deny process-table traversal even when
+  // this process is allowed to terminate its own direct child. Do not leave a
+  // timeout/cancellation hanging in that case: the direct kill cannot promise
+  // the descendants, but it can still close the child and its pipes. On an
+  // ordinary desktop taskkill remains the path that reaches the whole tree.
+  const killDirectChild = (): void => {
+    if (child.exitCode === null && child.signalCode === null) {
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        // It exited between the state check and the kill.
+      }
+    }
+  };
+
+  killer.on('error', killDirectChild);
+  killer.on('close', (code) => {
+    if (code !== 0) {
+      killDirectChild();
+    }
+  });
 }
 
 function killPosixTree(child: ChildProcess, pid: number, signal: NodeJS.Signals): void {
@@ -78,7 +96,7 @@ export function killProcessTree(child: ChildProcess, signal: NodeJS.Signals = 'S
   }
 
   if (isWindows) {
-    killWindowsTree(pid);
+    killWindowsTree(child, pid);
     return () => {};
   }
 

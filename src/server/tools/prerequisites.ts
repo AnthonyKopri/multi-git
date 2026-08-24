@@ -41,8 +41,11 @@ async function probeVersion(
 }
 
 /** Whether winget is here to install things with. */
-export async function hasWinget(runner: ExecutableRunner = executableRunner): Promise<boolean> {
-  if (process.platform !== 'win32') {
+export async function hasWinget(
+  runner: ExecutableRunner = executableRunner,
+  platform: NodeJS.Platform = process.platform
+): Promise<boolean> {
+  if (platform !== 'win32') {
     return false;
   }
 
@@ -50,13 +53,14 @@ export async function hasWinget(runner: ExecutableRunner = executableRunner): Pr
 }
 
 export async function detectPrerequisites(
-  runner: ExecutableRunner = executableRunner
+  runner: ExecutableRunner = executableRunner,
+  platform: NodeJS.Platform = process.platform
 ): Promise<PrerequisiteReport> {
   const [gitVersion, gitBash, github, canInstall] = await Promise.all([
     probeVersion('git', runner),
-    Promise.resolve(findGitBash()),
+    Promise.resolve(platform === 'win32' ? findGitBash() : null),
     checkGithubAvailability(runner),
-    hasWinget(runner)
+    hasWinget(runner, platform)
   ]);
 
   const git: PrerequisiteState = {
@@ -100,7 +104,10 @@ export async function detectPrerequisites(
   };
 
   return {
-    tools: [git, bash, gh],
+    // Git Bash is a Git-for-Windows component, not a missing prerequisite on
+    // a healthy Mac/Linux machine. Showing it there kept onboarding permanently
+    // red even though the native Terminal and shell were available.
+    tools: platform === 'win32' ? [git, bash, gh] : [git, gh],
     // Only git blocks. The rest degrade.
     blocked: !git.installed,
     canInstall

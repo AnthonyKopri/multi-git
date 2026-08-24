@@ -6,7 +6,11 @@ import { pathArg, pathArgs } from '../git/args';
 import { runGitCommand } from '../git/run';
 import { parseBlameOutput } from '../git/blame';
 import { resolveInsideRepo } from '../fs/paths';
-import { openPathInDefaultApp, pickFolderWithPowerShell } from '../os/reveal';
+import {
+  openPathInDefaultApp,
+  pickFolderWithAppleScript,
+  pickFolderWithPowerShell
+} from '../os/reveal';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 
@@ -137,13 +141,20 @@ folderRouter.get(
     if (process.versions.electron || process.env['IS_ELECTRON'] === 'true') {
       throw new HttpError('Folder selection is handled by Electron in desktop mode', 400);
     }
-    if (os.platform() !== 'win32') {
+    const platform = os.platform();
+    if (platform !== 'win32' && platform !== 'darwin') {
       throw new HttpError(
-        'Folder selection endpoint is only available on Windows web mode',
+        'Folder selection endpoint is not available on this platform in web mode',
         501
       );
     }
 
-    res.json({ success: true, path: await pickFolderWithPowerShell() });
+    res.json({
+      success: true,
+      path:
+        platform === 'darwin'
+          ? await pickFolderWithAppleScript()
+          : await pickFolderWithPowerShell()
+    });
   })
 );

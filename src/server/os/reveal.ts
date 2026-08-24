@@ -14,12 +14,17 @@ function launchDetached(command: string, args: readonly string[]): Promise<true>
       stdio: 'ignore'
     });
 
-    child.on('error', (error: Error) => {
+    child.once('error', (error: Error) => {
       reject(new Error(`Failed to open location: ${error.message}`));
     });
 
-    child.unref();
-    resolve(true);
+    // `spawn` reports ENOENT asynchronously. Resolve only once the OS has
+    // accepted the process; resolving immediately made a missing `open` /
+    // explorer / xdg-open look successful and discarded the later error.
+    child.once('spawn', () => {
+      child.unref();
+      resolve(true);
+    });
   });
 }
 
@@ -46,9 +51,11 @@ export function openPathInDefaultApp(targetPath: string): Promise<true> {
     return launchDetached('explorer', [targetPath]);
   }
   if (os.platform() === 'darwin') {
-    // -t routes through the default *text* editor, so a file with no
-    // extension does not land in an unrelated app.
-    return launchDetached('open', ['-t', targetPath]);
+    // With no `-a` or `-t`, LaunchServices uses the file's normal association:
+    // Preview for images/PDFs, the user's editor for text, and so on. `-t`
+    // forced every file through a text editor and corrupted the expected
+    // Explorer behaviour for non-text repository files.
+    return launchDetached('open', [targetPath]);
   }
   return launchDetached('xdg-open', [targetPath]);
 }
@@ -81,6 +88,35 @@ export async function pickFolderWithPowerShell(): Promise<string> {
 
   if (result.spawnError) {
     throw new Error(`Failed to open file dialog: ${result.spawnError.message}`);
+  }
+
+  return result.stdout.trim();
+}
+
+/** Opens Finder's native folder picker for browser mode on macOS. */
+export async function pickFolderWithAppleScript(): Promise<string> {
+  const { runProcess } = await import('../process/run');
+
+  // A constant program and constant script. The chosen path comes back on
+  // stdout and is never interpolated into AppleScript or a shell command.
+  const result = await runProcess(
+    'osascript',
+    [
+      '-e',
+      'POSIX path of (choose folder with prompt "Select Git Repository Folder")'
+    ],
+    { timeoutMs: 10 * 60 * 1000 }
+  );
+
+  if (result.spawnError) {
+    throw new Error(`Failed to open file dialog: ${result.spawnError.message}`);
+  }
+  if (result.code !== 0) {
+    // Error -128 is the ordinary Cancel button, not a failed picker.
+    if (result.stderr.includes('(-128)') || /user canceled/i.test(result.stderr)) {
+      return '';
+    }
+    throw new Error(result.stderr.trim() || 'The macOS folder picker failed.');
   }
 
   return result.stdout.trim();

@@ -6,7 +6,12 @@
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
-import { CHECKSUM_ASSET, assetBasename, parseReleaseTag } from '../src/main/update/release-feed';
+import {
+  CHECKSUM_ASSET,
+  MACOS_CHECKSUM_ASSET,
+  assetBasename,
+  parseReleaseTag
+} from '../src/main/update/release-feed';
 
 interface VerifyScriptApi {
   parseArgs(argv: string[]): Record<string, string | boolean>;
@@ -20,12 +25,21 @@ const verify = require('../scripts/verify-release.js') as VerifyScriptApi;
 
 const DIGEST = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
 
-function release(version: string, overrides: Record<string, unknown> = {}, assetNames?: string[]) {
-  const names = assetNames ?? [
+function completeAssetNames(version: string): string[] {
+  return [
     assetBasename('installer', version),
     assetBasename('portable', version),
-    CHECKSUM_ASSET
-  ];
+    assetBasename('macos', version, 'arm64'),
+    `Multi-Git-Client-macOS-${version}-arm64.zip`,
+    assetBasename('macos', version, 'x64'),
+    `Multi-Git-Client-macOS-${version}-x64.zip`,
+    CHECKSUM_ASSET,
+    MACOS_CHECKSUM_ASSET
+  ].filter((name): name is string => name !== null);
+}
+
+function release(version: string, overrides: Record<string, unknown> = {}, assetNames?: string[]) {
+  const names = assetNames ?? completeAssetNames(version);
 
   return {
     tag_name: `Release_v${version}`,
@@ -88,24 +102,36 @@ describe('working out what would be offered', () => {
     ).toBeNull();
   });
 
-  it('ignores a release that is missing an artifact or its checksums', () => {
-    const noPortable = release('3.2.0', {}, [assetBasename('installer', '3.2.0'), CHECKSUM_ASSET]);
-    const noChecksums = release('3.2.0', {}, [
-      assetBasename('installer', '3.2.0'),
-      assetBasename('portable', '3.2.0')
-    ]);
+  it('ignores a release that is missing any native artifact or checksum set', () => {
+    const complete = completeAssetNames('3.2.0');
+    const noPortable = release(
+      '3.2.0',
+      {},
+      complete.filter((name) => name !== assetBasename('portable', '3.2.0'))
+    );
+    const noWindowsChecksums = release(
+      '3.2.0',
+      {},
+      complete.filter((name) => name !== CHECKSUM_ASSET)
+    );
+    const noMacX64 = release(
+      '3.2.0',
+      {},
+      complete.filter((name) => name !== assetBasename('macos', '3.2.0', 'x64'))
+    );
 
     expect(verify.highestOffer([noPortable], '3.2.0')).toBeNull();
-    expect(verify.highestOffer([noChecksums], '3.2.0')).toBeNull();
+    expect(verify.highestOffer([noWindowsChecksums], '3.2.0')).toBeNull();
+    expect(verify.highestOffer([noMacX64], '3.2.0')).toBeNull();
   });
 
   it('spots a tag whose version does not match its assets', () => {
     // Tagged 3.3.0, but built from a package.json still saying 3.2.0.
-    const mismatched = release('3.3.0', { tag_name: 'Release_v3.3.0' }, [
-      assetBasename('installer', '3.2.0'),
-      assetBasename('portable', '3.2.0'),
-      CHECKSUM_ASSET
-    ]);
+    const mismatched = release(
+      '3.3.0',
+      { tag_name: 'Release_v3.3.0' },
+      completeAssetNames('3.2.0')
+    );
 
     expect(verify.highestOffer([mismatched], '3.3.0')).toBeNull();
   });

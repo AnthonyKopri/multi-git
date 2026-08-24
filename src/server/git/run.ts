@@ -11,6 +11,7 @@ import { DEFAULT_TIMEOUT_MS, runProcess } from '../process/run';
 import { sshCommandPrefix } from '../ssh/openssh-path';
 import { gitCommandKind } from './command-kind';
 import { appendLog } from '../logs';
+import { quoteShellArgument } from '../process/shell-quote';
 import type { LogCommand } from '../logs';
 
 export interface GitResult {
@@ -83,7 +84,7 @@ export function buildSshCommand(sshKeyPath: string, singlePasswordPrompt = false
     // to the MSYS build inside Git for Windows, which cannot see the agent
     // this app loads keys into, and so asks for the passphrase of a key that
     // is already unlocked and sitting in it.
-    `${sshCommandPrefix()} -i "${normalized}"`,
+    `${sshCommandPrefix()} -i ${quoteShellArgument(normalized)}`,
     '-o IdentitiesOnly=yes',
     '-o StrictHostKeyChecking=accept-new'
   ];

@@ -27,11 +27,17 @@ describe('detecting how this copy was installed', () => {
     expect(detectInstallKind(environment({ isPackaged: false }))).toBe('unsupported');
   });
 
-  it('updates nothing off Windows, whatever the environment says', () => {
-    for (const platform of ['darwin', 'linux']) {
-      const env = environment({ platform, env: { PORTABLE_EXECUTABLE_DIR: '/tmp/x' } });
-      expect(detectInstallKind(env)).toBe('unsupported');
-    }
+  it('recognises a packaged macOS application and ignores Windows portable state', () => {
+    const env = environment({
+      platform: 'darwin',
+      env: { PORTABLE_EXECUTABLE_DIR: '/tmp/not-a-mac-install-kind' }
+    });
+    expect(detectInstallKind(env)).toBe('macos');
+    expect(portableDirectory(env)).toBeNull();
+  });
+
+  it('updates nothing on an unsupported platform', () => {
+    expect(detectInstallKind(environment({ platform: 'linux' }))).toBe('unsupported');
   });
 
   it('ignores a blank variable rather than treating it as a directory', () => {
@@ -53,6 +59,13 @@ describe('starting the downloaded file', () => {
     expect(installCommand('portable', 'D:\\Tools\\New.exe')).toEqual({
       file: 'D:\\Tools\\New.exe',
       args: []
+    });
+  });
+
+  it('opens a verified macOS disk image through Launch Services', () => {
+    expect(installCommand('macos', '/tmp/Multi-Git.dmg')).toEqual({
+      file: '/usr/bin/open',
+      args: ['/tmp/Multi-Git.dmg']
     });
   });
 

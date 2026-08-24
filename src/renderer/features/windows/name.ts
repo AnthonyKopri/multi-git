@@ -8,22 +8,25 @@
 /**
  * A stable `window.open` target name for a repository path.
  *
- * Case is folded and separators normalised for the same reason the server's
- * canonical key does it — `D:\Work\App` and `d:/work/app` are one folder. A
- * trailing separator is dropped so `…\app\` and `…\app` agree.
+ * Windows paths are case-folded and have both separator spellings normalised,
+ * for the same reason the server's canonical key does it — `D:\Work\App` and
+ * `d:/work/app` are one folder. POSIX paths keep their case and backslashes:
+ * both can distinguish real folders on a case-sensitive APFS volume.
  *
  * Deliberately not the path itself: a window name may not contain whitespace
  * in some browsers, and the value is visible in `window.name`, so it is
  * reduced to characters that are safe to put there.
  */
 export function canonicalWindowName(repoPath: string): string {
-  const normalized = repoPath
-    .replace(/[\\/]+/g, '/')
+  const windowsPath = /^[a-z]:[\\/]/i.test(repoPath) || /^\\\\/.test(repoPath);
+  const normalized = (windowsPath ? repoPath.replace(/[\\/]+/g, '/') : repoPath.replace(/\/{2,}/g, '/'))
     .replace(/\/+$/, '')
-    .toLowerCase();
+    .normalize('NFC');
+  const identity = windowsPath ? normalized.toLowerCase() : normalized;
 
-  // Not a hash: a readable name is far easier to recognise in a browser's
-  // window list, and collisions between two different folders are prevented by
-  // keeping every distinguishing character rather than by the escaping.
-  return `multi-git-${normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
+  // Percent-encoding keeps every distinguishing Unicode code point while also
+  // removing whitespace and separators that browsers restrict in target
+  // names. The old ASCII slug erased all non-Latin names, so unrelated folders
+  // such as 项目 and 资料 both targeted the same tab.
+  return `multi-git-${encodeURIComponent(identity)}`;
 }

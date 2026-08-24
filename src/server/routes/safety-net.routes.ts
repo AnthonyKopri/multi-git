@@ -11,10 +11,8 @@ import {
   listCheckpoints
 } from '../safety-net/checkpoints';
 import {
-  readTrashIndex,
-  repoTrashDir,
-  pruneTrash,
-  writeTrashIndex
+  listTrash,
+  writeRepoTrashIndex
 } from '../safety-net/trash';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
@@ -63,18 +61,12 @@ safetyNetRouter.post(
 
 safetyNetRouter.get('/api/git/trash', (req, res) => {
   const repoPath = req.repoPath as string;
-  const trashDir = repoTrashDir(repoPath);
-
-  const entries = readTrashIndex(trashDir);
-  const pruned = pruneTrash(entries);
-  if (pruned.length !== entries.length) {
-    writeTrashIndex(trashDir, pruned);
-  }
+  const entries = listTrash(repoPath);
 
   res.json({
     success: true,
     // trashFile is a server-side path the client has no use for.
-    entries: pruned.map((entry) => ({
+    entries: entries.map((entry) => ({
       id: entry.id,
       path: entry.path,
       savedAt: entry.savedAt
@@ -88,8 +80,7 @@ safetyNetRouter.post(
     const repoPath = req.repoPath as string;
     const { id } = (req.body ?? {}) as { id?: unknown };
 
-    const trashDir = repoTrashDir(repoPath);
-    const entries = readTrashIndex(trashDir);
+    const entries = listTrash(repoPath);
     const entry = entries.find((candidate) => candidate.id === id);
 
     if (!entry) {
@@ -109,8 +100,8 @@ safetyNetRouter.post(
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.copyFileSync(entry.trashFile, targetPath);
     fs.unlinkSync(entry.trashFile);
-    writeTrashIndex(
-      trashDir,
+    writeRepoTrashIndex(
+      repoPath,
       entries.filter((candidate) => candidate.id !== id)
     );
 

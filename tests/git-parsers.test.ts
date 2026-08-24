@@ -96,6 +96,16 @@ describe('parsePorcelainStatus', () => {
     ]);
   });
 
+  it('keeps separately quoted rename paths and Unicode bytes intact', () => {
+    const status = parsePorcelainStatus(
+      '## main\nR  "old name.txt" -> "caf\\303\\251 new name.txt"'
+    );
+
+    expect(status.staged).toEqual([
+      { path: 'café new name.txt', status: 'R', origPath: 'old name.txt' }
+    ]);
+  });
+
   it('classifies every unmerged combination as a conflict', () => {
     const status = parsePorcelainStatus(
       ['## main', 'UU both-modified.txt', 'AA both-added.txt', 'DD both-deleted.txt', 'AU ours.txt', 'UD theirs.txt'].join('\n')
@@ -115,9 +125,9 @@ describe('parsePorcelainStatus', () => {
   it('decodes quoted paths with non-ASCII names', () => {
     const status = parsePorcelainStatus('## main\n M "caf\\303\\251.txt"');
 
-    // Git quotes non-ASCII bytes as octal escapes, which this parser leaves
-    // intact rather than mis-decoding as C escapes.
-    expect(status.unstaged[0]?.path).toContain('caf');
+    // Git's octal escapes are UTF-8 bytes. Returning the escape spelling makes
+    // every action on this row address a different, nonexistent file.
+    expect(status.unstaged[0]?.path).toBe('café.txt');
   });
 
   it('ignores truncated lines instead of producing junk entries', () => {

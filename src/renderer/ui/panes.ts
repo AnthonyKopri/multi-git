@@ -10,6 +10,8 @@
 // :root; the stylesheet reads those for the panel widths and heights. Sizes
 // are remembered per panel across sessions.
 
+import { displayShortcut } from './shortcuts';
+
 export type PaneName = 'sidebar' | 'history' | 'tree' | 'diffFiles' | 'commit' | 'terminal';
 
 export interface PaneSpec {
@@ -310,13 +312,14 @@ function applyCollapsed(side: CollapsibleSide, collapsed: boolean, root: ParentN
   }
 
   const label = collapsed ? spec.showLabel : spec.hideLabel;
+  const shortcut = displayShortcut(spec.shortcut);
   if (toggle) {
-    toggle.title = `${label} (${spec.shortcut})`;
+    toggle.title = `${label} (${shortcut})`;
     toggle.setAttribute('aria-label', label);
   }
   // The centre-tab control only exists to reopen, so its label never changes.
   if (reveal) {
-    reveal.title = `${spec.showLabel} (${spec.shortcut})`;
+    reveal.title = `${spec.showLabel} (${shortcut})`;
   }
 }
 

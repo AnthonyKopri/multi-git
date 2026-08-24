@@ -36,6 +36,8 @@ import type { InstallOutcome } from '../../shared/prerequisite-types';
 export interface LaunchDependencies {
   runner?: ExecutableRunner;
   launcher?: DetachedLauncher;
+  /** Test seam for platform-specific terminal planning. */
+  platform?: NodeJS.Platform;
 }
 
 /**
@@ -133,6 +135,7 @@ export async function launchAgent(
   const plan = buildLaunchPlan({
     definition,
     worktreePath,
+    ...(dependencies.platform ? { platform: dependencies.platform } : {}),
     ...(input.initialPrompt !== undefined ? { initialPrompt: input.initialPrompt } : {})
   });
 
@@ -305,6 +308,25 @@ const PACKAGES: Readonly<Record<string, { id: string; label: string; page: strin
   }
 };
 
+/** Resolves the fixed download record appropriate for the host platform. */
+export function prerequisitePackage(
+  id: string,
+  platform: NodeJS.Platform = process.platform
+): { id: string; label: string; page: string } | null {
+  if (id === 'git') {
+    if (platform === 'darwin') {
+      return { id: 'Git.Git', label: 'Git for macOS', page: 'https://git-scm.com/download/mac' };
+    }
+    if (platform !== 'win32') {
+      return { id: 'Git.Git', label: 'Git', page: 'https://git-scm.com/download/linux' };
+    }
+  }
+  if (id === 'git-bash' && platform !== 'win32') {
+    return null;
+  }
+  return PACKAGES[id] ?? null;
+}
+
 /**
  * Starts an installation, or opens the download page where it cannot.
  *
@@ -320,7 +342,8 @@ export async function installPrerequisite(
   id: string,
   dependencies: LaunchDependencies = {}
 ): Promise<InstallOutcome> {
-  const pkg = PACKAGES[id];
+  const platform = dependencies.platform ?? process.platform;
+  const pkg = prerequisitePackage(id, platform);
   if (!pkg) {
     throw new AgentLaunchError(`${id} is not something this application can install.`);
   }
@@ -328,8 +351,8 @@ export async function installPrerequisite(
   const runner = dependencies.runner ?? executableRunner;
   const launcher = dependencies.launcher ?? detachedLauncher;
 
-  if (process.platform !== 'win32' || (await resolveExecutable('winget.exe', runner)) === null) {
-    await openUrlExternally(pkg.page, launcher);
+  if (platform !== 'win32' || (await resolveExecutable('winget.exe', runner)) === null) {
+    await openUrlExternally(pkg.page, launcher, platform);
     return { started: false, via: 'browser', url: pkg.page };
   }
 
@@ -354,8 +377,12 @@ export async function installPrerequisite(
 }
 
 /** Opens a download page in the user's browser. */
-async function openUrlExternally(url: string, launcher: DetachedLauncher): Promise<void> {
-  if (process.platform === 'win32') {
+async function openUrlExternally(
+  url: string,
+  launcher: DetachedLauncher,
+  platform: NodeJS.Platform = process.platform
+): Promise<void> {
+  if (platform === 'win32') {
     // `start` needs a shell, so cmd is the launcher; the empty string is the
     // window title `start` would otherwise take the URL for.
     await runLaunchPlan(
@@ -374,7 +401,7 @@ async function openUrlExternally(url: string, launcher: DetachedLauncher): Promi
 
   await runLaunchPlan(
     {
-      executable: process.platform === 'darwin' ? 'open' : 'xdg-open',
+      executable: platform === 'darwin' ? 'open' : 'xdg-open',
       args: [url],
       cwd: process.cwd(),
       env: buildLaunchEnv(process.env, undefined),

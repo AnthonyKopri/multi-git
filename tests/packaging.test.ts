@@ -15,6 +15,25 @@ interface PackageManifest {
   build?: {
     files?: string[];
     icon?: string;
+    win?: { icon?: string };
+    mac?: {
+      icon?: string;
+      artifactName?: string;
+      category?: string;
+      extendInfo?: {
+        CFBundleDocumentTypes?: Array<{
+          CFBundleTypeName?: string;
+          CFBundleTypeRole?: string;
+          LSHandlerRank?: string;
+          LSItemContentTypes?: string[];
+        }>;
+      };
+      hardenedRuntime?: boolean;
+      entitlements?: string;
+      entitlementsInherit?: string;
+      notarize?: boolean;
+      target?: string[];
+    };
     nsis?: { artifactName?: string };
     portable?: { artifactName?: string };
   };
@@ -41,6 +60,16 @@ describe('packaging', () => {
     );
   });
 
+  it('uses stable architecture-qualified macOS DMG and ZIP filenames', () => {
+    expect(manifest.build?.mac?.artifactName).toBe(
+      'Multi-Git-Client-macOS-${version}-${arch}.${ext}'
+    );
+    expect(manifest.build?.mac?.target).toEqual(['dmg', 'zip']);
+    expect(manifest.scripts?.['build-mac:arm64']).toContain('--arm64');
+    expect(manifest.scripts?.['build-mac:x64']).toContain('--x64');
+    expect(manifest.scripts?.['build-mac:portable']).toContain('--mac zip');
+  });
+
   it('ships the template bodies the new-repository wizard reads', () => {
     // These are data files loaded at runtime, not code, so no bundler pulls
     // them in. Losing this entry breaks the wizard only in packaged builds.
@@ -53,6 +82,82 @@ describe('packaging', () => {
     expect(manifest.build?.icon).toBe(icon);
     expect(packaged).toContain(icon);
     expect(fs.existsSync(fromAppRoot(...icon.split('/')))).toBe(true);
+  });
+
+  it('has a macOS-sized transparent icon source without weakening the Windows icon', () => {
+    const windowsIcon = 'docs/images/multi-git-logo.ico';
+    const macIcon = 'docs/images/multi-git-logo.png';
+    const bytes = fs.readFileSync(fromAppRoot(...macIcon.split('/')));
+
+    expect(manifest.build?.win?.icon).toBe(windowsIcon);
+    expect(manifest.build?.mac?.icon).toBe(macIcon);
+    expect(packaged).toContain(macIcon);
+    expect(bytes.subarray(1, 4).toString('ascii')).toBe('PNG');
+    expect(bytes.readUInt32BE(16)).toBeGreaterThanOrEqual(512);
+    expect(bytes.readUInt32BE(20)).toBeGreaterThanOrEqual(512);
+    expect(bytes[25], 'macOS icon must retain its transparent background').toBe(6);
+  });
+
+  it('enables hardened signing, notarization, and Electron minimum entitlements on macOS', () => {
+    const mac = manifest.build?.mac;
+    expect(mac?.category).toBe('public.app-category.developer-tools');
+    expect(mac?.hardenedRuntime).toBe(true);
+    expect(mac?.notarize).toBe(true);
+
+    for (const relative of [mac?.entitlements, mac?.entitlementsInherit]) {
+      expect(relative).toBeTruthy();
+      const plist = fs.readFileSync(fromAppRoot(...(relative as string).split('/')), 'utf8');
+      expect(plist).toContain('com.apple.security.cs.allow-jit');
+      expect(plist).toContain('com.apple.security.cs.allow-unsigned-executable-memory');
+      expect(plist).not.toContain('com.apple.security.cs.disable-library-validation');
+      expect(plist).not.toContain('com.apple.security.app-sandbox');
+    }
+  });
+
+  it('registers repository folders with Finder without claiming to own every folder', () => {
+    expect(manifest.build?.mac?.extendInfo?.CFBundleDocumentTypes).toEqual([
+      {
+        CFBundleTypeName: 'Git repository folder',
+        CFBundleTypeRole: 'Viewer',
+        LSHandlerRank: 'Alternate',
+        LSItemContentTypes: ['public.folder']
+      }
+    ]);
+  });
+
+  it('builds and tests both macOS CPU families on native pinned runners', () => {
+    const ci = fs.readFileSync(fromAppRoot('.github', 'workflows', 'ci.yml'), 'utf8');
+    const release = fs.readFileSync(
+      fromAppRoot('.github', 'workflows', 'release-macos.yml'),
+      'utf8'
+    );
+
+    for (const workflow of [ci, release]) {
+      expect(workflow).toContain('macos-15');
+      expect(workflow).toContain('macos-15-intel');
+      expect(workflow).toContain('arm64');
+      expect(workflow).toContain('x64');
+      expect(workflow).toContain('mach_arch: x86_64');
+    }
+    expect(release).toContain('MACOS_CSC_LINK');
+    expect(release).toContain('MACOS_APPLE_API_KEY_BASE64');
+    expect(release).toContain('allow_unsigned');
+    expect(release).toContain('if: ${{ inputs.allow_unsigned == false }}');
+    expect(release).toMatch(/permissions:\r?\n  contents: read/);
+    expect(release).toContain('contents: write');
+    expect(release).toContain('persist-credentials: false');
+    expect(release).toContain('environment: macos-release');
+    expect(release).toContain("GITHUB_REF\" != 'refs/heads/main'");
+    expect(release).toContain('refs/tags/${{ inputs.tag }}');
+    expect(release).toContain('refs/remotes/origin/main');
+    expect(release).toContain('macos-unsigned-${{ matrix.arch }}');
+    expect(release).toContain('pattern: macos-signed-*');
+    expect(release).toContain('Remove temporary notarization key');
+    expect(release).not.toContain('APPLE_API_KEY=$key_path\" >> \"$GITHUB_ENV');
+    expect(release).toContain("xcrun stapler validate");
+    expect(ci).toContain('actions/upload-artifact@v4');
+    expect(ci).toContain('macos-smoke-${{ matrix.arch }}');
+    expect(ci).toContain('retention-days: 14');
   });
 
   it('ships every entry point the app loads at runtime', () => {

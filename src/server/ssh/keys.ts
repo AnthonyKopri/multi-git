@@ -161,5 +161,10 @@ export function isPermittedKeyPath(keyPath: string, registeredKeyPaths: readonly
 
   const sshDir = sshDirectory();
   const relative = path.relative(sshDir, resolved);
-  return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+  return (
+    relative !== '' &&
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
 }

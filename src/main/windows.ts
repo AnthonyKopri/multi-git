@@ -65,7 +65,9 @@ export function createMainWindow(
     minWidth: 900,
     minHeight: 600,
     title: appTitle(),
-    icon: ICON(),
+    // macOS gets its icon from the .app bundle. An .ico is a Windows/Linux
+    // BrowserWindow option and can produce a generic Dock icon on a Mac.
+    ...(process.platform === 'darwin' ? {} : { icon: ICON() }),
     webPreferences: {
       ...SECURE_WEB_PREFERENCES,
       preload: fromAppRoot('out', 'node', 'main', 'preload.js')
@@ -74,7 +76,9 @@ export function createMainWindow(
 
   pinTitle(window);
   window.loadURL(windowUrl(serverUrl, options.repoPath));
-  window.setMenuBarVisibility(false);
+  if (process.platform !== 'darwin') {
+    window.setMenuBarVisibility(false);
+  }
 
   if (options.maximized) {
     window.maximize();
@@ -88,13 +92,15 @@ export function createLogWindow(serverUrl: string): BrowserWindow {
     width: 720,
     height: 520,
     title: appTitle('Terminal Log'),
-    icon: ICON(),
+    ...(process.platform === 'darwin' ? {} : { icon: ICON() }),
     // The log window is read-only and needs no bridge.
     webPreferences: SECURE_WEB_PREFERENCES
   });
 
   pinTitle(window);
-  window.setMenuBarVisibility(false);
+  if (process.platform !== 'darwin') {
+    window.setMenuBarVisibility(false);
+  }
   window.loadURL(`${serverUrl}/logs.html`);
 
   return window;
@@ -109,7 +115,7 @@ export function createStartupFailureWindow(error: unknown): BrowserWindow {
     width: 700,
     height: 450,
     title: appTitle('Startup Error'),
-    icon: ICON(),
+    ...(process.platform === 'darwin' ? {} : { icon: ICON() }),
     webPreferences: SECURE_WEB_PREFERENCES
   });
 
@@ -121,7 +127,7 @@ export function createStartupFailureWindow(error: unknown): BrowserWindow {
   const html = `
     <html>
       <head><title>Startup Error</title></head>
-      <body style="font-family: Segoe UI, sans-serif; margin: 24px; line-height: 1.5;">
+      <body style="font-family: system-ui, sans-serif; margin: 24px; line-height: 1.5;">
         <h2>Failed to start Multi-Git backend</h2>
         <p>The desktop window could not start because the local backend server failed to launch.</p>
         <pre style="background:#f6f8fa; border:1px solid #ddd; padding:12px; white-space:pre-wrap;">${message.replace(

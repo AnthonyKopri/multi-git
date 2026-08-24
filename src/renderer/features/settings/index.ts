@@ -320,7 +320,7 @@ function buildWorktrees(current: AppSettings): HTMLElement {
       'Create worktrees in',
       'Where a new worktree is suggested. Empty means a sibling of the repository named <repo>.worktrees.',
       current.worktreeParentDir ?? '',
-      { type: 'text', placeholder: 'D:\\work' },
+      { type: 'text', placeholder: 'Path to a worktree parent folder' },
       (value) => void save({ worktreeParentDir: value })
     ),
     // There is deliberately no control for keeping agent prompt text. Nothing
@@ -357,10 +357,10 @@ function buildApplication(current: AppSettings): HTMLElement {
  * An update check the user can start.
  *
  * The navbar icon only appears once there is a release to act on, so an app
- * that is up to date offered no way to ask at all. Shown only where a check
- * can actually happen: on a build that can update itself, and with the setting
- * above switched on -- the service declines a check while it is off, and a
- * button that quietly did nothing would be worse than no button.
+ * that is up to date offered no way to ask at all. The preload bridge exists
+ * in source runs too, so checkNow() gives those runs a clear packaged-build
+ * explanation instead of silently doing nothing. The setting still controls
+ * whether the row is offered at all.
  */
 function checkNowRow(current: AppSettings): HTMLElement | null {
   if (!updates.isSupported() || current.checkForUpdates === false) {

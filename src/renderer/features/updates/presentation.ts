@@ -67,6 +67,9 @@ function installSentence(state: UpdateState): string {
   if (state.installKind === 'portable') {
     return 'The new version will be saved next to this one and opened. Your current file stays where it is.';
   }
+  if (state.installKind === 'macos') {
+    return 'The verified disk image will open in Finder so you can replace the app in Applications.';
+  }
   return 'It installs in the background, then Multi-Git restarts on the new version.';
 }
 
@@ -81,12 +84,16 @@ export function bodyText(state: UpdateState): string {
     return `Getting version ${version}. It is checked against the release checksum before anything runs.`;
   }
   if (state.phase === 'ready') {
-    return state.installKind === 'portable'
-      ? `Version ${version} is downloaded and verified. Opening it will close this window.`
-      : `Version ${version} is downloaded and verified. Installing will close Multi-Git and reopen it.`;
+    if (state.installKind === 'portable') {
+      return `Version ${version} is downloaded and verified. Opening it will close this window.`;
+    }
+    if (state.installKind === 'macos') {
+      return `Version ${version} is downloaded and verified. Opening its disk image will close Multi-Git; drag the app to Applications in Finder.`;
+    }
+    return `Version ${version} is downloaded and verified. Installing will close Multi-Git and reopen it.`;
   }
   if (state.phase === 'installing') {
-    return 'Starting the installer…';
+    return state.installKind === 'macos' ? 'Opening the disk image…' : 'Starting the installer…';
   }
 
   return `Version ${version} is available. You are on ${state.currentVersion}. ${installSentence(state)}`;
@@ -97,7 +104,11 @@ export function primaryLabel(state: UpdateState): string {
     case 'downloading':
       return `Downloading… ${state.percent ?? 0}%`;
     case 'ready':
-      return state.installKind === 'portable' ? 'Open new version' : 'Restart & install';
+      return state.installKind === 'portable'
+        ? 'Open new version'
+        : state.installKind === 'macos'
+          ? 'Open disk image'
+          : 'Restart & install';
     case 'installing':
       return 'Starting…';
     case 'error':

@@ -18,7 +18,12 @@ import { closeAllDropdowns, initDropdowns, registerDropdown } from './ui/dropdow
 import { initPanes, toggleSide } from './ui/panes';
 import { trapTab } from './ui/focus';
 import { initDock, isPanel } from './ui/dock';
-import { isTypingTarget, matchesShortcut } from './ui/shortcuts';
+import {
+  isTypingTarget,
+  localizeShortcutLabels,
+  matchesShortcut,
+  setShortcutPlatform
+} from './ui/shortcuts';
 import { initCollapsibleSections } from './ui/sections';
 import { attachHorizontalWheel } from './ui/wheel-scroll';
 import { logToTerminal, openLogWindow } from './ui/log';
@@ -78,7 +83,9 @@ let ui: Elements;
  */
 async function applyAppTitle(): Promise<void> {
   try {
-    const { title } = await api.getAppInfo();
+    const { title, platform } = await api.getAppInfo();
+    setShortcutPlatform(platform);
+    localizeShortcutLabels();
     if (title !== '') {
       document.title = title;
     }
@@ -1017,6 +1024,7 @@ async function start(): Promise<void> {
   initDialogs(ui);
   initDropdowns();
   initPanes();
+  localizeShortcutLabels();
   initCollapsibleSections();
   // The chip row scrolls sideways and would otherwise need a shift-wheel or a
   // trackpad to reach the chips past its edge.

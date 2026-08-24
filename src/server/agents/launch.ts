@@ -19,11 +19,13 @@
 //     inheriting it.
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
 
 import { describeCommand, detachedLauncher } from '../process/runner';
 import type { DetachedLauncher } from '../process/runner';
 import { sanitizeEnvOverrides } from '../config/validate';
 import type { ExternalAgentDefinition } from '../../shared/config-types';
+import { quoteShellArgument } from '../process/shell-quote';
 
 /**
  * Environment a launched tool inherits.
@@ -59,6 +61,7 @@ export const INHERITED_ENV_KEYS: readonly string[] = [
   'PROCESSOR_ARCHITECTURE',
   'OS',
   'SSH_AUTH_SOCK',
+  'SHELL',
   'LANG',
   'LC_ALL',
   'TERM',
@@ -144,6 +147,8 @@ export interface LaunchPlan {
   visible: boolean;
   /** The command as it reads in the Terminal Log. Excludes the prompt. */
   preview: string;
+  /** Command Terminal.app executes through a private `.command` bridge. */
+  macTerminalCommand?: { executable: string; args: string[] };
 }
 
 export interface BuildPlanInput {
@@ -151,7 +156,98 @@ export interface BuildPlanInput {
   worktreePath: string;
   initialPrompt?: string;
   parentEnv?: NodeJS.ProcessEnv;
+  /** Test seam; production uses process.platform. */
+  platform?: NodeJS.Platform;
 }
+
+/** Quotes one value for /bin/sh without allowing it to become shell syntax. */
+export function quotePosixShell(value: string): string {
+  return quoteShellArgument(value, 'darwin');
+}
+
+/**
+ * Contents of the private `.command` file Terminal.app opens.
+ *
+ * Terminal may already be running, in which case `open` does not transfer the
+ * child environment to it. Exporting the allowlisted environment inside the
+ * script preserves PATH and SSH_AUTH_SOCK. Every dynamic value is quoted, and
+ * the bridge removes itself before the agent starts.
+ */
+export function renderMacTerminalScript(plan: LaunchPlan): string {
+  const exports = Object.entries(plan.env)
+    .filter(
+      (entry): entry is [string, string] =>
+        /^[A-Za-z_][A-Za-z0-9_]*$/.test(entry[0]) && typeof entry[1] === 'string'
+    )
+    .map(([key, value]) => `export ${key}=${quotePosixShell(value)}`);
+  const command = plan.macTerminalCommand;
+  if (!command) {
+    throw new Error('No Terminal.app command was supplied.');
+  }
+
+  return [
+    '#!/bin/sh',
+    'script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)',
+    'rm -f -- "$0"',
+    'rmdir -- "$script_dir" 2>/dev/null || :',
+    ...exports,
+    `cd -- ${quotePosixShell(plan.cwd)} || exit 1`,
+    `exec -- ${[command.executable, ...command.args].map(quotePosixShell).join(' ')}`,
+    ''
+  ].join('\n');
+}
+
+/**
+ * Opens an interactive login shell through the same private bridge used for
+ * coding agents. Launch Services does not pass a new environment to an
+ * already-running Terminal.app, so opening a folder with `open -a Terminal`
+ * would silently lose PATH, SSH_AUTH_SOCK and repository SSH routing.
+ */
+export function macTerminalShellPlan(
+  worktreePath: string,
+  env: NodeJS.ProcessEnv
+): LaunchPlan {
+  const requestedShell = env['SHELL']?.trim();
+  let shell = '/bin/zsh';
+  if (requestedShell && path.posix.isAbsolute(requestedShell)) {
+    try {
+      fs.accessSync(requestedShell, fs.constants.X_OK);
+      shell = requestedShell;
+    } catch {
+      // Finder-launched apps can inherit a stale SHELL. macOS always ships zsh.
+    }
+  }
+
+  return {
+    executable: '/usr/bin/open',
+    args: [],
+    cwd: worktreePath,
+    env,
+    visible: true,
+    preview: `Terminal.app (in ${worktreePath})`,
+    macTerminalCommand: { executable: shell, args: ['-l'] }
+  };
+}
+
+function createMacTerminalBridge(plan: LaunchPlan): { scriptPath: string; cleanup: () => void } {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-terminal-'));
+  const scriptPath = path.join(directory, 'launch.command');
+  fs.writeFileSync(scriptPath, renderMacTerminalScript(plan), { encoding: 'utf8', mode: 0o700 });
+
+  return {
+    scriptPath,
+    cleanup: () => {
+      try {
+        fs.rmSync(directory, { recursive: true, force: true });
+      } catch {
+        // Best effort after an `open` failure.
+      }
+    }
+  };
+}
+
+/** Maximum lifetime of a bridge Launch Services never opened. */
+export const MAC_TERMINAL_BRIDGE_TTL_MS = 5 * 60 * 1000;
 
 /**
  * Works out exactly what will be spawned, without spawning it.
@@ -162,6 +258,7 @@ export interface BuildPlanInput {
  */
 export function buildLaunchPlan(input: BuildPlanInput): LaunchPlan {
   const { definition, worktreePath } = input;
+  const platform = input.platform ?? process.platform;
   const env = buildLaunchEnv(input.parentEnv ?? process.env, definition.env);
 
   // The prompt is appended only when the definition says it takes one, so a
@@ -209,6 +306,23 @@ export function buildLaunchPlan(input: BuildPlanInput): LaunchPlan {
     };
   }
 
+  // `direct` was seeded on macOS before this mode existed. Treat it as
+  // Terminal.app too, repairing existing configurations without a migration.
+  if (
+    definition.terminal === 'macos-terminal' ||
+    (definition.terminal === 'direct' && platform === 'darwin')
+  ) {
+    return {
+      executable: '/usr/bin/open',
+      args: [],
+      cwd: worktreePath,
+      env,
+      visible: true,
+      preview: `Terminal.app (in ${worktreePath}): ${preview}`,
+      macTerminalCommand: { executable: definition.executable, args: toolArgs }
+    };
+  }
+
   return {
     executable: definition.executable,
     args: toolArgs,
@@ -238,6 +352,30 @@ export async function runLaunchPlan(
     throw new AgentLaunchError(`${plan.cwd} no longer exists, so nothing can be started in it.`);
   }
 
+  if (plan.macTerminalCommand) {
+    const bridge = createMacTerminalBridge(plan);
+    try {
+      const result = await launcher.launch(
+        '/usr/bin/open',
+        ['-b', 'com.apple.Terminal', bridge.scriptPath],
+        {
+        cwd: plan.cwd,
+        env: plan.env,
+        visible: false
+        }
+      );
+      // The script removes itself as soon as Terminal executes it. This
+      // bounded fallback also removes prompt-bearing bridges when Launch
+      // Services accepts `open` but never delivers the document.
+      const cleanupTimer = setTimeout(bridge.cleanup, MAC_TERMINAL_BRIDGE_TTL_MS);
+      cleanupTimer.unref();
+      return result;
+    } catch (error) {
+      bridge.cleanup();
+      throw error;
+    }
+  }
+
   return launcher.launch(plan.executable, plan.args, {
     cwd: plan.cwd,
     env: plan.env,
@@ -248,10 +386,14 @@ export async function runLaunchPlan(
 // ---------- the companions on every worktree row ----------
 
 /** Opens the platform's terminal with the folder as its working directory. */
-export function terminalPlanFor(worktreePath: string, parentEnv = process.env): LaunchPlan {
+export function terminalPlanFor(
+  worktreePath: string,
+  parentEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+): LaunchPlan {
   const env = buildLaunchEnv(parentEnv, undefined);
 
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     // Windows Terminal when it is installed; the fallback is the shell that
     // has shipped with every version of Windows.
     return {
@@ -264,15 +406,8 @@ export function terminalPlanFor(worktreePath: string, parentEnv = process.env): 
     };
   }
 
-  if (process.platform === 'darwin') {
-    return {
-      executable: 'open',
-      args: ['-a', 'Terminal', worktreePath],
-      cwd: worktreePath,
-      env,
-      visible: true,
-      preview: `open -a Terminal "${worktreePath}"`
-    };
+  if (platform === 'darwin') {
+    return macTerminalShellPlan(worktreePath, env);
   }
 
   return {

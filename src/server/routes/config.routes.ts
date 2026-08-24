@@ -81,11 +81,14 @@ configRouter.post(
   asyncRoute((req, res) => {
     const resolvedPath = requireExistingRepo((req.body as { repoPath?: unknown })?.repoPath);
     const config = readConfig();
+    const repoKey = canonicalRepoKey(resolvedPath);
 
-    // Move to front, de-duplicating any earlier entry.
+    // Move to front, de-duplicating links, case variants and Unicode-normalised
+    // spellings of the same on-disk repository. Keep the newest display path:
+    // that is the spelling the user just chose and expects to see.
     config.recentRepos = [
       resolvedPath,
-      ...config.recentRepos.filter((entry) => entry !== resolvedPath)
+      ...config.recentRepos.filter((entry) => canonicalRepoKey(entry) !== repoKey)
     ].slice(0, MAX_RECENT_REPOS);
 
     writeConfig(config);
@@ -96,7 +99,7 @@ configRouter.post(
     res.json({
       success: true,
       repoPath: resolvedPath,
-      repoKey: canonicalRepoKey(resolvedPath),
+      repoKey,
       config: sanitizeConfigForClient(config)
     });
   })
@@ -131,8 +134,13 @@ configRouter.post(
 configRouter.delete('/api/config/repo', (req, res) => {
   const { repoPath } = (req.body ?? {}) as { repoPath?: unknown };
   const config = readConfig();
+  const repoKey = typeof repoPath === 'string' ? canonicalRepoKey(repoPath) : '';
 
-  config.recentRepos = config.recentRepos.filter((entry) => entry !== repoPath);
+  if (repoKey !== '') {
+    config.recentRepos = config.recentRepos.filter(
+      (entry) => canonicalRepoKey(entry) !== repoKey
+    );
+  }
   writeConfig(config);
 
   res.json({ success: true, config: sanitizeConfigForClient(config) });

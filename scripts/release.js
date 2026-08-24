@@ -1,4 +1,4 @@
-// Version bump + Windows build + checksum driver. Run with `npm run release`.
+// Version bump + native Electron build + checksum driver. Run with `npm run release`.
 //
 // Prompts for the new version and which artifacts to produce, then hands off
 // to electron-builder. Every prompt can be answered up front with a flag so
@@ -7,12 +7,17 @@
 //   node scripts/release.js --bump patch --target both --yes
 //   node scripts/release.js --bump 2.0.0 --target installer
 //   node scripts/release.js --bump none --target portable
+//   node scripts/release.js --bump none --target mac-arm64
 //   node scripts/release.js --dry-run
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const { resolveReleaseAssets, writeChecksumManifest } = require('./release-assets');
+const {
+  checksumSpecForTarget,
+  resolveReleaseAssets,
+  writeChecksumManifest
+} = require('./release-assets');
 
 const ROOT = path.join(__dirname, '..');
 const PACKAGE_JSON = path.join(ROOT, 'package.json');
@@ -21,9 +26,33 @@ const PACKAGE_LOCK = path.join(ROOT, 'package-lock.json');
 const SEMVER = /^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?$/;
 
 const TARGETS = {
-  installer: { label: 'Installer only (NSIS .exe setup)', args: ['--win', 'nsis'] },
-  portable: { label: 'Portable only (single .exe)', args: ['--win', 'portable'] },
-  both: { label: 'Installer and portable', args: ['--win', 'nsis', 'portable'] }
+  installer: {
+    label: 'Windows installer only (NSIS .exe setup)',
+    args: ['--win', 'nsis'],
+    platform: 'win32'
+  },
+  portable: {
+    label: 'Portable Windows executable only',
+    args: ['--win', 'portable'],
+    platform: 'win32'
+  },
+  both: {
+    label: 'Windows installer and portable executable',
+    args: ['--win', 'nsis', 'portable'],
+    platform: 'win32'
+  },
+  'mac-arm64': {
+    label: 'macOS DMG and ZIP (Apple Silicon)',
+    args: ['--mac', 'dmg', 'zip', '--arm64'],
+    platform: 'darwin',
+    arch: 'arm64'
+  },
+  'mac-x64': {
+    label: 'macOS DMG and ZIP (Intel)',
+    args: ['--mac', 'dmg', 'zip', '--x64'],
+    platform: 'darwin',
+    arch: 'x64'
+  }
 };
 
 function parseArgs(argv) {
@@ -33,9 +62,11 @@ function parseArgs(argv) {
     const arg = argv[i];
     const [flag, inlineValue] = arg.includes('=') ? arg.split(/=(.*)/s) : [arg, null];
     const nextValue = () => {
-      if (inlineValue !== null) return inlineValue;
-      i += 1;
-      return argv[i];
+      const value = inlineValue !== null ? inlineValue : argv[++i];
+      if (value === undefined || value === '' || value.startsWith('-')) {
+        throw new Error(`${flag} requires a value.`);
+      }
+      return value;
     };
 
     if (flag === '--bump') options.bump = nextValue();
@@ -53,7 +84,7 @@ function printHelp() {
   console.log(`Usage: node scripts/release.js [options]
 
   --bump <spec>     patch | minor | major | x.y.z | none
-  --target <name>   installer | portable | both
+  --target <name>   installer | portable | both | mac-arm64 | mac-x64
   --yes, -y         accept defaults instead of prompting (patch, both)
   --dry-run         bump nothing, just print the build command
   --help, -h        show this message
@@ -155,17 +186,26 @@ async function promptVersion(ask, current) {
 }
 
 async function promptTarget(ask) {
+  const nativeMacTarget = process.arch === 'arm64' ? 'mac-arm64' : 'mac-x64';
+  const defaultAnswer = process.platform === 'darwin' ? '4' : '3';
   console.log('\nWhat should be built?');
   console.log(`  1) ${TARGETS.installer.label}`);
   console.log(`  2) ${TARGETS.portable.label}`);
   console.log(`  3) ${TARGETS.both.label}`);
+  if (process.platform === 'darwin') {
+    console.log(`  4) ${TARGETS[nativeMacTarget].label}`);
+  }
 
   for (;;) {
-    const answer = (await ask('Target [3]: ')) || '3';
+    const answer = (await ask(`Target [${defaultAnswer}]: `)) || defaultAnswer;
     if (answer === '1' || answer === 'installer') return 'installer';
     if (answer === '2' || answer === 'portable') return 'portable';
     if (answer === '3' || answer === 'both') return 'both';
-    console.log('  Choose 1, 2, or 3.');
+    if (answer === '4' && process.platform === 'darwin') {
+      return process.arch === 'arm64' ? 'mac-arm64' : 'mac-x64';
+    }
+    if (answer === 'mac-arm64' || answer === 'mac-x64') return answer;
+    console.log('  Choose a listed number or target name.');
   }
 }
 
@@ -233,16 +273,35 @@ async function main() {
     } else {
       // Non-interactive and unanswered: fall back to the safest useful pair.
       bumpSpec = bumpSpec || 'patch';
-      targetName = targetName || 'both';
+      targetName =
+        targetName ||
+        (process.platform === 'darwin'
+          ? process.arch === 'arm64'
+            ? 'mac-arm64'
+            : 'mac-x64'
+          : 'both');
     }
   }
 
   if (!TARGETS[targetName]) {
-    throw new Error(`Invalid target "${targetName}". Use installer, portable, or both.`);
+    throw new Error(
+      `Invalid target "${targetName}". Use installer, portable, both, mac-arm64, or mac-x64.`
+    );
   }
 
   const version = nextVersion(current, bumpSpec);
   const target = TARGETS[targetName];
+
+  if (!options.dryRun && target.platform !== process.platform) {
+    throw new Error(
+      `${target.label} must be built on ${target.platform === 'darwin' ? 'macOS' : 'Windows'}, not ${process.platform}.`
+    );
+  }
+  if (!options.dryRun && target.arch && target.arch !== process.arch) {
+    throw new Error(
+      `${target.label} must be built natively on ${target.arch}, not ${process.arch}. Use the matching macOS CI runner.`
+    );
+  }
 
   if (options.dryRun) {
     console.log(`\nDry run — nothing was written.`);
@@ -252,7 +311,7 @@ async function main() {
     for (const asset of resolveReleaseAssets({ version, targetName })) {
       console.log(`  artifact: ${path.relative(ROOT, asset.path)}`);
     }
-    console.log(`  checksums: ${path.join('dist', 'SHA256SUMS.txt')}`);
+    console.log(`  checksums: ${path.join('dist', checksumSpecForTarget(targetName).basename)}`);
     return;
   }
 
@@ -295,16 +354,24 @@ async function main() {
     throw error;
   }
 
-  console.log(`\nDone. Artifacts and SHA256SUMS.txt for ${version} are in dist/.`);
+  console.log(`\nDone. Artifacts and checksums for ${version} are in dist/.`);
   if (version !== current) {
     console.log('The version bump is not committed or tagged — do that yourself when the build looks right.');
   }
   if (targetName === 'both') {
     console.log('After the tag and draft GitHub release exist, run "npm run release:upload".');
+  } else if (targetName.startsWith('mac-')) {
+    console.log(
+      'A complete macOS release needs both architectures. Use the macOS release workflow to build and upload them together.'
+    );
   }
 }
 
-main().catch((err) => {
-  console.error(`\nRelease failed: ${err.message}`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(`\nRelease failed: ${err.message}`);
+    process.exit(1);
+  });
+}
+
+module.exports = { parseArgs, nextVersion, TARGETS };

@@ -54,6 +54,16 @@ describe('resolveInsideRepo', () => {
     expect(resolveInsideRepo(repo, './src/../README.md')).toBe(path.join(repo, 'README.md'));
   });
 
+  it('does not confuse an ordinary name beginning with two dots for traversal', () => {
+    const unusual = path.join(repo, '..notes.md');
+    fs.writeFileSync(unusual, 'still inside the repository', 'utf8');
+
+    expect(resolveInsideRepo(repo, '..notes.md')).toBe(unusual);
+    expect(resolveInsideRepo(repo, '..drafts/file.txt', { allowMissing: true })).toBe(
+      path.join(repo, '..drafts', 'file.txt')
+    );
+  });
+
   it('rejects parent-directory traversal', () => {
     expect(resolveInsideRepo(repo, '../outside/id_ed25519')).toBeNull();
     expect(resolveInsideRepo(repo, '../../etc/passwd')).toBeNull();

@@ -60,7 +60,8 @@ export function assertUsableDefinition(definition: ExternalAgentDefinition): voi
   if (
     definition.terminal !== 'direct' &&
     definition.terminal !== 'windows-terminal' &&
-    definition.terminal !== 'powershell'
+    definition.terminal !== 'powershell' &&
+    definition.terminal !== 'macos-terminal'
   ) {
     throw new AgentDefinitionError(`"${definition.label}" has an unknown terminal mode.`);
   }
@@ -75,6 +76,11 @@ export function assertUsableDefinition(definition: ExternalAgentDefinition): voi
   if (definition.terminal === 'powershell' && process.platform !== 'win32') {
     throw new AgentDefinitionError(
       `"${definition.label}" is set to launch through PowerShell, which this build only supports on Windows.`
+    );
+  }
+  if (definition.terminal === 'macos-terminal' && process.platform !== 'darwin') {
+    throw new AgentDefinitionError(
+      `"${definition.label}" is set to launch through Terminal.app, which only exists on macOS.`
     );
   }
 }
@@ -107,7 +113,11 @@ export async function resolveExecutable(
 export async function detectAgents(
   runner: ExecutableRunner = executableRunner
 ): Promise<DetectedAgent[]> {
-  const configured = new Set(listAgentDefinitions().map((agent) => agent.executable.toLowerCase()));
+  const executableIdentity = (executable: string): string =>
+    process.platform === 'win32' ? executable.toLowerCase() : executable;
+  const configured = new Set(
+    listAgentDefinitions().map((agent) => executableIdentity(agent.executable))
+  );
   const detected: DetectedAgent[] = [];
 
   for (const known of KNOWN_AGENTS) {
@@ -119,7 +129,7 @@ export async function detectAgents(
     detected.push({
       ...known,
       resolvedPath,
-      configured: configured.has(known.executable.toLowerCase())
+      configured: configured.has(executableIdentity(known.executable))
     });
   }
 
@@ -134,8 +144,14 @@ export function definitionFromDetected(detected: DetectedAgent): ExternalAgentDe
     executable: detected.executable,
     args: [],
     // A coding agent is something the user talks to, so it needs a window.
-    // Windows Terminal where it exists, a plain console everywhere else.
-    terminal: process.platform === 'win32' ? 'windows-terminal' : 'direct',
+    // Interactive agents need a real terminal. A detached POSIX process with
+    // ignored stdio has no TTY and cannot be seen or answered.
+    terminal:
+      process.platform === 'win32'
+        ? 'windows-terminal'
+        : process.platform === 'darwin'
+          ? 'macos-terminal'
+          : 'direct',
     enabled: true,
     promptMode: 'argument'
   };

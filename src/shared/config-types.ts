@@ -112,7 +112,7 @@ export interface ExternalAgentDefinition {
   executable: string;
   /** Argument vector, kept as separate values all the way to spawn. */
   args: string[];
-  terminal: 'direct' | 'windows-terminal' | 'powershell';
+  terminal: 'direct' | 'windows-terminal' | 'powershell' | 'macos-terminal';
   enabled: boolean;
   /**
    * How an initial prompt is handed over. `none` means the definition takes no

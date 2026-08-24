@@ -1,8 +1,8 @@
 # Multi-Git Client
 
-**A free, open-source, local-first Windows Git client for multiple repositories, accounts, and SSH identities.**
+**A free, open-source, local-first Windows and macOS Git client for multiple repositories, accounts, and SSH identities.**
 
-[**Download for Windows →**](https://github.com/AnthonyKopri/multi-git/releases/latest) ·
+[**Download Multi-Git →**](https://github.com/AnthonyKopri/multi-git/releases/latest) ·
 [Five-minute guide](#five-minute-guide) ·
 [Full feature guide](#feature-guide)
 
@@ -16,7 +16,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/AnthonyKopri/multi-git?display_name=tag&sort=semver)](https://github.com/AnthonyKopri/multi-git/releases/latest)
 [![CI](https://github.com/AnthonyKopri/multi-git/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AnthonyKopri/multi-git/actions/workflows/ci.yml)
-[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078d4.svg)](https://github.com/AnthonyKopri/multi-git/releases/latest)
+[![Platforms: Windows and macOS](https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS-0078d4.svg)](https://github.com/AnthonyKopri/multi-git/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Why Multi-Git?
@@ -31,8 +31,6 @@
 
 ### Windows: installer or portable app
 
-Packaged releases are currently provided for Windows.
-
 1. Install [Git for Windows](https://git-scm.com/download/win) if `git` is not already available on your system.
 2. Open the [latest Multi-Git release](https://github.com/AnthonyKopri/multi-git/releases/latest).
 3. Download one of the two `.exe` files:
@@ -40,17 +38,31 @@ Packaged releases are currently provided for Windows.
    - **`Multi-Git-Client-Portable-<version>.exe`** can be run without installation.
 4. Launch **Multi-Git Client**.
 
+### macOS: disk image or portable archive
+
+1. Install Git and OpenSSH. The easiest route on a new Mac is `xcode-select --install`.
+2. Open the [latest Multi-Git release](https://github.com/AnthonyKopri/multi-git/releases/latest).
+3. Choose **`arm64`** for Apple Silicon (M1 or newer) or **`x64`** for an Intel Mac:
+   - **`Multi-Git-Client-macOS-<version>-<arch>.dmg`** is recommended. Open it and drag **Multi-Git Client** into Applications.
+   - **`Multi-Git-Client-macOS-<version>-<arch>.zip`** is the portable fallback. Extract it and move or run the `.app` wherever you prefer.
+
+The release workflow signs and notarizes macOS packages when Apple credentials are configured and refuses an unsigned release by default. An explicitly unsigned test release will trigger Gatekeeper; verify that it came from this repository before using Finder's **Open** confirmation.
+
+Finder registers Multi-Git as an alternate viewer for folders. Use **Open With → Multi-Git Client** on a repository folder, or run `open -a "Multi-Git Client" /path/to/repository`. Non-repository folders are rejected rather than opened as empty projects.
+
 Once installed, Multi-Git keeps itself current. It checks GitHub for a newer stable release shortly after launch, shows a one-time notice, and leaves an icon in the toolbar you can click at any time. Betas and prereleases are never offered. Nothing is downloaded until you choose **Download & install**, and every download is checked against the release's published SHA-256 checksum before it is allowed to run.
 
 - The **installer** build reinstalls in the background and reopens on the new version.
 - The **portable** build saves the new `.exe` next to the one you are running and opens it. Your current file is left in place, so you can go back to it by launching it again; delete it yourself when you no longer want it.
+- A **macOS** update downloads the DMG for the running CPU architecture, verifies it, and opens it. Replace the copy in Applications through the normal Finder drag-and-drop flow.
 
 The Windows packages are not currently code-signed, so Windows may show a SmartScreen warning. Only continue if the file came from this repository's official Releases page.
 
-Each release also includes `SHA256SUMS.txt`, a plain-text list of the expected
-SHA-256 fingerprint for each executable. To verify a download in PowerShell,
+Each release also includes `SHA256SUMS.txt` for Windows and
+`SHA256SUMS-macOS.txt` for macOS, plain-text lists of the expected SHA-256
+fingerprints. To verify a Windows download in PowerShell,
 run `Get-FileHash -Algorithm SHA256 <downloaded-file>` and compare its `Hash`
-with the matching line in that file.
+with the matching line. On macOS, run `shasum -a 256 <downloaded-file>`.
 
 ## Five-Minute Guide
 
@@ -633,7 +645,7 @@ The panel is a record, not an interactive shell — you read it here and type in
 
 ## Local Data, Privacy, And Security
 
-Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when the current UI loads its fonts and Material Symbols from Google Fonts, when a window you opened asks `gh` about this repository's pull requests — the pull-request preflight and the Maintenance tab's survey both do — and, on packaged Windows builds, when the app asks GitHub whether a newer release exists.
+Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when the current UI loads its fonts and Material Symbols from Google Fonts, when a window you opened asks `gh` about this repository's pull requests — the pull-request preflight and the Maintenance tab's survey both do — and, on packaged Windows or macOS builds, when the app asks GitHub whether a newer release exists.
 
 The update check is the only request Multi-Git makes that you did not start. It is an unauthenticated `GET` to `api.github.com` for this project's public release list, made once about ten seconds after launch and every six hours after that. It sends no account, no repository, and no identifying information beyond what any HTTPS request carries. Nothing is downloaded until you ask for it. Set `settings.checkForUpdates` to `false` in the configuration file to turn it off entirely.
 
@@ -745,7 +757,7 @@ npm start
 
 Then open `http://localhost:3000`. Desktop mode chooses a free local port automatically; browser mode uses `PORT` or port `3000`.
 
-> Packaged macOS and Linux builds are not published yet. The Electron source is designed to be portable, but those platforms still need packaging and workflow testing.
+> Packaged Linux builds are not published yet. Windows and both macOS architectures are exercised by native CI runners.
 
 ## Developer Commands
 
@@ -760,16 +772,20 @@ Then open `http://localhost:3000`. Desktop mode chooses a free local port automa
 | `npm run release` | Bump the version, build, and create `dist/SHA256SUMS.txt`, prompting for both targets. |
 | `npm run release:installer` | Prompt for a version, then build only the installer. |
 | `npm run release:portable` | Prompt for a version, then build only the portable executable. |
+| `npm run release:mac:arm64` | On Apple Silicon, build the DMG and portable ZIP for that architecture. |
+| `npm run release:mac:x64` | On an Intel Mac, build the DMG and portable ZIP for that architecture. |
 | `npm run release:upload` | Upload the current build to an existing GitHub release with download labels. |
 | `npm run build` | Build targets configured in `package.json`. |
 | `npm run build-win` | Build Windows NSIS installer and portable executable. |
+| `npm run build-mac` | Build macOS DMG and ZIP for the current architecture. |
+| `npm run build-mac:portable` | Build only the portable macOS ZIP for the current architecture. |
 | `npm run build-standalone` | Build only the portable Windows target into `dist-standalone`. |
 
 `npm start` and `npm run desktop` compile first, so the TypeScript sources are always current; every `build` and `release` script does the same. Express serves the compiled bundle and the static assets from `out/web`.
 
 `npm test` type-checks every source under `strict` and runs the Vitest suite: the Git output parsers, patch generation, path containment, argument guards, vault encryption, and the commit-graph layout, plus integration tests that drive the real API against throwaway repositories. Parts of the renderer are covered too — the pull-request creator and the diff pane are mounted from the real `public/index.html` under happy-dom, so a renamed element id fails the suite. Everything else in the UI is still unverified by tests, so exercise visual changes against a disposable repository as well.
 
-See [BUILDING.md](BUILDING.md) for the full build, check, and release procedure, including both Windows artifacts and how to bump the version.
+See [BUILDING.md](BUILDING.md) for the full native build, signing, checksum, and release procedure.
 
 ## Local API Examples
 

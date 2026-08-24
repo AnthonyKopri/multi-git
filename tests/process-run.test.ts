@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { runProcess } from '../src/server/process/run';
@@ -5,6 +8,26 @@ import { runProcess } from '../src/server/process/run';
 /** Runs a snippet of JavaScript in a child Node process. */
 function node(script: string, options = {}) {
   return runProcess(process.execPath, ['-e', script], options);
+}
+
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function waitFor(predicate: () => boolean, timeoutMs = 5000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return predicate();
 }
 
 describe('runProcess', () => {
@@ -34,6 +57,35 @@ describe('runProcess', () => {
     const result = await node('setTimeout(() => {}, 60000)', { timeoutMs: 300 });
 
     expect(result.timedOut).toBe(true);
+  });
+
+  it('kills descendants on cancellation instead of orphaning credential helpers', async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-process-tree-'));
+    const pidFile = path.join(directory, 'grandchild.pid');
+    const script = [
+      "const { spawn } = require('child_process');",
+      "const fs = require('fs');",
+      "const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)'], { stdio: 'ignore' });",
+      'fs.writeFileSync(process.argv[1], String(child.pid));',
+      'setTimeout(() => {}, 60000);'
+    ].join('\n');
+    const controller = new AbortController();
+
+    try {
+      const running = runProcess(process.execPath, ['-e', script, pidFile], {
+        signal: controller.signal
+      });
+      expect(await waitFor(() => fs.existsSync(pidFile))).toBe(true);
+
+      const grandchild = Number(fs.readFileSync(pidFile, 'utf8'));
+      expect(isAlive(grandchild)).toBe(true);
+
+      controller.abort();
+      expect((await running).cancelled).toBe(true);
+      expect(await waitFor(() => !isAlive(grandchild))).toBe(true);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it('decodes multi-byte characters split across chunk boundaries', async () => {

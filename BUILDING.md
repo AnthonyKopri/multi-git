@@ -1,10 +1,12 @@
 # Building And Releasing Multi-Git
 
-How to run the project from source, check it, and produce the two Windows
-artifacts: the **NSIS installer** and the **portable executable**.
+How to run the project from source, check it, and produce native packages for
+Windows and macOS: an **NSIS installer**, **portable executable**, and
+architecture-specific macOS **DMG** and **portable ZIP**.
 
 For contribution rules and coding conventions see [CONTRIBUTING.md](CONTRIBUTING.md).
 For what the app does see [README.md](README.md).
+For the owner of a Mac validating this port see [docs/MACOS_HANDOFF.md](docs/MACOS_HANDOFF.md).
 
 ## Contents
 
@@ -26,9 +28,12 @@ For what the app does see [README.md](README.md).
 | Git | any recent release | must be on `PATH`; the app shells out to it |
 | OpenSSH | `ssh`, `ssh-add`, and `ssh-keygen` on `PATH` | needed at runtime, not to build |
 | Windows | 10 or 11 | required to build the Windows artifacts |
+| macOS | 15 on Apple Silicon or Intel | required to build, sign, and notarize macOS artifacts |
 
-Building the Windows targets on macOS or Linux is not supported by this
-project's configuration. Develop anywhere; cut releases on Windows.
+Build each target on its native operating system. The macOS CI matrix uses
+`macos-15` for arm64 and `macos-15-intel` for x64; cross-packaging does not
+replace a native test. Windows builds still run on Windows. Develop anywhere,
+but assemble releases from the two native workflows.
 
 The GitHub CLI (`gh`) is optional. It is used at runtime by the new-repository
 dialog and the pull-request creator, and by `npm run release:upload`. Local
@@ -54,7 +59,7 @@ npx install-electron
 ```
 
 Packaging does not need it. Electron Builder downloads its own runtime through
-its own cache, so `npm run build-win` and `npm run release` work on a checkout
+its own cache, so `npm run build-win`, `npm run build-mac`, and `npm run release` work on a checkout
 that has never run `install-electron`.
 
 ## Running from source
@@ -118,10 +123,11 @@ project's Markdown resolves. External URLs are not fetched, so it never fails
 because a third-party site was briefly down.
 
 CI runs both, plus a packaging smoke test, on every pull request. See
-[.github/workflows/ci.yml](.github/workflows/ci.yml). The matrix covers Windows
-and Linux on Node 22.12 and Node 24 — Windows because the published artifacts
-are Windows-only and because process-tree termination, case-folded repository
-paths, and file replacement all behave differently there.
+[.github/workflows/ci.yml](.github/workflows/ci.yml). The matrix covers Windows,
+Linux, Apple Silicon macOS, and Intel macOS on Node 22.12 and Node 24. Separate
+packaging jobs inspect the Windows executable and both native Mac app bundles,
+including their CPU architecture, bundle identifier, asar entry point, DMG,
+and ZIP.
 
 Beyond that, verification is manual. The paths worth walking before a release:
 
@@ -146,8 +152,9 @@ Beyond that, verification is manual. The paths worth walking before a release:
 
 ## Releasing a new version
 
-`npm run release` bumps the version, builds, and writes SHA-256 checksums,
-asking about both:
+`npm run release` bumps the version, builds native artifacts, and writes the
+platform's SHA-256 manifest. On Windows it asks which Windows artifacts to
+build; on macOS its default is the current runner architecture:
 
 ```bash
 npm run release
@@ -167,17 +174,18 @@ Current version: 1.0.5
   5) keep the current version
 Version [1]:
 
-What should be built?
-  1) Installer only (NSIS .exe setup)
-  2) Portable only (single .exe)
-  3) Installer and portable
+What should be built? (Windows example)
+  1) Windows installer only (NSIS .exe setup)
+  2) Portable Windows executable only
+  3) Windows installer and portable executable
 Target [3]:
 ```
 
 The version is written to both `package.json` and `package-lock.json`. After a
-successful build, `dist/SHA256SUMS.txt` is replaced atomically with checksums
-for exactly the target or targets built by that invocation. Stale executables
-in `dist/` are never included. The bump is **not** committed or tagged — review
+successful Windows build, `dist/SHA256SUMS.txt` is replaced atomically. A Mac
+build writes `dist/SHA256SUMS-macOS.txt`. Each contains exactly the artifacts
+built by that invocation; stale packages in `dist/` are never included. The bump
+is **not** committed or tagged — review
 the artifacts first, then commit and tag yourself:
 
 ```bash
@@ -207,9 +215,9 @@ node scripts/release.js --bump none --target both
 | Flag | Values | Default when omitted |
 | --- | --- | --- |
 | `--bump` | `patch`, `minor`, `major`, `x.y.z`, `none` | prompt, or `patch` with `--yes` |
-| `--target` | `installer`, `portable`, `both` | prompt, or `both` with `--yes` |
-| `--yes`, `-y` | — | prompts are shown |
-| `--dry-run` | — | writes files and builds |
+| `--target` | `installer`, `portable`, `both`, `mac-arm64`, `mac-x64` | prompt, or the current platform's native set with `--yes` |
+| `--yes`, `-y` | — | accepts defaults without prompting |
+| `--dry-run` | — | prints the plan without writing or building |
 | `--help`, `-h` | — | — |
 
 Shortcuts for a single artifact, which still prompt for the version:
@@ -220,6 +228,15 @@ npm run release:installer
 
 ```bash
 npm run release:portable
+```
+
+Native Mac shortcuts build both the DMG and ZIP for the named CPU. The release
+driver refuses to build them on the other architecture, so a cross-package is
+not mistaken for a native verification:
+
+```bash
+npm run release:mac:arm64
+npm run release:mac:x64
 ```
 
 To see what a release would do without touching anything:
@@ -234,39 +251,54 @@ To rebuild without changing the version:
 node scripts/release.js --bump none --target both
 ```
 
-### The whole release in one command
+### The Windows half of a release in one command
 
 ```bash
 npm run release:ship
 ```
 
-Runs the six steps below in order, stopping before each one to ask
+Runs the six Windows steps below in order, stopping before each one to ask
 `[Y]es / [s]kip / [q]uit`:
 
 1. build the artifacts and checksums (`scripts/release.js`)
 2. commit and push the version bump
-3. create the GitHub release as a draft, titled `Multi-Git v<version>` on a
-   `Release_v<version>` tag, with notes linking this version's changelog entry
+3. create and non-force-push the exact `Release_v<version>` tag, then create the
+   GitHub release as a draft with `--verify-tag` and notes linking this version's
+   changelog entry
 4. upload the assets, verify them, and close the changelog
 5. commit and push the changelog
 6. publish the draft — only with `--publish`
+
+For a cross-platform release, leave the release as a draft after step 5, run
+the **macOS release packages** workflow for that tag, and only publish after it
+has attached both architectures. The workflow is the release path for Mac
+because signing and notarization require native Apple runners and credentials.
 
 Nothing here replaces the individual commands; each step spawns the documented
 one and passes its output straight through, so running them by hand still works
 exactly as described below.
 
-The check before step 1 says which branch you are on and warns if it is not the
-one releases are cut from — building elsewhere packages that branch's code and
-tags it as the release.
+The check before step 1 fails unless the checkout is the default branch at the
+exact commit currently on `origin`, with no source changes. It permits only the
+package/changelog residue produced by an interrupted release. Step 3 verifies
+that existing local and remote tags agree, that the tagged package version is
+correct, and that the tag is in the current branch's ancestry. GitHub is never
+allowed to invent the tag from a newer default-branch tip, so the Windows and
+Mac packages are built from the same immutable commit.
 
 A step that is already done is detected and skipped — a version already
 committed, a release that already exists, a changelog with nothing to move — so
-this is safe to re-run after a step fails partway through.
+this is safe to re-run after a step fails partway through. In particular, an
+uncommitted package bump, the exact package-only commit made by step 2, or an
+unpublished current tag/draft forces the rebuild to use `--bump none`, even
+when the original command used `--bump patch --yes`. Existing tags may be
+followed only by the generated `CHANGELOG.md` commit; any other source change
+stops the release because Windows and Mac would otherwise build different code.
 
 | Flag | Effect |
 | --- | --- |
 | `--bump <spec>` | `patch`, `minor`, `major`, `x.y.z`, or `none`. Omitted, the build asks. |
-| `--tag <tag>` | Release tag. Defaults to `Release_v<version>`. |
+| `--tag <tag>` | Explicit release tag; it must equal `Release_v<version>`. |
 | `--repo`, `-R` | GitHub repository in `OWNER/REPO` form. |
 | `--publish` | Publish the draft at the end. Off by default: publishing is the irreversible step. |
 | `--no-changelog` | Upload without closing the Unreleased section. Passed through to the upload step. |
@@ -301,6 +333,81 @@ upload, then runs `gh release upload` with these display labels:
 - `Portable Windows executable`
 - `SHA-256 checksums`
 
+The default target is the Windows upload path. The native workflow calls the
+same guarded command with `--target macos`. Windows and Mac use separate
+checksum files, so neither native build rewrites a manifest created on the
+other operating system.
+
+### Building, signing, and uploading macOS packages
+
+Create the draft release with the Windows flow, then run the
+**macOS release packages** workflow (`.github/workflows/release-macos.yml`) with
+its exact `Release_v<version>` tag. It proves that the tag matches the package
+version and points to a commit on `main`, pins later jobs to that commit, and
+builds on both native standard runners:
+
+- `macos-15` produces `arm64` DMG and ZIP packages;
+- `macos-15-intel` produces `x64` DMG and ZIP packages.
+
+The upload job downloads both runner outputs, creates
+`SHA256SUMS-macOS.txt` over the four exact packages, and attaches the set to the
+existing draft. It refuses to modify a published release and never uses
+`--clobber`.
+
+Before the first signed release, create a protected GitHub Environment named
+`macos-release`:
+
+1. Allow deployments only from `main` and require approval from the repository
+   owner (or another release owner).
+2. Put the secrets below in that environment, not in repository-wide Actions
+   secrets. Delete any repository-wide copies with the same values. Otherwise a
+   manually dispatched workflow from another in-repository branch could read
+   signing material before this workflow's own validation runs.
+3. Keep the repository's default Actions token permission read-only. The
+   workflow grants `contents: write` only to its approved final upload job.
+4. Add an active tag ruleset for `Release_v*` that prevents tag updates and
+   deletions after creation. This keeps the commit validated/built by Actions
+   attached to the same tag at publication time.
+
+The `macos-release` environment needs these secrets:
+
+| Secret | Purpose |
+| --- | --- |
+| `MACOS_CSC_LINK` | Base64 PKCS#12 Developer ID Application certificate |
+| `MACOS_CSC_KEY_PASSWORD` | Certificate password |
+| `MACOS_APPLE_API_KEY_BASE64` | Base64 App Store Connect `.p8` key |
+| `MACOS_APPLE_API_KEY_ID` | App Store Connect key ID |
+| `MACOS_APPLE_API_ISSUER` | App Store Connect issuer UUID |
+
+As an alternative to the three API-key secrets, configure
+`MACOS_APPLE_ID`, `MACOS_APPLE_APP_SPECIFIC_PASSWORD`, and
+`MACOS_APPLE_TEAM_ID`. Electron Builder signs with hardened runtime and the
+minimum Electron JIT entitlements, submits the app for notarization, and
+staples the app bundle before it is placed in the DMG and ZIP. The workflow
+verifies `codesign`, Gatekeeper (`spctl`), and that ticket before upload.
+
+The workflow fails closed when credentials are absent. For a test-only build,
+dispatch it with **allow_unsigned** explicitly enabled. That choice creates
+separate `macos-unsigned-arm64` and `macos-unsigned-x64` Actions artifacts and
+skips the release upload job completely. Gatekeeper will warn users; those files
+must never be attached to the public release.
+
+To build locally on a Mac without touching the version, use the runner's native
+architecture:
+
+```bash
+CSC_IDENTITY_AUTO_DISCOVERY=false \
+  npm run build-mac:arm64 -- --config.mac.notarize=false
+# or, on an Intel Mac
+CSC_IDENTITY_AUTO_DISCOVERY=false \
+  npm run build-mac:x64 -- --config.mac.notarize=false
+```
+
+`npm run build-mac:portable -- --config.mac.notarize=false` with
+`CSC_IDENTITY_AUTO_DISCOVERY=false` produces only the native unsigned ZIP. It
+is useful when a signing account is unavailable, and is the supported portable
+fallback rather than a Windows-built pseudo-Mac package.
+
 ### Verifying the release is discoverable
 
 After publishing, check that an installed copy will actually find it:
@@ -324,17 +431,18 @@ release script. To check a specific release:
 npm run release:verify -- --tag Release_v3.0.0
 ```
 
-When `dist/SHA256SUMS.txt` from the build is still present, it also compares the
-published checksums against it, which catches artifacts rebuilt between
-generating the manifest and uploading it.
+The verifier requires both native platforms. When either local checksum
+manifest is still present, it also compares published digests against it,
+which catches artifacts rebuilt between generation and upload.
 
-The upload command requires both executables, an existing release, and an
-authenticated GitHub CLI. It always uploads the installer, portable build, and
-their shared checksum file together, so the manifest always describes the full
-binary set and split uploads cannot collide on it. It does not use `--clobber`,
-so it will not delete an existing asset to replace it. Upload to a draft before
-publishing when immutable releases are enabled; names and labels cannot be
-changed after publication in that mode.
+The Windows upload command requires both executables, an existing release, and
+an authenticated, current GitHub CLI. It always verifies the installer,
+portable build, and their shared checksum file as one set. A retry reads the
+existing asset inventory, skips only assets whose name, byte size, and
+GitHub-reported SHA-256 all match, and uploads only missing files. It never uses
+`--clobber`; a different or unavailable digest fails closed and requires a
+deliberate human inspection. Upload to a draft before publishing when immutable
+releases are enabled; names and labels cannot be changed after publication.
 
 Use `--dry-run` to print the exact `gh` command without writing or uploading:
 
@@ -344,8 +452,8 @@ npm run release:upload -- --tag Release_v3.0.0 --dry-run
 
 ### Checking what reached the release
 
-After uploading, the command reads the release back and prints each asset with
-the size GitHub reports, next to the size of the file on disk.
+After uploading, the command reads the release back and verifies each asset's
+GitHub-reported byte size and SHA-256 against the local file.
 
 This exists because GitHub's own release editor is misleading here: assets
 uploaded through the API or the CLI are shown on the **Edit release** page as
@@ -353,10 +461,10 @@ uploaded through the API or the CLI are shown on the **Edit release** page as
 completely they uploaded. Following that advice deletes a working download. The
 API's view of the release is the truth, and that is what this prints.
 
-If an asset is missing or short, the command says which one and leaves
-`CHANGELOG.md` alone — a changelog saying a version shipped is wrong if its
-assets did not arrive. If the release cannot be read back at all, that is
-reported and nothing fails: the upload has already succeeded by then.
+If an asset is missing, short, different, or cannot be read back, the command
+fails and leaves `CHANGELOG.md` alone. A retry is safe: exact existing content
+is skipped, missing content is uploaded, and ambiguous content is never
+overwritten automatically.
 
 ### Closing the Unreleased section
 
@@ -407,7 +515,7 @@ Produces `dist/Multi-Git-Client-Setup-<version>.exe`. Configured in
 - `oneClick: false` — a real wizard rather than a silent install;
 - `allowToChangeInstallationDirectory: true` — the user picks the location.
 
-### Portable
+### Windows portable executable
 
 ```bash
 npx electron-builder --win portable
@@ -433,30 +541,70 @@ npm run build-standalone
 Same portable target, written to `dist-standalone/` instead of `dist/` so it
 does not collide with an installer build.
 
+### macOS DMG and portable ZIP
+
+```bash
+npm run build-mac
+```
+
+On Apple Silicon this produces:
+
+- `dist/Multi-Git-Client-macOS-<version>-arm64.dmg` — the normal
+  drag-to-Applications distribution;
+- `dist/Multi-Git-Client-macOS-<version>-arm64.zip` — the portable/manual
+  fallback.
+
+An Intel host produces the same names with `x64`. The `${arch}` segment is
+load-bearing: the updater chooses the DMG matching `process.arch` and never
+guesses. The ZIP is published for manual use but the in-app update opens the
+verified DMG.
+
+Electron Builder reads `docs/images/multi-git-logo.png` for the app icon and
+`packaging/entitlements.mac*.plist` for hardened helper processes. The PNG is a
+1024×1024 transparent conversion of the existing Windows logo; the two platform
+icons therefore remain the same mark in their native formats.
+
+`mac.extendInfo.CFBundleDocumentTypes` registers `public.folder` with the
+`Viewer` role and `Alternate` rank. That is the Info.plist half of Finder's
+**Open With** support; the main process queues Electron's `open-file` event and
+validates that the selected folder is actually a Git repository. To test the
+same path from Terminal:
+
+```bash
+open -a "Multi-Git Client" /path/to/repository
+```
+
 ### After-pack step
 
-`scripts/after-pack.js` runs automatically after packaging. It stamps the
-Windows executable icon and metadata with `rcedit`, because
+`scripts/after-pack.js` runs automatically after packaging. On Windows it stamps
+the executable icon and metadata with `rcedit`, because
 `win.signAndEditExecutable` is `false` in the Electron Builder config. If you
 change the icon, product name, description, or version, check the resulting
-`.exe` properties.
+`.exe` properties. The hook is a deliberate no-op on macOS; Electron Builder
+owns the signed bundle metadata there.
 
 ## Build output
 
-Both artifacts land in `dist/` (or `dist-standalone/` for that one script).
-The release driver also writes `dist/SHA256SUMS.txt`; direct
-`electron-builder`, `npm run build-win`, and `npm run build-standalone` calls do
-not. The checksum file is ordinary UTF-8 text without a BOM. Each line contains
-a lowercase SHA-256 digest, two spaces, and the exact artifact basename.
+Native artifacts land in `dist/` (or `dist-standalone/` for the one Windows
+script). The release driver writes `dist/SHA256SUMS.txt` for Windows or
+`dist/SHA256SUMS-macOS.txt` for Mac; direct `electron-builder` and `build-*`
+calls do not. Each checksum file is ordinary UTF-8 text without a BOM. Each line
+contains a lowercase SHA-256 digest, two spaces, and the exact artifact basename.
 `dist/`, `dist-standalone/`, `out/`, `release/`, and `*.blockmap` are all in
 `.gitignore` — build output is never committed.
 
-There is no special checksum container: `SHA256SUMS.txt` is a plain-text file
-that is uploaded beside the binaries. A Windows user can calculate a download's
+There is no special checksum container: both manifests are plain text uploaded
+beside the packages. A Windows user can calculate a download's
 value with PowerShell and compare it with the matching line:
 
 ```powershell
 Get-FileHash -Algorithm SHA256 -LiteralPath .\Multi-Git-Client-Setup-3.0.0.exe
+```
+
+The macOS equivalent is:
+
+```bash
+shasum -a 256 Multi-Git-Client-macOS-3.0.0-arm64.dmg
 ```
 
 Expect a few hundred megabytes per build. Delete the folder between releases
@@ -480,15 +628,34 @@ npm install
 
 ### The Electron download fails or stalls
 
-Electron Builder caches downloads in `%LOCALAPPDATA%\electron-builder\Cache`.
-A partial download there survives and keeps failing. Delete the cache folder
-and rerun the build.
+Electron Builder caches downloads in `%LOCALAPPDATA%\electron-builder\Cache`
+on Windows and `~/Library/Caches/electron-builder` on macOS. A partial download
+there survives and keeps failing. Delete only the affected cache entry and
+rerun the build.
 
 ### The build fails on a locked file
 
 An installed or running copy of Multi-Git, an open Explorer window on `dist/`,
 or a virus scanner can hold the output files. Close the app and any Explorer
 window on the output folder, then rerun.
+
+### A macOS release is unsigned or not notarized
+
+Pull-request packaging is unsigned by design. The public release path is not:
+it fails unless the certificate plus one complete notarization credential set
+is present. An **allow_unsigned** dispatch remains an Actions artifact and
+cannot reach the draft-release upload job. Check a signed result on macOS with:
+
+```bash
+codesign --verify --deep --strict --verbose=2 "dist/mac-arm64/Multi-Git Client.app"
+spctl --assess --type execute --verbose=2 "dist/mac-arm64/Multi-Git Client.app"
+xcrun stapler validate "dist/mac-arm64/Multi-Git Client.app"
+```
+
+Real Gatekeeper, drag-to-Applications, Keychain, SSH-agent, and Finder behavior
+still need a physical or virtual Mac for final manual QA; a Windows host cannot
+meaningfully simulate them. The two native CI runners cover compilation,
+packaging, architecture, metadata, signing, and notarization.
 
 ### A new source file is missing from the packaged app
 

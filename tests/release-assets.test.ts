@@ -4,8 +4,14 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 
-type ArtifactKey = 'installer' | 'portable';
-type TargetName = ArtifactKey | 'both';
+type ArtifactKey =
+  | 'installer'
+  | 'portable'
+  | 'macDmgArm64'
+  | 'macZipArm64'
+  | 'macDmgX64'
+  | 'macZipX64';
+type TargetName = ArtifactKey | 'both' | 'windows' | 'mac-arm64' | 'mac-x64' | 'macos';
 
 interface ArtifactSpec {
   label: string;
@@ -29,6 +35,8 @@ interface ReleaseAssetsApi {
   RELEASE_ASSETS: Readonly<Record<ArtifactKey, ArtifactSpec>>;
   CHECKSUM_BASENAME: string;
   CHECKSUM_LABEL: string;
+  MACOS_CHECKSUM_BASENAME: string;
+  MACOS_CHECKSUM_LABEL: string;
   selectedAssetKinds(targetName: TargetName | string): ArtifactKey[];
   resolveReleaseAssets(options: {
     version: string;
@@ -46,6 +54,7 @@ interface ReleaseAssetsApi {
     version: string;
     outputDir?: string;
     repo?: string;
+    targetName?: TargetName;
   }): string[];
 }
 
@@ -84,10 +93,36 @@ describe('release artifact metadata', () => {
     expect(releaseAssets.RELEASE_ASSETS.portable.label).toBe('Portable Windows executable');
   });
 
+  it('uses exact architecture-qualified macOS DMG and portable ZIP names', () => {
+    expect(releaseAssets.RELEASE_ASSETS.macDmgArm64.basename('3.0.0')).toBe(
+      'Multi-Git-Client-macOS-3.0.0-arm64.dmg'
+    );
+    expect(releaseAssets.RELEASE_ASSETS.macZipArm64.basename('3.0.0')).toBe(
+      'Multi-Git-Client-macOS-3.0.0-arm64.zip'
+    );
+    expect(releaseAssets.RELEASE_ASSETS.macDmgX64.basename('3.0.0')).toBe(
+      'Multi-Git-Client-macOS-3.0.0-x64.dmg'
+    );
+    expect(releaseAssets.RELEASE_ASSETS.macZipX64.basename('3.0.0')).toBe(
+      'Multi-Git-Client-macOS-3.0.0-x64.zip'
+    );
+    expect(releaseAssets.MACOS_CHECKSUM_BASENAME).toBe('SHA256SUMS-macOS.txt');
+  });
+
   it('maps each release target and keeps both in installer-first order', () => {
     expect(releaseAssets.selectedAssetKinds('installer')).toEqual(['installer']);
     expect(releaseAssets.selectedAssetKinds('portable')).toEqual(['portable']);
     expect(releaseAssets.selectedAssetKinds('both')).toEqual(['installer', 'portable']);
+    expect(releaseAssets.selectedAssetKinds('mac-arm64')).toEqual([
+      'macDmgArm64',
+      'macZipArm64'
+    ]);
+    expect(releaseAssets.selectedAssetKinds('macos')).toEqual([
+      'macDmgArm64',
+      'macZipArm64',
+      'macDmgX64',
+      'macZipX64'
+    ]);
   });
 
   it('returns a copy so callers cannot mutate the central target mapping', () => {
@@ -187,6 +222,33 @@ describe('SHA256SUMS.txt', () => {
       releaseAssets.writeChecksumManifest({ version: '3.0.0', targetName: 'installer', outputDir })
     ).rejects.toThrow('Expected release artifact is not a file');
   });
+
+  it('keeps all native macOS packages in a platform-specific manifest', async () => {
+    for (const key of ['macDmgArm64', 'macZipArm64', 'macDmgX64', 'macZipX64'] as const) {
+      fs.writeFileSync(artifactPath(key), key.endsWith('Arm64') ? 'abc' : '');
+    }
+
+    const result = await releaseAssets.writeChecksumManifest({
+      version: '3.0.0',
+      targetName: 'macos',
+      outputDir
+    });
+
+    expect(path.basename(result.manifestPath)).toBe('SHA256SUMS-macOS.txt');
+    expect(result.assets.map((entry) => entry.key)).toEqual([
+      'macDmgArm64',
+      'macZipArm64',
+      'macDmgX64',
+      'macZipX64'
+    ]);
+    expect(result.contents).toContain(
+      `${INSTALLER_SHA256}  Multi-Git-Client-macOS-3.0.0-arm64.dmg\n`
+    );
+    expect(result.contents).toContain(
+      `${PORTABLE_SHA256}  Multi-Git-Client-macOS-3.0.0-x64.zip\n`
+    );
+    expect(fs.existsSync(path.join(outputDir, releaseAssets.CHECKSUM_BASENAME))).toBe(false);
+  });
 });
 
 describe('GitHub release upload arguments', () => {
@@ -220,6 +282,24 @@ describe('GitHub release upload arguments', () => {
         repo: '  '
       })
     ).toThrow('GitHub repository must be a non-empty');
+  });
+
+  it('uploads both native macOS architectures and their own checksum file', () => {
+    const args = releaseAssets.buildGhUploadArgs({
+      tag: 'Release_v3.0.0',
+      version: '3.0.0',
+      targetName: 'macos',
+      outputDir
+    });
+
+    expect(args.slice(3)).toEqual([
+      `${artifactPath('macDmgArm64')}#macOS disk image (Apple Silicon)`,
+      `${artifactPath('macZipArm64')}#Portable macOS archive (Apple Silicon)`,
+      `${artifactPath('macDmgX64')}#macOS disk image (Intel)`,
+      `${artifactPath('macZipX64')}#Portable macOS archive (Intel)`,
+      `${path.join(outputDir, 'SHA256SUMS-macOS.txt')}#macOS SHA-256 checksums`
+    ]);
+    expect(args).not.toContain('--clobber');
   });
 
   it('requires the existing release tag instead of creating or guessing one', () => {

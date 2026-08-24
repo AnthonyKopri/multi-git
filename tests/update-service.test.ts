@@ -11,7 +11,10 @@ function releases(version = '3.2.0'): unknown {
   const names = [
     `Multi-Git-Client-Setup-${version}.exe`,
     `Multi-Git-Client-Portable-${version}.exe`,
-    'SHA256SUMS.txt'
+    'SHA256SUMS.txt',
+    `Multi-Git-Client-macOS-${version}-arm64.dmg`,
+    `Multi-Git-Client-macOS-${version}-x64.dmg`,
+    'SHA256SUMS-macOS.txt'
   ];
 
   return [
@@ -33,6 +36,8 @@ function manifest(version = '3.2.0'): string {
   return [
     `${DIGEST}  Multi-Git-Client-Setup-${version}.exe`,
     `${DIGEST}  Multi-Git-Client-Portable-${version}.exe`,
+    `${DIGEST}  Multi-Git-Client-macOS-${version}-arm64.dmg`,
+    `${DIGEST}  Multi-Git-Client-macOS-${version}-x64.dmg`,
     ''
   ].join('\n');
 }
@@ -51,6 +56,7 @@ interface Harness {
 function harness(
   overrides: {
     installKind?: InstallKind;
+    architecture?: string;
     settings?: Partial<UpdateSettings>;
     digest?: string;
     fetchJson?: UpdateServiceDeps['fetchJson'];
@@ -68,6 +74,7 @@ function harness(
   const deps: UpdateServiceDeps = {
     currentVersion: '3.1.1',
     installKind: overrides.installKind ?? 'installer',
+    architecture: overrides.architecture ?? 'x64',
     portableDir: 'D:\\Tools\\MultiGit',
     tempDir: 'C:\\Temp',
     fetchJson: overrides.fetchJson ?? (() => Promise.resolve(releases())),
@@ -224,6 +231,17 @@ describe('downloading', () => {
     ]);
   });
 
+  it('stages the native macOS DMG in the update directory', async () => {
+    const h = harness({ installKind: 'macos', architecture: 'arm64' });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    expect((await service.download()).phase).toBe('ready');
+    expect(h.commits).toEqual([
+      path.join('C:\\Temp', 'multi-git-update', 'Multi-Git-Client-macOS-3.2.0-arm64.dmg')
+    ]);
+  });
+
   it('reports progress while it runs', async () => {
     const h = harness();
     h.deps.downloadToFile = (_url, destPath, onProgress) => {
@@ -301,6 +319,25 @@ describe('installing', () => {
     ]);
   });
 
+  it('opens a verified macOS DMG, then quits the old app', async () => {
+    const h = harness({ installKind: 'macos', architecture: 'arm64' });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    await service.download();
+    await service.install();
+
+    expect(h.spawned).toEqual([
+      {
+        file: '/usr/bin/open',
+        args: [
+          path.join('C:\\Temp', 'multi-git-update', 'Multi-Git-Client-macOS-3.2.0-arm64.dmg')
+        ]
+      }
+    ]);
+    expect(h.quits).toBe(1);
+  });
+
   it('stays open when the installer could not be started', async () => {
     const h = harness({
       spawnDetached: () => {
@@ -315,6 +352,16 @@ describe('installing', () => {
 
     expect(state.phase).toBe('error');
     // Quitting here would close the app into nothing.
+    expect(h.quits).toBe(0);
+  });
+
+  it('stays open when spawning fails asynchronously', async () => {
+    const h = harness({ spawnDetached: () => Promise.reject(new Error('spawn ENOENT')) });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    await service.download();
+    expect((await service.install()).phase).toBe('error');
     expect(h.quits).toBe(0);
   });
 

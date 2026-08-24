@@ -1,16 +1,15 @@
 # Continuous integration.
 #
-# Windows is not an afterthought here, it is the primary target: the published
-# artifacts are Windows-only, and three of the behaviours this project depends
-# on differ there in ways a Linux-only run would never show — killing a process
-# tree has no signal-based equivalent, the filesystem folds case when deciding
-# what a repository path means, and replacing a file that another handle has
-# open behaves differently on NTFS.
+# Windows and macOS are native targets. Both macOS CPU families run separately:
+# a build that happens to cross-package is not proof that process execution,
+# bundle metadata, or filesystem handling works on that architecture.
 name: CI
 
 on:
   push:
-    branches: [main]
+    # Keep the one-off Mac handoff branch buildable before its PR exists. Forks
+    # still use the pull_request trigger when they open their PR.
+    branches: [main, codex/macos-parity-handoff]
   pull_request:
   workflow_dispatch:
 
@@ -29,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-15, macos-15-intel]
         # The floor declared in package.json engines, and the version Electron
         # 43 actually embeds. A break in either is a break for real users.
         node: ['22.12', '24']
@@ -119,7 +118,7 @@ jobs:
           fi
 
   package:
-    name: packaging smoke
+    name: Windows packaging smoke
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -175,3 +174,77 @@ jobs:
           }
 
           Write-Output "Packaged $($exe.FullName) with $($info.ProductName) $($info.ProductVersion)"
+
+  package-macos:
+    name: macOS packaging smoke (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Standard native runners as of 2026: macos-15 is Apple Silicon and
+          # macos-15-intel is the pinned x64 image (available through Aug 2027).
+          - os: macos-15
+            arch: arm64
+            mach_arch: arm64
+            app_dir: dist/mac-arm64/Multi-Git Client.app
+          - os: macos-15-intel
+            arch: x64
+            mach_arch: x86_64
+            app_dir: dist/mac/Multi-Git Client.app
+    env:
+      # Pull requests deliberately produce unsigned smoke packages. The release
+      # workflow requires credentials unless unsigned output is explicitly opted in.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build native DMG and ZIP
+        run: npm run build-mac:${{ matrix.arch }}
+
+      - name: Verify the macOS packages
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          dmg="dist/Multi-Git-Client-macOS-${version}-${{ matrix.arch }}.dmg"
+          zip="dist/Multi-Git-Client-macOS-${version}-${{ matrix.arch }}.zip"
+          test -s "$dmg"
+          test -s "$zip"
+
+          app='${{ matrix.app_dir }}'
+          test -d "$app"
+          asar="$app/Contents/Resources/app.asar"
+          test -f "$asar"
+          npx --no-install asar list "$asar" | grep -q 'out/node/main/main.js'
+
+          bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")
+          test "$bundle_id" = 'com.multigit.client'
+          folder_type=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:0:LSItemContentTypes:0' "$app/Contents/Info.plist")
+          test "$folder_type" = 'public.folder'
+
+          executable="$app/Contents/MacOS/Multi-Git Client"
+          archs=$(lipo -archs "$executable")
+          case " $archs " in
+            *" ${{ matrix.mach_arch }} "*) ;;
+            *) echo "Expected ${{ matrix.mach_arch }} executable, found: $archs" >&2; exit 1 ;;
+          esac
+
+      - name: Keep downloadable unsigned smoke packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-smoke-${{ matrix.arch }}
+          path: |
+            dist/Multi-Git-Client-macOS-*-${{ matrix.arch }}.dmg
+            dist/Multi-Git-Client-macOS-*-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 14
+          # DMG and ZIP are already compressed; recompressing only wastes CI time.
+          compression-level: 0

@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CHECKSUM_ASSET,
+  MACOS_CHECKSUM_ASSET,
   assetBasename,
+  checksumAssetBasename,
   compareVersions,
   findAsset,
   isPrereleaseBuild,
@@ -131,6 +133,54 @@ describe('selecting an update', () => {
     expect(pick([unverifiable], '3.1.1')).toBeNull();
   });
 
+  it('selects only the DMG for the running Mac architecture', () => {
+    const mac = release('3.2.0', {}, [
+      'Multi-Git-Client-macOS-3.2.0-arm64.dmg',
+      'Multi-Git-Client-macOS-3.2.0-arm64.zip',
+      'Multi-Git-Client-macOS-3.2.0-x64.dmg',
+      'Multi-Git-Client-macOS-3.2.0-x64.zip',
+      MACOS_CHECKSUM_ASSET
+    ]);
+
+    expect(
+      selectUpdate({
+        releases: [mac],
+        currentVersion: '3.1.1',
+        installKind: 'macos',
+        architecture: 'arm64'
+      })?.version
+    ).toBe('3.2.0');
+    expect(assetBasename('macos', '3.2.0', 'arm64')).toBe(
+      'Multi-Git-Client-macOS-3.2.0-arm64.dmg'
+    );
+    expect(assetBasename('macos', '3.2.0', 'x64')).toBe(
+      'Multi-Git-Client-macOS-3.2.0-x64.dmg'
+    );
+    expect(assetBasename('macos', '3.2.0', 'ia32')).toBeNull();
+  });
+
+  it('does not offer a Mac release with the wrong architecture or Windows checksum', () => {
+    const wrongArch = release('3.2.0', {}, [
+      'Multi-Git-Client-macOS-3.2.0-x64.dmg',
+      MACOS_CHECKSUM_ASSET
+    ]);
+    const wrongManifest = release('3.2.0', {}, [
+      'Multi-Git-Client-macOS-3.2.0-arm64.dmg',
+      CHECKSUM_ASSET
+    ]);
+
+    for (const candidate of [wrongArch, wrongManifest]) {
+      expect(
+        selectUpdate({
+          releases: [candidate],
+          currentVersion: '3.1.1',
+          installKind: 'macos',
+          architecture: 'arm64'
+        })
+      ).toBeNull();
+    }
+  });
+
   it('honours a skipped version, and stops honouring it once a higher one lands', () => {
     const skipped = { installKind: 'installer' as const, skippedVersion: '3.2.0' };
     expect(selectUpdate({ releases: [release('3.2.0')], currentVersion: '3.1.1', ...skipped })).toBeNull();
@@ -164,6 +214,12 @@ describe('asset matching', () => {
     const asset = findAsset(candidate, assetBasename('installer', '3.2.0'));
     expect(asset?.name).toBe('Multi-Git-Client-Setup-3.2.0.exe');
     expect(findAsset(candidate, 'Multi-Git-Client-Portable-3.2.0.exe')).toBeNull();
+  });
+
+  it('uses a separate checksum manifest for macOS releases', () => {
+    expect(checksumAssetBasename('installer')).toBe(CHECKSUM_ASSET);
+    expect(checksumAssetBasename('portable')).toBe(CHECKSUM_ASSET);
+    expect(checksumAssetBasename('macos')).toBe(MACOS_CHECKSUM_ASSET);
   });
 });
 

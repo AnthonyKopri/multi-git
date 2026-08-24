@@ -93,6 +93,7 @@ export function createUpdateWiring(targets: TargetWindows): UpdateService {
   return createUpdateService({
     currentVersion: appVersion(),
     installKind,
+    architecture: process.arch,
     portableDir: portableDirectory(environment()),
     tempDir: app.getPath('temp'),
     fetchJson: (url) => fetchJson(url, httpsFetcher),
@@ -106,15 +107,24 @@ export function createUpdateWiring(targets: TargetWindows): UpdateService {
     isRateLimit: (error) => error instanceof RateLimitedError,
     // Detached and unref'd: the installer has to outlive the process that
     // started it, because the next thing that happens is this one quitting.
-    spawnDetached: (file, args) => {
-      const child = spawn(file, args, {
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: true,
-        shell: false
-      });
-      child.unref();
-    },
+    spawnDetached: (file, args) =>
+      new Promise<void>((resolve, reject) => {
+        const child = spawn(file, args, {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+          shell: false
+        });
+
+        // spawn() reports an absent executable asynchronously. Waiting for
+        // `spawn` keeps the current app alive when the installer/open command
+        // could not actually start, instead of quitting into nothing.
+        child.once('error', reject);
+        child.once('spawn', () => {
+          child.unref();
+          resolve();
+        });
+      }),
     // app.quit(), never app.exit(): `before-quit` is where main.ts flushes the
     // window layout, and exit() would silently discard it on every update.
     quit: () => app.quit(),

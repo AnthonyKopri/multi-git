@@ -11,10 +11,12 @@ import path from 'node:path';
 import { resolveInsideRepo } from '../fs/paths';
 import { writeJsonAtomic } from '../fs/atomic';
 import { reportServerProblem } from '../logs';
+import { canonicalRepoKey } from '../config/repo-identity';
 
 export const TRASH_ROOT = path.join(os.tmpdir(), 'multi-git-trash');
 export const TRASH_TTL_MS = 24 * 60 * 60 * 1000;
 export const TRASH_MAX_ENTRIES = 30;
+const LEGACY_OWNER_FILE = 'migration-owner.json';
 
 export interface TrashEntry {
   id: string;
@@ -25,23 +27,31 @@ export interface TrashEntry {
   trashFile: string;
 }
 
+function trashDirForIdentity(identity: string): string {
+  const digest = crypto.createHash('md5').update(identity).digest('hex').slice(0, 12);
+  return path.join(TRASH_ROOT, digest);
+}
+
 /**
  * Per-repository trash directory, named by a digest of the repository path so
  * two repositories with the same folder name stay separate.
  *
  * MD5 is not a security choice here — it only derives a directory name, and
- * nothing trusts it. It stays MD5 because changing the digest would rename
- * every existing trash directory and orphan snapshots users could still
- * restore.
+ * nothing trusts it. POSIX keys use a v2 namespace so even an all-lowercase
+ * current identity cannot collide with the old always-lowercased bucket; that
+ * old bucket remains available through the guarded migration below.
  */
 export function repoTrashDir(repoPath: string): string {
-  const digest = crypto
-    .createHash('md5')
-    .update(path.resolve(repoPath).toLowerCase())
-    .digest('hex')
-    .slice(0, 12);
+  // The repository key follows the filesystem: it folds Windows paths but
+  // preserves case on case-sensitive POSIX volumes. Lower-casing every path
+  // merged `/Projects/App` and `/Projects/app` into one Safety Net on macOS.
+  const identity = canonicalRepoKey(repoPath) || path.resolve(repoPath).normalize('NFC');
+  return trashDirForIdentity(process.platform === 'win32' ? identity : `posix-v2\0${identity}`);
+}
 
-  return path.join(TRASH_ROOT, digest);
+/** Directory key used by releases before case-sensitive POSIX parity. */
+export function legacyRepoTrashDir(repoPath: string): string {
+  return trashDirForIdentity(path.resolve(repoPath).toLowerCase());
 }
 
 export function readTrashIndex(trashDir: string): TrashEntry[] {
@@ -65,6 +75,125 @@ export function writeTrashIndex(trashDir: string, entries: TrashEntry[]): void {
   } catch (error) {
     reportServerProblem(`Safety Net could not write its index: ${(error as Error).message}`);
   }
+}
+
+function legacyOwner(trashDir: string): string | null | undefined {
+  const ownerPath = path.join(trashDir, LEGACY_OWNER_FILE);
+  if (!fs.existsSync(ownerPath)) {
+    return undefined;
+  }
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(ownerPath, 'utf8'));
+    return typeof parsed === 'object' && parsed !== null &&
+      typeof (parsed as { repo?: unknown }).repo === 'string'
+      ? (parsed as { repo: string }).repo
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when the real parent contains two directories differing only by case. */
+function hasCaseDistinctSibling(repoPath: string): boolean {
+  if (process.platform === 'win32') {
+    return false;
+  }
+
+  const identity = canonicalRepoKey(repoPath) || path.resolve(repoPath).normalize('NFC');
+  const wanted = path.basename(identity).normalize('NFC').toLocaleLowerCase('en-US');
+  try {
+    const matches = fs
+      .readdirSync(path.dirname(identity), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+      .map((entry) => entry.name.normalize('NFC'))
+      .filter((name) => name.toLocaleLowerCase('en-US') === wanted);
+    return new Set(matches).size > 1;
+  } catch {
+    // An unreadable parent cannot prove that claiming a shared legacy bucket
+    // is safe. Losing a compatibility view is preferable to cross-repo restore.
+    return true;
+  }
+}
+
+/**
+ * Atomically assigns an unowned legacy bucket to one unambiguous repository.
+ * The old index did not record repository identity, so case-colliding paths
+ * must never both merge it.
+ */
+function claimLegacyTrash(repoPath: string, legacyDir: string): boolean {
+  const identity = canonicalRepoKey(repoPath) || path.resolve(repoPath).normalize('NFC');
+  const owner = legacyOwner(legacyDir);
+  if (owner !== undefined) {
+    return owner === identity;
+  }
+  if (hasCaseDistinctSibling(repoPath)) {
+    return false;
+  }
+
+  try {
+    fs.writeFileSync(
+      path.join(legacyDir, LEGACY_OWNER_FILE),
+      `${JSON.stringify({ repo: identity }, null, 2)}\n`,
+      { encoding: 'utf8', flag: 'wx', mode: 0o600 }
+    );
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      return legacyOwner(legacyDir) === identity;
+    }
+    reportServerProblem(
+      `Safety Net could not claim its legacy index safely: ${(error as Error).message}`
+    );
+    return false;
+  }
+}
+
+function legacyTrashOwnedBy(repoPath: string, legacyDir: string): boolean {
+  const identity = canonicalRepoKey(repoPath) || path.resolve(repoPath).normalize('NFC');
+  return legacyOwner(legacyDir) === identity;
+}
+
+/** Writes the current index and removes consumed/pruned rows from the legacy one. */
+export function writeRepoTrashIndex(repoPath: string, entries: TrashEntry[]): void {
+  const currentDir = repoTrashDir(repoPath);
+  const legacyDir = legacyRepoTrashDir(repoPath);
+  writeTrashIndex(currentDir, entries);
+
+  if (legacyDir !== currentDir && legacyTrashOwnedBy(repoPath, legacyDir)) {
+    const retainedIds = new Set(entries.map((entry) => entry.id));
+    const legacyEntries = readTrashIndex(legacyDir);
+    const retainedLegacy = legacyEntries.filter((entry) => retainedIds.has(entry.id));
+    if (retainedLegacy.length !== legacyEntries.length) {
+      writeTrashIndex(legacyDir, retainedLegacy);
+    }
+  }
+}
+
+/**
+ * Reads the current index plus the pre-macOS key for one 24-hour compatibility
+ * window. Migrated entries keep their absolute legacy snapshot paths; copying
+ * or moving them could make an old case-colliding repository lose its only
+ * recovery copy.
+ */
+function readRepoTrashEntries(repoPath: string): TrashEntry[] {
+  const currentDir = repoTrashDir(repoPath);
+  const legacyDir = legacyRepoTrashDir(repoPath);
+  const legacyEntries = legacyDir === currentDir ? [] : readTrashIndex(legacyDir);
+  const readableLegacy =
+    legacyEntries.length > 0 && claimLegacyTrash(repoPath, legacyDir) ? legacyEntries : [];
+  const combined = [
+    ...readTrashIndex(currentDir),
+    ...readableLegacy
+  ].sort((left, right) => right.savedAt - left.savedAt);
+
+  const seen = new Set<string>();
+  return combined.filter((entry) => {
+    if (seen.has(entry.id)) {
+      return false;
+    }
+    seen.add(entry.id);
+    return true;
+  });
 }
 
 /** Drops expired and over-quota entries, deleting their snapshots. */
@@ -130,7 +259,7 @@ export function saveManyToTrash(repoPath: string, relativePaths: readonly string
       // touches nothing does not create a trash directory for this repository.
       if (entries === null) {
         fs.mkdirSync(trashDir, { recursive: true });
-        entries = readTrashIndex(trashDir);
+        entries = readRepoTrashEntries(repoPath);
       }
 
       const id = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -144,13 +273,14 @@ export function saveManyToTrash(repoPath: string, relativePaths: readonly string
   }
 
   if (entries !== null) {
-    writeTrashIndex(trashDir, pruneTrash(entries));
+    writeRepoTrashIndex(repoPath, pruneTrash(entries));
   }
 }
 
 export function listTrash(repoPath: string): TrashEntry[] {
-  const trashDir = repoTrashDir(repoPath);
-  const entries = pruneTrash(readTrashIndex(trashDir));
-  writeTrashIndex(trashDir, entries);
+  const entries = pruneTrash(readRepoTrashEntries(repoPath));
+  // Writing the merged index makes the fallback self-migrating while the
+  // legacy directory remains readable until its entries naturally expire.
+  writeRepoTrashIndex(repoPath, entries);
   return entries;
 }

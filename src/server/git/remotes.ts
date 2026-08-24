@@ -117,6 +117,32 @@ function refspecArg(value: unknown, label = 'Refspec'): string {
 // ---------- reading ----------
 
 /**
+ * Git treats section and variable names case-insensitively, but subsection
+ * names (the remote name in `remote.<name>.<variable>`) are case-sensitive.
+ * Lowercasing the complete key therefore aliases valid remotes such as
+ * `origin` and `Origin` on every platform.
+ */
+function normalizeRemoteConfigKey(rawKey: string): string {
+  const lowerKey = rawKey.toLowerCase();
+  if (!lowerKey.startsWith('remote.')) {
+    return lowerKey;
+  }
+
+  for (const suffix of ['.pushurl', '.url', '.fetch', '.push', '.prune'] as const) {
+    if (lowerKey.endsWith(suffix)) {
+      const subsection = rawKey.slice('remote.'.length, rawKey.length - suffix.length);
+      if (subsection !== '') {
+        return `remote.${subsection}${suffix}`;
+      }
+    }
+  }
+
+  // Global settings such as remote.pushDefault have no remote-name
+  // subsection, so their complete key is case-insensitive.
+  return lowerKey;
+}
+
+/**
  * Every `remote.*` and `fetch.prune` setting, as key/value pairs.
  *
  * `--get-regexp` with `-z` gives one NUL-terminated record per key, where the
@@ -142,7 +168,7 @@ async function readRemoteConfig(repoPath: string): Promise<Map<string, string[]>
     }
 
     const newline = record.indexOf('\n');
-    const key = (newline === -1 ? record : record.slice(0, newline)).toLowerCase();
+    const key = normalizeRemoteConfigKey(newline === -1 ? record : record.slice(0, newline));
     const value = newline === -1 ? '' : record.slice(newline + 1);
 
     const existing = entries.get(key);
@@ -183,7 +209,7 @@ export async function listRemotes(repoPath: string): Promise<RemoteInfo[]> {
   const defaultPush = first(config, 'remote.pushdefault');
 
   return names.map((name) => {
-    const key = name.toLowerCase();
+    const key = name;
     const fetchUrl = first(config, `remote.${key}.url`) ?? '';
     const pushUrl = first(config, `remote.${key}.pushurl`) ?? fetchUrl;
     const prune = first(config, `remote.${key}.prune`);

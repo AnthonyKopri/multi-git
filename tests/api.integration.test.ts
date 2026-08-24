@@ -90,6 +90,7 @@ describe('application identity', () => {
 
     expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
     expect(body.title).toBe(`${body.name} v${body.version}`);
+    expect(body.platform).toBe(process.platform);
   });
 
   it('needs no repository, so the title is right before one is opened', async () => {

@@ -416,7 +416,12 @@ function validateExternalAgents(
     }
 
     const terminal = record['terminal'];
-    if (terminal !== 'direct' && terminal !== 'windows-terminal' && terminal !== 'powershell') {
+    if (
+      terminal !== 'direct' &&
+      terminal !== 'windows-terminal' &&
+      terminal !== 'powershell' &&
+      terminal !== 'macos-terminal'
+    ) {
       issues.push({ path: at, message: `dropped: unknown terminal mode ${String(terminal)}` });
       return;
     }

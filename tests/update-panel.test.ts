@@ -3,7 +3,7 @@
 // The update notice in the navbar and the modal behind it.
 //
 // The two things worth pinning here are the degradation and the intents. In a
-// browser tab, on macOS, and in a dev run there is no bridge or the bridge says
+// browser tab, on an unsupported OS, and in a dev run there is no bridge or the bridge says
 // unsupported, and this feature has to register nothing and show nothing. When
 // it is supported, each button must send the intent the current phase implies —
 // the renderer has no other way to act, because it is never told a URL.
@@ -12,6 +12,7 @@ import fs from 'node:fs';
 
 import { fromAppRoot } from '../src/server/app-root';
 import type { UpdateState } from '../src/shared/update-types';
+import { showToast } from '../src/renderer/ui/toast';
 
 vi.mock('../src/renderer/ui/toast', () => ({ showToast: vi.fn() }));
 
@@ -101,6 +102,16 @@ describe('when the app cannot update itself', () => {
 
     expect(hidden('btn-update')).toBe(true);
   });
+
+  it('explains why a manual source-build check cannot run instead of silently no-oping', async () => {
+    const updates = await mount(bridge);
+    push(bridge, state({ phase: 'idle', supported: false, latest: undefined }));
+
+    await updates.checkNow();
+
+    expect(bridge.checkForUpdate).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/packaged build/i), 'info', 6000);
+  });
 });
 
 describe('announcing an update', () => {
@@ -131,6 +142,10 @@ describe('announcing an update', () => {
 
     push(bridge, state({ installKind: 'portable' }));
     expect($('update-message').textContent).toMatch(/next to this one/i);
+
+    push(bridge, state({ installKind: 'macos' }));
+    expect($('update-message').textContent).toMatch(/disk image/i);
+    expect($('update-message').textContent).toMatch(/Applications/i);
   });
 
   it('holds the popup back when another modal already owns the screen', async () => {
@@ -206,6 +221,14 @@ describe('acting on an update', () => {
     push(bridge, state({ phase: 'ready', installKind: 'portable' }));
 
     expect($('btn-update-install').textContent).toMatch(/open new version/i);
+  });
+
+  it('offers to open the disk image on macOS', async () => {
+    await mount(bridge);
+    push(bridge, state({ phase: 'ready', installKind: 'macos' }));
+
+    expect($('btn-update-install').textContent).toMatch(/open disk image/i);
+    expect($('update-message').textContent).toMatch(/drag the app to Applications/i);
   });
 
   it('reports a failure and offers another attempt', async () => {

@@ -1,0 +1,301 @@
+name: macOS release packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag (must match package.json on main)
+        required: true
+        type: string
+      allow_unsigned:
+        description: Build test-only unsigned Actions artifacts; never attach them to a release
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-macos-${{ inputs.tag }}
+  cancel-in-progress: false
+
+# Build and validation jobs never need a write token. Only the final, signed
+# upload job gets permission to modify the existing draft release.
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.tag.outputs.commit }}
+    env:
+      REQUESTED_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require the exact tag, a main commit, and an existing draft
+        id: tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$GITHUB_REF" != 'refs/heads/main' ]]; then
+            echo 'Dispatch this release workflow from the main branch only.' >&2
+            exit 1
+          fi
+
+          version=$(node -p "require('./package.json').version")
+          expected="Release_v${version}"
+          if [[ "$REQUESTED_TAG" != "$expected" ]]; then
+            echo "The requested tag is $REQUESTED_TAG, but package.json requires $expected." >&2
+            exit 1
+          fi
+
+          tag_ref="refs/tags/${REQUESTED_TAG}"
+          git show-ref --verify --quiet "$tag_ref" || {
+            echo "$tag_ref does not exist as an exact tag." >&2
+            exit 1
+          }
+          tag_commit=$(git rev-list -n 1 "$tag_ref")
+          head_commit=$(git rev-parse HEAD)
+          if [[ "$tag_commit" != "$head_commit" ]]; then
+            echo "Checkout $head_commit does not match tag commit $tag_commit." >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$head_commit" refs/remotes/origin/main; then
+            echo "$REQUESTED_TAG does not point to a commit on main." >&2
+            exit 1
+          fi
+
+          draft=$(gh release view "$REQUESTED_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
+          if [[ "$draft" != 'true' ]]; then
+            echo "$REQUESTED_TAG must already exist as a draft release." >&2
+            exit 1
+          fi
+
+          echo "commit=$head_commit" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build macOS package (${{ matrix.arch }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    # Configure this environment to allow main only, require owner approval,
+    # and hold the Apple credentials as environment (not repository) secrets.
+    environment: macos-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+            mach_arch: arm64
+            app_dir: dist/mac-arm64/Multi-Git Client.app
+          - os: macos-15-intel
+            arch: x64
+            mach_arch: x86_64
+            app_dir: dist/mac/Multi-Git Client.app
+    steps:
+      # Pin every secret-bearing build to the commit validated above. A branch
+      # with the same name as the tag cannot select different source code.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Compile without Apple credentials
+        run: npm run compile
+
+      - name: Check signing and notarization credentials
+        if: ${{ inputs.allow_unsigned == false }}
+        id: signing
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+          APPLE_API_KEY_BASE64: ${{ secrets.MACOS_APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.MACOS_APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.MACOS_APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.MACOS_APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.MACOS_APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.MACOS_APPLE_TEAM_ID }}
+        run: |
+          if [[ -z "$CSC_LINK" ]]; then
+            echo 'MACOS_CSC_LINK is not configured. Refusing to build a public macOS package.' >&2
+            exit 1
+          fi
+
+          if [[ -n "$APPLE_API_KEY_BASE64" && -n "$APPLE_API_KEY_ID" && -n "$APPLE_API_ISSUER" ]]; then
+            echo 'notary=api' >> "$GITHUB_OUTPUT"
+          elif [[ -n "$APPLE_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" && -n "$APPLE_TEAM_ID" ]]; then
+            echo 'notary=apple-id' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Signing is configured, but notarization credentials are incomplete.' >&2
+            echo 'Provide either all three MACOS_APPLE_API_* secrets or the Apple ID/password/team secrets.' >&2
+            exit 1
+          fi
+
+      - name: Build signed DMG and ZIP with API-key notarization
+        if: ${{ inputs.allow_unsigned == false && steps.signing.outputs.notary == 'api' }}
+        shell: bash
+        # Only credential validation and electron-builder's packaging step
+        # receive signing material. Checkout, npm scripts, compilation,
+        # verification, and artifact actions do not.
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_BASE64: ${{ secrets.MACOS_APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.MACOS_APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.MACOS_APPLE_API_ISSUER }}
+        run: |
+          key_path="$RUNNER_TEMP/AuthKey.p8"
+          trap 'rm -f -- "$key_path"' EXIT
+          printf '%s' "$APPLE_API_KEY_BASE64" | /usr/bin/base64 -D > "$key_path"
+          chmod 600 "$key_path"
+          test -s "$key_path"
+          export APPLE_API_KEY="$key_path"
+          npx --no-install electron-builder --mac dmg zip --${{ matrix.arch }} --publish never
+
+      - name: Build signed DMG and ZIP with Apple-ID notarization
+        if: ${{ inputs.allow_unsigned == false && steps.signing.outputs.notary == 'apple-id' }}
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.MACOS_APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.MACOS_APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.MACOS_APPLE_TEAM_ID }}
+        run: npx --no-install electron-builder --mac dmg zip --${{ matrix.arch }} --publish never
+
+      - name: Remove temporary notarization key
+        if: ${{ always() && inputs.allow_unsigned == false }}
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Build unsigned test-only DMG and ZIP
+        if: ${{ inputs.allow_unsigned }}
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          echo '::warning::Unsigned output is for testing only and will not be attached to a release.'
+          npx --no-install electron-builder --mac dmg zip --${{ matrix.arch }} --publish never --config.mac.notarize=false
+
+      - name: Verify package architecture and Apple trust metadata
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          dmg="dist/Multi-Git-Client-macOS-${version}-${{ matrix.arch }}.dmg"
+          zip="dist/Multi-Git-Client-macOS-${version}-${{ matrix.arch }}.zip"
+          test -s "$dmg"
+          test -s "$zip"
+
+          app='${{ matrix.app_dir }}'
+          test -d "$app"
+          folder_type=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:0:LSItemContentTypes:0' "$app/Contents/Info.plist")
+          test "$folder_type" = 'public.folder'
+          executable="$app/Contents/MacOS/Multi-Git Client"
+          lipo -archs "$executable" | grep -Eq '(^| )${{ matrix.mach_arch }}( |$)'
+
+          if [[ '${{ inputs.allow_unsigned }}' == 'false' ]]; then
+            codesign --verify --deep --strict --verbose=2 "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+            xcrun stapler validate "$app"
+          fi
+
+      - name: Keep signed packages for the draft upload job
+        if: ${{ inputs.allow_unsigned == false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-signed-${{ matrix.arch }}
+          path: |
+            dist/Multi-Git-Client-macOS-*-${{ matrix.arch }}.dmg
+            dist/Multi-Git-Client-macOS-*-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Keep unsigned test packages separate
+        if: ${{ inputs.allow_unsigned }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-unsigned-${{ matrix.arch }}
+          path: |
+            dist/Multi-Git-Client-macOS-*-${{ matrix.arch }}.dmg
+            dist/Multi-Git-Client-macOS-*-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  upload:
+    name: Attach signed macOS packages to draft
+    if: ${{ inputs.allow_unsigned == false }}
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    environment: macos-release
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag }}
+      EXPECTED_COMMIT: ${{ needs.validate.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-signed-*
+          path: dist
+          merge-multiple: true
+
+      - name: Revalidate the tag and existing draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          IFS=$'\t' read -r object_type object_sha < <(
+            gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" \
+              --jq '.object | [.type, .sha] | @tsv'
+          )
+          for _ in 1 2 3 4 5; do
+            [[ "$object_type" == 'commit' ]] && break
+            if [[ "$object_type" != 'tag' ]]; then
+              echo "$TAG resolves to unsupported Git object type $object_type." >&2
+              exit 1
+            fi
+            IFS=$'\t' read -r object_type object_sha < <(
+              gh api "repos/$GITHUB_REPOSITORY/git/tags/$object_sha" \
+                --jq '.object | [.type, .sha] | @tsv'
+            )
+          done
+          if [[ "$object_type" != 'commit' || "$object_sha" != "$EXPECTED_COMMIT" ]]; then
+            echo "$TAG moved after validation; refusing to attach packages from $EXPECTED_COMMIT." >&2
+            exit 1
+          fi
+
+          draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
+          if [[ "$draft" != 'true' ]]; then
+            echo "$TAG must exist as a draft so immutable release assets are not changed after publication." >&2
+            exit 1
+          fi
+
+      - name: Create checksums and upload the complete macOS set
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/upload-release-assets.js --target macos --tag "$TAG" --no-changelog

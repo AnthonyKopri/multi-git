@@ -15,6 +15,53 @@ const ESCAPE_REPLACEMENTS: Record<string, string> = {
   r: '\r'
 };
 
+/** Decodes the C-style quoting used by Git's non-`-z` path output. */
+function decodeQuotedGitPath(contents: string): string {
+  let decoded = '';
+
+  for (let index = 0; index < contents.length; ) {
+    if (contents[index] !== '\\') {
+      decoded += contents[index];
+      index += 1;
+      continue;
+    }
+
+    // Git writes non-ASCII filenames as runs of octal-escaped UTF-8 bytes,
+    // e.g. café.txt becomes "caf\303\251.txt". Decode the complete byte run
+    // together; decoding one escape at a time would produce two replacement
+    // characters instead of é.
+    const bytes: number[] = [];
+    let byteIndex = index;
+    while (contents[byteIndex] === '\\') {
+      const match = contents.slice(byteIndex).match(/^\\([0-7]{1,3})/);
+      if (!match?.[1]) {
+        break;
+      }
+      bytes.push(Number.parseInt(match[1], 8));
+      byteIndex += match[0].length;
+    }
+
+    if (bytes.length > 0) {
+      decoded += Buffer.from(bytes).toString('utf8');
+      index = byteIndex;
+      continue;
+    }
+
+    const escaped = contents[index + 1];
+    if (escaped && Object.prototype.hasOwnProperty.call(ESCAPE_REPLACEMENTS, escaped)) {
+      decoded += ESCAPE_REPLACEMENTS[escaped] as string;
+      index += 2;
+      continue;
+    }
+
+    // Preserve unknown/incomplete escapes exactly as Git supplied them.
+    decoded += '\\';
+    index += 1;
+  }
+
+  return decoded;
+}
+
 /**
  * Git quotes paths containing special characters and escapes the contents:
  * `"path \"x\".txt"`. Unquoted paths are returned trimmed.
@@ -23,13 +70,7 @@ export function unquoteGitPath(rawPath: string): string {
   const trimmed = rawPath.trim();
 
   if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed
-      .slice(1, -1)
-      .replace(/\\([\\"tnr])/g, (match, character: string) =>
-        Object.prototype.hasOwnProperty.call(ESCAPE_REPLACEMENTS, character)
-          ? (ESCAPE_REPLACEMENTS[character] as string)
-          : match
-      );
+    return decodeQuotedGitPath(trimmed.slice(1, -1));
   }
 
   return trimmed;
@@ -102,6 +143,30 @@ function isConflictPair(index: string, workTree: string): boolean {
   );
 }
 
+/** Finds Git's rename arrow without mistaking one inside a quoted filename. */
+function splitRenamePath(rawPath: string): [string, string] | null {
+  let quoted = false;
+
+  for (let index = 0; index <= rawPath.length - 4; index += 1) {
+    const character = rawPath[index];
+    if (character === '\\') {
+      // In a quoted path the next character belongs to this escape (and an
+      // octal escape's remaining digits cannot contain a quote or arrow).
+      index += 1;
+      continue;
+    }
+    if (character === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (!quoted && rawPath.startsWith(' -> ', index)) {
+      return [rawPath.slice(0, index), rawPath.slice(index + 4)];
+    }
+  }
+
+  return null;
+}
+
 export function parsePorcelainStatus(stdout: string): PorcelainStatus {
   const staged: StagedFile[] = [];
   const unstaged: UnstagedFile[] = [];
@@ -134,15 +199,18 @@ export function parsePorcelainStatus(stdout: string): PorcelainStatus {
     const indexStatus = line[0] as StatusCode;
     const workTreeStatus = line[1] as StatusCode;
 
-    let filePath = unquoteGitPath(line.substring(3));
+    const rawFilePath = line.substring(3);
+    let filePath = unquoteGitPath(rawFilePath);
     let origPath: string | null = null;
 
     // Renames and copies are reported as "old -> new"; the new path is the
     // one the user acts on.
-    if ((indexStatus === 'R' || indexStatus === 'C') && filePath.includes(' -> ')) {
-      const [from, to] = filePath.split(' -> ');
-      origPath = unquoteGitPath(from ?? '');
-      filePath = unquoteGitPath(to ?? '');
+    if (indexStatus === 'R' || indexStatus === 'C') {
+      const rename = splitRenamePath(rawFilePath);
+      if (rename) {
+        origPath = unquoteGitPath(rename[0]);
+        filePath = unquoteGitPath(rename[1]);
+      }
     }
 
     if (isConflictPair(indexStatus, workTreeStatus)) {

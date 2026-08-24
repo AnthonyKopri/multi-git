@@ -18,6 +18,11 @@ export const RELEASES_URL = `https://api.github.com/repos/${UPDATE_REPO}/release
 /** Basename of the checksum manifest scripts/release-assets.js uploads. */
 export const CHECKSUM_ASSET = 'SHA256SUMS.txt';
 
+/** macOS artifacts are produced independently from the Windows release set. */
+export const MACOS_CHECKSUM_ASSET = 'SHA256SUMS-macOS.txt';
+
+export type UpdateArtifactKind = 'installer' | 'portable' | 'macos';
+
 /**
  * Exactly the tags scripts/release-assets.js `releaseTag()` produces.
  *
@@ -150,7 +155,9 @@ export interface SelectUpdateInput {
   releases: unknown;
   currentVersion: string;
   /** Which artifact this build needs, so a release without it is skipped. */
-  installKind: 'installer' | 'portable';
+  installKind: UpdateArtifactKind;
+  /** Native Electron architecture. Used only for the macOS DMG. */
+  architecture?: string | undefined;
   /** Version the user chose to skip, if any. */
   skippedVersion?: string | undefined;
 }
@@ -169,11 +176,16 @@ export interface SelectUpdateInput {
  */
 function hasNeededAssets(
   candidate: ReleaseCandidate,
-  installKind: 'installer' | 'portable'
+  installKind: UpdateArtifactKind,
+  architecture: string | undefined
 ): boolean {
+  const basename = assetBasename(installKind, candidate.version, architecture);
+  if (basename === null) {
+    return false;
+  }
   return (
-    findAsset(candidate, assetBasename(installKind, candidate.version)) !== null &&
-    findAsset(candidate, CHECKSUM_ASSET) !== null
+    findAsset(candidate, basename) !== null &&
+    findAsset(candidate, checksumAssetBasename(installKind)) !== null
   );
 }
 
@@ -199,7 +211,7 @@ export function selectUpdate(input: SelectUpdateInput): ReleaseCandidate | null 
     if (difference < 0 || (difference === 0 && !prerelease)) {
       continue;
     }
-    if (!hasNeededAssets(candidate, input.installKind)) {
+    if (!hasNeededAssets(candidate, input.installKind, input.architecture)) {
       continue;
     }
     if (!best || compareVersions(candidate.parsed, best.parsed) > 0) {
@@ -214,11 +226,42 @@ export function selectUpdate(input: SelectUpdateInput): ReleaseCandidate | null 
   return best;
 }
 
-/** Basenames must match scripts/release-assets.js RELEASE_ASSETS exactly. */
-export function assetBasename(kind: 'installer' | 'portable', version: string): string {
-  return kind === 'installer'
-    ? `Multi-Git-Client-Setup-${version}.exe`
-    : `Multi-Git-Client-Portable-${version}.exe`;
+/** Basenames must match the release workflows exactly. */
+export function assetBasename(
+  kind: 'installer' | 'portable',
+  version: string,
+  architecture?: string
+): string;
+export function assetBasename(
+  kind: 'macos',
+  version: string,
+  architecture?: string
+): string | null;
+export function assetBasename(
+  kind: UpdateArtifactKind,
+  version: string,
+  architecture?: string
+): string | null;
+export function assetBasename(
+  kind: UpdateArtifactKind,
+  version: string,
+  architecture?: string
+): string | null {
+  if (kind === 'installer') {
+    return `Multi-Git-Client-Setup-${version}.exe`;
+  }
+  if (kind === 'portable') {
+    return `Multi-Git-Client-Portable-${version}.exe`;
+  }
+  if (architecture !== 'arm64' && architecture !== 'x64') {
+    return null;
+  }
+  return `Multi-Git-Client-macOS-${version}-${architecture}.dmg`;
+}
+
+/** The manifest paired with an artifact family. */
+export function checksumAssetBasename(kind: UpdateArtifactKind): string {
+  return kind === 'macos' ? MACOS_CHECKSUM_ASSET : CHECKSUM_ASSET;
 }
 
 /** Looks an asset up by exact name; a near-miss is a failure, not a guess. */

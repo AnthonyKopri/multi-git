@@ -39,7 +39,7 @@ report.*.json
 *.key
 # Private keys in every format this project can plausibly meet: OpenSSH key
 # pairs (including the id_<type>_<label> names Multi-Git's generator creates),
-# PuTTY keys, and the PKCS#12 bundles used for Windows code signing.
+# PuTTY keys, and Apple/Windows signing or provisioning material.
 id_rsa*
 id_ed25519*
 id_ecdsa*
@@ -47,6 +47,9 @@ id_dsa*
 *.ppk
 *.pfx
 *.p12
+*.p8
+*.provisionprofile
+*.mobileprovision
 known_hosts*
 
 # Local scratch repositories and generated test workspaces

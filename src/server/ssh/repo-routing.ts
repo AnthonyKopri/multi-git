@@ -16,6 +16,7 @@
 // from the agent, it is just told which one to ask for.
 import { runGitCommand, tryGitCommand } from '../git/run';
 import { normalizeSshPath } from './keys';
+import { quoteShellArgument } from '../process/shell-quote';
 
 /** The git config key this owns. Nothing else in the app writes it. */
 export const SSH_COMMAND_KEY = 'core.sshCommand';
@@ -31,7 +32,7 @@ export function buildRepoSshCommand(privateKeyPath: string): string {
   const normalized = normalizeSshPath(privateKeyPath).replace(/\\/g, '/');
 
   return [
-    `ssh -i "${normalized}"`,
+    `ssh -i ${quoteShellArgument(normalized)}`,
     '-o IdentitiesOnly=yes',
     '-o StrictHostKeyChecking=accept-new'
   ].join(' ');
@@ -87,5 +88,9 @@ export async function clearRepoSshCommand(repoPath: string): Promise<{ changed: 
  * own reasons — a jump host, a custom binary, extra options.
  */
 export function isMultiGitSshCommand(value: string | null): boolean {
-  return value !== null && value.startsWith('ssh -i "') && value.includes('IdentitiesOnly=yes');
+  return (
+    value !== null &&
+    (value.startsWith('ssh -i "') || value.startsWith("ssh -i '")) &&
+    value.includes('IdentitiesOnly=yes')
+  );
 }

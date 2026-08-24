@@ -8,7 +8,12 @@
 // two releases because the hint and the binding were separate.
 import { describe, expect, it } from 'vitest';
 
-import { isTypingTarget, matchesShortcut } from '../src/renderer/ui/shortcuts';
+import {
+  displayShortcut,
+  isTypingTarget,
+  localizeShortcutLabels,
+  matchesShortcut
+} from '../src/renderer/ui/shortcuts';
 
 function press(init: Partial<KeyboardEventInit> & { key: string }): KeyboardEvent {
   return new KeyboardEvent('keydown', init);
@@ -32,12 +37,47 @@ describe('matching a chord', () => {
     expect(matchesShortcut('Ctrl+K', press({ key: 'k', ctrlKey: true }))).toBe(true);
   });
 
+  it('keeps Ctrl-only shortcuts logical on non-QWERTY layouts', () => {
+    expect(
+      matchesShortcut('Ctrl+K', press({ key: 'k', code: 'KeyV', ctrlKey: true }))
+    ).toBe(true);
+  });
+
+  it('keeps Windows and Linux Ctrl+Alt shortcuts logical too', () => {
+    expect(
+      matchesShortcut(
+        'Ctrl+Alt+S',
+        press({ key: 's', code: 'KeyO', ctrlKey: true, altKey: true })
+      )
+    ).toBe(true);
+  });
+
   it('accepts Cmd for Ctrl', () => {
     expect(matchesShortcut('Ctrl+1', press({ key: '1', metaKey: true }))).toBe(true);
   });
 
+  it('matches a Cmd+Option letter by code when Option changes the typed character', () => {
+    // On the macOS US layout Option+S produces ß. KeyboardEvent.key therefore
+    // no longer contains the letter written in the shortcut, even though this
+    // is the physical S key. Every Ctrl+Alt command is exposed as Cmd+Option on
+    // macOS, so matching only `key` makes Stage all, Fetch, Pull and Push inert.
+    expect(
+      matchesShortcut(
+        'Ctrl+Alt+S',
+        press({ key: 'ß', code: 'KeyS', metaKey: true, altKey: true })
+      )
+    ).toBe(true);
+    expect(
+      matchesShortcut(
+        'Ctrl+Alt+S',
+        press({ key: '∂', code: 'KeyD', metaKey: true, altKey: true })
+      )
+    ).toBe(false);
+  });
+
   it('matches function keys by name', () => {
     expect(matchesShortcut('F5', press({ key: 'F5' }))).toBe(true);
+    expect(matchesShortcut('F5', press({ key: 'r', code: 'KeyR', metaKey: true }))).toBe(true);
     expect(matchesShortcut('F5', press({ key: 'F6' }))).toBe(false);
     // And is not confused by a modifier nobody asked for.
     expect(matchesShortcut('F5', press({ key: 'F5', ctrlKey: true }))).toBe(false);
@@ -84,5 +124,30 @@ describe('not stealing keys from a text box', () => {
     const event = press({ key: 'a' });
     Object.defineProperty(event, 'target', { value: document.createElement('div') });
     expect(isTypingTarget(event)).toBe(false);
+  });
+});
+
+describe('platform shortcut labels', () => {
+  it('uses conventional macOS modifier symbols without changing the binding', () => {
+    expect(displayShortcut('Ctrl+Alt+S', true)).toBe('⌘⌥S');
+    expect(displayShortcut('Ctrl+Shift+B', true)).toBe('⌘⇧B');
+    expect(displayShortcut('Ctrl+Enter', true)).toBe('⌘↩');
+    expect(displayShortcut('F5', true)).toBe('⌘R');
+    expect(displayShortcut('Ctrl+Alt+S', false)).toBe('Ctrl+Alt+S');
+  });
+
+  it('localises shortcut hints embedded in static markup', () => {
+    const root = document.createElement('div');
+    root.innerHTML = [
+      '<button title="Fetch (Ctrl+Alt+F)"></button>',
+      '<textarea placeholder="Type (Ctrl+Enter to commit)"></textarea>'
+    ].join('');
+
+    localizeShortcutLabels(root, true);
+
+    expect(root.querySelector('button')?.title).toBe('Fetch (⌘⌥F)');
+    expect(root.querySelector('textarea')?.getAttribute('placeholder')).toBe(
+      'Type (⌘↩ to commit)'
+    );
   });
 });

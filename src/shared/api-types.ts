@@ -13,6 +13,7 @@ import type {
 } from './git-types';
 import type { ClientConfig, RepoSettings, VaultStatus } from './config-types';
 import type { GitignoreSummary, LicenseSummary } from './template-types';
+import type { HostPlatform } from './ssh-agent-types';
 
 /** Every successful response carries this. */
 export interface Ok {
@@ -213,6 +214,8 @@ export interface AppInfoResponse extends Ok {
   version: string;
   /** Name and version together, ready to use as a window or tab title. */
   title: string;
+  /** Node's host platform, used for native keyboard notation and labels. */
+  platform: HostPlatform;
 }
 
 export interface TemplateCatalogueResponse extends Ok {

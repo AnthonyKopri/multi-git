@@ -14,10 +14,16 @@
     "test": "npm run typecheck && vitest run",
     "build": "npm run compile && electron-builder",
     "build-win": "npm run compile && electron-builder --win nsis portable",
+    "build-mac": "npm run compile && electron-builder --mac dmg zip --publish never",
+    "build-mac:arm64": "npm run compile && electron-builder --mac dmg zip --arm64 --publish never",
+    "build-mac:x64": "npm run compile && electron-builder --mac dmg zip --x64 --publish never",
+    "build-mac:portable": "npm run compile && electron-builder --mac zip --publish never",
     "build-standalone": "npm run compile && electron-builder --win portable --config.directories.output=dist-standalone",
     "release": "node scripts/release.js",
     "release:installer": "node scripts/release.js --target installer",
     "release:portable": "node scripts/release.js --target portable",
+    "release:mac:arm64": "node scripts/release.js --target mac-arm64",
+    "release:mac:x64": "node scripts/release.js --target mac-x64",
     "release:upload": "node scripts/upload-release-assets.js",
     "release:ship": "node scripts/ship.js",
     "release:verify": "node scripts/verify-release.js"
@@ -57,6 +63,7 @@
       "out/**/*",
       "templates/**/*",
       "docs/images/multi-git-logo.ico",
+      "docs/images/multi-git-logo.png",
       "package.json"
     ],
     "icon": "docs/images/multi-git-logo.ico",
@@ -65,10 +72,36 @@
     },
     "afterPack": "./scripts/after-pack.js",
     "win": {
+      "icon": "docs/images/multi-git-logo.ico",
       "signAndEditExecutable": false,
       "target": [
         "nsis",
         "portable"
+      ]
+    },
+    "mac": {
+      "icon": "docs/images/multi-git-logo.png",
+      "artifactName": "Multi-Git-Client-macOS-${version}-${arch}.${ext}",
+      "category": "public.app-category.developer-tools",
+      "extendInfo": {
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Git repository folder",
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "public.folder"
+            ]
+          }
+        ]
+      },
+      "hardenedRuntime": true,
+      "entitlements": "packaging/entitlements.mac.plist",
+      "entitlementsInherit": "packaging/entitlements.mac.inherit.plist",
+      "notarize": true,
+      "target": [
+        "dmg",
+        "zip"
       ]
     },
     "nsis": {

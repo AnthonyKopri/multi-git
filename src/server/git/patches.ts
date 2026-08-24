@@ -153,7 +153,12 @@ function assertContained(repoPath: string, paths: readonly string[]): void {
     const resolved = path.resolve(root, candidate);
     const relative = path.relative(root, resolved);
 
-    if (relative === '' || relative.startsWith('..') || path.isAbsolute(relative)) {
+    if (
+      relative === '' ||
+      relative === '..' ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative)
+    ) {
       throw new PatchError(
         `This patch writes outside the repository (${candidate}), which is refused.`
       );

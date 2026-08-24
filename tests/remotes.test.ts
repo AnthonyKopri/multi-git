@@ -118,6 +118,21 @@ describe('listing remotes', () => {
     expect(remotes.map((remote) => remote.name).sort()).toEqual(['origin', 'upstream']);
     expect(origin?.fetchRefspecs).toHaveLength(2);
   });
+
+  it('keeps remote subsection names case-sensitive', async () => {
+    const repo = createRepoWithHistory();
+    git(repo, 'remote', 'add', 'origin', 'https://example.com/lower.git');
+    git(repo, 'remote', 'add', 'Origin', 'https://example.com/upper.git');
+
+    const remotes = await listRemotes(repo);
+
+    expect(remotes.find((remote) => remote.name === 'origin')?.fetchUrl).toBe(
+      'https://example.com/lower.git'
+    );
+    expect(remotes.find((remote) => remote.name === 'Origin')?.fetchUrl).toBe(
+      'https://example.com/upper.git'
+    );
+  });
 });
 
 describe('adding and editing a remote', () => {

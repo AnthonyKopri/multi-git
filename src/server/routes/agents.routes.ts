@@ -88,7 +88,8 @@ agentsRouter.post(
     if (
       body.terminal !== 'direct' &&
       body.terminal !== 'windows-terminal' &&
-      body.terminal !== 'powershell'
+      body.terminal !== 'powershell' &&
+      body.terminal !== 'macos-terminal'
     ) {
       throw new HttpError('Choose how the agent should be launched.', 400);
     }

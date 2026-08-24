@@ -18,6 +18,8 @@ import { spawn } from 'node:child_process';
 import type { SpawnOptions } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 
+import { killProcessTree, TREE_KILLABLE_SPAWN_OPTIONS } from './kill-tree';
+
 /** 64 MiB. Larger than any diff a human reads, small enough to stay safe. */
 export const DEFAULT_MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 
@@ -123,7 +125,8 @@ export function runProcess(
   return new Promise((resolve) => {
     const spawnOptions: SpawnOptions = {
       shell: false,
-      windowsHide: true
+      windowsHide: true,
+      ...TREE_KILLABLE_SPAWN_OPTIONS
     };
     if (options.cwd !== undefined) {
       spawnOptions.cwd = options.cwd;
@@ -141,15 +144,21 @@ export function runProcess(
     let timedOut = false;
     let cancelled = false;
     let settled = false;
+    let cancelEscalation: (() => void) | null = null;
+
+    const terminate = (): void => {
+      cancelEscalation?.();
+      cancelEscalation = killProcessTree(child);
+    };
 
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill();
+      terminate();
     }, timeoutMs);
 
     const onAbort = (): void => {
       cancelled = true;
-      child.kill();
+      terminate();
     };
 
     if (options.signal) {
@@ -168,6 +177,7 @@ export function runProcess(
       }
       settled = true;
       clearTimeout(timer);
+      cancelEscalation?.();
       options.signal?.removeEventListener('abort', onAbort);
 
       resolve({

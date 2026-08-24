@@ -12,9 +12,9 @@
 import path from 'node:path';
 
 import {
-  CHECKSUM_ASSET,
   RELEASES_URL,
   assetBasename,
+  checksumAssetBasename,
   findAsset,
   lookupChecksum,
   parseChecksumManifest,
@@ -45,6 +45,8 @@ export interface UpdateSettings {
 export interface UpdateServiceDeps {
   currentVersion: string;
   installKind: InstallKind;
+  /** process.arch, used to choose the native macOS DMG. */
+  architecture?: string | undefined;
   /** Where a portable replacement goes: beside the running exe. */
   portableDir: string | null;
   /** Where an installer is staged. */
@@ -60,7 +62,7 @@ export interface UpdateServiceDeps {
   /** True when the failure was GitHub's hourly limit, which is not an error. */
   isRateLimit: (error: unknown) => boolean;
   /** Starts the downloaded file. Throws if it could not be started. */
-  spawnDetached: (file: string, args: string[]) => void;
+  spawnDetached: (file: string, args: string[]) => void | Promise<void>;
   quit: () => void;
   broadcastState: (state: UpdateState) => void;
   /** Asks the one chosen window to show the popup. */
@@ -141,7 +143,12 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     const candidate = selectUpdate({
       releases,
       currentVersion: deps.currentVersion,
-      installKind: deps.installKind === 'portable' ? 'portable' : 'installer',
+      installKind: deps.installKind === 'portable'
+        ? 'portable'
+        : deps.installKind === 'macos'
+          ? 'macos'
+          : 'installer',
+      architecture: deps.architecture,
       skippedVersion: deps.readSettings().skippedUpdateVersion
     });
 
@@ -183,8 +190,15 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     }
 
     const release = resolved;
-    const kind = deps.installKind === 'portable' ? 'portable' : 'installer';
-    const basename = assetBasename(kind, release.version);
+    const kind = deps.installKind === 'portable'
+      ? 'portable'
+      : deps.installKind === 'macos'
+        ? 'macos'
+        : 'installer';
+    const basename = assetBasename(kind, release.version, deps.architecture);
+    if (basename === null) {
+      return fail(null, `This ${deps.architecture ?? 'unknown'} build has no compatible update artifact.`);
+    }
 
     let destination: string;
     try {
@@ -200,9 +214,10 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
 
     // Fail closed: without the manifest there is nothing to verify against, so
     // the download is refused rather than trusted.
-    const checksumAsset = findAsset(release, CHECKSUM_ASSET);
+    const checksumName = checksumAssetBasename(kind);
+    const checksumAsset = findAsset(release, checksumName);
     if (!checksumAsset) {
-      return fail(null, `Release ${release.tag} published no ${CHECKSUM_ASSET} to verify against.`);
+      return fail(null, `Release ${release.tag} published no ${checksumName} to verify against.`);
     }
 
     publish({ phase: 'downloading', percent: 0, message: undefined });
@@ -260,7 +275,7 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     const command = installCommand(deps.installKind, downloadedPath);
 
     try {
-      deps.spawnDetached(command.file, command.args);
+      await deps.spawnDetached(command.file, command.args);
     } catch (error) {
       // Quitting here would close the app into nothing. Stay open and say so.
       return fail(error, 'The update could not be started.');

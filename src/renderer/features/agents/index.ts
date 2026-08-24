@@ -35,6 +35,15 @@ let launchTarget = '';
 
 export function initAgents(elements: Elements): void {
   ui = elements;
+
+  const isWindows = navigator.userAgent.includes('Windows');
+  const isMac = navigator.userAgent.includes('Mac');
+  for (const option of asSelect(ui.agentTerminalSelect).options) {
+    const windowsOnly = option.value === 'windows-terminal' || option.value === 'powershell';
+    const macOnly = option.value === 'macos-terminal';
+    option.hidden = (windowsOnly && !isWindows) || (macOnly && !isMac);
+    option.disabled = option.hidden;
+  }
 }
 
 export function canLaunch(): boolean {
@@ -62,6 +71,8 @@ function terminalLabel(mode: ExternalAgentDefinition['terminal']): string {
       return 'Windows Terminal';
     case 'powershell':
       return 'PowerShell window';
+    case 'macos-terminal':
+      return 'Terminal.app';
     default:
       return 'its own window';
   }
@@ -184,8 +195,11 @@ function resetAgentForm(): void {
   asInput(ui.agentLabelInput).value = '';
   asInput(ui.agentExecutableInput).value = '';
   asInput(ui.agentArgsInput).value = '';
-  asSelect(ui.agentTerminalSelect).value =
-    navigator.userAgent.includes('Windows') ? 'windows-terminal' : 'direct';
+  asSelect(ui.agentTerminalSelect).value = navigator.userAgent.includes('Windows')
+    ? 'windows-terminal'
+    : navigator.userAgent.includes('Mac')
+      ? 'macos-terminal'
+      : 'direct';
   asInput(ui.agentPromptModeCheckbox).checked = true;
 }
 

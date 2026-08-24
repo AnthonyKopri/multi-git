@@ -8,7 +8,7 @@
 // the update the main process already chose, and nothing else.
 
 /** How the running copy was installed, which decides what gets downloaded. */
-export type InstallKind = 'installer' | 'portable' | 'unsupported';
+export type InstallKind = 'installer' | 'portable' | 'macos' | 'unsupported';
 
 export type UpdatePhase =
   | 'idle'
@@ -41,8 +41,8 @@ export interface UpdateReleaseInfo {
 export interface UpdateState {
   phase: UpdatePhase;
   /**
-   * False on non-Windows, in browser mode, and when running unpackaged. The
-   * renderer shows no update UI at all in that case.
+   * False in browser mode, on an unsupported platform, and when running
+   * unpackaged. The renderer shows no update UI at all in that case.
    */
   supported: boolean;
   installKind: InstallKind;

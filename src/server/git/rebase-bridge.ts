@@ -28,6 +28,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { quoteShellArgument } from '../process/shell-quote';
+
 /**
  * The bridge, verbatim.
  *
@@ -97,17 +99,6 @@ export function removeEditorBridge(bridge: { directory: string } | null): void {
   }
 }
 
-/**
- * Quotes one path for the command string git will hand to a shell.
- *
- * Both values are paths this application chose, so this is about spaces in
- * `C:\Program Files\...`, not about untrusted input. Double quotes work for
- * cmd.exe and for POSIX shells alike, and neither path can contain one.
- */
-function quoteForShell(value: string): string {
-  return `"${value.replace(/"/g, '')}"`;
-}
-
 /** The interpreter to run the bridge with. */
 function interpreter(): { command: string; env: NodeJS.ProcessEnv } {
   // Under Electron, argv[0] is the Electron binary; this variable is the
@@ -120,7 +111,7 @@ function interpreter(): { command: string; env: NodeJS.ProcessEnv } {
 function invocation(bridge: EditorBridge, mode: 'sequence' | 'accept'): string {
   const { command } = interpreter();
   // Git appends the file to edit, so the mode has to come first.
-  return `${quoteForShell(command)} ${quoteForShell(bridge.scriptPath)} ${mode}`;
+  return `${quoteShellArgument(command)} ${quoteShellArgument(bridge.scriptPath)} ${mode}`;
 }
 
 export interface BridgeEnvOptions {

@@ -8,6 +8,8 @@ const ROOT = path.join(__dirname, '..');
 const DEFAULT_OUTPUT_DIR = path.join(ROOT, 'dist');
 const CHECKSUM_BASENAME = 'SHA256SUMS.txt';
 const CHECKSUM_LABEL = 'SHA-256 checksums';
+const MACOS_CHECKSUM_BASENAME = 'SHA256SUMS-macOS.txt';
+const MACOS_CHECKSUM_LABEL = 'macOS SHA-256 checksums';
 // Keep this in step with the release driver's accepted version format.
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
@@ -19,13 +21,33 @@ const RELEASE_ASSETS = Object.freeze({
   portable: Object.freeze({
     label: 'Portable Windows executable',
     basename: (version) => `Multi-Git-Client-Portable-${version}.exe`
+  }),
+  macDmgArm64: Object.freeze({
+    label: 'macOS disk image (Apple Silicon)',
+    basename: (version) => `Multi-Git-Client-macOS-${version}-arm64.dmg`
+  }),
+  macZipArm64: Object.freeze({
+    label: 'Portable macOS archive (Apple Silicon)',
+    basename: (version) => `Multi-Git-Client-macOS-${version}-arm64.zip`
+  }),
+  macDmgX64: Object.freeze({
+    label: 'macOS disk image (Intel)',
+    basename: (version) => `Multi-Git-Client-macOS-${version}-x64.dmg`
+  }),
+  macZipX64: Object.freeze({
+    label: 'Portable macOS archive (Intel)',
+    basename: (version) => `Multi-Git-Client-macOS-${version}-x64.zip`
   })
 });
 
 const TARGET_ASSET_KINDS = Object.freeze({
   installer: Object.freeze(['installer']),
   portable: Object.freeze(['portable']),
-  both: Object.freeze(['installer', 'portable'])
+  both: Object.freeze(['installer', 'portable']),
+  windows: Object.freeze(['installer', 'portable']),
+  'mac-arm64': Object.freeze(['macDmgArm64', 'macZipArm64']),
+  'mac-x64': Object.freeze(['macDmgX64', 'macZipX64']),
+  macos: Object.freeze(['macDmgArm64', 'macZipArm64', 'macDmgX64', 'macZipX64'])
 });
 
 function assertVersion(version) {
@@ -39,9 +61,26 @@ function selectedAssetKinds(targetName) {
     ? TARGET_ASSET_KINDS[targetName]
     : undefined;
   if (!keys) {
-    throw new Error(`Invalid release target "${targetName}"; expected installer, portable, or both.`);
+    throw new Error(
+      `Invalid release target "${targetName}"; expected installer, portable, both, windows, mac-arm64, mac-x64, or macos.`
+    );
   }
   return [...keys];
+}
+
+/** Each platform owns one manifest, so independently built artifacts never clobber each other. */
+function checksumSpecForTarget(targetName) {
+  const keys = selectedAssetKinds(targetName);
+  const macOnly = keys.every((key) => key.startsWith('mac'));
+  const windowsOnly = keys.every((key) => !key.startsWith('mac'));
+
+  if (macOnly) {
+    return Object.freeze({ basename: MACOS_CHECKSUM_BASENAME, label: MACOS_CHECKSUM_LABEL });
+  }
+  if (windowsOnly) {
+    return Object.freeze({ basename: CHECKSUM_BASENAME, label: CHECKSUM_LABEL });
+  }
+  throw new Error(`Release target "${targetName}" mixes platforms; write one manifest per platform.`);
 }
 
 function resolveReleaseAssets({ version, targetName, outputDir = DEFAULT_OUTPUT_DIR }) {
@@ -93,6 +132,7 @@ function writeFileAtomic(filePath, contents) {
 
 async function writeChecksumManifest({ version, targetName, outputDir = DEFAULT_OUTPUT_DIR }) {
   const artifacts = resolveReleaseAssets({ version, targetName, outputDir });
+  const checksum = checksumSpecForTarget(targetName);
 
   for (const artifact of artifacts) {
     let stat;
@@ -118,7 +158,7 @@ async function writeChecksumManifest({ version, targetName, outputDir = DEFAULT_
   }
 
   const contents = `${entries.map((entry) => `${entry.sha256}  ${entry.basename}`).join('\n')}\n`;
-  const manifestPath = path.join(path.resolve(outputDir), CHECKSUM_BASENAME);
+  const manifestPath = path.join(path.resolve(outputDir), checksum.basename);
   writeFileAtomic(manifestPath, contents);
   return Object.freeze({
     manifestPath,
@@ -136,20 +176,22 @@ function buildGhUploadArgs({
   tag,
   version,
   outputDir = DEFAULT_OUTPUT_DIR,
-  repo
+  repo,
+  targetName = 'both'
 }) {
   if (typeof tag !== 'string' || tag.trim() === '') {
     throw new Error('GitHub release tag must be a non-empty string.');
   }
 
-  const artifacts = resolveReleaseAssets({ version, targetName: 'both', outputDir });
-  const checksumPath = path.join(path.resolve(outputDir), CHECKSUM_BASENAME);
+  const artifacts = resolveReleaseAssets({ version, targetName, outputDir });
+  const checksum = checksumSpecForTarget(targetName);
+  const checksumPath = path.join(path.resolve(outputDir), checksum.basename);
   const args = [
     'release',
     'upload',
     tag,
     ...artifacts.map((artifact) => `${artifact.path}#${artifact.label}`),
-    `${checksumPath}#${CHECKSUM_LABEL}`
+    `${checksumPath}#${checksum.label}`
   ];
 
   if (repo !== undefined) {
@@ -166,7 +208,10 @@ module.exports = {
   RELEASE_ASSETS,
   CHECKSUM_BASENAME,
   CHECKSUM_LABEL,
+  MACOS_CHECKSUM_BASENAME,
+  MACOS_CHECKSUM_LABEL,
   selectedAssetKinds,
+  checksumSpecForTarget,
   resolveReleaseAssets,
   writeChecksumManifest,
   releaseTag,
