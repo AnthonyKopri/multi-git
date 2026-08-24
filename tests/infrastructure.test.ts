@@ -6,6 +6,7 @@ import path from 'node:path';
 import { writeFileAtomic, writeJsonAtomic } from '../src/server/fs/atomic';
 import { withRepoLock } from '../src/server/git/lock';
 import { GitError, buildSshCommand } from '../src/server/git/run';
+import { quoteShellArgument } from '../src/server/process/shell-quote';
 import { createAskpassBridge } from '../src/server/ssh/askpass';
 import { isPermittedKeyPath, sanitizeLabelForKeyName } from '../src/server/ssh/keys';
 import { LOG_TEXT_MAX, appendLog, clearLogBuffer } from '../src/server/logs';
@@ -150,7 +151,9 @@ describe('buildSshCommand', () => {
     // The binary itself is resolved rather than left to PATH, so only the
     // identity argument is asserted here; tests/openssh-path.test.ts covers
     // which ssh gets named.
-    expect(command).toContain('-i "C:/Users/jane/.ssh/id_ed25519"');
+    expect(command).toContain(
+      `-i ${quoteShellArgument('C:/Users/jane/.ssh/id_ed25519')}`
+    );
     expect(command.startsWith('ssh') || command.startsWith('"')).toBe(true);
     expect(command).toContain('IdentitiesOnly=yes');
     expect(command).toContain('StrictHostKeyChecking=accept-new');

@@ -15,6 +15,7 @@ import {
   setRepoSshCommand,
   SSH_COMMAND_KEY
 } from '../src/server/ssh/repo-routing';
+import { quoteShellArgument } from '../src/server/process/shell-quote';
 import { FakeRunner, command, programName } from './helpers/fake-runner';
 import { cleanupRepos, createRepoWithHistory, git } from './helpers/temp-repo';
 
@@ -152,7 +153,7 @@ describe('repository routing', () => {
     const value = await readRepoSshCommand(repo);
     expect(value).toContain('café');
     // Quoted, because git hands this string to a shell.
-    expect(value).toContain('"');
+    expect(value).toContain(quoteShellArgument(awkward.replace(/\\/g, '/')));
   });
 });
 

@@ -21,6 +21,7 @@ import {
 import { parseScField, parseServiceQuery, repairNeedsElevation, AGENT_REPAIR_COMMAND } from '../src/server/ssh/agent-service';
 import { buildRepoSshCommand, isMultiGitSshCommand } from '../src/server/ssh/repo-routing';
 import { normalizeSshPath } from '../src/server/ssh/keys';
+import { quoteShellArgument } from '../src/server/process/shell-quote';
 import { FakeRunner, command, programName } from './helpers/fake-runner';
 
 const FINGERPRINT = 'SHA256:VGhpc0lzQVRlc3RGaW5nZXJwcmludFZhbHVlMDE=';
@@ -432,7 +433,9 @@ describe('repository routing', () => {
 
     // Quoted because git hands this to a shell, and separators normalised
     // because a POSIX-style shell would eat backslashes.
-    expect(value).toContain(`ssh -i "${key.replace(/\\/g, '/')}"`);
+    expect(value).toContain(
+      `ssh -i ${quoteShellArgument(key.replace(/\\/g, '/'))}`
+    );
     expect(value).toContain(' ');
     // Without this, ssh offers every agent identity in turn and GitHub
     // authenticates as whichever matches first.
