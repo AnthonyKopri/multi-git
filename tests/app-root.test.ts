@@ -7,6 +7,8 @@ import { findAppRoot } from '../src/server/app-root';
 
 // Synthetic trees rather than the real repository, so these assertions stay
 // true regardless of where the test file itself happens to live.
+// Compare lexical absolute paths: macOS exposes its temporary directory as
+// /var/folders even though realpath resolves the same location under /private.
 const tempRoots: string[] = [];
 
 function makeTree(layout: Record<string, string>): string {
@@ -38,7 +40,7 @@ describe('findAppRoot', () => {
       'src/server/app-root.ts': ''
     });
 
-    expect(findAppRoot(path.join(root, 'src', 'server'))).toBe(fs.realpathSync(root));
+    expect(findAppRoot(path.join(root, 'src', 'server'))).toBe(path.resolve(root));
   });
 
   it('resolves the built layout, two directories deeper than the sources', () => {
@@ -50,7 +52,7 @@ describe('findAppRoot', () => {
 
     // This is the case a fixed number of `..` segments gets wrong: the built
     // file is at out/node/server, the sources were at src/server.
-    expect(findAppRoot(path.join(root, 'out', 'node', 'server'))).toBe(fs.realpathSync(root));
+    expect(findAppRoot(path.join(root, 'out', 'node', 'server'))).toBe(path.resolve(root));
   });
 
   it('resolves the packaged layout, where the asar root holds package.json', () => {
@@ -72,7 +74,7 @@ describe('findAppRoot', () => {
     });
 
     expect(findAppRoot(path.join(root, 'node_modules', 'some-dep', 'lib'))).toBe(
-      fs.realpathSync(root)
+      path.resolve(root)
     );
   });
 
@@ -83,7 +85,7 @@ describe('findAppRoot', () => {
       'broken/nested/file.js': ''
     });
 
-    expect(findAppRoot(path.join(root, 'broken', 'nested'))).toBe(fs.realpathSync(root));
+    expect(findAppRoot(path.join(root, 'broken', 'nested'))).toBe(path.resolve(root));
   });
 
   it('returns null rather than looping when no application root exists', () => {
