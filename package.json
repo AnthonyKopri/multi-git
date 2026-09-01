@@ -43,7 +43,7 @@
     "@types/supertest": "^7.2.1",
     "electron": "^43.3.0",
     "electron-builder": "^26.15.3",
-    "esbuild": "^0.28.1",
+    "esbuild": "^0.28.2",
     "happy-dom": "^20.11.2",
     "rcedit": "^5.0.2",
     "supertest": "^7.0.0",
