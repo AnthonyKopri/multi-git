@@ -20,13 +20,19 @@
 // and it is two bytes at a fixed place. So the question is answered by reading
 // the target rather than by guessing from its name.
 //
+// A Store app's name on PATH is not the program but an app execution alias:
+// `wt.exe` in `%LOCALAPPDATA%\Microsoft\WindowsApps` is a zero-byte reparse
+// point that Windows follows when it starts a program and that nothing can open
+// as a file. The alias records which executable it starts, though, and that
+// one is read like any other. See `linkTarget`.
+//
 // The rule is deliberately one-sided: the fast path is taken only for a file
 // this can open, parse, and see is a GUI program. Anything else -- a name that
-// resolves to nothing, a `.cmd` shim, a Store execution alias that cannot be
-// opened at all, a header this does not understand -- is unknown, and unknown
-// keeps the bridge. Being slow for a program that did not need it is a pause;
-// being direct for a program that did need it is the bug this all exists for.
-import { open } from 'node:fs/promises';
+// resolves to nothing, a `.cmd` shim, a header this does not understand -- is
+// unknown, and unknown keeps the bridge. Being slow for a program that did not
+// need it is a pause; being direct for a program that did need it is the bug
+// this all exists for.
+import { open, readlink } from 'node:fs/promises';
 import path from 'node:path';
 
 /** The two Subsystem values that matter here, from the PE specification. */
@@ -145,10 +151,9 @@ async function readHead(file: string): Promise<Buffer | null> {
     handle = await open(file, 'r');
   } catch {
     // Not there, or there and unreadable. Windows reports an app execution
-    // alias -- the zero-byte reparse point PATH holds for a Store app such as
-    // `wt.exe` -- as ENOENT through one Node entry point and EACCES through
-    // another, so the code is not something to draw a conclusion from. Both
-    // mean the same thing here: this file cannot say what it is.
+    // alias as ENOENT through one Node entry point and EACCES through another,
+    // so the code is not something to draw a conclusion from. Both mean the
+    // same thing here: this file cannot say what it is.
     return null;
   }
 
@@ -163,23 +168,57 @@ async function readHead(file: string): Promise<Buffer | null> {
   }
 }
 
+/**
+ * What a link that could not be opened points at, or null when it is not one.
+ *
+ * This is for the app execution alias. Opening one fails, but libuv's readlink
+ * reads its reparse data and returns the executable it starts -- the same file
+ * Windows runs, so there is no second file standing in for the first. Checked
+ * against all 37 aliases on a Windows 11 install: every one resolved; wherever
+ * App Paths also names a program for that alias it is this same file; and
+ * `winget.exe`, `wsl.exe` and `bash.exe` read as the console programs they are.
+ *
+ * The target's name need not match the alias's -- `bash.exe` starts WSL's
+ * `wsl.exe` -- so it is not compared. A relative target is resolved from the
+ * link's own directory, as the filesystem would.
+ */
+async function linkTarget(file: string): Promise<string | null> {
+  try {
+    return path.resolve(path.dirname(file), await readlink(file));
+  } catch {
+    return null;
+  }
+}
+
 export type LaunchTargetKind = 'console' | 'gui' | 'unknown';
 
 /**
  * What kind of program this name would start.
  *
  * `unknown` is a real answer, and the common one for anything that is not a
- * plain executable: a batch shim, a Store alias, a name that is not installed.
- * Callers have to read it as "assume it needs a console".
+ * plain executable: a batch shim, a name that is not installed. Callers have
+ * to read it as "assume it needs a console".
  */
 export async function launchTargetKind(
   executable: string,
   env: NodeJS.ProcessEnv = process.env
 ): Promise<LaunchTargetKind> {
   for (const candidate of executableCandidates(executable, env)) {
-    const head = await readHead(candidate);
+    let head = await readHead(candidate);
+
     if (head === null) {
-      continue;
+      const target = await linkTarget(candidate);
+      if (target === null) {
+        continue;
+      }
+
+      // A link is there, so it is what would run. When what it points at
+      // cannot be read either, this is unknown: reading on down PATH would
+      // describe a same-named program that is not the one Windows would pick.
+      head = await readHead(target);
+      if (head === null) {
+        return 'unknown';
+      }
     }
 
     const subsystem = peSubsystem(head);
