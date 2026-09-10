@@ -88,6 +88,22 @@ describe('the bridge script', () => {
     // Otherwise every launched program inherits them.
     expect(NEW_CONSOLE_BRIDGE_SCRIPT).toMatch(/Remove-Item Env:.*Start-Process/s);
   });
+
+  it('waits with a cmdlet, so a locked-down PowerShell can still do it', () => {
+    // Managed Windows fleets commonly run PowerShell in Constrained Language
+    // Mode, where property access is allowed and method calls are not. Measured
+    // there: Start-Process and $started.Id work, $started.WaitForExit() fails
+    // with "Method invocation is supported only on core types in this language
+    // mode" -- and with $ErrorActionPreference='Stop' that ends the script, so
+    // the bridge exits at once and a merge tool's temporary inputs are deleted
+    // while it still has them open. Wait-Process is a cmdlet, so it is allowed.
+    expect(NEW_CONSOLE_BRIDGE_SCRIPT).toContain('Wait-Process');
+    expect(NEW_CONSOLE_BRIDGE_SCRIPT).not.toContain('WaitForExit');
+
+    // Not `-Wait` on Start-Process either: that holds the id back until the
+    // program exits, and the id is what says it started at all.
+    expect(NEW_CONSOLE_BRIDGE_SCRIPT).toMatch(/Write-Output.*MG_PID.*Wait-Process/s);
+  });
 });
 
 describe('consoleBridgeEnv', () => {

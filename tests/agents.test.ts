@@ -43,6 +43,34 @@ class FakeBridgeChild extends EventEmitter {
   unref(): void {}
 }
 
+/**
+ * A directory holding one executable of a stated kind, and the PATH to find it
+ * on.
+ *
+ * Which branch a visible Windows launch takes now depends on what the target
+ * file says it is, so a test that means "a console program" has to put one
+ * somewhere rather than name something and hope the runner does not have it.
+ * See windows-subsystem.test.ts for the header being written here.
+ */
+function pathWith(name: string, subsystem: 2 | 3 | 'not-an-exe'): string {
+  const directory = createTempDir();
+
+  if (subsystem === 'not-an-exe') {
+    fs.writeFileSync(path.join(directory, name), '@echo off\r\n');
+    return directory;
+  }
+
+  const file = Buffer.alloc(512);
+  file.writeUInt16LE(0x5a4d, 0); // 'MZ'
+  file.writeUInt32LE(128, 0x3c);
+  file.writeUInt32LE(0x00004550, 128); // 'PE\0\0'
+  file.writeUInt16LE(0x20b, 128 + 24);
+  file.writeUInt16LE(subsystem, 128 + 24 + 68);
+  fs.writeFileSync(path.join(directory, name), file);
+
+  return directory;
+}
+
 function definition(overrides: Partial<ExternalAgentDefinition> = {}): ExternalAgentDefinition {
   return {
     id: 'claude',
@@ -437,11 +465,12 @@ describe('the detached launcher', () => {
       return bridge;
     }) as unknown as typeof import('node:child_process').spawn;
 
+    const bin = pathWith('powershell.exe', 3);
     const result = await withPlatform('win32', () =>
       createDetachedLauncher(fakeSpawn).launch(
         'powershell.exe',
         ['-NoProfile', '-NoExit', '-Command', 'winget install --id GitHub.cli -e --source winget'],
-        { cwd: 'C:\\Users\\me', env: { PATH: 'C:\\Windows' }, visible: true }
+        { cwd: 'C:\\Users\\me', env: { PATH: bin }, visible: true }
       )
     );
 
@@ -464,7 +493,7 @@ describe('the detached launcher', () => {
     expect(env['MG_CONSOLE_EXE']).toBe('powershell.exe');
     expect(env['MG_CONSOLE_ARGS']).toContain('"winget install --id GitHub.cli -e --source winget"');
     expect(env['MG_CONSOLE_CWD']).toBe('C:\\Users\\me');
-    expect(env['PATH']).toBe('C:\\Windows');
+    expect(env['PATH']).toBe(bin);
     expect(NEW_CONSOLE_BRIDGE_SCRIPT).not.toContain('winget');
   });
 
@@ -480,7 +509,13 @@ describe('the detached launcher', () => {
 
     await expect(
       withPlatform('win32', () =>
-        createDetachedLauncher(fakeSpawn).launch('nope.exe', [], { visible: true })
+        createDetachedLauncher(fakeSpawn).launch('nope.exe', [], {
+          // Nothing of that name anywhere, which is how it reads as unknown --
+          // and unknown still goes through the bridge, so Start-Process is the
+          // thing that gets to say it could not be started.
+          env: { PATH: createTempDir() },
+          visible: true
+        })
       )
     ).rejects.toThrow(/cannot be run/);
   });
@@ -512,11 +547,76 @@ describe('the detached launcher', () => {
     }) as unknown as typeof import('node:child_process').spawn;
 
     const result = await withPlatform('win32', () =>
-      createDetachedLauncher(fakeSpawn).launch('wt.exe', ['-d', '.'], { visible: true })
+      createDetachedLauncher(fakeSpawn).launch('wt.exe', ['-d', '.'], {
+        // `wt.exe` is really an app execution alias -- a zero-byte reparse
+        // point that cannot be opened -- so it reads as unknown and takes the
+        // bridge. An empty PATH reaches the same answer without depending on
+        // whether the runner has Windows Terminal installed.
+        env: { PATH: createTempDir() },
+        visible: true
+      })
     );
 
     expect(executables).toEqual(['powershell.exe', 'wt.exe']);
     expect(result.pid).toBe(11);
+  });
+
+  it('skips the bridge for a program that makes its own window', async () => {
+    // The cost the bridge adds is about 0.8s of PowerShell startup, and a
+    // windowed program never had the bug it exists for. git-bash.exe, WinMerge
+    // and every other GUI tool should therefore still be spawned directly --
+    // which is also what keeps `onExit` tied to the tool closing rather than to
+    // a PowerShell that may not be allowed to wait for it.
+    const executables: string[] = [];
+    const fakeSpawn = ((executable: string) => {
+      executables.push(executable);
+      const child = {
+        pid: 77,
+        on(event: string, listener: () => void) {
+          if (event === 'spawn') {
+            queueMicrotask(listener);
+          }
+          return child;
+        },
+        unref() {}
+      };
+      return child;
+    }) as unknown as typeof import('node:child_process').spawn;
+
+    const bin = pathWith('git-bash.exe', 2);
+    const result = await withPlatform('win32', () =>
+      createDetachedLauncher(fakeSpawn).launch(path.join(bin, 'git-bash.exe'), ['--cd=C:\\repo'], {
+        env: { PATH: bin },
+        visible: true
+      })
+    );
+
+    // No PowerShell at all: one spawn, and it is the program itself.
+    expect(executables).toEqual([path.join(bin, 'git-bash.exe')]);
+    expect(result.pid).toBe(77);
+  });
+
+  it('still bridges a console program that only differs by its header', async () => {
+    // The same launch, same name, same everything except the subsystem byte.
+    // That byte is the whole decision, so it is worth stating on its own.
+    const executables: string[] = [];
+    const fakeSpawn = ((executable: string) => {
+      executables.push(executable);
+      const child = new FakeBridgeChild();
+      queueMicrotask(() => child.stdout.emit('data', Buffer.from('MG_PID=4242\n')));
+      return child;
+    }) as unknown as typeof import('node:child_process').spawn;
+
+    const bin = pathWith('git-bash.exe', 3);
+    const result = await withPlatform('win32', () =>
+      createDetachedLauncher(fakeSpawn).launch(path.join(bin, 'git-bash.exe'), ['--cd=C:\\repo'], {
+        env: { PATH: bin },
+        visible: true
+      })
+    );
+
+    expect(executables).toEqual(['powershell.exe']);
+    expect(result.pid).toBe(4242);
   });
 
   it('rejects when the program does not exist', async () => {

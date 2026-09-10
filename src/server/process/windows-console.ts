@@ -19,8 +19,12 @@
 //     hidden PowerShell            -- a real console window, and a process that
 //                                     outlives the shell that started it.
 //
-// So a visible launch goes through a PowerShell that does nothing but call
-// `Start-Process` and exit. The script below is a constant. It names four
+// So a visible launch that needs a console goes through a PowerShell that does
+// nothing but call `Start-Process` and exit. Which launches those are is
+// windows-subsystem.ts's question: a program that makes its own window never
+// had this problem and does not come through here at all.
+//
+// The script below is a constant. It names four
 // environment variables and interpolates nothing, so no executable path, no
 // argument, no folder name and no prompt is ever part of a string PowerShell
 // parses -- the same discipline as the launch bridge in agents/launch.ts, and
@@ -48,6 +52,19 @@ export const CONSOLE_BRIDGE_PID_PREFIX = 'MG_PID=';
  * The bridge itself: read four variables, unset them so they do not leak into
  * the launched program's environment, start it, say what its id is, and get out
  * of the way -- or wait, when the caller needs to know that it finished.
+ *
+ * The wait is `Wait-Process` rather than `$started.WaitForExit()` because
+ * managed Windows fleets commonly run PowerShell in Constrained Language Mode,
+ * where property access is allowed but method calls are not. Measured there:
+ * `Start-Process` and `$started.Id` both work, `WaitForExit()` fails with
+ * "Method invocation is supported only on core types in this language mode" --
+ * which, with `$ErrorActionPreference='Stop'`, ends the script, so the bridge
+ * exits immediately and the caller's `onExit` deletes a merge tool's temporary
+ * inputs while it is still open. `Wait-Process` is a cmdlet, so it is allowed,
+ * and it is a no-op when the process has already gone.
+ *
+ * Not `Start-Process -Wait`: that would hold the pid back until the program
+ * exits, and the pid is what tells the caller it started at all.
  */
 export const NEW_CONSOLE_BRIDGE_SCRIPT = [
   "$ErrorActionPreference='Stop'",
@@ -61,7 +78,7 @@ export const NEW_CONSOLE_BRIDGE_SCRIPT = [
   'if($dir){$options.WorkingDirectory=$dir}',
   '$started=Start-Process @options',
   "Write-Output ('MG_PID=' + $started.Id)",
-  "if($wait -eq '1'){$started.WaitForExit()}"
+  "if($wait -eq '1'){Wait-Process -Id $started.Id -ErrorAction SilentlyContinue}"
 ].join(';');
 
 /**
