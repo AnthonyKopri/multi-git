@@ -12,6 +12,29 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **Git Bash and external diff tools open instantly again, on Windows.** 4.1.1
+  gave every visible launch a console of its own. That fixed the console
+  programs which had been failing silently, and it slowed down the ones that
+  never had the problem: a program which makes its own window — Git Bash,
+  WinMerge, any windowed diff or merge tool — was already working, and routing
+  it through PowerShell added about 0.8s of startup to a button that used to be
+  instant. Which kind a program is, is written in the file. Every Windows
+  executable carries a header saying whether Windows should give it a console,
+  so that is now read, and only the programs which need one take the long way
+  round. Measured on Windows 11: 4ms direct against 786ms through the bridge.
+  Anything that cannot be read for certain — a `.cmd` shim, a Store execution
+  alias such as `wt.exe`, a name that is not installed — keeps the safe path,
+  because being slow costs a moment and being wrong costs the whole window.
+- **An external merge tool keeps its files on a managed Windows machine.** Where
+  an administrator has put PowerShell in Constrained Language Mode, which is
+  common on company fleets, waiting for the tool to close did not work: that
+  mode allows reading a property but refuses to call a method, and the wait was
+  a method call. It failed, the launch finished early, and the temporary files a
+  three-way merge had just been handed were deleted while it still had them
+  open. The wait is now a cmdlet, which that mode permits.
+
 ## [4.1.1] - 2026-09-10
 
 ### Fixed

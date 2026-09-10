@@ -22,6 +22,7 @@ import {
   NEW_CONSOLE_BRIDGE_SCRIPT,
   parseBridgePid
 } from './windows-console';
+import { needsConsoleBridge } from './windows-subsystem';
 import { StreamRedactor, redactArgs, redactText } from './redact';
 import { appendLog } from '../logs';
 import { processCommandKind } from '../git/command-kind';
@@ -583,10 +584,17 @@ function launchWithNewConsole(
 export function createDetachedLauncher(spawnFn: typeof spawn = spawn): DetachedLauncher {
   return {
     async launch(executable, args, options = {}) {
-      // A visible launch on Windows needs a console that a detached spawn will
-      // not give it. Everything else -- every platform's hidden launches, and
-      // every launch on macOS and Linux -- keeps the direct path below.
-      if (process.platform === 'win32' && options.visible === true) {
+      // A visible launch on Windows *may* need a console that a detached spawn
+      // will not give it. Only a console-subsystem program does; one that makes
+      // its own window never had the problem, and the bridge would cost it
+      // about 0.8s of PowerShell startup for nothing. See windows-subsystem.ts.
+      // Everything else -- every platform's hidden launches, and every launch
+      // on macOS and Linux -- keeps the direct path below.
+      if (
+        process.platform === 'win32' &&
+        options.visible === true &&
+        (await needsConsoleBridge(executable, options.env))
+      ) {
         try {
           return await launchWithNewConsole(executable, args, options, spawnFn);
         } catch (error) {
