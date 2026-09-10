@@ -1,9 +1,11 @@
 {
   "name": "multi-git",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "A local-first Git desktop client for multiple repositories, accounts, and SSH identities",
   "main": "out/node/main/main.js",
-  "bin": { "multi-git": "scripts/multi-git.cjs" },
+  "bin": {
+    "multi-git": "scripts/multi-git.cjs"
+  },
   "scripts": {
     "agent": "node scripts/multi-git.cjs",
     "start": "npm run compile && node out/node/server/cli.js",

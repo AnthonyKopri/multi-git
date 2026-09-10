@@ -14,6 +14,18 @@ or Security. Remove empty headings when preparing a release.
 
 ### Added
 
+- **Browse GitHub repositories while cloning.** Load up to 100 repositories
+  owned by your signed-in GitHub user or a named user/organization, filter by
+  name or description, and select an SSH or HTTPS URL before cloning. The
+  original URL-paste flow remains available without GitHub CLI. An information
+  box explains browsing and offers **Install GitHub CLI** when it is missing.
+- **A JSON CLI for agents.** Connect to the running app to inspect repositories
+  and diffs, stage and commit, manage branches and worktrees, clone, fetch and
+  push. Commands use explicit repository scope, request previews and a write
+  flag. Settings shows the current connection address. The CLI is available
+  from a compiled source checkout; the Windows installer does not add it to PATH.
+- **CLI and Computer Use agent skills**, plus eleven native GUI smoke cases
+  and a helper that prepares disposable repositories and an isolated app profile.
 - **A repository now says which account it should use, and which one it really
   uses.** The SSH Key dropdown gains a block naming the account derived from the
   remote's owner — overridable, because the owner of an organisation repository
@@ -27,6 +39,7 @@ or Security. Remove empty headings when preparing a release.
 
 ### Changed
 
+- Updated Electron to 44.2.0 and refreshed the development toolchain and lockfile.
 - **Authentication and authorship are written together, or not at all.** The
   repository pin was written unconditionally while the commit identity was
   written only behind a dialog, and only if the profile carried an email — so a
