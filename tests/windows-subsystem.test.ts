@@ -148,32 +148,92 @@ describe('executableCandidates', () => {
   });
 });
 
-describe('launchTargetKind', () => {
-  it('reads a program named by its full path', async () => {
-    const directory = createTempDir();
-    const gui = path.join(directory, 'winmergeu.exe');
-    const cli = path.join(directory, 'gh.exe');
-    fs.writeFileSync(gui, fakePeFile(PE_SUBSYSTEM.gui));
-    fs.writeFileSync(cli, fakePeFile(PE_SUBSYSTEM.console));
+/** A file of stated content, named by its full path. */
+function write(name: string, contents: Buffer | string): string {
+  const file = path.join(createTempDir(), name);
+  fs.writeFileSync(file, contents);
+  return file;
+}
 
-    expect(await launchTargetKind(gui, {})).toBe('gui');
-    expect(await launchTargetKind(cli, {})).toBe('console');
-  });
-
-  it('finds a bare name on PATH', async () => {
-    const directory = createTempDir();
-    fs.writeFileSync(path.join(directory, 'winmergeu.exe'), fakePeFile(PE_SUBSYSTEM.gui));
-
-    expect(await launchTargetKind('winmergeu', { PATH: directory, PATHEXT: '.EXE' })).toBe('gui');
+// Naming a file by its full path is the half of this that reads the same on
+// any host, so it carries the cases that are really about the header. The PATH
+// search below cannot be: a PATH entry is joined to a name with a backslash,
+// which is right on Windows and is one unopenable filename on Linux.
+describe('launchTargetKind, by full path', () => {
+  it('reads a program by what its header says it is', async () => {
+    expect(await launchTargetKind(write('winmergeu.exe', fakePeFile(PE_SUBSYSTEM.gui)), {})).toBe(
+      'gui'
+    );
+    expect(await launchTargetKind(write('gh.exe', fakePeFile(PE_SUBSYSTEM.console)), {})).toBe(
+      'console'
+    );
   });
 
   it('is unknown for a batch shim, which really does need a console', async () => {
     // `code` on Windows is `code.cmd`. It runs under cmd.exe, so it has exactly
     // the problem the bridge exists for, and reading it as unknown is right.
-    const directory = createTempDir();
-    fs.writeFileSync(path.join(directory, 'code.cmd'), '@echo off\r\nnode cli.js %*\r\n');
+    expect(await launchTargetKind(write('code.cmd', '@echo off\r\nnode cli.js %*\r\n'), {})).toBe(
+      'unknown'
+    );
+  });
 
-    expect(await launchTargetKind('code', { PATH: directory, PATHEXT: '.EXE;.CMD' })).toBe('unknown');
+  it('is unknown for a name that is not there', async () => {
+    expect(await launchTargetKind(path.join(createTempDir(), 'nope.exe'), {})).toBe('unknown');
+  });
+
+  it('is unknown for a directory, and does not throw', async () => {
+    const directory = path.join(createTempDir(), 'tool.exe');
+    fs.mkdirSync(directory);
+
+    expect(await launchTargetKind(directory, {})).toBe('unknown');
+  });
+
+  it('is unknown for a file too short to hold a header', async () => {
+    expect(await launchTargetKind(write('stub.exe', Buffer.from([0x4d, 0x5a])), {})).toBe('unknown');
+  });
+
+  it('reads only the head of a large file', async () => {
+    const big = Buffer.concat([
+      fakePeFile(PE_SUBSYSTEM.gui),
+      Buffer.alloc(HEADER_PROBE_BYTES * 4, 0x41)
+    ]);
+
+    expect(await launchTargetKind(write('big.exe', big), {})).toBe('gui');
+  });
+});
+
+describe('needsConsoleBridge', () => {
+  it('is false only for a program confirmed to make its own window', async () => {
+    expect(await needsConsoleBridge(write('gui.exe', fakePeFile(PE_SUBSYSTEM.gui)), {})).toBe(false);
+    expect(await needsConsoleBridge(write('cli.exe', fakePeFile(PE_SUBSYSTEM.console)), {})).toBe(
+      true
+    );
+    expect(await needsConsoleBridge(path.join(createTempDir(), 'missing.exe'), {})).toBe(true);
+  });
+});
+
+// Finding a bare name means joining a PATH entry to it the way Windows does,
+// so these can only be run where that produces a path the host can open. The
+// order they rely on is stated platform-independently in `executableCandidates`
+// above; what is left to check here is that the file at the end of it is read.
+describe.skipIf(process.platform !== 'win32')('launchTargetKind, through PATH', () => {
+  it('finds a bare name on PATH', async () => {
+    const directory = createTempDir();
+    fs.writeFileSync(path.join(directory, 'winmergeu.exe'), fakePeFile(PE_SUBSYSTEM.gui));
+
+    expect(await launchTargetKind('winmergeu', { PATH: directory, PATHEXT: '.EXE' })).toBe('gui');
+    expect(await needsConsoleBridge('winmergeu', { PATH: directory, PATHEXT: '.EXE' })).toBe(false);
+  });
+
+  it('takes the extension PATHEXT reaches first', async () => {
+    // `code` resolves to `code.cmd` rather than to nothing, and a shim is not
+    // something this can read -- which is the answer that keeps it bridged.
+    const directory = createTempDir();
+    fs.writeFileSync(path.join(directory, 'code.cmd'), '@echo off\r\n');
+
+    expect(await launchTargetKind('code', { PATH: directory, PATHEXT: '.EXE;.CMD' })).toBe(
+      'unknown'
+    );
   });
 
   it('stops at the first file that is there, rather than reading past it', async () => {
@@ -184,51 +244,14 @@ describe('launchTargetKind', () => {
     fs.writeFileSync(path.join(first, 'tool.cmd'), '@echo off\r\n');
     fs.writeFileSync(path.join(second, 'tool.exe'), fakePeFile(PE_SUBSYSTEM.gui));
 
-    expect(
-      await launchTargetKind('tool', { PATH: `${first};${second}`, PATHEXT: '.EXE;.CMD' })
-    ).toBe('unknown');
+    expect(await launchTargetKind('tool', { PATH: `${first};${second}`, PATHEXT: '.EXE;.CMD' })).toBe(
+      'unknown'
+    );
   });
 
   it('is unknown for a name that is not installed', async () => {
     expect(await launchTargetKind('nope.exe', { PATH: createTempDir() })).toBe('unknown');
     expect(await launchTargetKind('nope.exe', { PATH: '' })).toBe('unknown');
-  });
-
-  it('is unknown for a directory, and does not throw', async () => {
-    const directory = createTempDir();
-    fs.mkdirSync(path.join(directory, 'tool.exe'));
-
-    expect(await launchTargetKind('tool.exe', { PATH: directory })).toBe('unknown');
-  });
-
-  it('is unknown for a file too short to hold a header', async () => {
-    const directory = createTempDir();
-    fs.writeFileSync(path.join(directory, 'stub.exe'), Buffer.from([0x4d, 0x5a]));
-
-    expect(await launchTargetKind('stub.exe', { PATH: directory })).toBe('unknown');
-  });
-
-  it('reads only the head of a large file', async () => {
-    const directory = createTempDir();
-    const big = Buffer.concat([
-      fakePeFile(PE_SUBSYSTEM.gui),
-      Buffer.alloc(HEADER_PROBE_BYTES * 4, 0x41)
-    ]);
-    fs.writeFileSync(path.join(directory, 'big.exe'), big);
-
-    expect(await launchTargetKind('big.exe', { PATH: directory })).toBe('gui');
-  });
-});
-
-describe('needsConsoleBridge', () => {
-  it('is false only for a program confirmed to make its own window', async () => {
-    const directory = createTempDir();
-    fs.writeFileSync(path.join(directory, 'gui.exe'), fakePeFile(PE_SUBSYSTEM.gui));
-    fs.writeFileSync(path.join(directory, 'cli.exe'), fakePeFile(PE_SUBSYSTEM.console));
-
-    expect(await needsConsoleBridge('gui.exe', { PATH: directory })).toBe(false);
-    expect(await needsConsoleBridge('cli.exe', { PATH: directory })).toBe(true);
-    expect(await needsConsoleBridge('missing.exe', { PATH: directory })).toBe(true);
   });
 });
 
