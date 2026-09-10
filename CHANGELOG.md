@@ -12,6 +12,59 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Added
+
+- **A repository now says which account it should use, and which one it really
+  uses.** The SSH Key dropdown gains a block naming the account derived from the
+  remote's owner — overridable, because the owner of an organisation repository
+  or a fork is not an account anybody authenticates as — beside the account the
+  host actually greets when that key connects. A push whose account disagrees is
+  blocked with an override, force pushes included: a force push as the wrong
+  account is the worst version of this mistake, not one to wave through.
+- **A default account, chosen deliberately.** A star to the left of a profile
+  name sets the account that every unpinned repository falls back to. Nothing
+  recorded that choice before, so it was whichever repository you opened last.
+
+### Changed
+
+- **Authentication and authorship are written together, or not at all.** The
+  repository pin was written unconditionally while the commit identity was
+  written only behind a dialog, and only if the profile carried an email — so a
+  repository could authenticate as one account and commit as another, with
+  nothing to reconcile them and no warning at any point. Profiles with no commit
+  email now say so on the row, rather than letting it surface later in a commit.
+- **Changing a repository's account shows what is already configured and asks
+  before overwriting it**, including when a hand-written `core.sshCommand` will
+  be left alone. Previously that last case was a silent no-op.
+- **Profile rows lost five buttons.** Eight icon buttons wrapping onto two lines
+  became Edit, Verify, Copy key, Delete and an overflow menu.
+
+### Fixed
+
+- **The account pinned to a repository now reaches the SSH agent.** The pin
+  written into `core.sshCommand` named a bare `ssh`, and git prepends its own
+  `usr/bin` — so it resolved to the MSYS build, which looks for an agent on a
+  Unix socket, while the keys had been loaded into the Windows agent service's
+  named pipe. Keys present, agent healthy, and every push outside this app
+  asking for a passphrase that was already cached — or failing outright wherever
+  there is no terminal to ask at, such as git-lfs, hooks and coding agents.
+- **A pinned repository authenticates as the account you picked.**
+  `IdentitiesOnly=yes` does not mean "only the key given with `-i`". It means
+  only the identities named in the configuration *and* on the command line, so
+  the managed block's own entry for the same host was offered alongside the pin
+  and the agent's ordering decided the account. GitHub answered `ERROR:
+  Repository not found.`, which names the wrong problem entirely and sends
+  people looking for a repository they think they deleted; that message now
+  carries the explanation. Pins written by earlier versions are recognised and
+  migrated in place on the next profile apply.
+- **The machine-wide default account no longer follows whichever repository is
+  open.** Selecting a profile for one repository rewrote the catch-all entry in
+  `~/.ssh/config` with that repository's key, so a push from any unpinned folder
+  went out as whichever account you had looked at last.
+- **Repository settings stopped discarding one another.** The config validator
+  rebuilds each section from a list of fields it knows, so a setting saved here
+  worked for the rest of the session and reverted on the next read.
+
 ## [4.0.0] - 2026-08-23
 
 ### Added
