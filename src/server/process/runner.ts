@@ -17,6 +17,11 @@ import type { ChildProcess, SpawnOptions } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 
 import { killProcessTree, TREE_KILLABLE_SPAWN_OPTIONS } from './kill-tree';
+import {
+  consoleBridgeEnv,
+  NEW_CONSOLE_BRIDGE_SCRIPT,
+  parseBridgePid
+} from './windows-console';
 import { StreamRedactor, redactArgs, redactText } from './redact';
 import { appendLog } from '../logs';
 import { processCommandKind } from '../git/command-kind';
@@ -31,6 +36,22 @@ export const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
  * produced one of its own.
  */
 export const TERMINATED_EXIT_CODE = -1;
+
+/**
+ * How long to wait for the streams once the process itself has exited.
+ *
+ * `close` means "exited *and* stdio ended", and the second half is not this
+ * process's to guarantee: a child that leaves a detached grandchild holding the
+ * inherited pipes -- `gpg` starting `gpg-agent`, `git push` starting `ssh` --
+ * is gone while the pipes stay open behind it. Settling only on `close` leaves
+ * the promise pending forever and makes `timeoutMs` a suggestion rather than a
+ * bound.
+ *
+ * `exit` therefore starts a short grace for the tail of the output, after which
+ * the result is returned regardless. Long enough that an ordinary drain is
+ * never cut short, and only ever paid when something really is holding on.
+ */
+const STREAM_DRAIN_GRACE_MS = 1000;
 
 export interface RunOptions {
   cwd?: string;
@@ -292,6 +313,7 @@ export function createExecutableRunner(): ExecutableRunner {
         let timedOut = false;
         let settled = false;
         let cancelEscalation: (() => void) | null = null;
+        let drainTimer: NodeJS.Timeout | null = null;
 
         const terminate = (): void => {
           cancelEscalation?.();
@@ -301,11 +323,15 @@ export function createExecutableRunner(): ExecutableRunner {
         const timer = setTimeout(() => {
           timedOut = true;
           terminate();
+          // Killing the tree does not guarantee a `close`: whoever holds the
+          // pipes may already be beyond reach. The deadline has to hold anyway.
+          startDrainGrace();
         }, timeoutMs);
 
         const onAbort = (): void => {
           cancelled = true;
           terminate();
+          startDrainGrace();
         };
 
         if (options.signal) {
@@ -320,9 +346,31 @@ export function createExecutableRunner(): ExecutableRunner {
 
         const cleanup = (): void => {
           clearTimeout(timer);
+          if (drainTimer !== null) {
+            clearTimeout(drainTimer);
+          }
           cancelEscalation?.();
           options.signal?.removeEventListener('abort', onAbort);
         };
+
+        /**
+         * Settles with what has arrived once the streams have had their grace.
+         *
+         * Idempotent, and always loses to a `close` that turns up first, which
+         * it does in every ordinary run.
+         */
+        function startDrainGrace(): void {
+          if (settled || drainTimer !== null) {
+            return;
+          }
+
+          drainTimer = setTimeout(
+            () => settle(child.exitCode ?? TERMINATED_EXIT_CODE, null),
+            STREAM_DRAIN_GRACE_MS
+          );
+          // Nothing should be held open purely to give up on a stream.
+          drainTimer.unref?.();
+        }
 
         const settle = (exitCode: number, spawnError: Error | null): void => {
           if (settled) {
@@ -373,6 +421,8 @@ export function createExecutableRunner(): ExecutableRunner {
 
         child.on('error', (error: Error) => settle(TERMINATED_EXIT_CODE, error));
         child.on('close', (code) => settle(code ?? TERMINATED_EXIT_CODE, null));
+        // The process is gone; the pipes may not be.
+        child.on('exit', () => startDrainGrace());
 
         writeInput(child, options.input);
       });
@@ -412,6 +462,118 @@ export interface DetachedLauncher {
 }
 
 /**
+ * PowerShell itself could not be started, so there is no bridge to launch
+ * through. Distinct from the program failing to start, which is the caller's
+ * answer rather than a reason to try something else.
+ */
+class ConsoleBridgeUnavailableError extends Error {
+  constructor(cause: Error) {
+    super(`The console bridge could not be started: ${cause.message}`);
+    this.name = 'ConsoleBridgeUnavailableError';
+    this.cause = cause;
+  }
+}
+
+/**
+ * Starts a program in a console window of its own, on Windows.
+ *
+ * See process/windows-console.ts for why a plain detached spawn cannot: the
+ * program would be given no console and exit without running. Resolves with the
+ * launched program's own process id, not the bridge's.
+ */
+function launchWithNewConsole(
+  executable: string,
+  args: readonly string[],
+  options: DetachedLaunchOptions,
+  spawnFn: typeof spawn
+): Promise<{ pid?: number }> {
+  return new Promise((resolve, reject) => {
+    const wants = options.onExit !== undefined;
+
+    let bridge: ChildProcess;
+    try {
+      bridge = spawnFn(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', NEW_CONSOLE_BRIDGE_SCRIPT],
+        {
+          shell: false,
+          // The bridge is plumbing; the window belongs to what it starts.
+          windowsHide: true,
+          // Deliberately not detached: that is the flag that would deny the
+          // bridge itself a console and stop PowerShell running at all.
+          detached: false,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+          env: consoleBridgeEnv({
+            executable,
+            args,
+            ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+            ...(options.env === undefined ? {} : { env: options.env }),
+            wait: wants
+          })
+        }
+      );
+    } catch (error) {
+      reject(new ConsoleBridgeUnavailableError(error as Error));
+      return;
+    }
+
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+
+    bridge.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+
+      // The program has started; the bridge may still be waiting on it.
+      const pid = parseBridgePid(stdout);
+      if (pid !== null && !settled) {
+        settled = true;
+        resolve({ pid });
+      }
+    });
+    bridge.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+
+    bridge.on('error', (error: Error) => {
+      if (!settled) {
+        settled = true;
+        reject(new ConsoleBridgeUnavailableError(error));
+      }
+    });
+
+    bridge.on('close', () => {
+      if (!settled) {
+        settled = true;
+        // No id was ever printed, so Start-Process did not get as far as
+        // starting anything. Its complaint is the useful part.
+        reject(
+          new CommandSpawnError(
+            executable,
+            new Error(stderr.trim() || 'the program could not be started in a new window')
+          )
+        );
+        return;
+      }
+
+      if (options.onExit) {
+        // Cleanup hooks must not turn a process that already finished into an
+        // uncaught error in the main process.
+        try {
+          options.onExit();
+        } catch {
+          // Best effort. The caller owns any reporting it needs.
+        }
+      }
+    });
+
+    // Nothing should be held open on account of the bridge.
+    bridge.unref();
+  });
+}
+
+/**
  * The detached launcher used in production.
  *
  * Same discipline as `run`: the executable and its arguments stay separate
@@ -420,70 +582,97 @@ export interface DetachedLauncher {
  */
 export function createDetachedLauncher(spawnFn: typeof spawn = spawn): DetachedLauncher {
   return {
-    launch(executable, args, options = {}) {
-      return new Promise((resolve, reject) => {
-        const spawnOptions: SpawnOptions = {
-          shell: false,
-          windowsHide: options.visible !== true,
-          detached: true,
-          // Nothing is going to read these: the process is on its own from
-          // here, and an unread pipe would eventually block it.
-          stdio: 'ignore'
-        };
-        if (options.cwd !== undefined) {
-          spawnOptions.cwd = options.cwd;
-        }
-        if (options.env !== undefined) {
-          spawnOptions.env = options.env;
-        }
-
-        let child: ChildProcess;
+    async launch(executable, args, options = {}) {
+      // A visible launch on Windows needs a console that a detached spawn will
+      // not give it. Everything else -- every platform's hidden launches, and
+      // every launch on macOS and Linux -- keeps the direct path below.
+      if (process.platform === 'win32' && options.visible === true) {
         try {
-          child = spawnFn(executable, [...args], spawnOptions);
+          return await launchWithNewConsole(executable, args, options, spawnFn);
         } catch (error) {
-          reject(new CommandSpawnError(executable, error as Error));
-          return;
+          // A machine with no usable PowerShell still deserves the old
+          // behaviour, which does work for a program that makes its own
+          // window. A program that simply failed to start is not that case:
+          // that answer is the caller's, and retrying would only bury it.
+          if (!(error instanceof ConsoleBridgeUnavailableError)) {
+            throw error;
+          }
         }
+      }
 
-        let settled = false;
-        let started = false;
-
-        child.on('close', () => {
-          if (!started || !options.onExit) {
-            return;
-          }
-
-          // Cleanup hooks must not turn a process that already finished into
-          // an uncaught error in the main process.
-          try {
-            options.onExit();
-          } catch {
-            // Best effort. The caller owns any reporting it needs.
-          }
-        });
-
-        child.on('error', (error: Error) => {
-          if (!settled) {
-            settled = true;
-            reject(new CommandSpawnError(executable, error));
-          }
-        });
-
-        child.on('spawn', () => {
-          if (settled) {
-            return;
-          }
-          settled = true;
-          started = true;
-
-          // Released from this process's job control, so quitting Multi-Git
-          // does not take the user's editor or agent with it.
-          child.unref();
-          resolve(child.pid === undefined ? {} : { pid: child.pid });
-        });
-      });
+      return directLaunch(executable, args, options, spawnFn);
     }
   };
+}
+
+/** The plain detached spawn, unchanged. */
+function directLaunch(
+  executable: string,
+  args: readonly string[],
+  options: DetachedLaunchOptions,
+  spawnFn: typeof spawn
+): Promise<{ pid?: number }> {
+  return new Promise((resolve, reject) => {
+    const spawnOptions: SpawnOptions = {
+      shell: false,
+      windowsHide: options.visible !== true,
+      detached: true,
+      // Nothing is going to read these: the process is on its own from here,
+      // and an unread pipe would eventually block it.
+      stdio: 'ignore'
+    };
+    if (options.cwd !== undefined) {
+      spawnOptions.cwd = options.cwd;
+    }
+    if (options.env !== undefined) {
+      spawnOptions.env = options.env;
+    }
+
+    let child: ChildProcess;
+    try {
+      child = spawnFn(executable, [...args], spawnOptions);
+    } catch (error) {
+      reject(new CommandSpawnError(executable, error as Error));
+      return;
+    }
+
+    let settled = false;
+    let started = false;
+
+    child.on('close', () => {
+      if (!started || !options.onExit) {
+        return;
+      }
+
+      // Cleanup hooks must not turn a process that already finished into an
+      // uncaught error in the main process.
+      try {
+        options.onExit();
+      } catch {
+        // Best effort. The caller owns any reporting it needs.
+      }
+    });
+
+    child.on('error', (error: Error) => {
+      if (!settled) {
+        settled = true;
+        reject(new CommandSpawnError(executable, error));
+      }
+    });
+
+    child.on('spawn', () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      started = true;
+
+      // Released from this process's job control, so quitting Multi-Git does
+      // not take the user's editor or agent with it.
+      child.unref();
+      resolve(child.pid === undefined ? {} : { pid: child.pid });
+    });
+  });
 }
 
 export const detachedLauncher: DetachedLauncher = createDetachedLauncher();

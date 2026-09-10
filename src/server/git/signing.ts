@@ -12,7 +12,8 @@ import fs from 'node:fs';
 
 import { commitish, refArg } from './args';
 import { runGitCommand, tryGitCommand } from './run';
-import { runProcess } from '../process/run';
+import { CommandFailedError, CommandTimeoutError, executableRunner } from '../process/runner';
+import type { ExecutableRunner } from '../process/runner';
 import type {
   SignatureInfo,
   SignatureKind,
@@ -342,13 +343,27 @@ export async function writeSigningConfig(
   return readSigningConfig(repoPath);
 }
 
-async function toolVersion(command: string, args: readonly string[]): Promise<string | null> {
-  const result = await runProcess(command, args, { timeoutMs: 10_000 });
-  if (result.spawnError || result.timedOut) {
+/** Long enough for a cold start, short enough not to hold up a panel. */
+const TOOL_VERSION_TIMEOUT_MS = 10_000;
+
+async function toolVersion(
+  command: string,
+  args: readonly string[],
+  runner: ExecutableRunner
+): Promise<string | null> {
+  try {
+    const result = await runner.run(command, args, { timeoutMs: TOOL_VERSION_TIMEOUT_MS });
+    // ssh-keygen prints its version on stderr.
+    return `${result.stdout}${result.stderr}`.trim() || null;
+  } catch (error) {
+    // A tool that ran and complained still said which version it is --
+    // `ssh-keygen -V` exits non-zero and prints its banner regardless. Only a
+    // tool that could not be started, or would not finish, counts as missing.
+    if (error instanceof CommandFailedError && !(error instanceof CommandTimeoutError)) {
+      return `${error.result.stdout}${error.result.stderr}`.trim() || null;
+    }
     return null;
   }
-  // ssh-keygen prints its version on stderr.
-  return `${result.stdout}${result.stderr}`.trim() || null;
 }
 
 function sshKeygenTooOld(version: string): boolean {
@@ -362,6 +377,19 @@ function sshKeygenTooOld(version: string): boolean {
   return major < MIN_SSH_KEYGEN.major || (major === MIN_SSH_KEYGEN.major && minor < MIN_SSH_KEYGEN.minor);
 }
 
+export interface SigningDiagnosticsOptions {
+  /**
+   * Runs `gpg` and `ssh-keygen`. Defaults to the shared runner.
+   *
+   * The same seam ssh/verify.ts takes, and for the same reason: without it the
+   * only way to exercise this function is to have the real binaries installed,
+   * which made a unit test depend on whether the machine had a keyring and how
+   * fast `gpg-agent` starts. Injecting the runner lets the diagnostics be
+   * asserted exactly, and stops this file touching the host at all in a test.
+   */
+  runner?: ExecutableRunner | undefined;
+}
+
 /**
  * What would stop signing, or stop verification, before it is attempted.
  *
@@ -369,13 +397,15 @@ function sshKeygenTooOld(version: string): boolean {
  * is that a failed signature says why rather than reporting git's exit code.
  */
 export async function signingDiagnostics(
-  config: SigningConfig
+  config: SigningConfig,
+  options: SigningDiagnosticsOptions = {}
 ): Promise<{ diagnostics: SigningDiagnostic[]; gpgVersion: string | null }> {
+  const runner = options.runner ?? executableRunner;
   const diagnostics: SigningDiagnostic[] = [];
   let gpgVersion: string | null = null;
 
   if (config.mode === 'gpg' || (config.mode === 'system' && config.signCommitsByDefault)) {
-    gpgVersion = await toolVersion('gpg', ['--version']);
+    gpgVersion = await toolVersion('gpg', ['--version'], runner);
     if (gpgVersion === null) {
       diagnostics.push({
         code: 'gpg-missing',
@@ -386,7 +416,7 @@ export async function signingDiagnostics(
   }
 
   if (config.mode === 'ssh') {
-    const version = await toolVersion('ssh-keygen', ['-V']);
+    const version = await toolVersion('ssh-keygen', ['-V'], runner);
     if (version === null) {
       diagnostics.push({
         code: 'ssh-keygen-missing',
