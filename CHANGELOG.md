@@ -12,6 +12,23 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **Windows Terminal opens without the wait again.** 4.1.2 stopped sending
+  programs that make their own window through PowerShell, and Windows Terminal
+  is one — but it kept paying for the trip anyway, because `wt.exe` on `PATH`
+  is not the program itself. It is a Store app execution alias: a zero-byte
+  pointer that Windows follows when it starts a program and that cannot be
+  opened as a file, so there was no header to read and it went the safe, slow
+  way. The alias does record which program it starts, and that can be read
+  without opening it. So the **Terminal** button, **Open a terminal here** on a
+  worktree, and any agent set to run in Windows Terminal now start it directly.
+  Measured on Windows 11, from the launch to a shell running in the new window:
+  about 1.1s before, 0.4s now. A Store program that does need a console, such
+  as `winget`, is read through its alias the same way and still gets one. An
+  alias is also now taken as the program that will run, where before it was
+  passed over for any same-named program further down `PATH`.
+
 ## [4.1.2] - 2026-09-10
 
 ### Fixed

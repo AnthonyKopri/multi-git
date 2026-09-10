@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   HEADER_PROBE_BYTES,
@@ -21,7 +21,35 @@ import {
 } from '../src/server/process/windows-subsystem';
 import { cleanupRepos, createTempDir } from './helpers/temp-repo';
 
+/**
+ * App execution aliases, by path, and the program each one starts.
+ *
+ * A real alias is a reparse point that only a Store app's registration writes,
+ * so the tests about the logic stand one in: opening it fails, as it does on
+ * Windows, and reading it as a link names its program. Every other path goes
+ * to the real filesystem untouched. The real aliases are read further down,
+ * on a machine that has them.
+ */
+const aliases = vi.hoisted(() => new Map<string, string>());
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+
+  return {
+    ...actual,
+    open: (file: string, flags?: string) =>
+      aliases.has(file)
+        ? Promise.reject(Object.assign(new Error(`EACCES: open '${file}'`), { code: 'EACCES' }))
+        : actual.open(file, flags),
+    readlink: (file: string) => {
+      const target = aliases.get(file);
+      return target === undefined ? actual.readlink(file) : Promise.resolve(target);
+    }
+  };
+});
+
 afterEach(() => {
+  aliases.clear();
   cleanupRepos();
 });
 
@@ -202,6 +230,61 @@ describe('launchTargetKind, by full path', () => {
   });
 });
 
+describe('launchTargetKind, through an app execution alias', () => {
+  /** An alias named `name` that starts `target`. */
+  function alias(name: string, target: string): string {
+    const file = path.join(createTempDir(), name);
+    aliases.set(file, target);
+    return file;
+  }
+
+  it('reads the program the alias starts', async () => {
+    // Windows Terminal: `wt.exe` on PATH is an alias for a program that makes
+    // its own window, and this is the launch that used to pay for the bridge.
+    const terminal = write('wt.exe', fakePeFile(PE_SUBSYSTEM.gui));
+
+    expect(await launchTargetKind(alias('wt.exe', terminal), {})).toBe('gui');
+    expect(await needsConsoleBridge(alias('wt.exe', terminal), {})).toBe(false);
+  });
+
+  it('still reads a console program behind an alias as one', async () => {
+    // winget is an alias as well. Reading it as windowed would be the Install
+    // button that opened nothing, back again.
+    const winget = write('winget.exe', fakePeFile(PE_SUBSYSTEM.console));
+
+    expect(await launchTargetKind(alias('winget.exe', winget), {})).toBe('console');
+    expect(await needsConsoleBridge(alias('winget.exe', winget), {})).toBe(true);
+  });
+
+  it("does not expect the program to share the alias's name", async () => {
+    // `bash.exe` starts WSL's `wsl.exe`. The alias names the file Windows
+    // runs, so there is nothing to cross-check the name against.
+    const wsl = write('wsl.exe', fakePeFile(PE_SUBSYSTEM.console));
+
+    expect(await launchTargetKind(alias('bash.exe', wsl), {})).toBe('console');
+  });
+
+  it('is unknown when the program it starts cannot be read', async () => {
+    expect(await launchTargetKind(alias('wt.exe', path.join(createTempDir(), 'gone.exe')), {})).toBe(
+      'unknown'
+    );
+  });
+
+  it.skipIf(process.platform !== 'win32')(
+    'stops at an alias on PATH rather than reading past it',
+    async () => {
+      // The alias is what Windows would run, so a same-named program further
+      // down PATH says nothing about this launch.
+      const first = createTempDir();
+      const second = createTempDir();
+      aliases.set(path.join(first, 'tool.exe'), path.join(first, 'gone.exe'));
+      fs.writeFileSync(path.join(second, 'tool.exe'), fakePeFile(PE_SUBSYSTEM.gui));
+
+      expect(await launchTargetKind('tool.exe', { PATH: `${first};${second}` })).toBe('unknown');
+    }
+  );
+});
+
 describe('needsConsoleBridge', () => {
   it('is false only for a program confirmed to make its own window', async () => {
     expect(await needsConsoleBridge(write('gui.exe', fakePeFile(PE_SUBSYSTEM.gui)), {})).toBe(false);
@@ -268,5 +351,32 @@ describe('against the real Windows binaries', () => {
   it.skipIf(!onWindows)('reads explorer.exe as a windowed program', async () => {
     expect(await launchTargetKind('explorer.exe')).toBe('gui');
     expect(await needsConsoleBridge('explorer.exe')).toBe(false);
+  });
+
+  // A Store app's alias, where this machine has one -- a runner image may not.
+  // Named by full path, so the answer is about the alias and not about
+  // whichever same-named program PATH happens to reach first.
+  function storeAlias(name: string): string | null {
+    if (!onWindows) {
+      return null;
+    }
+
+    const file = path.join(process.env['LOCALAPPDATA'] ?? '', 'Microsoft', 'WindowsApps', name);
+    try {
+      return fs.lstatSync(file).isSymbolicLink() ? file : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const terminal = storeAlias('wt.exe');
+  const winget = storeAlias('winget.exe');
+
+  it.skipIf(terminal === null)('reads the Windows Terminal alias as a windowed program', async () => {
+    expect(await launchTargetKind(terminal ?? '', {})).toBe('gui');
+  });
+
+  it.skipIf(winget === null)('reads the winget alias as a console program', async () => {
+    expect(await launchTargetKind(winget ?? '', {})).toBe('console');
   });
 });

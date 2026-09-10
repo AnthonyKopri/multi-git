@@ -548,10 +548,8 @@ describe('the detached launcher', () => {
 
     const result = await withPlatform('win32', () =>
       createDetachedLauncher(fakeSpawn).launch('wt.exe', ['-d', '.'], {
-        // `wt.exe` is really an app execution alias -- a zero-byte reparse
-        // point that cannot be opened -- so it reads as unknown and takes the
-        // bridge. An empty PATH reaches the same answer without depending on
-        // whether the runner has Windows Terminal installed.
+        // Nothing called wt.exe on this PATH, so it reads as unknown and takes
+        // the bridge -- whether or not the runner has Windows Terminal.
         env: { PATH: createTempDir() },
         visible: true
       })
