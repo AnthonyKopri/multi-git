@@ -58,6 +58,7 @@ export type InstallOutcome =
 
 /** The features that need `gh`, so the UI can disable exactly those. */
 export const GH_DEPENDENT_FEATURES = [
+  'Browse GitHub repositories when cloning',
   'Create a pull request',
   'Create the repository on GitHub in the New Repository wizard',
   'Repository maintenance checks that ask GitHub about a branch'

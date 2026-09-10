@@ -3,7 +3,9 @@
   "version": "4.0.0",
   "description": "A local-first Git desktop client for multiple repositories, accounts, and SSH identities",
   "main": "out/node/main/main.js",
+  "bin": { "multi-git": "scripts/multi-git.cjs" },
   "scripts": {
+    "agent": "node scripts/multi-git.cjs",
     "start": "npm run compile && node out/node/server/cli.js",
     "dev": "npm run compile && node out/node/server/cli.js",
     "desktop": "npm run compile && node scripts/ensure-electron.mjs && electron .",
@@ -55,6 +57,8 @@
     "productName": "Multi-Git Client",
     "files": [
       "out/**/*",
+      "scripts/multi-git.cjs",
+      "skills/**/*",
       "templates/**/*",
       "docs/images/multi-git-logo.ico",
       "package.json"

@@ -5292,3 +5292,10 @@ tr:hover .profile-star:hover {
 .profile-star.is-default .material-symbols-outlined {
   font-variation-settings: 'FILL' 1;
 }
+/* The remote list scrolls independently so destination controls stay reachable. */
+.clone-repository-results { display: grid; gap: 6px; max-height: 180px; overflow-y: auto; }
+.clone-repository { text-align: left; white-space: normal; overflow-wrap: anywhere; justify-content: flex-start; }
+#clone-browser { margin-bottom: 16px; }
+#clone-browser summary { cursor: pointer; margin-bottom: 10px; }
+.clone-browser-info { padding: 12px; margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-input); }
+.clone-browser-info p { margin: 0 0 10px; font-size: 0.875rem; color: var(--text-secondary); }
