@@ -175,3 +175,14 @@ export function pinnedBranchesFor(repoPath: string, config: AppConfig = readConf
   const pinned = config.repoSettings[canonicalRepoKey(repoPath)]?.pinnedBranches;
   return Array.isArray(pinned) ? pinned : [];
 }
+
+/**
+ * Whether a repository pin bypasses ~/.ssh/config.
+ *
+ * On by default: without it `IdentitiesOnly=yes` still admits whatever key the
+ * managed block names for the same host, so the account that authenticates is
+ * decided by agent ordering rather than by the pin. See ssh/command.ts.
+ */
+export function isSshConfigIsolationEnabled(config: AppConfig): boolean {
+  return !config.settings || config.settings.isolateSshConfig !== false;
+}

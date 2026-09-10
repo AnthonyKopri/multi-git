@@ -439,3 +439,110 @@ export async function setupVault(): Promise<void> {
     setVaultSetupFeedback(errorMessage(error, 'Could not set up the vault.'));
   }
 }
+
+/**
+ * Asks the host which account this key actually authenticates as.
+ *
+ * The one check the local configuration cannot do for itself. A pin can name
+ * exactly the right key and still authenticate as another account, because
+ * ~/.ssh/config names a key for the same host and the agent decides which is
+ * offered first — and the error that comes back, `Repository not found`, does
+ * not mention accounts at all.
+ */
+export async function verifyProfileAccount(profile: ClientSshProfile): Promise<void> {
+  const { activeRepo } = getState();
+
+  try {
+    const { host, check } = await api.verifySshAccount(profile.id, activeRepo ?? '');
+
+    const tone = check.mismatch ? 'error' : check.ok ? 'success' : 'error';
+    logToTerminal(`${host} — ${profile.label}: ${check.message}`, tone);
+    showToast(check.message, tone === 'success' ? 'success' : 'error', 8000);
+  } catch (error) {
+    showToast(errorMessage(error, 'Could not verify the account.'), 'error', 6000);
+  }
+}
+
+/**
+ * Makes one profile the account repositories with none of their own fall back to.
+ *
+ * Machine-wide, and therefore always an explicit action. This used to happen
+ * as a side effect of selecting a profile in any repository, which meant the
+ * default quietly became whichever repository was opened last.
+ */
+export async function makeDefaultAccount(profile: ClientSshProfile): Promise<void> {
+  // The star is a toggle, so clicking the filled one clears the default and
+  // leaves no account privileged rather than doing nothing.
+  if (getState().defaultAccountProfileId === profile.id) {
+    await clearDefaultAccount(profile);
+    return;
+  }
+
+  const identity = profile.userEmail
+    ? `
+
+Optionally also set your global Git identity to ${profile.userName || profile.label} <${profile.userEmail}>, so new repositories are authored as this account.`
+    : `
+
+"${profile.label}" has no commit email, so the global Git identity will be left as it is.`;
+
+  const { confirmed, checked } = await confirmDialog(
+    `Repositories with no account of their own — plus terminals and external tools — will authenticate as "${profile.label}" on hosts Multi-Git manages.${identity}`,
+    {
+      title: 'Make this the default account?',
+      confirmLabel: 'Make Default',
+      ...(profile.userEmail
+        ? { checkboxLabel: 'Also set my global Git identity', checkboxChecked: true }
+        : {})
+    }
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const result = await api.setDefaultAccount(profile.id, Boolean(profile.userEmail) && checked);
+    applyConfigSnapshot(result.config);
+
+    if (result.warning) {
+      logToTerminal(result.warning, 'error');
+    }
+
+    logToTerminal(
+      `Default account is now "${profile.label}"${result.identityApplied ? ' (global Git identity updated)' : ''}.`,
+      'success'
+    );
+    showToast(`Default account: ${profile.label}`, 'success');
+  } catch (error) {
+    showToast(errorMessage(error, 'Failed to set the default account.'), 'error');
+  }
+}
+
+/**
+ * Leaves no account as the machine-wide fallback.
+ *
+ * Worth confirming rather than toggling silently: with no default, anything
+ * that does not read a repository's own setting — a terminal, an external tool —
+ * is back to whatever ~/.ssh/config and the agent decide between them.
+ */
+async function clearDefaultAccount(profile: ClientSshProfile): Promise<void> {
+  const { confirmed } = await confirmDialog(
+    `"${profile.label}" will stop being the account that repositories with none of their own fall back to. Nothing else becomes the default in its place.`,
+    { title: 'Clear the default account?', confirmLabel: 'Clear Default' }
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const result = await api.setDefaultAccount(null, false);
+    applyConfigSnapshot(result.config);
+
+    logToTerminal('No account is set as the default any more.', 'info');
+    showToast('Default account cleared.', 'info');
+  } catch (error) {
+    showToast(errorMessage(error, 'Failed to clear the default account.'), 'error');
+  }
+}

@@ -105,17 +105,26 @@ configRouter.post(
 configRouter.post(
   '/api/config/repo-settings',
   asyncRoute((req, res) => {
-    const { repoPath, warnBeforeDelete } = (req.body ?? {}) as {
+    const { repoPath, warnBeforeDelete, identityOptOut, intendedAccount } = (req.body ?? {}) as {
       repoPath?: unknown;
       warnBeforeDelete?: unknown;
+      identityOptOut?: unknown;
+      intendedAccount?: unknown;
     };
     const resolvedPath = requireExistingRepo(repoPath);
     const repoKey = canonicalRepoKey(resolvedPath);
 
     const config = readConfig();
+    // Each field is written only when the caller mentioned it: a request that
+    // sets one setting must not reset the others to their defaults.
     config.repoSettings[repoKey] = {
       ...(config.repoSettings[repoKey] ?? {}),
-      warnBeforeDelete: warnBeforeDelete !== false
+      ...(warnBeforeDelete !== undefined ? { warnBeforeDelete: warnBeforeDelete !== false } : {}),
+      ...(identityOptOut !== undefined ? { identityOptOut: identityOptOut === true } : {}),
+      // An empty string clears the override and goes back to deriving it.
+      ...(intendedAccount !== undefined
+        ? { intendedAccount: typeof intendedAccount === 'string' ? intendedAccount.trim() : '' }
+        : {})
     };
     writeConfig(config);
 

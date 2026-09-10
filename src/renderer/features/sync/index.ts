@@ -149,6 +149,72 @@ async function confirmAccountForPush(): Promise<boolean> {
 }
 
 /**
+ * Repositories whose account the host has already confirmed this session.
+ *
+ * Only agreement is cached. A mismatch has to keep asking, because the whole
+ * failure mode is that nothing else in the app can tell the difference.
+ */
+const verifiedAccounts = new Set<string>();
+
+/**
+ * Asks the host who this key authenticates as, and blocks a push that would go
+ * out as the wrong account.
+ *
+ * The check the local configuration cannot do for itself: a pin can name
+ * exactly the right key and still authenticate as another account, because the
+ * managed block names a key for the same host and the agent decides which is
+ * offered first. GitHub then answers `ERROR: Repository not found.`, which
+ * sends people looking for a repository that was never missing.
+ */
+async function confirmVerifiedAccount(): Promise<boolean> {
+  const { activeRepo, activeProfileId } = getState();
+
+  // Nothing pinned means nothing to check against: the identity is whatever
+  // the machine already does, which is the user's own arrangement.
+  if (!activeRepo || !activeProfileId) {
+    return true;
+  }
+
+  const cacheKey = `${activeRepo}::${activeProfileId}`;
+  if (verifiedAccounts.has(cacheKey)) {
+    return true;
+  }
+
+  let check;
+  try {
+    ({ check } = await api.verifySshAccount(activeProfileId, activeRepo));
+  } catch (error) {
+    // A push must not be blocked because the check itself could not run.
+    if (!isStale(error)) {
+      logToTerminal(`Could not verify which account this key uses: ${errorMessage(error)}`, 'error');
+    }
+    return true;
+  }
+
+  if (!check.mismatch) {
+    if (check.ok) {
+      verifiedAccounts.add(cacheKey);
+      logToTerminal(check.message, 'success');
+    }
+    return true;
+  }
+
+  logToTerminal(check.message, 'error');
+
+  const { confirmed } = await confirmDialog(
+    `${check.message}\n\nPushing now would appear to come from ${check.account}. Push anyway?`,
+    { title: 'Wrong account', confirmLabel: 'Push Anyway', danger: true }
+  );
+
+  return confirmed;
+}
+
+/** Forgets a cached result, so the next push re-asks the host. */
+export function forgetVerifiedAccounts(): void {
+  verifiedAccounts.clear();
+}
+
+/**
  * Confirms a pull whose outcome is not obvious.
  *
  * Only when it is not obvious: a fast-forward is the safest thing git does and
@@ -294,6 +360,12 @@ export async function performSync(
   }
 
   if (action === 'push' && !options.force && !(await confirmAccountForPush())) {
+    return;
+  }
+
+  // Deliberately not skipped for a force push. A force push as the wrong
+  // account is the worst version of this mistake, not one to wave through.
+  if (action === 'push' && !(await confirmVerifiedAccount())) {
     return;
   }
 

@@ -126,6 +126,14 @@ function validateSshProfiles(raw: unknown, issues: ConfigIssue[]): SshProfile[] 
       profile.userEmail = record['userEmail'];
     }
 
+    // Learned from a verification rather than configured. Dropping it here
+    // would mean the wrong-account warning silently stopped working the next
+    // time the config was re-read, which is the same trap sshProfileId fell
+    // into below.
+    if (isNonEmptyString(record['verifiedAccount'])) {
+      profile.verifiedAccount = record['verifiedAccount'];
+    }
+
     profiles.push(profile);
   });
 
@@ -185,6 +193,15 @@ function validateRepoSettings(
     // System profile.
     if (typeof record['sshProfileId'] === 'string') {
       entry.sshProfileId = record['sshProfileId'];
+    }
+
+    if (typeof record['identityOptOut'] === 'boolean') {
+      entry.identityOptOut = record['identityOptOut'];
+    }
+
+    // The account this repository belongs to, when the remote does not say.
+    if (isNonEmptyString(record['intendedAccount'])) {
+      entry.intendedAccount = record['intendedAccount'];
     }
 
     if (Array.isArray(record['pinnedBranches'])) {
@@ -284,6 +301,10 @@ export function validateSettings(raw: unknown): Partial<AppSettings> | undefined
 
   if (typeof source['manageSshConfig'] === 'boolean') {
     settings.manageSshConfig = source['manageSshConfig'];
+  }
+
+  if (typeof source['isolateSshConfig'] === 'boolean') {
+    settings.isolateSshConfig = source['isolateSshConfig'];
   }
 
   // A negative or fractional retention would produce expiry times nobody asked
@@ -736,6 +757,7 @@ const KNOWN_KEYS = new Set([
   'repoSettings',
   'settings',
   'sshConfigHosts',
+  'defaultAccountProfileId',
   'repoGroups',
   'externalAgents',
   'windowState',
@@ -794,6 +816,9 @@ export function validateAppConfig(raw: unknown): ValidationResult {
     repoSettings: validateRepoSettings(source['repoSettings'], issues),
     ...(settings ? { settings } : {}),
     ...(sshConfigHosts ? { sshConfigHosts } : {}),
+    ...(isNonEmptyString(source['defaultAccountProfileId'])
+      ? { defaultAccountProfileId: source['defaultAccountProfileId'] }
+      : {}),
     ...(repoGroups ? { repoGroups } : {}),
     ...(externalAgents ? { externalAgents } : {}),
     ...(windowState ? { windowState } : {}),

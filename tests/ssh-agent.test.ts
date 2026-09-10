@@ -432,10 +432,40 @@ describe('repository routing', () => {
 
     // Quoted because git hands this to a shell, and separators normalised
     // because a POSIX-style shell would eat backslashes.
-    expect(value).toContain(`ssh -i "${key.replace(/\\/g, '/')}"`);
+    expect(value).toContain(`-i "${key.replace(/\\/g, '/')}"`);
     expect(value).toContain(' ');
     // Without this, ssh offers every agent identity in turn and GitHub
     // authenticates as whichever matches first.
+    expect(value).toContain('IdentitiesOnly=yes');
+  });
+
+  it('names the ssh binary rather than leaving it to PATH', () => {
+    // git/run.ts already did this; this one did not. The pin is written by
+    // this app and *run by git*, which prepends its own usr/bin on Windows, so
+    // an unqualified `ssh` there is the MSYS build that cannot see the agent
+    // this app loads keys into. The identity used for Multi-Git's own commands
+    // worked and the one left behind for every other tool did not.
+    const value = buildRepoSshCommand(keyPath);
+    const binary = /^"([^"]+)"/.exec(value)?.[1] ?? value.split(' ')[0] ?? '';
+
+    expect(path.basename(binary).toLowerCase()).toMatch(/^ssh(\.exe)?$/);
+  });
+
+  it('bypasses the user configuration so the given key is the only identity', () => {
+    // IdentitiesOnly means "identities named in the configuration *and* on the
+    // command line", so without this the managed block's own entry for the
+    // same host is offered too and agent ordering picks the account.
+    const value = buildRepoSshCommand(keyPath);
+
+    expect(value).toContain(process.platform === 'win32' ? '-F NUL' : '-F /dev/null');
+    expect(value.match(/ -i /g)).toHaveLength(1);
+  });
+
+  it('leaves the configuration alone when isolation is turned off', () => {
+    // The escape hatch for a host the user gave a ProxyJump or a custom Port.
+    const value = buildRepoSshCommand(keyPath, { isolateConfig: false });
+
+    expect(value).not.toContain('-F ');
     expect(value).toContain('IdentitiesOnly=yes');
   });
 
@@ -449,5 +479,25 @@ describe('repository routing', () => {
     expect(isMultiGitSshCommand(buildRepoSshCommand('/k'))).toBe(true);
     expect(isMultiGitSshCommand('ssh -J bastion.example -i /k')).toBe(false);
     expect(isMultiGitSshCommand(null)).toBe(false);
+  });
+
+  it('still recognises the format written by older versions', () => {
+    // The predicate has to accept the old shape before the builder stops
+    // producing it. A value that is no longer recognised is treated as
+    // hand-written and never rewritten, which would strand every already-pinned
+    // repository on the pin that cannot reach the agent.
+    const old =
+      'ssh -i "C:/Users/jane/.ssh/id_ed25519" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new';
+
+    expect(isMultiGitSshCommand(old)).toBe(true);
+  });
+
+  it('does not claim a value carrying options this app never writes', () => {
+    const quotedKey = '-i "C:/k" -o IdentitiesOnly=yes';
+
+    expect(isMultiGitSshCommand(`ssh ${quotedKey} -o ProxyJump=bastion`)).toBe(false);
+    expect(isMultiGitSshCommand(`ssh -F ~/.ssh/other_config ${quotedKey}`)).toBe(false);
+    // A different program entirely, however it was spelled.
+    expect(isMultiGitSshCommand(`"C:/tools/plink.exe" ${quotedKey}`)).toBe(false);
   });
 });

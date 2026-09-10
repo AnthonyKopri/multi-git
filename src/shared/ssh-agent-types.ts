@@ -134,3 +134,79 @@ export interface SshAgentRepairResult {
   cancelled: boolean;
   message: string;
 }
+
+// ---------- account verification ----------
+
+/** Why a verification did not produce an account name. */
+export type SshVerifyFailure =
+  /** No ssh binary could be resolved on this machine. */
+  | 'no-binary'
+  /** ssh wanted a passphrase or a host-key answer that BatchMode refused. */
+  | 'prompted'
+  /** The host rejected every identity offered. */
+  | 'refused'
+  | 'timeout'
+  /** Authenticated, but the host's greeting named no account. */
+  | 'unparsed';
+
+/**
+ * What the remote says about who just authenticated.
+ *
+ * The point of asking rather than assuming: a pin can be syntactically perfect
+ * and still authenticate as the wrong account, and the error the host then
+ * returns — `ERROR: Repository not found.` — names the wrong problem entirely.
+ */
+export interface SshIdentityCheck {
+  /** Whether authentication succeeded at all. */
+  ok: boolean;
+  /** The account the host greeted, when it named one. */
+  account: string | null;
+  /** The account the remote URL implies. Null when there is no usable remote. */
+  expected: string | null;
+  /** True only when both are known and they disagree. */
+  mismatch: boolean;
+  reason?: SshVerifyFailure;
+  /** One sentence worth showing verbatim. Never carries a key or passphrase. */
+  message: string;
+}
+
+// ---------- existing repository setup ----------
+
+/** How a repository's `core.sshCommand` got there. */
+export type RepoPinOrigin = 'none' | 'multi-git' | 'user';
+
+/**
+ * What a repository is currently configured to do, for the confirmation shown
+ * before changing it.
+ *
+ * Reading this before a write is what turns "the app silently did something to
+ * my .git/config" into a decision the user made.
+ */
+export interface RepoAccountSetup {
+  pinOrigin: RepoPinOrigin;
+  /** The raw core.sshCommand value, when there is one. */
+  pinValue: string | null;
+  /** The key path the pin names, when it names one. */
+  pinKeyPath: string | null;
+  /** The profile that key belongs to, when it belongs to one. */
+  pinProfileId: string | null;
+  pinProfileLabel: string | null;
+  /** Repository-local identity. Null means it inherits the global one. */
+  localName: string | null;
+  localEmail: string | null;
+  /** What git would actually use, local or inherited. */
+  effectiveName: string | null;
+  effectiveEmail: string | null;
+  originRemoteUrl: string | null;
+  /** Owner segment of the remote, e.g. `akopri-familiara`. */
+  originOwner: string | null;
+  /**
+   * The account this repository should authenticate as.
+   *
+   * The remote's owner unless the user said otherwise, which they need to for
+   * an organisation repository or a fork.
+   */
+  intendedAccount: string | null;
+  /** Whether that came from the user rather than from the remote. */
+  intendedIsOverride: boolean;
+}

@@ -5,6 +5,7 @@
 // the vault can supply a passphrase, whether the repository should be pinned —
 // so those primitives stay testable with nothing but a fake runner.
 import { readConfig, writeConfig } from '../config/store';
+import { runGitCommand, tryGitCommand } from '../git/run';
 import { canonicalRepoKey } from '../config/repo-identity';
 import { mainWorktreePathSync } from '../git/worktrees';
 import {
@@ -62,6 +63,16 @@ export interface ApplyProfileResult {
   code?: SshAgentErrorCode;
   /** Whether this repository's core.sshCommand was written or cleared. */
   routingChanged: boolean;
+  /** Whether repository-local user.name/user.email were written with it. */
+  identityChanged?: boolean;
+  /**
+   * Set when a hand-written core.sshCommand was left in place.
+   *
+   * Leaving it alone is right — it may be a jump host — but doing so without
+   * saying anything meant the account simply did not change and nothing
+   * explained why.
+   */
+  routingBlocked?: boolean;
 }
 
 export interface ApplyProfileOptions {
@@ -120,7 +131,15 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
   // Routing first, and unconditionally. Even if the agent cannot be repaired,
   // a pinned repository still authenticates correctly through the per-command
   // fallback, so the degraded state stays usable rather than becoming wrong.
-  const routingChanged = repoPath ? await applyRepoRouting(repoPath, profile) : false;
+  const routing = repoPath
+    ? await applyRepoRouting(repoPath, profile)
+    : { routingChanged: false, identityChanged: false, blockedByUserPin: false };
+
+  const routingFields = {
+    routingChanged: routing.routingChanged,
+    identityChanged: routing.identityChanged,
+    routingBlocked: routing.blockedByUserPin
+  };
 
   const before = await agentStatus({ profileId, ...(runner ? { runner } : {}) });
 
@@ -131,7 +150,7 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
   // which is what the passphrase prompt now does. Storing on a second call
   // after the key was already in was the shape that quietly stored nothing.
   if (before.selectedKeyLoaded) {
-    return { success: true, agent: before, routingChanged };
+    return { success: true, agent: before, ...routingFields };
   }
 
   if (before.availability !== 'ready') {
@@ -140,7 +159,7 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
       agent: before,
       error: before.diagnostic ?? 'No SSH agent is available.',
       code: before.repairRequiresElevation ? 'REPAIR_REQUIRED' : 'AGENT_UNAVAILABLE',
-      routingChanged
+      ...routingFields
     };
   }
 
@@ -156,7 +175,7 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
       agent: before,
       error: 'Unlock the vault so the saved passphrase can be used for this key.',
       code: 'VAULT_LOCKED',
-      routingChanged
+      ...routingFields
     };
   }
 
@@ -204,24 +223,77 @@ export async function applyProfile(options: ApplyProfileOptions): Promise<ApplyP
         : outcome.needsPassphrase === true
           ? 'PASSPHRASE_REQUIRED'
           : 'LOAD_FAILED',
-      routingChanged
+      ...routingFields
     };
   }
 
-  return { success: true, agent: after, routingChanged };
+  return { success: true, agent: after, ...routingFields };
 }
 
-/** Writes the repository pin, leaving a hand-written value alone. */
-async function applyRepoRouting(repoPath: string, profile: SshProfile): Promise<boolean> {
+export interface RepoRoutingOutcome {
+  routingChanged: boolean;
+  identityChanged: boolean;
+  blockedByUserPin: boolean;
+}
+
+/**
+ * Writes the repository pin and the matching authorship, together.
+ *
+ * Together is the point. Authentication and authorship are separate settings
+ * in Git and stay separate here, but they were also written by two different
+ * code paths with two different strengths: the pin unconditionally, the
+ * identity only if a dialog was confirmed and the profile happened to carry an
+ * email. So a repository could authenticate as one account and commit as
+ * another, with nothing to reconcile them and no warning at any point.
+ */
+async function applyRepoRouting(
+  repoPath: string,
+  profile: SshProfile
+): Promise<RepoRoutingOutcome> {
   const existing = await readRepoSshCommand(repoPath);
 
   if (existing !== null && !isMultiGitSshCommand(existing)) {
     // Someone configured a jump host or a custom ssh binary here. Overwriting
-    // it would break their setup to enforce ours.
+    // it would break their setup to enforce ours, so it is reported instead.
+    return { routingChanged: false, identityChanged: false, blockedByUserPin: true };
+  }
+
+  const routingChanged = (await setRepoSshCommand(repoPath, profile.privateKeyPath)).changed;
+  const identityChanged = await applyRepoIdentity(repoPath, profile);
+
+  return { routingChanged, identityChanged, blockedByUserPin: false };
+}
+
+/** The repository-local commit identity that goes with a profile. */
+async function applyRepoIdentity(repoPath: string, profile: SshProfile): Promise<boolean> {
+  // A profile with no email cannot say anything about authorship, so it leaves
+  // the repository on the global identity. That is reported when the profile is
+  // saved rather than silently discovered later.
+  if (!profile.userEmail || identityOptedOut(repoPath)) {
     return false;
   }
 
-  return (await setRepoSshCommand(repoPath, profile.privateKeyPath)).changed;
+  const name = profile.userName || profile.label;
+
+  const [currentName, currentEmail] = await Promise.all([
+    tryGitCommand(repoPath, ['config', '--local', '--get', 'user.name']),
+    tryGitCommand(repoPath, ['config', '--local', '--get', 'user.email'])
+  ]);
+
+  if (currentName?.stdout.trim() === name && currentEmail?.stdout.trim() === profile.userEmail) {
+    return false;
+  }
+
+  await runGitCommand(repoPath, ['config', '--local', 'user.name', name]);
+  await runGitCommand(repoPath, ['config', '--local', 'user.email', profile.userEmail]);
+
+  return true;
+}
+
+/** Whether the user said this repository is intentionally mixed. */
+function identityOptedOut(repoPath: string): boolean {
+  const key = canonicalRepoKey(identityOwner(repoPath));
+  return key !== '' && readConfig().repoSettings[key]?.identityOptOut === true;
 }
 
 /** Removes the pin, but only one this app wrote. */

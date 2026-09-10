@@ -5,7 +5,16 @@ import { Router } from 'express';
 
 import { readConfig, writeConfig, isSshConfigManagementEnabled } from '../config/store';
 import { sanitizeConfigForClient } from '../config/sanitize';
-import { syncSshConfigForHost } from '../ssh/config-sync';
+import {
+  hasCompetingAccounts,
+  resolveDefaultAccount,
+  setDefaultAccount,
+  syncSshAliases
+} from '../ssh/config-sync';
+import { readRepoAccountSetup, wouldOverwrite } from '../ssh/repo-setup';
+import { verifySshAccount } from '../ssh/verify';
+import { canonicalHost } from '../ssh/host-alias';
+import { runGitCommand } from '../git/run';
 import { deriveOriginHost } from '../ssh/profiles';
 import {
   buildUniqueKeyBaseName,
@@ -78,7 +87,16 @@ sshRouter.post(
     }
 
     writeConfig(config);
-    res.json({ success: true, config: sanitizeConfigForClient(config) });
+
+    // Raised now rather than at push time. A profile with no email applies
+    // its key and leaves authorship to whatever the global config says,
+    // which on a two-account machine is routinely the other account.
+    const warning =
+      profile.userEmail === ''
+        ? `"${profile.label}" has no commit email, so repositories using it will be authored with your global Git identity.`
+        : null;
+
+    res.json({ success: true, warning, config: sanitizeConfigForClient(config) });
   })
 );
 
@@ -106,35 +124,26 @@ sshRouter.post(
       return;
     }
 
-    let keyPath: string | null = null;
-    if (profileId) {
-      const profile = config.sshProfiles.find((entry) => entry.id === profileId);
-      if (!profile) {
-        throw new HttpError('SSH profile not found.', 404);
-      }
-      keyPath = profile.privateKeyPath;
+    if (profileId && !config.sshProfiles.some((entry) => entry.id === profileId)) {
+      throw new HttpError('SSH profile not found.', 404);
     }
 
-    let host = await deriveOriginHost(typeof repoPath === 'string' ? repoPath : undefined);
-    if (!host) {
-      if (!keyPath) {
-        // Nothing to assign and no host to remove.
-        res.json({ success: true, skipped: true });
-        return;
-      }
-      host = 'github.com';
-    }
-
-    const result = syncSshConfigForHost(host, keyPath);
+    // Aliases only. Selecting a profile for one repository is not a statement
+    // about which account the whole machine falls back to, and treating it as
+    // one is what made the default flip to whichever repository was opened
+    // last.
+    const host = await deriveOriginHost(typeof repoPath === 'string' ? repoPath : undefined);
+    const result = syncSshAliases(host);
     if (result.error) {
       throw new HttpError(result.error, 500);
     }
 
     res.json({
       success: true,
-      host,
+      host: host ?? null,
       updated: Boolean(result.updated),
-      removed: !keyPath,
+      competingAccounts: hasCompetingAccounts(config),
+      defaultAccountProfileId: resolveDefaultAccount(config)?.id ?? null,
       warning: result.warning ?? null
     });
   })
@@ -334,7 +343,13 @@ sshRouter.post(
     // Point ~/.ssh/config at the new key so external tools use it too.
     const repoPath = typeof body['repoPath'] === 'string' ? body['repoPath'] : undefined;
     const originHost = (await deriveOriginHost(repoPath)) ?? 'github.com';
-    const sshConfigResult = syncSshConfigForHost(originHost, privateKeyPath);
+    // The first account on a machine becomes the default, because otherwise
+    // nothing answers for an unpinned repository. A later one does not: that
+    // is a deliberate choice, and quietly reassigning it is the defect this
+    // avoids.
+    const sshConfigResult = resolveDefaultAccount(readConfig())
+      ? syncSshAliases(originHost)
+      : setDefaultAccount(profileId);
 
     res.json({
       success: true,
@@ -422,5 +437,116 @@ sshRouter.post(
 
     await openPathInFileExplorer(target);
     res.json({ success: true, openedPath: target });
+  })
+);
+
+/**
+ * Makes one profile the account unpinned repositories fall back to.
+ *
+ * The only thing that writes the catch-all `Host <host>` block, and the only
+ * thing that writes a global commit identity. Both are machine-wide, so both
+ * are a deliberate action rather than a side effect of opening a folder.
+ */
+sshRouter.post(
+  '/api/config/ssh/default-account',
+  asyncRoute(async (req, res) => {
+    const { profileId, setGlobalIdentity } = (req.body ?? {}) as Record<string, unknown>;
+    const id = typeof profileId === 'string' && profileId ? profileId : null;
+
+    const result = setDefaultAccount(id);
+    if (result.error) {
+      throw new HttpError(result.error, 400);
+    }
+
+    const profile = id ? readConfig().sshProfiles.find((entry) => entry.id === id) : null;
+    let identityApplied = false;
+
+    if (profile && setGlobalIdentity === true && profile.userEmail) {
+      await runGitCommand(process.cwd(), [
+        'config', '--global', 'user.name',
+        profile.userName || profile.label
+      ]);
+      await runGitCommand(process.cwd(), [
+        'config', '--global', 'user.email', profile.userEmail
+      ]);
+      identityApplied = true;
+    }
+
+    res.json({
+      success: true,
+      updated: Boolean(result.updated),
+      identityApplied,
+      warning: result.warning ?? null,
+      config: sanitizeConfigForClient(readConfig())
+    });
+  })
+);
+
+/**
+ * Asks the host which account a profile actually authenticates as.
+ *
+ * One network round trip, and the only way to tell a correct pin from one that
+ * is syntactically perfect and authenticating as the wrong account.
+ */
+sshRouter.post(
+  '/api/config/ssh/verify',
+  asyncRoute(async (req, res) => {
+    const { profileId, repoPath } = (req.body ?? {}) as Record<string, unknown>;
+    const config = readConfig();
+
+    const profile = config.sshProfiles.find((entry) => entry.id === profileId);
+    if (profileId && !profile) {
+      throw new HttpError('SSH profile not found.', 404);
+    }
+
+    const folder = typeof repoPath === 'string' ? repoPath : undefined;
+    const setup = folder ? await readRepoAccountSetup(folder) : null;
+    const host = canonicalHost(await deriveOriginHost(folder), config.sshProfiles) ?? 'github.com';
+
+    const check = await verifySshAccount({
+      host,
+      ...(profile ? { privateKeyPath: profile.privateKeyPath } : {}),
+      // The remote's owner unless the user overrode it, which they need to for
+      // an organisation repository or a fork.
+      expectedAccount: setup?.intendedAccount ?? null
+    });
+
+    // Remembered so the dropdown can warn about a wrong account instantly and
+    // offline. A key's account does not change on its own.
+    if (check.account && profile && profile.verifiedAccount !== check.account) {
+      const stored = readConfig();
+      const entry = stored.sshProfiles.find((candidate) => candidate.id === profile.id);
+      if (entry) {
+        entry.verifiedAccount = check.account;
+        writeConfig(stored);
+      }
+    }
+
+    res.json({ success: true, host, check, config: sanitizeConfigForClient(readConfig()) });
+  })
+);
+
+/** What a repository is configured to do right now, before anything changes it. */
+sshRouter.post(
+  '/api/config/ssh/repo-setup',
+  asyncRoute(async (req, res) => {
+    const { repoPath, profileId } = (req.body ?? {}) as Record<string, unknown>;
+
+    if (typeof repoPath !== 'string' || repoPath === '') {
+      throw new HttpError('A repository path is required.', 400);
+    }
+
+    const setup = await readRepoAccountSetup(repoPath);
+    const target = readConfig().sshProfiles.find((entry) => entry.id === profileId) ?? null;
+
+    res.json({
+      success: true,
+      setup,
+      // Computed here so the renderer and the server cannot disagree about
+      // what counts as overwriting something.
+      wouldOverwrite: target
+        ? wouldOverwrite(setup, target.id, target.userEmail || null)
+        : false
+    });
   })
 );

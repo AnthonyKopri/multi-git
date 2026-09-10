@@ -116,6 +116,24 @@
               <!-- Rendered dynamically -->
             </ul>
             <div class="dropdown-divider"></div>
+            <!-- Which account this repository should be using, and which one it
+                 actually authenticates as. The second is what the host reports,
+                 not what the profile is called: a correct-looking selection can
+                 still authenticate as another account. -->
+            <div class="repo-account" id="repo-account-block">
+              <div class="repo-account-row">
+                <span class="repo-account-label">Should use</span>
+                <span id="repo-intended-account" class="repo-account-value">&mdash;</span>
+                <button id="btn-change-intended" class="btn btn-text btn-sm" type="button" title="Set which account this repository belongs to, for an organisation repository or a fork">Change</button>
+              </div>
+              <div class="repo-account-row">
+                <span class="repo-account-label">Using</span>
+                <span id="repo-using-account" class="repo-account-value">&mdash;</span>
+                <button id="btn-check-account" class="btn btn-text btn-sm" type="button" title="Ask the host which account this key authenticates as">Check</button>
+              </div>
+              <div id="repo-account-note" class="repo-account-note hidden"></div>
+            </div>
+            <div class="dropdown-divider"></div>
             <div class="dropdown-identity" id="identity-row" title="Commit author identity used in this repository">
               <span class="material-symbols-outlined" style="font-size: 16px;">badge</span>
               <span id="identity-text" class="identity-text">Identity: unknown</span>

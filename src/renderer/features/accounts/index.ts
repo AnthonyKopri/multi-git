@@ -7,11 +7,15 @@ import { getState, ruleProfileFor, update } from '../../state/store';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
-import { applyProfileIdentity, maybeOfferIdentity } from './identity';
+import { applyProfileIdentity, refreshIdentity } from './identity';
+import { confirmProfileChange } from './repo-setup';
 import { renderAccountRules, renderProfileUI } from './profile-ui';
 import { renderProfileTable } from './profile-table';
+export { toggleRowMenu } from './profile-table';
 import { renderOverlaySshStatus, renderVaultStatus } from './vault-ui';
 import { initAgentPanel, loadSelectedKey, refreshAgent } from './agent';
+import { initRepoAccount, refreshRepoAccount, renderRepoAccount } from './repo-account';
+export { changeIntendedAccount, checkAccountNow, refreshRepoAccount } from './repo-account';
 import type { ClientConfig, ClientSshProfile } from '../../../shared/config-types';
 
 let ui: Elements;
@@ -24,6 +28,7 @@ function storageKey(repoPath: string): string {
 export function initAccounts(elements: Elements): void {
   ui = elements;
   initAgentPanel(elements);
+  initRepoAccount(elements);
   // Read once at startup, so the dropdown says something true before the user
   // touches anything.
   void refreshAgent();
@@ -37,7 +42,8 @@ export function renderAccounts(): void {
   renderVaultStatus(ui, state.vaultStatus);
   renderAccountRules(ui, state);
   renderOverlaySshStatus(ui, state);
-  renderProfileTable(ui.sshProfilesTableBody, state.sshProfiles);
+  renderProfileTable(ui.sshProfilesTableBody, state.sshProfiles, state.defaultAccountProfileId);
+  renderRepoAccount();
   asInput(ui.sshManageConfigCheckbox).checked = state.manageSshConfig;
 }
 
@@ -49,6 +55,7 @@ export function applyConfigSnapshot(config: ClientConfig): void {
     accountRules: config.accountRules,
     repoSettings: config.repoSettings,
     vaultStatus: config.vaultStatus,
+    defaultAccountProfileId: config.defaultAccountProfileId,
     manageSshConfig: config.settings.manageSshConfig !== false,
     // Off unless it was turned on: nothing should start moving commits on its
     // own because the setting happened to be absent.
@@ -77,7 +84,14 @@ export function activeProfile(): ClientSshProfile | null {
   return activeProfileId ? (sshProfiles.find((p) => p.id === activeProfileId) ?? null) : null;
 }
 
-/** Keeps ~/.ssh/config pointing at whichever key is now active. */
+/**
+ * Refreshes the per-profile Host aliases in ~/.ssh/config.
+ *
+ * This used to also rewrite the catch-all `Host github.com` entry with the
+ * active repository's key, which meant the machine-wide default account became
+ * whichever repository you opened last. The default is now only ever set from
+ * the explicit action in the SSH manager.
+ */
 async function applySshConfigForActiveProfile(): Promise<void> {
   const { activeRepo, activeProfileId, manageSshConfig } = getState();
   if (!activeRepo || !manageSshConfig) {
@@ -100,6 +114,29 @@ export async function setActiveProfile(
   id: string,
   options: { silent?: boolean } = {}
 ): Promise<void> {
+  const { activeRepo: repoBefore, sshProfiles } = getState();
+  const target = id ? (sshProfiles.find((p) => p.id === id) ?? null) : null;
+
+  // Asked before anything is written, and only when something is already
+  // configured. The silent path is a repository being restored to the choice
+  // it already had, which is not a change to confirm.
+  if (!options.silent && repoBefore && target) {
+    const decision = await confirmProfileChange(repoBefore, target);
+    if (!decision.confirmed) {
+      return;
+    }
+
+    if (decision.keepIdentity !== null) {
+      try {
+        await api.setIdentityOptOut(repoBefore, decision.keepIdentity);
+      } catch (error) {
+        // The account still changes; only the record of this preference is
+        // lost, and it is re-asked next time.
+        logToTerminal(`Could not record the commit identity choice: ${errorMessage(error)}`, 'error');
+      }
+    }
+  }
+
   update({ activeProfileId: id });
 
   const { activeRepo } = getState();
@@ -118,12 +155,27 @@ export async function setActiveProfile(
   // agents in this repository authenticate as the same account.
   await loadSelectedKey(id);
 
+  // Reads local git config only, so this costs nothing and keeps the
+  // should-use/using pair honest after every switch.
+  await refreshRepoAccount();
+
   if (!options.silent) {
     const profile = activeProfile();
     const label = profile?.label ?? 'System SSH';
     logToTerminal(`Active SSH key for this repository: ${label}`);
     showToast(`SSH key: ${label}`, 'info', 2500);
-    await maybeOfferIdentity(profile);
+
+    // The identity is written alongside the pin by the same server call, so
+    // there is nothing left to offer — only the result to show, and the one
+    // case where a profile could not supply one.
+    await refreshIdentity();
+
+    if (profile && !profile.userEmail) {
+      logToTerminal(
+        `Account "${profile.label}" has no commit email, so this repository still commits with your global Git identity.`,
+        'error'
+      );
+    }
   }
 }
 
