@@ -59,6 +59,9 @@ sshRouter.post(
 
     const config = readConfig();
     const profileId = typeof id === 'string' && id ? id : Date.now().toString();
+    const index = config.sshProfiles.findIndex((entry) => entry.id === profileId);
+    const existing = index >= 0 ? config.sshProfiles[index] : undefined;
+
     const profile: SshProfile = {
       id: profileId,
       label: String(label),
@@ -67,7 +70,15 @@ sshRouter.post(
       userEmail: trimmed(userEmail)
     };
 
-    const index = config.sshProfiles.findIndex((entry) => entry.id === profileId);
+    // Carried over only while the profile still points at the same key. That
+    // value drives the instant offline mismatch warning in the SSH Key
+    // dropdown, so keeping it across a key change would go on asserting an
+    // account this profile no longer authenticates as -- and re-verifying is
+    // one round trip, which is cheaper than being confidently wrong.
+    if (existing?.verifiedAccount !== undefined && existing.privateKeyPath === resolvedKeyPath) {
+      profile.verifiedAccount = existing.verifiedAccount;
+    }
+
     if (index >= 0) {
       config.sshProfiles[index] = profile;
     } else {

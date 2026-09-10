@@ -12,6 +12,7 @@
 import { executableRunner } from '../process/runner';
 import type { ExecutableRunner } from '../process/runner';
 import { checkGithubAvailability } from '../providers/github';
+import { refreshPathFromRegistry } from '../os/windows-path';
 import { findGitBash } from './shells';
 import type { PrerequisiteReport, PrerequisiteState } from '../../shared/prerequisite-types';
 
@@ -52,6 +53,13 @@ export async function hasWinget(runner: ExecutableRunner = executableRunner): Pr
 export async function detectPrerequisites(
   runner: ExecutableRunner = executableRunner
 ): Promise<PrerequisiteReport> {
+  // Before asking, catch up with anything installed since this process started.
+  // An installer extends PATH in the registry and broadcasts a change that a
+  // running application does not receive, so "Check again" would otherwise keep
+  // reporting a tool as missing however many times it was pressed -- which is
+  // exactly what happened after installing the GitHub CLI by hand.
+  await refreshPathFromRegistry(runner);
+
   const [gitVersion, gitBash, github, canInstall] = await Promise.all([
     probeVersion('git', runner),
     Promise.resolve(findGitBash()),

@@ -7,6 +7,7 @@
 // of the plan, and asserting them against a real process would prove less
 // while being far slower.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -25,11 +26,22 @@ import {
   resolveExecutable
 } from '../src/server/agents/definitions';
 import { createDetachedLauncher } from '../src/server/process/runner';
+import { NEW_CONSOLE_BRIDGE_SCRIPT } from '../src/server/process/windows-console';
 import { FakeRunner } from './helpers/fake-runner';
+import { withPlatform } from './helpers/platform';
 import { createTempDir, cleanupRepos } from './helpers/temp-repo';
 import type { ExternalAgentDefinition } from '../src/shared/config-types';
 
 const isWindows = process.platform === 'win32';
+
+/** A child with the pipes the console bridge reads, and nothing else. */
+class FakeBridgeChild extends EventEmitter {
+  readonly pid = 1234;
+  readonly stdout = new EventEmitter();
+  readonly stderr = new EventEmitter();
+
+  unref(): void {}
+}
 
 function definition(overrides: Partial<ExternalAgentDefinition> = {}): ExternalAgentDefinition {
   return {
@@ -365,7 +377,7 @@ describe('the detached launcher', () => {
     const result = await launcher.launch('claude', ['--resume'], {
       cwd: '/work/app',
       env: { PATH: '/usr/bin' },
-      visible: true
+      visible: false
     });
 
     expect(result.pid).toBe(4242);
@@ -376,10 +388,135 @@ describe('the detached launcher', () => {
       detached: true,
       stdio: 'ignore',
       cwd: '/work/app',
-      // Visible means the console window is not hidden.
-      windowsHide: false
+      windowsHide: true
     });
     expect(calls[0]?.options['env']).toEqual({ PATH: '/usr/bin' });
+  });
+
+  it('leaves a visible launch detached where a detached spawn gets a window', async () => {
+    // Everywhere except Windows, that is: `detached` there means
+    // DETACHED_PROCESS, which is the opposite of what a visible launch needs.
+    const calls: { executable: string; options: Record<string, unknown> }[] = [];
+    const fakeSpawn = ((executable: string, _args: readonly string[], options: Record<string, unknown>) => {
+      calls.push({ executable, options });
+      const child = {
+        pid: 9,
+        on(event: string, listener: () => void) {
+          if (event === 'spawn') {
+            queueMicrotask(listener);
+          }
+          return child;
+        },
+        unref() {}
+      };
+      return child;
+    }) as unknown as typeof import('node:child_process').spawn;
+
+    await withPlatform('linux', () =>
+      createDetachedLauncher(fakeSpawn).launch('claude', ['--resume'], { visible: true })
+    );
+
+    expect(calls[0]?.executable).toBe('claude');
+    expect(calls[0]?.options).toMatchObject({ detached: true, windowsHide: false });
+  });
+
+  it('gives a visible Windows launch a console of its own, through the bridge', async () => {
+    // The defect behind issue #46. `detached: true` on Windows is
+    // DETACHED_PROCESS: a console program started that way is given no console
+    // and exits without running, so "Installing GitHub CLI in a terminal
+    // window" opened no terminal and installed nothing. The bridge asks
+    // PowerShell to Start-Process it instead, which does create one.
+    const calls: { executable: string; args: readonly string[]; options: Record<string, unknown> }[] = [];
+    let bridge: FakeBridgeChild | null = null;
+
+    const fakeSpawn = ((executable: string, args: readonly string[], options: Record<string, unknown>) => {
+      calls.push({ executable, args, options });
+      bridge = new FakeBridgeChild();
+      // The bridge prints the launched program's own id.
+      queueMicrotask(() => bridge?.stdout.emit('data', Buffer.from('MG_PID=4242\n')));
+      return bridge;
+    }) as unknown as typeof import('node:child_process').spawn;
+
+    const result = await withPlatform('win32', () =>
+      createDetachedLauncher(fakeSpawn).launch(
+        'powershell.exe',
+        ['-NoProfile', '-NoExit', '-Command', 'winget install --id GitHub.cli -e --source winget'],
+        { cwd: 'C:\\Users\\me', env: { PATH: 'C:\\Windows' }, visible: true }
+      )
+    );
+
+    // The id reported is the program's, not the bridge's.
+    expect(result.pid).toBe(4242);
+
+    expect(calls[0]?.executable).toBe('powershell.exe');
+    expect(calls[0]?.args).toEqual([
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      NEW_CONSOLE_BRIDGE_SCRIPT
+    ]);
+    // Not detached: that is the flag that denies PowerShell a console too.
+    expect(calls[0]?.options).toMatchObject({ shell: false, detached: false, windowsHide: true });
+
+    // Nothing about the launch is interpolated into the script; it travels as
+    // environment, and the command line is quoted for the C runtime.
+    const env = calls[0]?.options['env'] as Record<string, string>;
+    expect(env['MG_CONSOLE_EXE']).toBe('powershell.exe');
+    expect(env['MG_CONSOLE_ARGS']).toContain('"winget install --id GitHub.cli -e --source winget"');
+    expect(env['MG_CONSOLE_CWD']).toBe('C:\\Users\\me');
+    expect(env['PATH']).toBe('C:\\Windows');
+    expect(NEW_CONSOLE_BRIDGE_SCRIPT).not.toContain('winget');
+  });
+
+  it('reports what Start-Process said when the program will not start', async () => {
+    const fakeSpawn = (() => {
+      const child = new FakeBridgeChild();
+      queueMicrotask(() => {
+        child.stderr.emit('data', Buffer.from('This command cannot be run: nope.exe'));
+        child.emit('close', 1);
+      });
+      return child;
+    }) as unknown as typeof import('node:child_process').spawn;
+
+    await expect(
+      withPlatform('win32', () =>
+        createDetachedLauncher(fakeSpawn).launch('nope.exe', [], { visible: true })
+      )
+    ).rejects.toThrow(/cannot be run/);
+  });
+
+  it('falls back to a plain spawn when there is no PowerShell to bridge through', async () => {
+    // A program that makes its own window still worked on the old path, so a
+    // machine without PowerShell should keep that rather than lose the launch.
+    const executables: string[] = [];
+    const fakeSpawn = ((executable: string) => {
+      executables.push(executable);
+
+      if (executable === 'powershell.exe') {
+        const child = new FakeBridgeChild();
+        queueMicrotask(() => child.emit('error', new Error('ENOENT')));
+        return child;
+      }
+
+      const child = {
+        pid: 11,
+        on(event: string, listener: () => void) {
+          if (event === 'spawn') {
+            queueMicrotask(listener);
+          }
+          return child;
+        },
+        unref() {}
+      };
+      return child;
+    }) as unknown as typeof import('node:child_process').spawn;
+
+    const result = await withPlatform('win32', () =>
+      createDetachedLauncher(fakeSpawn).launch('wt.exe', ['-d', '.'], { visible: true })
+    );
+
+    expect(executables).toEqual(['powershell.exe', 'wt.exe']);
+    expect(result.pid).toBe(11);
   });
 
   it('rejects when the program does not exist', async () => {

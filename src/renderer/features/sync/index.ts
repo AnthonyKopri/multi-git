@@ -157,6 +157,22 @@ async function confirmAccountForPush(): Promise<boolean> {
 const verifiedAccounts = new Set<string>();
 
 /**
+ * What a cached agreement was actually about.
+ *
+ * The key path is part of it, not just the profile id. Editing a profile keeps
+ * its id while allowing it to point at a different private key -- a different
+ * account -- and a cache keyed on the id alone would still hit, silently
+ * skipping the one check that can tell those two situations apart. Including
+ * the path means a profile that no longer means what it meant re-verifies on
+ * its own, without depending on every caller that edits one remembering to say
+ * so.
+ */
+function verificationKey(repo: string, profileId: string): string {
+  const profile = activeProfile();
+  return `${repo}::${profileId}::${profile?.privateKeyPath ?? ''}`;
+}
+
+/**
  * Asks the host who this key authenticates as, and blocks a push that would go
  * out as the wrong account.
  *
@@ -175,7 +191,7 @@ async function confirmVerifiedAccount(): Promise<boolean> {
     return true;
   }
 
-  const cacheKey = `${activeRepo}::${activeProfileId}`;
+  const cacheKey = verificationKey(activeRepo, activeProfileId);
   if (verifiedAccounts.has(cacheKey)) {
     return true;
   }

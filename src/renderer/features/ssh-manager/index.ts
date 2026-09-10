@@ -17,6 +17,7 @@ import {
   refreshVaultStatus,
   setActiveProfile
 } from '../accounts';
+import { forgetVerifiedAccounts } from '../sync';
 import type { ClientSshProfile } from '../../../shared/config-types';
 import type { GenerateKeyResponse } from '../../../shared/api-types';
 
@@ -186,6 +187,10 @@ export async function saveSshProfile(): Promise<void> {
     });
 
     applyConfigSnapshot(config);
+    // The push guard caches which account a profile authenticates as. Saving
+    // one can change the key it points at while keeping its id, so anything
+    // remembered about it describes a profile that no longer exists.
+    forgetVerifiedAccounts();
     hideKeyForms();
     showToast(id ? 'Profile updated.' : 'Profile saved.', 'success');
   } catch (error) {
@@ -205,6 +210,9 @@ export async function deleteSshProfile(id: string, label: string): Promise<void>
   try {
     const { config } = await api.deleteSshProfile(id);
     applyConfigSnapshot(config);
+    // A recreated profile can reuse this id, so what was verified about the
+    // deleted one must not be inherited by whatever takes its place.
+    forgetVerifiedAccounts();
     showToast(`Deleted profile "${label}".`, 'success');
   } catch (error) {
     showToast(errorMessage(error, 'Failed to delete the profile.'), 'error');

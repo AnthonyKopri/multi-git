@@ -99,4 +99,48 @@ describe('runProcess', () => {
 
     expect(result.stdout).toBe('$(whoami) && echo pwned > /tmp/x');
   });
+
+  it('settles when a grandchild keeps the pipes open after the child exits', async () => {
+    // The defect this exists for. `close` fires only once the child has exited
+    // *and* its stdio has ended, and a detached grandchild that inherited the
+    // pipes keeps them open long after the direct child is gone -- `gpg`
+    // starting `gpg-agent` is the real case. Waiting only for `close` left the
+    // promise pending forever, which made `timeoutMs` unenforceable: a signing
+    // diagnostic with a 10s limit could hang a 30s test instead.
+    const leaky = [
+      "const { spawn } = require('child_process');",
+      "spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)'],",
+      "  { stdio: ['ignore', 'inherit', 'inherit'], detached: true }).unref();",
+      'process.stdout.write("parent-done");',
+      'process.exit(0);'
+    ].join(String.fromCharCode(10));
+
+    const startedAt = Date.now();
+    const result = await node(leaky, { timeoutMs: 30_000 });
+    const elapsed = Date.now() - startedAt;
+
+    // Settled on the child's own exit rather than waiting out the grandchild.
+    expect(result.code).toBe(0);
+    expect(result.timedOut).toBe(false);
+    expect(result.stdout).toBe('parent-done');
+    expect(elapsed).toBeLessThan(10_000);
+  }, 40_000);
+
+  it('honours its timeout even when the streams never end', async () => {
+    // Same shape, but the child itself outlives the deadline. The timeout has
+    // to be a real bound, not a request that something eventually closes.
+    const leaky = [
+      "const { spawn } = require('child_process');",
+      "spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)'],",
+      "  { stdio: ['ignore', 'inherit', 'inherit'], detached: true }).unref();",
+      'setTimeout(() => {}, 60000);'
+    ].join(String.fromCharCode(10));
+
+    const startedAt = Date.now();
+    const result = await node(leaky, { timeoutMs: 1000 });
+    const elapsed = Date.now() - startedAt;
+
+    expect(result.timedOut).toBe(true);
+    expect(elapsed).toBeLessThan(10_000);
+  }, 40_000);
 });

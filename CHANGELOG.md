@@ -12,6 +12,66 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **Install opens a terminal again, on Windows.** Pressing **Install** on the
+  setup screen said a terminal window was opening and none ever did, so the
+  GitHub CLI was never installed and nothing said why. Every visible launch this
+  application makes was affected — the PowerShell fallback when Windows Terminal
+  is absent, and any agent that is a console program. Node's `detached` becomes
+  `DETACHED_PROCESS` on Windows, which does not mean "outlives us": it means the
+  program inherits no console *and* is given none, so a console program exits
+  before it has anywhere to write. There is no error to report, because the
+  spawn succeeds. Visible launches now go through a short PowerShell that starts
+  the program with a console of its own and gets out of the way. Nothing about
+  the launch is built into that script — the program, its arguments and its
+  folder travel as environment, so a path with a space, a quote or an ampersand
+  in it is still exactly one argument.
+- **A tool installed while Multi-Git is open is now found by Check again.**
+  Having installed the GitHub CLI by hand, **Check again** went on reporting it
+  missing however many times it was pressed, and only a restart helped. Nothing
+  was wrong with the detection: a process inherits its environment once, and an
+  installer that extends `PATH` writes it to the registry and announces a change
+  that a running application never receives. The registry is now re-read before
+  answering, and any directory `PATH` has gained is added — so the answer can
+  differ from the one given a moment ago, which is the entire point of the
+  button. Entries this process has of its own are kept rather than replaced.
+- **A command whose output is held open by something else can no longer hang.**
+  `close` fires when a program has exited *and* its output has ended, and the
+  second half is not ours to guarantee: `gpg` starts `gpg-agent` and `git push`
+  starts `ssh`, and a grandchild left holding the pipes keeps them open long
+  after the program itself is gone. Waiting only for `close` meant the operation
+  never finished at all, and the timeout could not save it — the deadline fired,
+  the kill landed on something already exited, and the caller waited anyway. A
+  program that has exited now gets a short grace for the last of its output and
+  then reports, and a timeout kills the whole tree rather than only the program
+  it started. This is why a signing check with a ten-second limit could hold a
+  window for far longer than ten seconds.
+- **Changing a profile's key no longer skips the wrong-account check.** The
+  guard that asks the host who a key really authenticates as remembers a repository
+  and profile that agreed, so it need not ask again on every push. Editing a
+  profile keeps its id while allowing it to point at a different private key —
+  a different account — and the remembered answer still matched, so the check
+  was quietly skipped for the rest of the session. That is exactly the failure
+  the guard exists to catch: a pin that looks right locally and authenticates as
+  somebody else. What is remembered is now tied to the key as well as the
+  profile, so a profile that no longer means what it meant is checked again on
+  its own, and saving or deleting any profile clears what was remembered.
+- **A profile's last known account is forgotten when its key changes.** That
+  value is what lets the SSH Key dropdown warn about a wrong account instantly
+  and offline. It is learned from a verification rather than configured, and
+  carrying it across a key change would have gone on asserting an account the
+  profile no longer authenticates as.
+
+### Changed
+
+- **Signing diagnostics take a runner, so they can be tested without gpg.**
+  They shelled out to the real binary, which made a unit test about
+  configuration depend on whether the machine had a keyring and how quickly
+  `gpg-agent` starts — on a cold Windows runner, slowly enough to fail a build
+  that had nothing to do with signing. The seam is the one SSH verification
+  already uses.
+
 ## [4.1.0] - 2026-09-10
 
 ### Added

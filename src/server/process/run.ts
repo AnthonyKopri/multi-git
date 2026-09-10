@@ -18,10 +18,30 @@ import { spawn } from 'node:child_process';
 import type { SpawnOptions } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 
+import { killProcessTree, TREE_KILLABLE_SPAWN_OPTIONS } from './kill-tree';
+
 /** 64 MiB. Larger than any diff a human reads, small enough to stay safe. */
 export const DEFAULT_MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 
 export const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * How long to wait for the streams after the process itself has exited.
+ *
+ * `close` fires when the child has exited *and* its stdio has ended, and those
+ * are not the same event. A child that leaves a detached grandchild holding the
+ * inherited pipes -- `gpg` starting `gpg-agent` is the case that prompted this
+ * -- exits immediately while the pipes stay open for as long as the grandchild
+ * lives. Waiting only for `close` means the promise never settles at all, which
+ * makes `timeoutMs` unenforceable: the timer fires, the kill lands on a process
+ * that has already gone, and the caller waits forever regardless.
+ *
+ * So `exit` starts a short grace for the last of the output to arrive, and the
+ * result is returned with or without a `close`. Generous enough that an
+ * ordinary drain is never cut short, and only ever paid when something really
+ * is holding the pipes open.
+ */
+const STREAM_DRAIN_GRACE_MS = 1000;
 
 export interface RunOptions {
   cwd?: string | undefined;
@@ -123,7 +143,11 @@ export function runProcess(
   return new Promise((resolve) => {
     const spawnOptions: SpawnOptions = {
       shell: false,
-      windowsHide: true
+      windowsHide: true,
+      // Killing the direct child is not enough: `git push` spawns `ssh` and
+      // `gpg` spawns `gpg-agent`, and a grandchild left holding the pipes is
+      // exactly what stops this promise from settling.
+      ...TREE_KILLABLE_SPAWN_OPTIONS
     };
     if (options.cwd !== undefined) {
       spawnOptions.cwd = options.cwd;
@@ -141,15 +165,27 @@ export function runProcess(
     let timedOut = false;
     let cancelled = false;
     let settled = false;
+    let cancelEscalation: (() => void) | null = null;
+    let drainTimer: NodeJS.Timeout | null = null;
+
+    const terminate = (): void => {
+      cancelEscalation?.();
+      cancelEscalation = killProcessTree(child);
+    };
 
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill();
+      terminate();
+      // The kill lands on the tree, but nothing guarantees a `close` follows:
+      // whoever holds the pipes may not be reachable. The deadline the caller
+      // asked for has to hold either way.
+      startDrainGrace();
     }, timeoutMs);
 
     const onAbort = (): void => {
       cancelled = true;
-      child.kill();
+      terminate();
+      startDrainGrace();
     };
 
     if (options.signal) {
@@ -162,12 +198,33 @@ export function runProcess(
       }
     }
 
+    /**
+     * Returns what has arrived so far once the streams have had their grace.
+     *
+     * Started from `exit`, and from a timeout or cancellation that may have
+     * killed something already gone. Idempotent: the first of `close` and this
+     * settles, and the other finds the promise already resolved.
+     */
+    function startDrainGrace(): void {
+      if (settled || drainTimer !== null) {
+        return;
+      }
+
+      drainTimer = setTimeout(() => settle(child.exitCode, null), STREAM_DRAIN_GRACE_MS);
+      // Nothing should be held open purely to give up on a stream.
+      drainTimer.unref?.();
+    }
+
     const settle = (code: number | null, spawnError: Error | null): void => {
       if (settled) {
         return;
       }
       settled = true;
       clearTimeout(timer);
+      if (drainTimer !== null) {
+        clearTimeout(drainTimer);
+      }
+      cancelEscalation?.();
       options.signal?.removeEventListener('abort', onAbort);
 
       resolve({
@@ -196,6 +253,9 @@ export function runProcess(
 
     child.on('error', (error: Error) => settle(null, error));
     child.on('close', (code) => settle(code, null));
+    // The process is gone; the pipes may not be. `close` still wins when it
+    // arrives, which it does first in every ordinary run.
+    child.on('exit', () => startDrainGrace());
 
     if (child.stdin) {
       if (options.input !== undefined) {
