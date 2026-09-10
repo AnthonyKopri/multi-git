@@ -144,21 +144,29 @@ describe('GitError', () => {
 
 describe('buildSshCommand', () => {
   it('pins a single identity', () => {
-    const command = buildSshCommand('C:\\Users\\jane\\.ssh\\id_ed25519');
+    // Built from the platform's own temp root rather than a hardcoded
+    // `C:\...`: the key path is resolved, and a Windows-shaped string is a
+    // *relative* path on Linux, so a literal would be rewritten to sit under
+    // the working directory and the assertion would only hold on one runner.
+    const key = path.join(workspace, 'jane', '.ssh', 'id_ed25519');
+
+    const command = buildSshCommand(key);
 
     // Backslashes become forward slashes: ssh reads this as a shell word.
     // The binary itself is resolved rather than left to PATH, so only the
     // identity argument is asserted here; tests/openssh-path.test.ts covers
     // which ssh gets named.
-    expect(command).toContain('-i "C:/Users/jane/.ssh/id_ed25519"');
+    expect(command).toContain(`-i "${key.replace(/\\/g, '/')}"`);
     expect(command.startsWith('ssh') || command.startsWith('"')).toBe(true);
     expect(command).toContain('IdentitiesOnly=yes');
     expect(command).toContain('StrictHostKeyChecking=accept-new');
   });
 
   it('limits password prompts only when asked', () => {
-    expect(buildSshCommand('/k')).not.toContain('NumberOfPasswordPrompts');
-    expect(buildSshCommand('/k', true)).toContain('NumberOfPasswordPrompts=1');
+    const key = path.join(workspace, 'k');
+
+    expect(buildSshCommand(key)).not.toContain('NumberOfPasswordPrompts');
+    expect(buildSshCommand(key, true)).toContain('NumberOfPasswordPrompts=1');
   });
 });
 

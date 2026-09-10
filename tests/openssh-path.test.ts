@@ -103,9 +103,15 @@ describe('the bare name', () => {
 
 describe('buildSshCommand', () => {
   it('pins the identity and keeps the options that make per-repo accounts work', () => {
-    const command = buildSshCommand('C:\\Users\\me\\.ssh\\id_ed25519');
+    // Built from the platform's own temp root rather than a hardcoded
+    // `C:\...`: the key path is resolved, and a Windows-shaped string is a
+    // *relative* path on Linux, so a literal would be rewritten to sit under
+    // the working directory and the assertion would only hold on one runner.
+    const key = path.join(os.tmpdir(), 'multi-git-key', '.ssh', 'id_ed25519');
 
-    expect(command).toContain('-i "C:/Users/me/.ssh/id_ed25519"');
+    const command = buildSshCommand(key);
+
+    expect(command).toContain(`-i "${key.replace(/\\/g, '/')}"`);
     // IdentitiesOnly is what stops ssh offering every key in the agent, which
     // is what makes per-repository account selection work at all.
     expect(command).toContain('-o IdentitiesOnly=yes');
