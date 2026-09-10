@@ -246,7 +246,8 @@ Runs the six steps below in order, stopping before each one to ask
 1. build the artifacts and checksums (`scripts/release.js`)
 2. commit and push the version bump
 3. create the GitHub release as a draft, titled `Multi-Git v<version>` on a
-   `Release_v<version>` tag, with notes linking this version's changelog entry
+   `Release_v<version>` tag, with notes written from this version's changelog
+   entry
 4. upload the assets, verify them, and close the changelog
 5. commit and push the changelog
 6. publish the draft — only with `--publish`
@@ -254,6 +255,25 @@ Runs the six steps below in order, stopping before each one to ask
 Nothing here replaces the individual commands; each step spawns the documented
 one and passes its output straight through, so running them by hand still works
 exactly as described below.
+
+### What goes into the release notes
+
+Step 3 writes the notes rather than linking to them: the entries under this
+version — or under Unreleased, which is where they still are at that point —
+become the `What's new` and `What's fixed` sections, followed by the downloads
+named from the same table the upload uses, and a footer linking the full
+changelog and the comparison against the previous release.
+
+Two parts are not derivable and are not invented. The opening paragraph and the
+account of what was verified are judgement, so they come from files:
+
+```bash
+npm run release:ship -- --bump patch --intro notes/intro.md --verification notes/verified.md
+```
+
+Left out, the release simply has no such section and step 3 says so before the
+draft is created. That is a draft precisely so the missing half can be written
+before anybody sees it.
 
 The check before step 1 says which branch you are on and warns if it is not the
 one releases are cut from — building elsewhere packages that branch's code and
@@ -268,6 +288,8 @@ this is safe to re-run after a step fails partway through.
 | `--bump <spec>` | `patch`, `minor`, `major`, `x.y.z`, or `none`. Omitted, the build asks. |
 | `--tag <tag>` | Release tag. Defaults to `Release_v<version>`. |
 | `--repo`, `-R` | GitHub repository in `OWNER/REPO` form. |
+| `--intro <file>` | Opening paragraph for the release notes. |
+| `--verification <file>` | What was verified, for the notes' Verification section. |
 | `--publish` | Publish the draft at the end. Off by default: publishing is the irreversible step. |
 | `--no-changelog` | Upload without closing the Unreleased section. Passed through to the upload step. |
 | `--yes`, `-y` | Do not ask; run every step. |
