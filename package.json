@@ -41,7 +41,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^24.13.3",
     "@types/supertest": "^7.2.1",
-    "electron": "^43.3.0",
+    "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "happy-dom": "^20.12.0",
