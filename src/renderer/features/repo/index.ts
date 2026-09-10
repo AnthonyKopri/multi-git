@@ -11,6 +11,7 @@ import { logToTerminal } from '../../ui/log';
 import { closeAllDropdowns } from '../../ui/dropdown';
 import { withButtonBusy } from '../../ui/busy';
 import { renderRecentRepos } from './repo-list';
+import { initRepositoryBrowser, refreshCloneBrowserAvailability } from './browser';
 import { applyConfigSnapshot, loadConfig, renderAccounts, restoreProfileForRepo } from '../accounts';
 import { refreshIdentity } from '../accounts/identity';
 import { ensureKeyUsable } from '../accounts/unlock';
@@ -36,6 +37,7 @@ export function initRepo(
   handlers: { refreshAll: () => Promise<void>; onOpened: () => void }
 ): void {
   ui = elements;
+  initRepositoryBrowser();
   refreshAll = handlers.refreshAll;
   onRepoOpened = handlers.onOpened;
 }
@@ -219,6 +221,7 @@ function setCloneFeedback(message: string, type: 'info' | 'error' | 'success' = 
 
 export function openCloneModal(): void {
   closeAllDropdowns();
+  void refreshCloneBrowserAvailability();
 
   const select = asSelect(ui.cloneProfileSelect);
   select.replaceChildren();

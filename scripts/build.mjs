@@ -53,6 +53,7 @@ const NODE_TARGET = 'node22.12';
 const WEB_TARGET = 'es2022';
 
 const nodeEntries = [
+  { in: 'src/server/agent-cli/main.ts', out: 'out/node/server/agent-cli.js', external: [] },
   { in: 'src/main/main.ts', out: 'out/node/main/main.js', external: ['electron'] },
   { in: 'src/main/preload.ts', out: 'out/node/main/preload.js', external: ['electron'] },
   // cli.ts, not index.ts: index.ts is a library that the Electron bundle also

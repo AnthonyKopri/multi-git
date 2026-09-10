@@ -186,9 +186,17 @@ function buildIntegrations(): HTMLElement {
   const report = prerequisites();
 
   const rows: (Node | null)[] = [
+    el('div', {
+      className: 'settings-row',
+      children: [
+        el('span', { className: 'settings-label', text: 'Agent CLI connection' }),
+        el('p', { className: 'modal-desc', text: 'Use this address with the Multi-Git CLI --server option. It changes when the desktop app restarts.' }),
+        el('input', { attrs: { type: 'text', readonly: '', 'aria-label': 'Agent CLI server URL', value: window.location.origin } })
+      ]
+    }),
     el('p', {
       className: 'modal-desc',
-      text: 'Multi-Git runs Git for everything. The GitHub CLI is optional and unlocks pull requests and publishing a new repository to GitHub.'
+      text: 'Multi-Git runs Git for everything. The GitHub CLI is optional and unlocks repository browsing, pull requests and publishing a new repository to GitHub.'
     })
   ];
 

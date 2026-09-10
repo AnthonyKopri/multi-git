@@ -1349,14 +1349,33 @@
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-desc">Clone a remote repository using one of your SSH key profiles.</p>
-        <div id="clone-feedback" class="inline-feedback hidden"></div>
-
+        <p class="modal-desc">Paste a remote URL or browse GitHub using your signed-in GitHub CLI account.</p>
         <form id="clone-form" class="modal-form">
           <div class="form-group">
             <label for="clone-url">Repository URL</label>
             <input type="text" id="clone-url" placeholder="git@github.com:owner/repo.git" required autocomplete="off">
           </div>
+          <div class="clone-browser-info" role="note" aria-label="Optional GitHub repository browsing">
+            <p>Cloning by URL works without GitHub CLI. Install the optional CLI to browse GitHub repositories and choose one here.</p>
+            <p id="clone-gh-status" role="status" aria-live="polite">Checking GitHub CLI…</p>
+            <a id="clone-install-gh" class="btn btn-secondary btn-sm hidden" href="https://cli.github.com/" target="_blank" rel="noopener noreferrer">Install GitHub CLI</a>
+            <button id="clone-check-gh" type="button" class="btn btn-secondary btn-sm">Check again</button>
+          </div>
+          <details id="clone-browser">
+            <summary>Browse GitHub repositories</summary>
+            <div class="modal-form">
+              <label for="clone-owner">GitHub user or organization (optional)</label>
+              <input id="clone-owner" type="text" placeholder="Signed-in user when empty" autocomplete="off">
+              <button id="clone-load-repositories" type="button" class="btn btn-secondary">Load repositories</button>
+              <label for="clone-repository-filter">Filter loaded repositories</label>
+              <input id="clone-repository-filter" type="text" placeholder="Repository name or description">
+              <label for="clone-protocol">Clone protocol</label>
+              <select id="clone-protocol"><option value="ssh">SSH</option><option value="https">HTTPS</option></select>
+              <p id="clone-browser-status" role="status" aria-live="polite">Lists up to 100 repositories owned by this user or organization. GitHub CLI authentication is separate from your SSH profile.</p>
+              <div id="clone-repository-results" class="clone-repository-results"></div>
+            </div>
+          </details>
+          <div id="clone-feedback" class="inline-feedback hidden"></div>
 
           <div class="form-group">
             <label for="clone-parent-dir">Clone into folder</label>

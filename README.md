@@ -60,7 +60,7 @@ The welcome screen offers three starting points:
 
 - **Select Folder** opens an existing local Git repository.
 - **Create** selects a folder and runs `git init` there.
-- **Clone** accepts a remote URL, destination, optional folder name, and optional SSH profile.
+- **Clone** accepts a remote URL, destination, optional folder name, and optional SSH profile. Pasting a URL works without GitHub CLI. An information box explains optional browsing and offers **Install GitHub CLI** when it is missing, plus **Check again** after setup. Expand **Browse GitHub repositories** to load up to 100 repositories owned by the signed-in GitHub CLI user or a named user/organization, filter the results, and select an SSH or HTTPS URL. Browsing uses `gh` authentication; cloning uses the chosen SSH profile or system credentials.
 - **Recent Repositories** reopens a repository you previously used.
 
 After opening a repository, use the **Repository** section in the header to switch projects. Multi-Git remembers recent paths, but it does not move, upload, or copy those repositories.
@@ -772,6 +772,8 @@ Then open `http://localhost:3000`. Desktop mode chooses a free local port automa
 See [BUILDING.md](BUILDING.md) for the full build, check, and release procedure, including both Windows artifacts and how to bump the version.
 
 ## Local API Examples
+
+For agent workflows, use the [JSON CLI and agent skills](docs/agent-cli.md). It provides discoverable commands, explicit repository paths, request previews, and controlled writes through the running app. **Settings → Git and GitHub → Agent CLI connection** shows the current server address. Native GUI regression cases are documented in [Computer Use smoke tests](docs/testing/computer-use-smoke.md).
 
 Most users never need the API, but these examples are useful when debugging browser mode.
 

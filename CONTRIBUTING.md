@@ -114,6 +114,8 @@ Use a disposable repository and test the normal path plus relevant failure paths
 
 Never test destructive operations against a repository containing work you cannot restore.
 
+For native GUI changes, use the repeatable [Computer Use smoke cases](docs/testing/computer-use-smoke.md). `node scripts/gui-smoke.mjs --launch` prepares disposable repositories and starts an isolated development desktop. Report which cases were actually observed; DOM and API tests do not validate native dialogs.
+
 Available validation and build commands include:
 
 ```bash

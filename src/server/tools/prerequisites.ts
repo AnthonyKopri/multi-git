@@ -93,7 +93,7 @@ export async function detectPrerequisites(
     signedIn: github.available,
     ...(github.version ? { version: github.version } : {}),
     detail: !ghInstalled
-      ? 'Optional. Without it, creating pull requests and publishing a new repository to GitHub are unavailable.'
+      ? 'Optional. Enables repository browsing, pull requests and publishing a new repository to GitHub. Cloning by URL works without it.'
       : github.available
         ? `Signed in${github.account ? ` as ${github.account}` : ''}.`
         : 'Installed, but nobody is signed in. Run "gh auth login" to finish.'
