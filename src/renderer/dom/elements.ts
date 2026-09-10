@@ -446,6 +446,12 @@ export const ELEMENT_MAP = {
   // Confirm & Prompt dialogs
   confirmModal: 'confirm-modal',
   confirmTitle: 'confirm-title',
+  repoAccountBlock: 'repo-account-block',
+  repoIntendedAccount: 'repo-intended-account',
+  repoUsingAccount: 'repo-using-account',
+  repoAccountNote: 'repo-account-note',
+  btnChangeIntended: 'btn-change-intended',
+  btnCheckAccount: 'btn-check-account',
   confirmMessage: 'confirm-message',
   confirmCheckboxRow: 'confirm-checkbox-row',
   confirmCheckbox: 'confirm-checkbox',

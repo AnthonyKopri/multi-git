@@ -57,3 +57,9 @@ export function getToggledRemoteUrl(remoteUrl: string | null | undefined): strin
 
   return null;
 }
+
+/** The `owner` of `owner/repo`, when the remote is one this app understands. */
+export function ownerFromRemote(remoteUrl: string | null | undefined): string | null {
+  const owner = parseRemoteUrl(remoteUrl)?.repoPath?.split('/')[0]?.trim();
+  return owner ? owner : null;
+}

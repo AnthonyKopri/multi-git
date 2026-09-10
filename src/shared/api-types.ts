@@ -12,6 +12,7 @@ import type {
   RemoteProtocol
 } from './git-types';
 import type { ClientConfig, RepoSettings, VaultStatus } from './config-types';
+import type { RepoAccountSetup, SshIdentityCheck } from './ssh-agent-types';
 import type { GitignoreSummary, LicenseSummary } from './template-types';
 
 /** Every successful response carries this. */
@@ -290,8 +291,33 @@ export interface UndoOperationResponse extends GitOutput {
 
 export interface ApplySshConfigResponse extends Ok {
   skipped?: boolean;
-  host?: string;
+  host?: string | null;
   updated?: boolean;
-  removed?: boolean;
+  /** More than one profile could serve this host, so a default had to win. */
+  competingAccounts?: boolean;
+  defaultAccountProfileId?: string | null;
   warning?: string | null;
+}
+
+/** What the host says about who a profile authenticates as. */
+export interface SshVerifyResponse extends Ok {
+  host: string;
+  check: SshIdentityCheck;
+  /** Carries the profile's newly-remembered account back to the renderer. */
+  config: ClientConfig;
+}
+
+/** A repository's current account configuration, read before changing it. */
+export interface RepoSetupResponse extends Ok {
+  setup: RepoAccountSetup;
+  /** Whether applying the profile that was asked about would change something. */
+  wouldOverwrite: boolean;
+}
+
+export interface DefaultAccountResponse extends Ok {
+  updated: boolean;
+  /** Whether the global commit identity was written too. */
+  identityApplied: boolean;
+  warning: string | null;
+  config: ClientConfig;
 }

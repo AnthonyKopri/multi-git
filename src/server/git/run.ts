@@ -8,7 +8,8 @@
 // only way the log can be trusted, which for this application is the point of
 // having one.
 import { DEFAULT_TIMEOUT_MS, runProcess } from '../process/run';
-import { sshCommandPrefix } from '../ssh/openssh-path';
+import { buildSshCommandLine } from '../ssh/command';
+import { isSshConfigIsolationEnabled, readConfig } from '../config/store';
 import { gitCommandKind } from './command-kind';
 import { appendLog } from '../logs';
 import type { LogCommand } from '../logs';
@@ -77,22 +78,17 @@ export interface GitCommandOptions {
  * makes per-repository account selection work at all.
  */
 export function buildSshCommand(sshKeyPath: string, singlePasswordPrompt = false): string {
-  const normalized = sshKeyPath.replace(/\\/g, '/');
-  const options = [
-    // Named rather than left to PATH: on Windows a bare `ssh` often resolves
-    // to the MSYS build inside Git for Windows, which cannot see the agent
-    // this app loads keys into, and so asks for the passphrase of a key that
-    // is already unlocked and sitting in it.
-    `${sshCommandPrefix()} -i "${normalized}"`,
-    '-o IdentitiesOnly=yes',
-    '-o StrictHostKeyChecking=accept-new'
-  ];
-
-  if (singlePasswordPrompt) {
-    options.push('-o NumberOfPasswordPrompts=1');
-  }
-
-  return options.join(' ');
+  // Delegates to ../ssh/command.ts, which also writes the repository pin, so
+  // the identity this app uses for its own commands and the one it leaves
+  // behind for every other tool cannot drift apart. That includes bypassing
+  // ~/.ssh/config: IdentitiesOnly admits the identities named there alongside
+  // `-i`, so without it the managed block's key is offered too and the agent's
+  // ordering decides which account authenticates.
+  return buildSshCommandLine({
+    privateKeyPath: sshKeyPath,
+    isolateConfig: isSshConfigIsolationEnabled(readConfig()),
+    singlePasswordPrompt
+  });
 }
 
 /**

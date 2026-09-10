@@ -27,19 +27,46 @@ export function getSshConfigPath(): string {
   return path.join(getSshDir(), 'config');
 }
 
-export function renderManagedBlock(hostsMap: SshHostsMap): string {
+export interface ManagedBlockInput {
+  /**
+   * Catch-all entries: `Host <host>` naming the default account.
+   *
+   * One host may have at most one, which is the whole difficulty — it makes
+   * exactly one profile the machine-wide answer for that host. It is written
+   * only from an explicit choice of default account, never as a side effect of
+   * opening a repository.
+   */
+  defaults: SshHostsMap;
+  /** `Host <host>-<label>` entries, one per profile. Never a default. */
+  aliases?: SshHostsMap;
+}
+
+/** The real host an alias entry should connect to. Identity for a catch-all. */
+export type HostNameResolver = (host: string) => string;
+
+export function renderManagedBlock(
+  input: SshHostsMap | ManagedBlockInput,
+  hostNameFor: HostNameResolver = (host) => host
+): string {
+  const { defaults, aliases } = isBlockInput(input) ? input : { defaults: input, aliases: {} };
   const lines: string[] = [MARK_BEGIN];
 
-  for (const host of Object.keys(hostsMap).sort()) {
-    const keyPath = String(hostsMap[host]).replace(/\\/g, '/');
+  const entries: SshHostsMap = { ...(aliases ?? {}), ...defaults };
+
+  for (const host of Object.keys(entries).sort()) {
+    const keyPath = String(entries[host]).replace(/\\/g, '/');
     lines.push(`Host ${host}`);
-    lines.push(`  HostName ${host}`);
+    lines.push(`  HostName ${hostNameFor(host)}`);
     lines.push(`  IdentityFile "${keyPath}"`);
     lines.push('  IdentitiesOnly yes');
   }
 
   lines.push(MARK_END);
   return lines.join('\n');
+}
+
+function isBlockInput(value: SshHostsMap | ManagedBlockInput): value is ManagedBlockInput {
+  return typeof value === 'object' && value !== null && 'defaults' in value;
 }
 
 function escapeRegExp(text: string): string {
@@ -54,7 +81,10 @@ function escapeRegExp(text: string): string {
  * key actually beats a pre-existing user Host entry. Users who do not want
  * that turn the feature off in the app.
  */
-export function applyManagedBlock(hostsMap: SshHostsMap): ApplyResult {
+export function applyManagedBlock(
+  input: SshHostsMap | ManagedBlockInput,
+  hostNameFor: HostNameResolver = (host) => host
+): ApplyResult {
   const sshDir = getSshDir();
   const configPath = getSshConfigPath();
 
@@ -69,8 +99,12 @@ export function applyManagedBlock(hostsMap: SshHostsMap): ApplyResult {
     content = fs.readFileSync(configPath, 'utf8');
   }
 
-  const wantBlock = Object.keys(hostsMap).length > 0;
-  const block = wantBlock ? renderManagedBlock(hostsMap) : '';
+  const entryCount = isBlockInput(input)
+    ? Object.keys(input.defaults).length + Object.keys(input.aliases ?? {}).length
+    : Object.keys(input).length;
+
+  const wantBlock = entryCount > 0;
+  const block = wantBlock ? renderManagedBlock(input, hostNameFor) : '';
   const blockRegex = new RegExp(`${escapeRegExp(MARK_BEGIN)}[\\s\\S]*?${escapeRegExp(MARK_END)}\\n?`);
 
   let warning: string | null = null;
@@ -115,5 +149,5 @@ export function applyManagedBlock(hostsMap: SshHostsMap): ApplyResult {
 }
 
 export function removeManagedBlock(): ApplyResult {
-  return applyManagedBlock({});
+  return applyManagedBlock({ defaults: {}, aliases: {} });
 }

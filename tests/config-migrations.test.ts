@@ -751,6 +751,42 @@ describe('validateAppConfig', () => {
     expect(issues).toHaveLength(1);
   });
 
+  it('keeps the fields the account-verification feature writes', () => {
+    // The validator rebuilds each section from an allowlist, so a field it does
+    // not know about is dropped on the next read. That is silent: the value
+    // works for the rest of the session and then reverts, which is exactly how
+    // sshProfileId behaved before it was added here. These four are written by
+    // the app itself, so losing them breaks the wrong-account warning rather
+    // than merely a preference.
+    const { config } = validateAppConfig({
+      configVersion: 2,
+      sshProfiles: [
+        {
+          id: '1',
+          label: 'familiara',
+          privateKeyPath: '/home/jane/.ssh/id_ed25519_familiara',
+          verifiedAccount: 'akopri-familiara'
+        }
+      ],
+      repoSettings: {
+        '/home/jane/work/site': {
+          intendedAccount: 'some-org',
+          identityOptOut: true
+        }
+      },
+      settings: { isolateSshConfig: false },
+      defaultAccountProfileId: '1'
+    });
+
+    expect(config.sshProfiles[0]?.verifiedAccount).toBe('akopri-familiara');
+    expect(config.defaultAccountProfileId).toBe('1');
+    expect(config.settings?.isolateSshConfig).toBe(false);
+
+    const repo = Object.values(config.repoSettings)[0];
+    expect(repo?.intendedAccount).toBe('some-org');
+    expect(repo?.identityOptOut).toBe(true);
+  });
+
   it('rejects a key path containing a quote or newline', () => {
     const { config } = validateAppConfig({
       sshConfigHosts: { 'github.com': '/k"\n  ProxyCommand evil' }

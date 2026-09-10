@@ -12,6 +12,15 @@ export interface SshProfile {
   userName?: string;
   /** Commit author email applied when this profile is selected. */
   userEmail?: string;
+  /**
+   * The account this key was last seen to authenticate as, as the host named
+   * it.
+   *
+   * Learned from a verification rather than configured, and remembered so the
+   * mismatch warning can be shown instantly and offline. A key's account does
+   * not change; when it does, the next verification overwrites this.
+   */
+  verifiedAccount?: string;
 }
 
 /** An SSH profile as sent to the client, with vault state resolved. */
@@ -37,6 +46,24 @@ export interface RepoSettings {
    * repository belongs to.
    */
   sshProfileId?: string;
+  /**
+   * Whether the user declined to align this repository's commit identity with
+   * its account.
+   *
+   * Recorded so a dismissed dialog means "intentionally mixed" rather than
+   * "half-applied and asked again every time".
+   */
+  identityOptOut?: boolean;
+  /**
+   * The account this repository is meant to be used with, when the remote
+   * does not say.
+   *
+   * Normally derived: `git@github.com:akopri-familiara/site.git` states the
+   * owner, and that is the account that should be authenticating. It is wrong
+   * for a repository owned by an organisation, or a fork, where the owner is
+   * not anybody's account — so this overrides it, and only then.
+   */
+  intendedAccount?: string;
   /** Branches the user pinned to the top of the list, in the order they chose. */
   pinnedBranches?: string[];
 }
@@ -44,6 +71,16 @@ export interface RepoSettings {
 export interface AppSettings {
   /** Whether Multi-Git maintains its managed block in ~/.ssh/config. */
   manageSshConfig: boolean;
+  /**
+   * Whether a repository pin bypasses ~/.ssh/config entirely.
+   *
+   * Defaults to true, and wants to stay that way: without it a pinned
+   * repository still offers whatever key the managed block names for the same
+   * host, and the agent's ordering decides which account authenticates.
+   * Turning it off restores directives a user wrote for that host by hand — a
+   * ProxyJump, or Port 443 for ssh.github.com — at that cost.
+   */
+  isolateSshConfig?: boolean;
   /**
    * How long a Safety Net recovery point is kept, in days. 0 keeps them until
    * they are removed by hand. Absent means the built-in default.
@@ -239,6 +276,15 @@ export interface AppConfig {
    */
   repoSettings: Record<string, RepoSettings>;
   settings?: Partial<AppSettings>;
+  /**
+   * The account that unpinned repositories and external tools fall back to.
+   *
+   * The only input to the catch-all `Host <host>` entry in ~/.ssh/config.
+   * Previously that entry was rewritten by whichever repository was open, so
+   * "the default account" silently became whichever one was looked at last.
+   * Set only by an explicit action.
+   */
+  defaultAccountProfileId?: string;
   /** Host to key path, the source of truth the ~/.ssh/config block is rendered from. */
   sshConfigHosts?: Record<string, string>;
   repoGroups?: RepoGroup[];
@@ -278,6 +324,8 @@ export interface ClientConfig {
   accountRules: AccountRule[];
   repoSettings: Record<string, RepoSettings>;
   vaultStatus: VaultStatus;
+  /** Profile id, or empty when no default account has been chosen. */
+  defaultAccountProfileId: string;
   settings: AppSettings;
   repoGroups: RepoGroup[];
   externalAgents: ExternalAgentDefinition[];

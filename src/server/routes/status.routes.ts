@@ -157,7 +157,11 @@ statusRouter.post(
   '/api/git/identity',
   asyncRoute(async (req, res) => {
     const repoPath = req.repoPath as string;
-    const { name, email } = (req.body ?? {}) as { name?: unknown; email?: unknown };
+    const { name, email, scope } = (req.body ?? {}) as {
+      name?: unknown;
+      email?: unknown;
+      scope?: unknown;
+    };
 
     const safeName = typeof name === 'string' ? name.trim() : '';
     const safeEmail = typeof email === 'string' ? email.trim() : '';
@@ -167,9 +171,15 @@ statusRouter.post(
       return;
     }
 
-    await runGitCommand(repoPath, ['config', 'user.name', safeName]);
-    await runGitCommand(repoPath, ['config', 'user.email', safeEmail]);
+    // Explicit rather than implicit. Without a scope flag `git config` writes
+    // --local inside a repository, which is what is wanted almost always — but
+    // "make this the default for new repositories" is the case where it is not,
+    // and relying on the implicit scope left no way to say so.
+    const gitScope = scope === 'global' ? '--global' : '--local';
 
-    res.json({ success: true, name: safeName, email: safeEmail });
+    await runGitCommand(repoPath, ['config', gitScope, 'user.name', safeName]);
+    await runGitCommand(repoPath, ['config', gitScope, 'user.email', safeEmail]);
+
+    res.json({ success: true, name: safeName, email: safeEmail, scope: gitScope.slice(2) });
   })
 );

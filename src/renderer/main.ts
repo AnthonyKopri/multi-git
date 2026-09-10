@@ -227,6 +227,8 @@ function wireHeader(): void {
   ui.btnAutoPull.addEventListener('click', () => void sync.toggleAutoPull());
   ui.btnRemoteProtocol.addEventListener('click', () => void sync.toggleRemoteProtocol());
 
+  ui.btnChangeIntended.addEventListener('click', () => void accounts.changeIntendedAccount());
+  ui.btnCheckAccount.addEventListener('click', () => void accounts.checkAccountNow());
   ui.btnEditIdentity.addEventListener('click', () => workspace.openIdentityModal());
   ui.btnDropdownVault.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -755,12 +757,27 @@ function wireSshManager(): void {
       return;
     }
 
-    switch (target.dataset['action']) {
+    const action = target.dataset['action'];
+
+    // Any action closes every row overflow, including the one that opened it:
+    // a menu left hanging over the row below is worse than one that closes
+    // eagerly.
+    accounts.toggleRowMenu(ui.sshProfilesTableBody, action === 'more' ? (id ?? null) : null, target);
+
+    switch (action) {
+      case 'more':
+        break;
       case 'edit':
         ssh.loadProfileIntoForm(profile);
         break;
       case 'test':
         void ssh.testSshProfile(profile.id, profile.label);
+        break;
+      case 'verify':
+        void ssh.verifyProfileAccount(profile);
+        break;
+      case 'make-default':
+        void ssh.makeDefaultAccount(profile);
         break;
       case 'copy-key':
         void ssh.copyProfilePublicKey(profile);

@@ -2218,7 +2218,9 @@ body.pane-resizing-y * {
   background-color: rgba(255, 255, 255, 0.02);
 }
 
+/* The row overflow is positioned against this cell. */
 .action-buttons {
+  position: relative;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -5164,4 +5166,129 @@ body.dock-open .terminal-panel {
 }
 .tool-launcher-note-warn {
   color: var(--color-warning);
+}
+
+/* Per-row overflow in the SSH profile table. Four icons and a menu, rather
+   than eight icons wrapping onto a second line. */
+.profile-row-menu {
+  /* Fixed, not absolute: the cell is overflow:hidden for its ellipsis and the
+     table scrolls, so an absolutely-positioned menu is clipped by both.
+     Coordinates come from toggleRowMenu. */
+  position: fixed;
+  z-index: 1200;
+  min-width: 190px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-elevated, var(--bg-panel));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+}
+
+.profile-row-menu .btn-menu-row {
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  padding: 6px 8px;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+
+.profile-no-identity {
+  font-size: 0.6875rem;
+  color: var(--warn, var(--text-dim));
+}
+
+/* Should-use / using, inside the SSH Key dropdown. Two facts from two
+   different sources: the remote states the first, the host reports the
+   second, and only comparing them catches a wrong-account push. */
+.repo-account {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.repo-account-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+
+.repo-account-label {
+  color: var(--text-dim);
+  min-width: 68px;
+}
+
+.repo-account-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.repo-account-value.repo-account-good {
+  color: var(--success, #3fb950);
+}
+
+.repo-account-value.repo-account-bad {
+  color: var(--danger, #f85149);
+  font-weight: 600;
+}
+
+/* The note carries the whole message, so nothing depends on colour alone. */
+.repo-account-note {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--danger, #f85149);
+  padding: 2px 0 0 0;
+}
+
+/* The default-account star, beside the name it applies to.
+
+   Invisible until the row is hovered, so a table of five profiles shows one
+   star rather than five; the filled one is always visible, because which
+   account everything falls back to is worth reading at a glance. */
+.profile-star {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-right: 4px;
+  cursor: pointer;
+  line-height: 1;
+  vertical-align: middle;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.profile-star .material-symbols-outlined {
+  display: block;
+  font-variation-settings: 'FILL' 0;
+}
+
+tr:hover .profile-star,
+.profile-star:focus-visible {
+  opacity: 1;
+}
+
+tr:hover .profile-star:hover {
+  color: var(--text);
+}
+
+/* Set as default: always visible, and filled rather than outlined. */
+.profile-star.is-default {
+  opacity: 1;
+  color: var(--accent, #d29922);
+}
+
+.profile-star.is-default .material-symbols-outlined {
+  font-variation-settings: 'FILL' 1;
 }

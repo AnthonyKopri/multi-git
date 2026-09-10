@@ -122,6 +122,20 @@ export const saveRepoSettings = (repoPath: string, warnBeforeDelete: boolean) =>
     body: { repoPath, warnBeforeDelete }
   });
 
+/** Records which account owns this repository, when the remote does not say. */
+export const setIntendedAccount = (repoPath: string, intendedAccount: string) =>
+  api.post<Api.RepoSettingsResponse>('/api/config/repo-settings', {
+    ...global,
+    body: { repoPath, intendedAccount }
+  });
+
+/** Records that this repository is intentionally on a different commit identity. */
+export const setIdentityOptOut = (repoPath: string, identityOptOut: boolean) =>
+  api.post<Api.RepoSettingsResponse>('/api/config/repo-settings', {
+    ...global,
+    body: { repoPath, identityOptOut }
+  });
+
 /**
  * Writes app settings. Only the fields present are changed, so a caller
  * toggling one setting cannot reset another it did not mention.
@@ -196,6 +210,27 @@ export const applySshConfig = (profileId: string, repoPath: string) =>
     body: { profileId, repoPath }
   });
 
+/** Asks the host which account this profile actually authenticates as. */
+export const verifySshAccount = (profileId: string, repoPath: string) =>
+  api.post<Api.SshVerifyResponse>('/api/config/ssh/verify', {
+    ...global,
+    body: { profileId, repoPath }
+  });
+
+/** What the repository is configured to do right now, before anything changes it. */
+export const getRepoAccountSetup = (repoPath: string, profileId?: string) =>
+  api.post<Api.RepoSetupResponse>('/api/config/ssh/repo-setup', {
+    ...global,
+    body: { repoPath, profileId }
+  });
+
+/** Machine-wide: the account repositories with none of their own fall back to. */
+export const setDefaultAccount = (profileId: string | null, setGlobalIdentity: boolean) =>
+  api.post<Api.DefaultAccountResponse>('/api/config/ssh/default-account', {
+    ...global,
+    body: { profileId, setGlobalIdentity }
+  });
+
 export const addAccountRule = (match: string, profileId: string) =>
   api.post<Api.ConfigMutationResponse>('/api/config/account-rules', {
     ...global,
@@ -221,8 +256,8 @@ export const getFiles = () => api.get<Api.FilesResponse>('/api/git/files');
 
 export const getIdentity = () => api.get<Api.IdentityResponse>('/api/git/identity');
 
-export const setIdentity = (name: string, email: string) =>
-  api.post<Api.IdentityResponse>('/api/git/identity', { body: { name, email } });
+export const setIdentity = (name: string, email: string, scope: 'local' | 'global' = 'local') =>
+  api.post<Api.IdentityResponse>('/api/git/identity', { body: { name, email, scope } });
 
 // ---------- staging ----------
 

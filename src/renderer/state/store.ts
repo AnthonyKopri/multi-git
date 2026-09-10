@@ -48,6 +48,8 @@ export interface AppState {
   vaultStatus: VaultStatus;
   /** '' means System SSH. */
   activeProfileId: string;
+  /** The account repositories with none of their own use. '' means none chosen. */
+  defaultAccountProfileId: string;
   manageSshConfig: boolean;
   /** Whether a fetch that leaves the branch purely behind pulls on its own. */
   autoPull: boolean;
@@ -95,6 +97,7 @@ function initialState(): AppState {
     accountRules: [],
     vaultStatus: { hasVault: false, unlocked: false },
     activeProfileId: '',
+    defaultAccountProfileId: '',
     manageSshConfig: true,
     autoPull: false,
 

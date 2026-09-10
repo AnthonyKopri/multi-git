@@ -18,8 +18,12 @@ export function sanitizeConfigForClient(config: AppConfig): ClientConfig {
     accountRules: config.accountRules,
     repoSettings: config.repoSettings,
     vaultStatus: getVaultStatus(),
+    defaultAccountProfileId: config.defaultAccountProfileId ?? '',
     settings: {
       manageSshConfig: !config.settings || config.settings.manageSshConfig !== false,
+      // Isolation is the default. It is what stops a pinned repository from
+      // also offering whatever key the managed block names for the same host.
+      isolateSshConfig: config.settings?.isolateSshConfig !== false,
       // Restoring is the default; the setting exists to turn it off.
       restoreWindowsOnStartup: config.settings?.restoreWindowsOnStartup !== false,
       // Checking is the default; like the one above, the setting exists to

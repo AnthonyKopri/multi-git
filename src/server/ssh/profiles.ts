@@ -1,10 +1,12 @@
 // Applies an SSH profile to a network Git operation.
 import path from 'node:path';
 
-import { buildSshCommand, runGitCommand, tryGitCommand } from '../git/run';
+import { GitError, runGitCommand, tryGitCommand } from '../git/run';
+import { buildSshCommandLine } from './command';
+import { wrongAccountHint } from './verify';
 import type { GitResult } from '../git/run';
 import { isLikelyHttpRemote, parseRemoteUrl } from '../git/remote';
-import { readConfig } from '../config/store';
+import { isSshConfigIsolationEnabled, readConfig } from '../config/store';
 import { createAskpassBridge } from './askpass';
 import { normalizeSshPath } from './keys';
 import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/vault';
@@ -68,6 +70,34 @@ function selectProfile(
 }
 
 /**
+ * Rethrows a git failure with the wrong-account explanation attached.
+ *
+ * `ERROR: Repository not found.` is what GitHub returns when the account that
+ * authenticated cannot see the repository, which on a machine with two
+ * accounts is far more often the wrong key than a missing repo.
+ */
+function withAccountContext(
+  error: unknown,
+  profileLabel: string | null,
+  originRemoteUrl: string
+): never {
+  if (error instanceof GitError) {
+    const hint = wrongAccountHint(error.stderr, { profileLabel, originRemoteUrl });
+
+    if (hint) {
+      throw new GitError(error.message, {
+        stdout: error.stdout,
+        stderr: `${error.stderr.trim()}\n\n${hint}`,
+        exitCode: error.exitCode,
+        statusCode: error.statusCode
+      });
+    }
+  }
+
+  throw error;
+}
+
+/**
  * Runs a network Git operation under the selected SSH identity, supplying a
  * stored passphrase through a short-lived askpass bridge when one exists.
  */
@@ -110,25 +140,39 @@ export async function runSyncOperationWithProfile(
     selectedProfile && isUnlocked() ? getStoredPassphrase(selectedProfile.id) : null;
 
   if (!storedPassphrase) {
-    const result = await runGitCommand(repoPath, gitArgs, effectiveKeyPath || null, {
-      ...(options.signal ? { signal: options.signal } : {})
-    });
-    return { ...result, usedAskpass: false, profileLabel, originRemoteUrl };
+    try {
+      const result = await runGitCommand(repoPath, gitArgs, effectiveKeyPath || null, {
+        ...(options.signal ? { signal: options.signal } : {})
+      });
+      return { ...result, usedAskpass: false, profileLabel, originRemoteUrl };
+    } catch (error) {
+      withAccountContext(error, profileLabel, originRemoteUrl);
+    }
   }
 
   const bridge = createAskpassBridge(storedPassphrase);
   try {
-    const customSshCommand = effectiveKeyPath
-      ? buildSshCommand(effectiveKeyPath, true)
-      : 'ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o NumberOfPasswordPrompts=1';
-
-    const result = await runGitCommand(repoPath, gitArgs, null, {
-      envOverrides: bridge.envOverrides,
-      customSshCommand,
-      ...(options.signal ? { signal: options.signal } : {})
+    // No key of its own means there is nothing for `-i` to name, so this
+    // branch deliberately gets neither IdentitiesOnly nor a bypassed
+    // configuration: both together would tell ssh to offer nothing at all,
+    // which is what the string this replaces actually did.
+    const customSshCommand = buildSshCommandLine({
+      ...(effectiveKeyPath ? { privateKeyPath: effectiveKeyPath } : {}),
+      isolateConfig: isSshConfigIsolationEnabled(config),
+      singlePasswordPrompt: true
     });
 
-    return { ...result, usedAskpass: true, profileLabel, originRemoteUrl };
+    try {
+      const result = await runGitCommand(repoPath, gitArgs, null, {
+        envOverrides: bridge.envOverrides,
+        customSshCommand,
+        ...(options.signal ? { signal: options.signal } : {})
+      });
+
+      return { ...result, usedAskpass: true, profileLabel, originRemoteUrl };
+    } catch (error) {
+      withAccountContext(error, profileLabel, originRemoteUrl);
+    }
   } finally {
     // Always, including when the git command threw: the file holds a
     // plaintext passphrase.
