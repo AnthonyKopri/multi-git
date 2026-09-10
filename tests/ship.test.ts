@@ -15,6 +15,8 @@ interface ShipOptions {
   dryRun: boolean;
   publish: boolean;
   changelog: boolean;
+  intro: string | null;
+  verification: string | null;
   help: boolean;
 }
 
@@ -27,6 +29,17 @@ interface ShipApi {
   parseArgs(argv: string[]): ShipOptions;
   answerToAction(answer: unknown): 'run' | 'skip' | 'quit' | 'unclear';
   Asker: new (options: { yes: boolean }) => AskerLike;
+  changelogSections(source: string, version: string): { heading: string; body: string }[];
+  downloadsSection(version: string): string;
+  previousVersion(source: string, version: string): string | null;
+  releaseNotes(input: {
+    version: string;
+    branch: string;
+    tag?: string;
+    source?: string;
+    intro?: string;
+    verification?: string;
+  }): string;
 }
 
 const require = createRequire(import.meta.url);
@@ -44,6 +57,10 @@ describe('parseArgs', () => {
       // because a flag was left off.
       publish: false,
       changelog: true,
+      // The two halves of the notes nobody can derive. Absent by default, and
+      // the release says so rather than filling them in.
+      intro: null,
+      verification: null,
       help: false
     });
   });
@@ -143,5 +160,161 @@ describe('the prompt across a step that owns the terminal', () => {
     asker.close();
 
     expect(closed).toBe(1);
+  });
+});
+
+// A changelog with the shape the real one has: an Unreleased section carrying
+// the guidance comment, two closed versions, and the link definitions every
+// generated URL is built from.
+const CHANGELOG = `# Changelog
+
+## [Unreleased]
+
+<!--
+Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
+or Security. Remove empty headings when preparing a release.
+-->
+
+### Fixed
+
+- **A thing stopped being broken.** With a second line.
+
+### Changed
+
+- **Something else moved.**
+
+## [2.0.0] - 2026-01-02
+
+### Added
+
+- **A feature.**
+
+## [1.9.0] - 2026-01-01
+
+### Added
+
+- **An older feature.**
+
+[Unreleased]: https://github.com/owner/repo/compare/Release_v2.0.0...HEAD
+[2.0.0]: https://github.com/owner/repo/compare/Release_v1.9.0...Release_v2.0.0
+[1.9.0]: https://github.com/owner/repo/compare/Release_v1.8.0...Release_v1.9.0
+`;
+
+describe('changelogSections', () => {
+  it('reads the Unreleased entries, which is where they are at step 3', () => {
+    // The notes are written before the changelog is closed, so a version with
+    // no heading of its own is the ordinary case rather than an error.
+    expect(ship.changelogSections(CHANGELOG, '2.1.0')).toEqual([
+      { heading: "What's fixed", body: '- **A thing stopped being broken.** With a second line.' },
+      { heading: "What's changed", body: '- **Something else moved.**' }
+    ]);
+  });
+
+  it('prefers the version’s own section once the changelog is closed', () => {
+    expect(ship.changelogSections(CHANGELOG, '2.0.0')).toEqual([
+      { heading: "What's new", body: '- **A feature.**' }
+    ]);
+  });
+
+  it('stops at the next version rather than swallowing the whole file', () => {
+    // The oldest version has no version after it, so the thing that ends its
+    // section is the block of link definitions -- which would otherwise be
+    // quoted into the notes as though it were an entry.
+    const sections = ship.changelogSections(CHANGELOG, '1.9.0');
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.body).toBe('- **An older feature.**');
+  });
+
+  it('drops the guidance comment, and a heading with nothing under it', () => {
+    const empty = '## [Unreleased]\n\n<!--\nAdd changes here.\n-->\n\n### Fixed\n\n## [1.0.0] - x\n';
+    expect(ship.changelogSections(empty, '1.1.0')).toEqual([]);
+  });
+
+  it('keeps a heading it has no nicer name for', () => {
+    const odd = '## [Unreleased]\n\n### Performance\n\n- **Faster.**\n';
+    expect(ship.changelogSections(odd, '1.1.0')).toEqual([
+      { heading: 'Performance', body: '- **Faster.**' }
+    ]);
+  });
+});
+
+describe('previousVersion', () => {
+  it('is the release before this one', () => {
+    expect(ship.previousVersion(CHANGELOG, '2.0.0')).toBe('1.9.0');
+  });
+
+  it('is the newest release when this one has no heading yet', () => {
+    expect(ship.previousVersion(CHANGELOG, '2.1.0')).toBe('2.0.0');
+  });
+
+  it('is null for the first release there has ever been', () => {
+    expect(ship.previousVersion('## [1.0.0] - 2026-01-01\n', '1.0.0')).toBeNull();
+  });
+});
+
+describe('downloadsSection', () => {
+  it('names the files the upload will actually put there', () => {
+    // Built from the same table `upload-release-assets.js` uploads from, so
+    // the notes cannot promise a filename that never arrives.
+    expect(ship.downloadsSection('2.1.0')).toBe(
+      [
+        '- **Windows installer (recommended):** `Multi-Git-Client-Setup-2.1.0.exe`',
+        '- **Portable Windows executable:** `Multi-Git-Client-Portable-2.1.0.exe`',
+        '- **SHA-256 checksums:** `SHA256SUMS.txt`'
+      ].join('\n')
+    );
+  });
+});
+
+describe('releaseNotes', () => {
+  const notes = (extra: Record<string, string> = {}) =>
+    ship.releaseNotes({
+      version: '2.1.0',
+      branch: 'main',
+      tag: 'Release_v2.1.0',
+      source: CHANGELOG,
+      ...extra
+    });
+
+  it('says what changed rather than linking to it', () => {
+    // The point of the rewrite: someone reading the release in a notification
+    // should not have to open the changelog to learn what they are getting.
+    const body = notes();
+    expect(body).toContain("## What's fixed");
+    expect(body).toContain('- **A thing stopped being broken.**');
+    expect(body).toContain("## What's changed");
+  });
+
+  it('lists the downloads and compares against the previous release', () => {
+    const body = notes();
+    expect(body).toContain('`Multi-Git-Client-Setup-2.1.0.exe`');
+    expect(body).toContain(
+      '[All changes since 2.0.0](https://github.com/owner/repo/compare/Release_v2.0.0...Release_v2.1.0)'
+    );
+    expect(body).toContain('/blob/main/CHANGELOG.md#210---');
+  });
+
+  it('leaves out the parts nobody wrote, rather than inventing them', () => {
+    // An opening line and an account of what was verified are judgement, and a
+    // bland placeholder would be worse than their absence.
+    const body = notes();
+    expect(body).not.toContain('## Verification');
+    expect(body.startsWith("## What's fixed")).toBe(true);
+  });
+
+  it('places the author’s own words where they belong', () => {
+    const body = notes({ intro: '  2.1.0 is a bug-fix release.  ', verification: 'CI was green.' });
+    expect(body.startsWith('2.1.0 is a bug-fix release.\n\n')).toBe(true);
+    expect(body).toContain('## Verification\n\nCI was green.');
+    // Still before the footer links, which stay last.
+    expect(body.trimEnd().endsWith(')')).toBe(true);
+  });
+
+  it('falls back to a link when there is nothing to quote', () => {
+    const body = ship.releaseNotes({ version: '2.1.0', branch: 'main', source: '' });
+    expect(body).toContain('## What changed');
+    expect(body).toContain('CHANGELOG.md');
+    // No repository URL to build links from, so none are invented.
+    expect(body).not.toContain('https://');
   });
 });

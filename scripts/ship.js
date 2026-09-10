@@ -18,9 +18,14 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-const { releaseTag } = require('./release-assets');
+const {
+  releaseTag,
+  RELEASE_ASSETS,
+  CHECKSUM_BASENAME,
+  CHECKSUM_LABEL
+} = require('./release-assets');
 const { spawnSpec } = require('./command-path');
-const { versionAnchor, repoUrlFromLinks } = require('./changelog');
+const { versionAnchor, repoUrlFromLinks, tagForVersion } = require('./changelog');
 
 const ROOT = path.join(__dirname, '..');
 const PACKAGE_JSON = path.join(ROOT, 'package.json');
@@ -35,6 +40,8 @@ function parseArgs(argv) {
     dryRun: false,
     publish: false,
     changelog: true,
+    intro: null,
+    verification: null,
     help: false
   };
 
@@ -53,6 +60,8 @@ function parseArgs(argv) {
     if (flag === '--bump') options.bump = nextValue();
     else if (flag === '--tag') options.tag = nextValue();
     else if (flag === '--repo' || flag === '-R') options.repo = nextValue();
+    else if (flag === '--intro') options.intro = nextValue();
+    else if (flag === '--verification') options.verification = nextValue();
     else if (flag === '--yes' || flag === '-y') options.yes = true;
     else if (flag === '--dry-run') options.dryRun = true;
     else if (flag === '--publish') options.publish = true;
@@ -84,6 +93,9 @@ one of them fails.
   --bump <spec>     patch, minor, major, x.y.z, or none (default: ask)
   --tag <tag>       release tag (default: Release_v<version>)
   --repo, -R <repo> GitHub repository in OWNER/REPO form
+  --intro <file>    opening paragraph for the release notes
+  --verification <file>
+                    what was verified, for the notes' Verification section
   --publish         also publish the draft at the end
   --no-changelog    upload without closing the Unreleased section
   --yes, -y         do not ask; run every step
@@ -248,35 +260,156 @@ async function releaseExists(tag, repo) {
   return (await read('gh', args)) !== null;
 }
 
-/**
- * The body of the release, pointing at this version's changelog entry.
- *
- * Built rather than written, so it names the right version and the right
- * anchor every time. The repository URL comes from the changelog's own link
- * definitions, so a fork links to itself.
- */
-function releaseNotes(shipping, branch) {
-  let source = '';
-  try {
-    source = fs.readFileSync(CHANGELOG, 'utf8');
-  } catch {
-    // No changelog to link to; the note below still stands on its own.
+const HTML_COMMENT = /<!--[\s\S]*?-->/g;
+
+/** Keep a Changelog's section names, as release notes introduce them. */
+const NOTE_HEADINGS = Object.freeze({
+  Added: "What's new",
+  Changed: "What's changed",
+  Deprecated: "What's deprecated",
+  Removed: "What's been removed",
+  Fixed: "What's fixed",
+  Security: 'Security'
+});
+
+/** The body of one `## [version]` block, up to the next one. */
+function changelogBody(source, version) {
+  const escaped = version.replace(/[.]/g, '\\.');
+  const heading =
+    new RegExp(`^## \\[${escaped}\\][^\\n]*$`, 'm').exec(source) ??
+    // Written at step 3, and the changelog is not closed until step 4, so the
+    // usual case is that these entries are still under Unreleased.
+    new RegExp('^## \\[Unreleased\\][^\\n]*$', 'm').exec(source);
+
+  if (!heading) {
+    return '';
   }
 
-  const repoUrl = repoUrlFromLinks(source);
-  const changelog = repoUrl
-    ? `[the ${shipping} entry in the changelog](${repoUrl}/blob/${branch}/CHANGELOG.md#${versionAnchor(source, shipping)})`
-    : 'CHANGELOG.md';
+  const rest = source.slice(heading.index + heading[0].length);
+  // The next version, or -- for the oldest one, which has no version after it
+  // -- the block of link definitions that closes the file.
+  const end = /^## \[/m.exec(rest) ?? /^\[[^\]]+\]:\s*\S+$/m.exec(rest);
+  return end ? rest.slice(0, end.index) : rest;
+}
 
+/**
+ * What this release ships, as `{ heading, body }` in the order written.
+ *
+ * The entries themselves rather than a link to them: a release people read in
+ * their notifications should say what changed without a round trip, which is
+ * what 4.1.0 and 4.1.1 did by hand.
+ */
+function changelogSections(source, version) {
+  const body = changelogBody(source, version).replace(HTML_COMMENT, '');
+  const found = [...body.matchAll(/^### (.+?)[ \t]*$/gm)];
+
+  return found
+    .map((match, index) => ({
+      heading: NOTE_HEADINGS[match[1]] ?? match[1],
+      body: body
+        .slice(match.index + match[0].length, found[index + 1]?.index ?? undefined)
+        .trim()
+    }))
+    .filter((section) => section.body !== '');
+}
+
+/** The downloads list, named from the same table the upload uses. */
+function downloadsSection(version) {
   return [
-    `### What changed`,
-    ``,
-    `See ${changelog}.`,
-    ``,
-    `### Verifying your download`,
-    ``,
-    '`SHA256SUMS.txt` below lists the SHA-256 of each executable in this release.'
+    ...Object.values(RELEASE_ASSETS).map(
+      (spec) => `- **${spec.label}:** \`${spec.basename(version)}\``
+    ),
+    `- **${CHECKSUM_LABEL}:** \`${CHECKSUM_BASENAME}\``
   ].join('\n');
+}
+
+/**
+ * The version released before this one, from the changelog's own headings.
+ *
+ * When this version has no heading yet -- the ordinary case, before step 4 --
+ * the newest heading in the file is the previous release.
+ */
+function previousVersion(source, version) {
+  const versions = [...source.matchAll(/^## \[(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\]/gm)].map(
+    (match) => match[1]
+  );
+  const index = versions.indexOf(version);
+
+  return (index === -1 ? versions[0] : versions[index + 1]) ?? null;
+}
+
+/**
+ * The body of the release.
+ *
+ * Everything derivable is derived, so it names the right version, the right
+ * anchor and the right comparison every time; the repository URL comes from
+ * the changelog's own link definitions, so a fork links to itself.
+ *
+ * The two parts that cannot be derived are the opening line and the account of
+ * what was verified. Those are the author's, supplied with `--intro` and
+ * `--verification`, and left out rather than filled with something bland when
+ * they are not.
+ */
+function releaseNotes({ version, branch, tag, source = '', intro = '', verification = '' }) {
+  const repoUrl = repoUrlFromLinks(source);
+  const sections = changelogSections(source, version);
+  const blocks = [];
+
+  if (intro.trim() !== '') {
+    blocks.push(intro.trim());
+  }
+
+  for (const section of sections) {
+    blocks.push(`## ${section.heading}\n\n${section.body}`);
+  }
+
+  if (sections.length === 0) {
+    // Nothing to quote. Better a link than an empty release.
+    blocks.push(
+      `## What changed\n\nSee ${
+        repoUrl
+          ? `[the ${version} entry in the changelog](${repoUrl}/blob/${branch}/CHANGELOG.md#${versionAnchor(source, version)})`
+          : 'CHANGELOG.md'
+      }.`
+    );
+  }
+
+  blocks.push(
+    `## Downloads\n\n${downloadsSection(version)}\n\nThe portable app shares configuration with an installed copy.`
+  );
+
+  if (verification.trim() !== '') {
+    blocks.push(`## Verification\n\n${verification.trim()}`);
+  }
+
+  if (repoUrl) {
+    const previous = previousVersion(source, version);
+    const previousTag = previous === null ? null : tagForVersion(source, previous);
+    const links = [
+      `[Full changelog](${repoUrl}/blob/${branch}/CHANGELOG.md#${versionAnchor(source, version)})`
+    ];
+
+    if (previousTag && tag) {
+      links.push(`[All changes since ${previous}](${repoUrl}/compare/${previousTag}...${tag})`);
+    }
+
+    blocks.push(links.join(' · '));
+  }
+
+  return blocks.join('\n\n');
+}
+
+/** Reads a file given on the command line, so a missing one is the user's. */
+function readNotesFile(file, what) {
+  if (!file) {
+    return '';
+  }
+
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch (error) {
+    throw new Error(`Could not read the ${what} from ${file}: ${error.message}`);
+  }
 }
 
 async function preflight() {
@@ -394,6 +527,34 @@ async function main() {
           say('Skipped. The upload needs a release to exist, so it will fail.');
           break;
         default: {
+          let source = '';
+          try {
+            source = fs.readFileSync(CHANGELOG, 'utf8');
+          } catch {
+            // No changelog to quote; releaseNotes falls back to a link.
+          }
+
+          const notes = releaseNotes({
+            version: shipping,
+            branch: await defaultBranch(),
+            tag,
+            source,
+            intro: readNotesFile(options.intro, 'opening paragraph'),
+            verification: readNotesFile(options.verification, 'verification notes')
+          });
+
+          // Said before the draft exists, because a release that reads like a
+          // changelog dump is the thing worth catching while it is still a
+          // draft. Both parts are the author's judgement and cannot be derived.
+          for (const [flag, value] of [
+            ['--intro', options.intro],
+            ['--verification', options.verification]
+          ]) {
+            if (!value) {
+              say(`No ${flag}. The notes will go without that section; add it on the draft.`);
+            }
+          }
+
           const args = [
             'release',
             'create',
@@ -404,7 +565,7 @@ async function main() {
             '--title',
             `Multi-Git v${shipping}`,
             '--notes',
-            releaseNotes(shipping, await defaultBranch())
+            notes
           ];
           if (options.repo) args.push('--repo', options.repo);
 
@@ -499,4 +660,13 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, answerToAction, printHelp, Asker };
+module.exports = {
+  parseArgs,
+  answerToAction,
+  printHelp,
+  Asker,
+  changelogSections,
+  downloadsSection,
+  previousVersion,
+  releaseNotes
+};
