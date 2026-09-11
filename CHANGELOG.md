@@ -12,6 +12,8 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [4.1.4] - 2026-09-12
+
 ### Changed
 
 - **A stash row now has room for the stash.** Six icon buttons sat on every row
@@ -710,7 +712,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.3...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.4...HEAD
+[4.1.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.3...Release_v4.1.4
 [4.1.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.2...Release_v4.1.3
 [4.1.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.1...Release_v4.1.2
 [4.1.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.0...Release_v4.1.1
