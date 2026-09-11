@@ -12,6 +12,8 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [4.1.3] - 2026-09-11
+
 ### Fixed
 
 - **Windows Terminal opens without the wait again.** 4.1.2 stopped sending
@@ -695,7 +697,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.2...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.3...HEAD
+[4.1.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.2...Release_v4.1.3
 [4.1.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.1...Release_v4.1.2
 [4.1.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.0...Release_v4.1.1
 [4.1.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.0.0...Release_v4.1.0
