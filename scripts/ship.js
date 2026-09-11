@@ -338,6 +338,88 @@ function previousVersion(source, version) {
   return (index === -1 ? versions[0] : versions[index + 1]) ?? null;
 }
 
+/** Markdown's own ways of saying "break here": two trailing spaces, or a `\`. */
+const HARD_BREAK = /( {2,}|\\)$/;
+const FENCE = /^\s*(?:```|~~~)/;
+const LIST_ITEM = /^( *)([-*+]|\d+[.)])( +)/;
+/** Lines that begin something of their own and must not be joined onto.  */
+const BLOCK_START = /^ *(?:#{1,6} |>|\||-{3,} *$|_{3,} *$|\*{3,} *$)/;
+/** A line this far past its block's prose is an indented code block. */
+const CODE_INDENT = 4;
+
+/**
+ * Joins lines that a writer wrapped, because a release body is not rendered
+ * the way the file it came from is.
+ *
+ * GitHub renders release notes with hard line breaks: every newline becomes a
+ * `<br>`. CHANGELOG.md wraps its prose at 80 columns, so quoting an entry
+ * verbatim published a paragraph broken mid-sentence at every wrap -- 13 of
+ * them in the first 4.1.3 draft. That is also why 4.1.0, 4.1.1 and 4.1.2 were
+ * written by hand with each bullet on one long line.
+ *
+ * Only continuations are joined. A heading, a list item, a blank line and a
+ * table row each begin something; a fenced or indented code block means what
+ * its line breaks say; and a line ending in Markdown's own hard break asked
+ * for one.
+ */
+function unwrapSoftBreaks(text) {
+  const out = [];
+  let fenced = false;
+  // Where the current block's prose starts, and where an indented code block
+  // does. Null for neither, which is also what a blank line restores.
+  let blockIndent = null;
+  let codeIndent = null;
+
+  // Split on either ending: the changelog is checked out CRLF on Windows, and
+  // a `\r` left on the end of a line would be carried into the middle of the
+  // line it was joined to, where GitHub renders it as the break this removes.
+  for (const line of text.split(/\r?\n/)) {
+    const indent = /^ */.exec(line)[0].length;
+
+    if (FENCE.test(line)) {
+      fenced = !fenced;
+      out.push(line);
+      blockIndent = null;
+      codeIndent = null;
+      continue;
+    }
+
+    if (fenced || line.trim() === '') {
+      out.push(line);
+      // A blank line ends a paragraph, but an indented code block may have one
+      // in the middle of it, so that is deliberately not forgotten here.
+      if (!fenced) blockIndent = null;
+      continue;
+    }
+
+    if (codeIndent !== null && indent >= codeIndent) {
+      out.push(line);
+      continue;
+    }
+    codeIndent = null;
+
+    const item = LIST_ITEM.exec(line);
+    const starts = blockIndent === null;
+
+    if (!item && indent >= (starts ? CODE_INDENT : blockIndent + CODE_INDENT)) {
+      codeIndent = indent;
+      out.push(line);
+      continue;
+    }
+
+    const previous = out[out.length - 1];
+    if (!starts && !item && !BLOCK_START.test(line) && previous && !HARD_BREAK.test(previous)) {
+      out[out.length - 1] = `${previous.replace(/ +$/, '')} ${line.trim()}`;
+      continue;
+    }
+
+    out.push(line);
+    blockIndent = item ? item[1].length + item[2].length + item[3].length : indent;
+  }
+
+  return out.join('\n');
+}
+
 /**
  * The body of the release.
  *
@@ -396,7 +478,10 @@ function releaseNotes({ version, branch, tag, source = '', intro = '', verificat
     blocks.push(links.join(' · '));
   }
 
-  return blocks.join('\n\n');
+  // Applied to the whole body rather than only to what the changelog supplied:
+  // an `--intro` or `--verification` file is prose somebody wrote in an editor,
+  // and is wrapped as often as not.
+  return unwrapSoftBreaks(blocks.join('\n\n'));
 }
 
 /** Reads a file given on the command line, so a missing one is the user's. */
@@ -668,5 +753,6 @@ module.exports = {
   changelogSections,
   downloadsSection,
   previousVersion,
-  releaseNotes
+  releaseNotes,
+  unwrapSoftBreaks
 };

@@ -40,6 +40,7 @@ interface ShipApi {
     intro?: string;
     verification?: string;
   }): string;
+  unwrapSoftBreaks(text: string): string;
 }
 
 const require = createRequire(import.meta.url);
@@ -266,6 +267,60 @@ describe('downloadsSection', () => {
   });
 });
 
+// GitHub renders a release body with hard line breaks, so a paragraph wrapped
+// at 80 columns -- which is how CHANGELOG.md is written -- publishes as a
+// stack of short lines. What must survive is the breaks somebody meant.
+describe('unwrapSoftBreaks', () => {
+  it('joins the lines a writer wrapped, in a paragraph and in a bullet', () => {
+    expect(ship.unwrapSoftBreaks('One sentence\nwrapped in two.')).toBe('One sentence wrapped in two.');
+    expect(ship.unwrapSoftBreaks('- **A fix.** It was\n  wrapped here.')).toBe(
+      '- **A fix.** It was wrapped here.'
+    );
+  });
+
+  it('keeps each list item, heading and table row on its own line', () => {
+    const source = '## Heading\n\n- first\n- second\n  - nested\n\n| a | b |\n| - | - |';
+
+    expect(ship.unwrapSoftBreaks(source)).toBe(source);
+  });
+
+  it('keeps the line breaks inside a fenced code block', () => {
+    const source = '```\nfirst line\nsecond line\n```\n\ntext that\nwraps';
+
+    expect(ship.unwrapSoftBreaks(source)).toBe('```\nfirst line\nsecond line\n```\n\ntext that wraps');
+  });
+
+  it('keeps an indented code block, including one inside a list item', () => {
+    // Four spaces past the prose is a code block, and the blank line in the
+    // middle of one does not end it.
+    const top = '    one\n\n    two';
+    expect(ship.unwrapSoftBreaks(top)).toBe(top);
+
+    const inItem = '- **A fix.** Measured:\n\n      before 786ms\n      after 4ms';
+    expect(ship.unwrapSoftBreaks(inItem)).toBe(inItem);
+  });
+
+  it('honours a break the writer asked for', () => {
+    // Markdown's own hard break: two trailing spaces, or a backslash.
+    expect(ship.unwrapSoftBreaks('first  \nsecond')).toBe('first  \nsecond');
+    expect(ship.unwrapSoftBreaks('first\\\nsecond')).toBe('first\\\nsecond');
+  });
+
+  it('leaves blank lines between blocks alone', () => {
+    expect(ship.unwrapSoftBreaks('one\n\ntwo')).toBe('one\n\ntwo');
+  });
+
+  it('joins a changelog checked out with CRLF endings', () => {
+    // Not hypothetical: this is how CHANGELOG.md sits in the working tree on
+    // Windows, where releases are built. A carriage return left behind ends up
+    // inside the joined line, and GitHub renders it as the break it was.
+    expect(ship.unwrapSoftBreaks('- **A fix.** It was\r\n  wrapped here.\r\n')).toBe(
+      '- **A fix.** It was wrapped here.\n'
+    );
+    expect(ship.unwrapSoftBreaks('one\r\n\r\ntwo')).toBe('one\n\ntwo');
+  });
+});
+
 describe('releaseNotes', () => {
   const notes = (extra: Record<string, string> = {}) =>
     ship.releaseNotes({
@@ -316,5 +371,46 @@ describe('releaseNotes', () => {
     expect(body).toContain('CHANGELOG.md');
     // No repository URL to build links from, so none are invented.
     expect(body).not.toContain('https://');
+  });
+
+  it('publishes a wrapped entry as one line per bullet', () => {
+    // The changelog wraps its prose at 80 columns and a release body renders
+    // every newline as a line break, so quoting it as written published a
+    // paragraph broken mid-sentence at each wrap.
+    const wrapped = [
+      '## [Unreleased]',
+      '',
+      '### Fixed',
+      '',
+      '- **A thing stopped being broken.** It had been broken since the release',
+      '  before this one, in a way nobody could see from the outside.',
+      '- **A second thing.** Also wrapped',
+      '  across two lines.',
+      ''
+    ].join('\n');
+
+    const body = ship.releaseNotes({ version: '2.1.0', branch: 'main', source: wrapped });
+
+    expect(body).toContain(
+      '- **A thing stopped being broken.** It had been broken since the release before this one, in a way nobody could see from the outside.\n- **A second thing.** Also wrapped across two lines.'
+    );
+  });
+
+  it('keeps the line breaks in a code block inside an entry', () => {
+    const withCode = [
+      '## [Unreleased]',
+      '',
+      '### Fixed',
+      '',
+      '- **Faster again.** Measured on Windows 11:',
+      '',
+      '      through the bridge  786ms',
+      '      direct                4ms',
+      ''
+    ].join('\n');
+
+    const body = ship.releaseNotes({ version: '2.1.0', branch: 'main', source: withCode });
+
+    expect(body).toContain('      through the bridge  786ms\n      direct                4ms');
   });
 });
