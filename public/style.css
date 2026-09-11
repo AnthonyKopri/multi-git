@@ -3051,20 +3051,35 @@ body.pane-resizing-y * {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* At rest the actions give their width back to the message, so a row that is
+   not being hovered shows as much of its text as the space allows. They stay
+   in the layout (clipped, not removed) to remain reachable by keyboard, which
+   is what :focus-within reveals them for. */
 .stash-actions {
   display: flex;
   gap: 2px;
+  width: 0;
+  margin-left: -8px;
+  overflow: hidden;
   opacity: 0;
   transition: opacity 0.15s ease;
   flex-shrink: 0;
 }
-.stash-item:hover .stash-actions {
+.stash-item:hover .stash-actions,
+.stash-item:focus-within .stash-actions,
+.stash-item:has(.btn.open) .stash-actions {
+  width: auto;
+  margin-left: 0;
   opacity: 1;
 }
 .stash-actions .btn {
   padding: 2px;
   width: 22px;
   height: 22px;
+}
+.stash-actions .btn.open {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
 }
 
 /* Branch list delete action (revealed on hover) */
@@ -5168,12 +5183,15 @@ body.dock-open .terminal-panel {
   color: var(--color-warning);
 }
 
-/* Per-row overflow in the SSH profile table. Four icons and a menu, rather
-   than eight icons wrapping onto a second line. */
-.profile-row-menu {
+/* Per-row overflow: the SSH profile table's menu, and the one a stash row
+   opens from "...". Four icons and a menu, rather than eight icons wrapping
+   onto a second line. */
+.profile-row-menu,
+.overflow-menu {
   /* Fixed, not absolute: the cell is overflow:hidden for its ellipsis and the
-     table scrolls, so an absolutely-positioned menu is clipped by both.
-     Coordinates come from toggleRowMenu. */
+     table scrolls, so an absolutely-positioned menu is clipped by both. The
+     stash list has the same problem in the scrolling sidebar. Coordinates come
+     from toggleRowMenu and from openOverflowMenu. */
   position: fixed;
   z-index: 1200;
   min-width: 190px;
@@ -5181,13 +5199,14 @@ body.dock-open .terminal-panel {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: var(--bg-elevated, var(--bg-panel));
-  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  box-shadow: var(--shadow-lg);
 }
 
-.profile-row-menu .btn-menu-row {
+.profile-row-menu .btn-menu-row,
+.overflow-menu .btn-menu-row {
   justify-content: flex-start;
   width: 100%;
   height: auto;
@@ -5195,6 +5214,15 @@ body.dock-open .terminal-panel {
   padding: 6px 8px;
   gap: 8px;
   white-space: nowrap;
+}
+
+/* Dropping a stash is the one entry here that cannot be undone. */
+.btn-menu-row.danger,
+.btn-menu-row.danger .material-symbols-outlined {
+  color: var(--color-danger);
+}
+.btn-menu-row.danger:hover {
+  background-color: var(--color-danger-bg);
 }
 
 

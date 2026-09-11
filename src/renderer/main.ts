@@ -15,6 +15,7 @@ import * as api from './api/endpoints';
 import { initToasts } from './ui/toast';
 import { cancelOpenDialog, hasOpenDialog, initDialogs } from './ui/dialogs';
 import { closeAllDropdowns, initDropdowns, registerDropdown } from './ui/dropdown';
+import { initOverflowMenus } from './ui/overflow-menu';
 import { initPanes, toggleSide } from './ui/panes';
 import { trapTab } from './ui/focus';
 import { initDock, isPanel } from './ui/dock';
@@ -496,32 +497,7 @@ function wireShelves(): void {
     stashFilterTimer = setTimeout(() => shelf.setStashQuery(value), 250);
   });
 
-  delegate(ui.stashList, 'click', '[data-action]', (target) => {
-    const ref = target.closest<HTMLElement>('[data-ref]')?.dataset['ref'];
-    if (!ref) {
-      return;
-    }
-
-    switch (target.dataset['action']) {
-      case 'drop':
-        void shelf.dropStash(ref);
-        return;
-      case 'inspect':
-        void shelf.inspectStash(ref);
-        return;
-      case 'branch':
-        void shelf.branchFromStash(ref);
-        return;
-      case 'apply-index':
-        void shelf.applyStash(ref, false, true);
-        return;
-      case 'pop':
-        void shelf.applyStash(ref, true);
-        return;
-      default:
-        void shelf.applyStash(ref, false);
-    }
-  });
+  delegate(ui.stashList, 'click', '[data-action]', shelf.handleStashAction);
 
   delegate(ui.tagList, 'click', '[data-action]', (target) => {
     const row = target.closest<HTMLElement>('[data-tag]');
@@ -1033,6 +1009,7 @@ async function start(): Promise<void> {
   initDock();
   initDialogs(ui);
   initDropdowns();
+  initOverflowMenus();
   initPanes();
   initCollapsibleSections();
   // The chip row scrolls sideways and would otherwise need a shift-wheel or a

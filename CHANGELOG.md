@@ -12,6 +12,19 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Changed
+
+- **A stash row now has room for the stash.** Six icon buttons sat on every row
+  of a sidebar column narrow enough that the message they belonged to was cut
+  to a few words. Applying is what a stash is for, so **apply and remove** and
+  **apply and keep** keep their place on the row; seeing what it holds,
+  applying it with the staged files restored, branching from it, and dropping
+  it moved behind a **...** menu, where each is a labelled line rather than an
+  icon left to guess at. The buttons also give their width back when the
+  pointer is elsewhere, so a row at rest now reads about 150px further into its
+  message instead of holding space open for buttons that are not being shown.
+  They stay reachable by keyboard, and appear on focus as they do on hover.
+
 ## [4.1.3] - 2026-09-11
 
 ### Fixed
