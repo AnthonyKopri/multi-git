@@ -9,6 +9,7 @@ import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { withButtonBusy } from '../../ui/busy';
+import { openOverflowMenu, type OverflowItem } from '../../ui/overflow-menu';
 import { activeProfile } from '../accounts';
 
 let ui: Elements;
@@ -24,6 +25,17 @@ interface ShelfAction {
   glyph: string;
   title: string;
   danger?: boolean;
+  /** Kept out of the row and shown in the "..." menu instead. */
+  overflow?: boolean;
+}
+
+function actionButton(spec: ShelfAction): HTMLButtonElement {
+  return el('button', {
+    className: `btn btn-icon btn-sm${spec.danger ? ' file-action-destructive' : ''}`,
+    title: spec.title,
+    data: { action: spec.action },
+    children: [icon(spec.glyph, 14)]
+  });
 }
 
 function buildShelfRow(
@@ -33,6 +45,15 @@ function buildShelfRow(
   data: Record<string, string>,
   actions: readonly ShelfAction[]
 ): HTMLLIElement {
+  // Only the everyday actions sit in the row; the rest wait behind "...",
+  // which keeps a narrow sidebar row readable instead of half buttons.
+  const inline = actions.filter((spec) => spec.overflow !== true).map(actionButton);
+  if (actions.some((spec) => spec.overflow === true)) {
+    inline.push(
+      actionButton({ action: 'more', glyph: 'more_horiz', title: 'More actions' })
+    );
+  }
+
   return el('li', {
     className: 'stash-item',
     title: rowTitle,
@@ -40,17 +61,7 @@ function buildShelfRow(
     children: [
       icon(glyph),
       el('span', { className: 'stash-msg', text: label }),
-      el('span', {
-        className: 'stash-actions',
-        children: actions.map((spec) =>
-          el('button', {
-            className: `btn btn-icon btn-sm${spec.danger ? ' file-action-destructive' : ''}`,
-            title: spec.title,
-            data: { action: spec.action },
-            children: [icon(spec.glyph, 14)]
-          })
-        )
-      })
+      el('span', { className: 'stash-actions', children: inline })
     ]
   });
 }
@@ -74,6 +85,42 @@ function matchedFilesOf(stash: object): string[] {
   const matched = (stash as { matchedFiles?: unknown }).matchedFiles;
   return Array.isArray(matched) ? (matched as string[]) : [];
 }
+
+/**
+ * The two actions worth a click of their own, then the rest.
+ *
+ * Applying is what a stash is for, so "apply and remove" and "apply and keep"
+ * stay in the row; inspecting, branching, and dropping are occasional enough
+ * to live one click deeper.
+ */
+const STASH_ACTIONS: readonly ShelfAction[] = [
+  { action: 'pop', glyph: 'unarchive', title: 'Apply and remove the stash' },
+  { action: 'apply', glyph: 'download', title: 'Apply and keep the stash' },
+  { action: 'inspect', glyph: 'visibility', title: 'See what this stash holds', overflow: true },
+  {
+    action: 'apply-index',
+    glyph: 'playlist_add_check',
+    title: 'Apply, restoring what was staged',
+    overflow: true
+  },
+  {
+    action: 'branch',
+    glyph: 'alt_route',
+    title: 'Start a branch from this stash',
+    overflow: true
+  },
+  { action: 'drop', glyph: 'delete', title: 'Delete this stash', danger: true, overflow: true }
+];
+
+/** The "..." menu's contents: the row's own titles, read as labels. */
+const STASH_MENU: readonly OverflowItem[] = STASH_ACTIONS.filter(
+  (spec) => spec.overflow === true
+).map((spec) => ({
+  action: spec.action,
+  glyph: spec.glyph,
+  label: spec.title,
+  ...(spec.danger === true ? { danger: true } : {})
+}));
 
 /** The current filter. Empty means show everything. */
 let stashQuery = '';
@@ -102,14 +149,7 @@ export async function refreshStashList(): Promise<void> {
             ? `${stash.ref} - ${stash.date} - matches ${matchedFilesOf(stash).join(', ')}`
             : `${stash.ref} - ${stash.date}`,
           { ref: stash.ref },
-          [
-            { action: 'inspect', glyph: 'visibility', title: 'See what this stash holds' },
-            { action: 'apply', glyph: 'download', title: 'Apply and keep the stash' },
-            { action: 'apply-index', glyph: 'playlist_add_check', title: 'Apply, restoring what was staged' },
-            { action: 'branch', glyph: 'alt_route', title: 'Start a branch from this stash' },
-            { action: 'pop', glyph: 'unarchive', title: 'Apply and remove the stash' },
-            { action: 'drop', glyph: 'delete', title: 'Delete this stash', danger: true }
-          ]
+          STASH_ACTIONS
         )
       ),
       stashQuery === '' ? 'No stashes' : `No stashes match "${stashQuery}"`
@@ -214,6 +254,52 @@ export async function applyStash(ref: string, pop: boolean, restoreIndex = false
       showToast(text, 'error', 8000);
     }
   }
+}
+
+/**
+ * Runs one stash action, whether it was clicked in the row or picked from the
+ * "..." menu — the menu floats outside the list, so it cannot reach the click
+ * delegation the rows use.
+ */
+function runStashAction(ref: string, action: string): void {
+  switch (action) {
+    case 'drop':
+      void dropStash(ref);
+      return;
+    case 'inspect':
+      void inspectStash(ref);
+      return;
+    case 'branch':
+      void branchFromStash(ref);
+      return;
+    case 'apply-index':
+      void applyStash(ref, false, true);
+      return;
+    case 'pop':
+      void applyStash(ref, true);
+      return;
+    default:
+      void applyStash(ref, false);
+  }
+}
+
+/** A click anywhere in a stash row: an action, or the "..." that holds more. */
+export function handleStashAction(target: HTMLElement, event: MouseEvent): void {
+  const ref = target.closest<HTMLElement>('[data-ref]')?.dataset['ref'];
+  const action = target.dataset['action'];
+  if (ref === undefined || action === undefined) {
+    return;
+  }
+
+  if (action === 'more') {
+    // Without this the document-level dismissal would close the menu in the
+    // same click that opened it.
+    event.stopPropagation();
+    openOverflowMenu(target, STASH_MENU, (picked) => runStashAction(ref, picked));
+    return;
+  }
+
+  runStashAction(ref, action);
 }
 
 export async function dropStash(ref: string): Promise<void> {
