@@ -14,14 +14,6 @@
   >
 </p>
 
-<p align="center">
-  <img
-    src="docs/images/multi-git-overview.png"
-    alt="Multi-Git Client showing repository controls, SSH identity selection, staging, Safety Net, worktrees, and commit history"
-    width="1200"
-  >
-</p>
-
 [![Latest release](https://img.shields.io/github/v/release/AnthonyKopri/multi-git?display_name=tag&sort=semver)](https://github.com/AnthonyKopri/multi-git/releases/latest)
 [![CI](https://github.com/AnthonyKopri/multi-git/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AnthonyKopri/multi-git/actions/workflows/ci.yml)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078d4.svg)](https://github.com/AnthonyKopri/multi-git/releases/latest)
