@@ -8,6 +8,14 @@
 
 <p align="center">
   <img
+    src="docs/images/multi-git-promo.gif"
+    alt="A tour of Multi-Git Client: following a branch to each feature, switching the SSH identity a repository uses, staging and committing, and recovering through Safety Net"
+    width="720"
+  >
+</p>
+
+<p align="center">
+  <img
     src="docs/images/multi-git-overview.png"
     alt="Multi-Git Client showing repository controls, SSH identity selection, staging, Safety Net, worktrees, and commit history"
     width="1200"
@@ -445,7 +453,11 @@ Authentication and authorship are related in the UI but distinct in Git:
 - The **SSH key** authenticates fetch, pull, push, tag push, and SSH clone operations.
 - `user.name` and `user.email` determine the author recorded in new commits.
 
-An SSH profile can carry both. When you switch to a profile whose identity differs from the repository, Multi-Git offers to update the repository-local Git identity. It also warns before committing with a mismatched identity or pushing with an account that conflicts with an Auto-Select Rule.
+An SSH profile can carry both. When you switch to a profile whose identity differs from the repository, Multi-Git offers to update the repository-local Git identity. It also warns before committing with a mismatched identity or pushing with an account that conflicts with an Auto-Select Rule. Authentication and authorship are written together or not at all, so a repository cannot end up authenticating as one account and committing as another; a profile carrying no commit email says so on its row rather than letting that surface later in a commit.
+
+The **SSH Key** dropdown names two accounts. The first is the one this repository *should* use, derived from the owner of its remote and overridable, because the owner of an organisation repository or a fork is not an account anybody authenticates as. The second is the one the host actually greets when the selected key connects, learned from a verification and then remembered per key, so the warning is instant and needs no network. A push whose two accounts disagree is blocked with an override, force pushes included — a force push as the wrong account is the worst version of this mistake, not one to wave through.
+
+A star to the left of a profile name sets the **default account**, the one every unpinned repository falls back to. Without it that fallback is whichever repository you happened to open last.
 
 On a machine with no repositories yet, the welcome screen carries its own **Set Up Keys** button. It reports how many key profiles exist and opens the SSH manager, going straight to the generator when there are none, so a first key can be created before the first clone.
 
@@ -472,7 +484,7 @@ Open **SSH Key → Manage SSH Profiles → Add Existing Key**, then enter:
 - optional **Commit Name** and **Commit Email**;
 - optional SSH passphrase and encrypted-vault storage.
 
-Use **Test Key** to validate the private/public key pair, then **Save Profile**. Registered profiles also provide actions to retest the key, copy its public key or path, open its folder, edit it, or delete it.
+Use **Test Key** to validate the private/public key pair, then **Save Profile**. A registered profile's row carries the four actions worth a click of their own — edit it, ask the host which account its key authenticates as, copy the public key to paste into that host, and delete it — with retesting the key file, copying its path, and opening its folder behind the row's **...** menu.
 
 #### Generate a new key
 
@@ -610,9 +622,10 @@ The explorer is deliberately read-only; edit files in your normal editor and ret
 **Stashes** supports the complete short-term shelf workflow:
 
 - **Stash** runs `git stash push -u`, including untracked files.
-- **Apply** restores a stash and keeps it in the list.
-- **Pop** restores and removes it.
-- **Drop** permanently deletes it after confirmation.
+- **Apply and remove** and **apply and keep** sit on the row itself, because applying is what a stash is for.
+- A **...** menu on the row holds the occasional actions, each a labelled line rather than an icon left to guess at: seeing what the stash holds, applying it with the staged files restored, starting a branch from it, and deleting it after confirmation.
+
+The row's buttons also give their width back when the pointer is elsewhere, so a row at rest reads about 150px further into its message instead of holding space open for buttons that are not being shown. They stay reachable by keyboard, and appear on focus as they do on hover.
 
 **Tags** lists local tags and their target commits. Use the actions beside a tag to inspect its commit, push that specific tag to origin with the active SSH profile, or delete the local tag. Create a new tag from a commit's History drawer. Deleting locally does not delete an already-pushed remote tag.
 
