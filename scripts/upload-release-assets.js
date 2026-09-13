@@ -9,6 +9,7 @@ const path = require('path');
 const {
   buildGhUploadArgs,
   releaseTag,
+  resolveReleaseAssets,
   writeChecksumManifest
 } = require('./release-assets');
 const { releaseChangelog } = require('./changelog');
@@ -25,6 +26,7 @@ function parseArgs(argv) {
     repo: null,
     dryRun: false,
     changelog: true,
+    clobber: false,
     help: false
   };
 
@@ -44,6 +46,7 @@ function parseArgs(argv) {
     else if (flag === '--repo' || flag === '-R') options.repo = nextValue();
     else if (flag === '--dry-run') options.dryRun = true;
     else if (flag === '--no-changelog') options.changelog = false;
+    else if (flag === '--clobber') options.clobber = true;
     else if (flag === '--help' || flag === '-h') options.help = true;
     else throw new Error(`Unknown option: ${arg}`);
   }
@@ -54,12 +57,15 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`Usage: node scripts/upload-release-assets.js [options]
 
-Uploads both Windows binaries and SHA256SUMS.txt to an existing GitHub release.
+Uploads every build of a release, and SHA256SUMS.txt, to an existing GitHub
+release. The Release workflow runs this; by hand it is the fallback for
+attaching builds to a release yourself.
 
   --tag <tag>       release tag (default: Release_v<package version>)
   --repo, -R <repo> GitHub repository in OWNER/REPO form
   --dry-run         print the gh command without writing or uploading
   --no-changelog    leave CHANGELOG.md alone
+  --clobber         replace assets already on the release (for a draft only)
   --help, -h        show this message
 
 After a successful upload, the Unreleased entries in CHANGELOG.md are moved
@@ -144,28 +150,45 @@ async function main() {
     tag,
     version,
     outputDir: OUTPUT_DIR,
-    repo: options.repo ?? undefined
+    repo: options.repo ?? undefined,
+    clobber: options.clobber
   });
 
   if (options.dryRun) {
     console.log('Dry run — nothing was written or uploaded.');
     console.log(['gh', ...uploadArgs].map(quoteForDisplay).join(' '));
 
+    const missing = missingAssets(version);
+    if (missing.length > 0) {
+      console.log(`Not in dist/ yet, so a real run would stop: ${missing.join(', ')}`);
+    }
     if (options.changelog) {
       console.log(`CHANGELOG.md: ${previewChangelog({ version, tag })}`);
     }
     return;
   }
 
+  if (options.clobber) {
+    await assertDraft({ tag, repo: options.repo ?? undefined });
+  }
+
+  const missing = missingAssets(version);
+  if (missing.length > 0) {
+    throw new Error(
+      `Not in dist/: ${missing.join(', ')}. A release carries every build, and the ` +
+        'macOS one can only be made on a Mac, so releases are built by the Release workflow.'
+    );
+  }
+
   const checksum = await writeChecksumManifest({
     version,
-    targetName: 'both',
+    targetName: 'release',
     outputDir: OUTPUT_DIR
   });
   console.log(`Updated ${path.relative(ROOT, checksum.manifestPath)} from the files being uploaded.`);
   console.log(`Uploading release assets to ${tag}...\n`);
   await runGh(uploadArgs);
-  console.log(`\nUploaded ${checksum.assets.length} executable(s) and SHA256SUMS.txt with display labels.`);
+  console.log(`\nUploaded ${checksum.assets.length} build(s) and SHA256SUMS.txt with display labels.`);
 
   const localSize = (filePath) => fs.statSync(filePath).size;
   const verified = await verifyUpload({
@@ -183,18 +206,67 @@ async function main() {
     ]
   });
 
+  // A release with a short or missing asset is not a release that worked,
+  // whoever is running this. The Release workflow depends on this exit code
+  // to stop before publishing.
+  if (verified === 'mismatch') {
+    process.exitCode = 1;
+    if (options.changelog) {
+      console.log('Left CHANGELOG.md alone until the assets on the release are right.');
+    }
+    return;
+  }
+
   if (!options.changelog) {
     return;
   }
 
   // After the upload and its check, never before: a changelog saying a
   // version shipped is wrong if its assets did not arrive intact.
-  if (verified === 'mismatch') {
-    console.log('Left CHANGELOG.md alone until the assets on the release are right.');
-    return;
-  }
 
   updateChangelog({ version, tag });
+}
+
+/**
+ * Refuses `--clobber` on anything but a draft.
+ *
+ * Replacing an asset is how a re-run recovers from an upload that failed
+ * halfway, and on a draft nobody can have downloaded what is replaced. On a
+ * published release it would swap a file out from under the checksum people
+ * already verified against, so a release that cannot be confirmed to be a
+ * draft is treated as published.
+ */
+async function assertDraft({ tag, repo, read = readGh }) {
+  const args = ['release', 'view', tag, '--json', 'isDraft'];
+  if (repo !== undefined) args.push('--repo', repo);
+
+  const output = await read(args);
+  let isDraft = false;
+  try {
+    isDraft = output !== null && JSON.parse(output).isDraft === true;
+  } catch {
+    // Unreadable is not a draft.
+  }
+
+  if (!isDraft) {
+    throw new Error(
+      `--clobber only replaces assets on a draft, and ${tag} is ${
+        output === null ? 'not a release that could be read' : 'published'
+      }.`
+    );
+  }
+}
+
+/**
+ * The builds a release carries that are not in `outputDir`, by name.
+ *
+ * Checked before anything is written. The checksum step would fail on a
+ * missing build too, but on the first one only, and after deciding to upload.
+ */
+function missingAssets(version, outputDir = OUTPUT_DIR) {
+  return resolveReleaseAssets({ version, targetName: 'release', outputDir })
+    .filter((asset) => !fs.existsSync(asset.path))
+    .map((asset) => asset.basename);
 }
 
 /**
@@ -311,6 +383,8 @@ if (require.main === module) {
 
 module.exports = {
   parseArgs,
+  assertDraft,
+  missingAssets,
   quoteForDisplay,
   runGh,
   readGh,

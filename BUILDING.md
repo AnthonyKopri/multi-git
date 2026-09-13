@@ -1,7 +1,8 @@
 # Building And Releasing Multi-Git
 
-How to run the project from source, check it, and produce the two Windows
-artifacts: the **NSIS installer** and the **portable executable**.
+How to run the project from source, check it, and release it: the **NSIS
+installer** and the **portable executable** for Windows, and the **macOS disk
+image**, all built and published by GitHub Actions.
 
 For contribution rules and coding conventions see [CONTRIBUTING.md](CONTRIBUTING.md).
 For what the app does see [README.md](README.md).
@@ -25,14 +26,16 @@ For what the app does see [README.md](README.md).
 | npm | ships with Node | `npm --version` |
 | Git | any recent release | must be on `PATH`; the app shells out to it |
 | OpenSSH | `ssh`, `ssh-add`, and `ssh-keygen` on `PATH` | needed at runtime, not to build |
-| Windows | 10 or 11 | required to build the Windows artifacts |
+| Windows | 10 or 11 | required to build the Windows artifacts locally |
 
 Building the Windows targets on macOS or Linux is not supported by this
-project's configuration. Develop anywhere; cut releases on Windows.
+project's configuration, and the macOS disk image can only be built on a Mac.
+Develop anywhere: releases are built on GitHub Actions, one runner per
+platform — see [Releasing a new version](#releasing-a-new-version).
 
 The GitHub CLI (`gh`) is optional. It is used at runtime by the new-repository
-dialog and the pull-request creator, and by `npm run release:upload`. Local
-builds and checksum generation do not need it.
+dialog and the pull-request creator, and to start a release from the command
+line. Local builds and checksum generation do not need it.
 
 ## First-time setup
 
@@ -146,7 +149,162 @@ Beyond that, verification is manual. The paths worth walking before a release:
 
 ## Releasing a new version
 
-`npm run release` bumps the version, builds, and writes SHA-256 checksums,
+Releases are built and published by GitHub Actions, in
+[`.github/workflows/release.yml`](.github/workflows/release.yml). Nothing is
+built on your machine and nothing is uploaded from it, so a release does not
+depend on which computer it was cut from, and the macOS build — which can only
+be made on a Mac — comes out of the same run as the Windows ones.
+
+A release is two steps.
+
+**1. Prepare the version**, on a branch:
+
+```bash
+npm run release:prepare -- --bump minor
+```
+
+That bumps `package.json` and `package-lock.json`, and moves the Unreleased
+entries in `CHANGELOG.md` under a heading for the new version. Commit both and
+merge them to `main` through a pull request. `--bump` takes `patch`, `minor`,
+`major`, or an explicit `x.y.z`; `--dry-run` says what would change.
+
+**2. Run the Release workflow** on `main`, from **Actions → Release → Run
+workflow**, or:
+
+```bash
+gh workflow run release.yml
+```
+
+It releases whatever version `package.json` on `main` carries:
+
+1. **plan** reads the version, and stops if that version is already released
+   or its tag already points somewhere else;
+2. **wait for CI** waits for CI on the same commit to pass — so running this
+   straight after the merge is fine — and stops if it fails;
+3. **build (Windows)** and **build (macOS)** run meanwhile, each on its own
+   runner, and each checks what it built (below);
+4. **publish** creates the release as a draft, titled `Multi-Git v<version>`
+   on a `Release_v<version>` tag, attaches every build and `SHA256SUMS.txt`,
+   reads the release back to confirm each asset arrived at full size, publishes
+   it, and checks that an installed copy would be offered it.
+
+The draft stage is not something to act on: it is how every file is in place
+before the release is public, and before its tag exists. A version whose number
+has a prerelease suffix (`5.0.0-beta.1`) is released as a GitHub prerelease,
+which the updater never offers.
+
+| Input | Effect |
+| --- | --- |
+| **draft** | Stop at the draft, with every build attached, so the notes can be edited before you publish it yourself. Works from any branch. |
+| **dry run** | Build and assemble everything, attaching the builds, the checksums and the notes to the run as artifacts, and create no release. Works from any branch, and does not wait for CI. |
+
+The workflow also runs as a dry run on every pull request that changes the
+packaging or the release scripts, so a build that no longer works shows up
+there instead of on release day.
+
+If a run fails, fix the cause and re-run its failed jobs. A draft left behind by
+an earlier run is reused: pointed at the new commit, its assets replaced, its
+notes kept.
+
+### What each build checks
+
+The Windows build confirms the installer and the portable executable both
+exist under the names the upload and the updater look for, and that the
+executable they wrap carries the product name, description and version.
+
+The macOS disk image is universal: one download for Apple silicon and Intel
+Macs. The build mounts it and checks the bundle's version, both architectures,
+that `app.asar` holds the app's entry point, and the code signature, then
+launches the app and fails if it exits or cannot boot.
+
+### What goes into the release notes
+
+The notes are written from the changelog rather than linking to it: the entries
+under this version become the `What's new`, `What's fixed` and similar
+sections, followed by the downloads, named from the same table the upload uses,
+and a footer linking the full changelog and the comparison against the previous
+release. Wrapped changelog prose is unwrapped, since GitHub renders every line
+break in a release body.
+
+They are a starting point. Edit them on the release afterwards, or tick
+**draft** to edit them before it is published. To see them first:
+
+```bash
+npm run release:notes
+```
+
+`--intro <file>` and `--verification <file>` add an opening paragraph and a
+Verification section, for a release whose notes are written by hand.
+
+### Signing and notarization
+
+The Windows builds are not code-signed, and Windows may show a SmartScreen
+warning for them.
+
+Without an Apple Developer ID, the macOS app is ad-hoc signed. That is enough
+for it to run, but not for Gatekeeper: a Mac that downloads it says Apple could
+not verify it, and will not open it until the user chooses **Open Anyway** under
+**System Settings → Privacy & Security**. Say so in the release notes while
+that is the case.
+
+With an Apple Developer Program membership, the macOS build signs and
+notarizes instead, once these repository secrets exist:
+
+| Secret | What it is |
+| --- | --- |
+| `MACOS_CERTIFICATE` | The *Developer ID Application* certificate and key, exported as `.p12` and base64-encoded |
+| `MACOS_CERTIFICATE_PASSWORD` | The password the `.p12` was exported with |
+| `APPLE_ID` | The Apple ID of the developer account |
+| `APPLE_APP_SPECIFIC_PASSWORD` | An app-specific password for that Apple ID |
+| `APPLE_TEAM_ID` | The ten-character team ID |
+
+The certificate alone signs without notarizing, and the build warns about it:
+Gatekeeper still blocks a build that is signed but not notarized.
+
+### Verifying the release is discoverable
+
+The workflow's last step runs this, and it can be run by hand at any time:
+
+```bash
+npm run release:verify
+```
+
+It queries the same GitHub API the in-app updater does and applies the same
+filters, then reports each check individually. The things that hide a release
+from the updater — a mistyped or miscased tag, a tag whose version disagrees
+with `package.json`, a release left as a draft or ticked as a pre-release, a
+missing artifact or checksum file — all fail *silently*: nothing errors, the
+release is simply invisible, and nobody updates. This is what catches that.
+
+It exits non-zero when the release would not be offered. A missing build for a
+platform the updater does not serve, such as macOS, is reported as a warning
+instead: every installed copy still finds the release. To check a specific one:
+
+```bash
+npm run release:verify -- --tag Release_v3.0.0
+```
+
+When `dist/SHA256SUMS.txt` is present, it also compares the published checksums
+against it, which catches artifacts rebuilt between generating the manifest and
+uploading it. With `GH_TOKEN` set it asks with that token, which avoids the
+anonymous rate limit of 60 requests an hour.
+
+### Checking what reached the release
+
+The upload step reads the release back and prints each asset with the size
+GitHub reports, next to the size of the file it uploaded, and fails when one is
+missing or short.
+
+This exists because GitHub's own release editor is misleading here: assets
+uploaded through the API or the CLI are shown on the **Edit release** page as
+*"Upload failed. Delete and try uploading this file again"*, no matter how
+completely they uploaded. Following that advice deletes a working download. The
+API's view of the release is the truth, and that is what this prints.
+
+### Building locally
+
+`npm run release` builds the Windows artifacts on this machine, to try them
+before releasing. It bumps the version, builds, and writes SHA-256 checksums,
 asking about both:
 
 ```bash
@@ -154,9 +312,13 @@ npm run release
 ```
 
 It works locally only. Nothing is uploaded, no GitHub token is needed, and the
-version bump is left uncommitted for you to review. If compilation, packaging,
-or checksum generation fails, the bump is rolled back so a failed release does
-not leave the project renamed.
+version bump is left uncommitted. If compilation, packaging, or checksum
+generation fails, the bump is rolled back. To build without changing the
+version, which is what trying a change usually wants:
+
+```bash
+node scripts/release.js --bump none --target both
+```
 
 ```text
 Current version: 1.0.5
@@ -177,32 +339,7 @@ Target [3]:
 The version is written to both `package.json` and `package-lock.json`. After a
 successful build, `dist/SHA256SUMS.txt` is replaced atomically with checksums
 for exactly the target or targets built by that invocation. Stale executables
-in `dist/` are never included. The bump is **not** committed or tagged — review
-the artifacts first, then commit and tag yourself:
-
-```bash
-git commit -am "chore: release v1.0.6"
-```
-
-```bash
-git tag Release_v1.0.6
-```
-
-### Skipping the prompts
-
-Every prompt has a flag, so the same script works in CI or a one-liner:
-
-```bash
-node scripts/release.js --bump patch --target both --yes
-```
-
-To rebuild the already-versioned release without accidentally incrementing it,
-pass `none` explicitly. A non-interactive invocation with no flags defaults to
-a patch bump:
-
-```bash
-node scripts/release.js --bump none --target both
-```
+in `dist/` are never included.
 
 | Flag | Values | Default when omitted |
 | --- | --- | --- |
@@ -222,194 +359,38 @@ npm run release:installer
 npm run release:portable
 ```
 
-To see what a release would do without touching anything:
+A macOS build cannot be made this way. For one to try, run the Release workflow
+with **dry run** ticked and download `build-macos` from the run.
 
-```bash
-node scripts/release.js --bump minor --target both --dry-run
-```
+### Uploading by hand
 
-To rebuild without changing the version:
-
-```bash
-node scripts/release.js --bump none --target both
-```
-
-### The whole release in one command
-
-```bash
-npm run release:ship
-```
-
-Runs the six steps below in order, stopping before each one to ask
-`[Y]es / [s]kip / [q]uit`:
-
-1. build the artifacts and checksums (`scripts/release.js`)
-2. commit and push the version bump
-3. create the GitHub release as a draft, titled `Multi-Git v<version>` on a
-   `Release_v<version>` tag, with notes written from this version's changelog
-   entry
-4. upload the assets, verify them, and close the changelog
-5. commit and push the changelog
-6. publish the draft — only with `--publish`
-
-Nothing here replaces the individual commands; each step spawns the documented
-one and passes its output straight through, so running them by hand still works
-exactly as described below.
-
-### What goes into the release notes
-
-Step 3 writes the notes rather than linking to them: the entries under this
-version — or under Unreleased, which is where they still are at that point —
-become the `What's new` and `What's fixed` sections, followed by the downloads
-named from the same table the upload uses, and a footer linking the full
-changelog and the comparison against the previous release.
-
-Two parts are not derivable and are not invented. The opening paragraph and the
-account of what was verified are judgement, so they come from files:
-
-```bash
-npm run release:ship -- --bump patch --intro notes/intro.md --verification notes/verified.md
-```
-
-Left out, the release simply has no such section and step 3 says so before the
-draft is created. That is a draft precisely so the missing half can be written
-before anybody sees it.
-
-The check before step 1 says which branch you are on and warns if it is not the
-one releases are cut from — building elsewhere packages that branch's code and
-tags it as the release.
-
-A step that is already done is detected and skipped — a version already
-committed, a release that already exists, a changelog with nothing to move — so
-this is safe to re-run after a step fails partway through.
-
-| Flag | Effect |
-| --- | --- |
-| `--bump <spec>` | `patch`, `minor`, `major`, `x.y.z`, or `none`. Omitted, the build asks. |
-| `--tag <tag>` | Release tag. Defaults to `Release_v<version>`. |
-| `--repo`, `-R` | GitHub repository in `OWNER/REPO` form. |
-| `--intro <file>` | Opening paragraph for the release notes. |
-| `--verification <file>` | What was verified, for the notes' Verification section. |
-| `--publish` | Publish the draft at the end. Off by default: publishing is the irreversible step. |
-| `--no-changelog` | Upload without closing the Unreleased section. Passed through to the upload step. |
-| `--yes`, `-y` | Do not ask; run every step. |
-| `--dry-run` | Print what each step would run and change nothing. |
-
-To see the whole thing without touching anything:
-
-```bash
-npm run release:ship -- --dry-run --yes
-```
-
-### Uploading the assets and applying GitHub labels
-
-Create the GitHub release as a draft first, then upload the already-built
-artifacts with:
-
-```bash
-npm run release:upload
-```
-
-The default tag is `Release_v<package version>`. To select it explicitly:
+The workflow uploads with this command, and it is the fallback for attaching
+builds to an existing release yourself:
 
 ```bash
 npm run release:upload -- --tag Release_v3.0.0
 ```
 
-This command regenerates `SHA256SUMS.txt` from the exact files it is about to
-upload, then runs `gh release upload` with these display labels:
+It needs every build of the release in `dist/` — both Windows executables and
+the macOS disk image, which a dry run's artifacts provide — and stops before
+writing anything if one is missing. It regenerates `SHA256SUMS.txt` from exactly
+the files it is about to upload, so the manifest always describes the full set,
+then runs `gh release upload` with these display labels:
 
 - `Windows installer (recommended)`
 - `Portable Windows executable`
+- `macOS disk image (Apple silicon and Intel)`
 - `SHA-256 checksums`
 
-### Verifying the release is discoverable
+It will not replace an asset that is already on the release unless given
+`--clobber`, and refuses `--clobber` on anything but a draft: a published
+download may already have been checked against its checksum. `--dry-run` prints
+the exact `gh` command and names any build that is missing.
 
-After publishing, check that an installed copy will actually find it:
-
-```bash
-npm run release:verify
-```
-
-This queries the same GitHub API the in-app updater does and applies the same
-filters, then reports each check individually. Run it every time. The things
-that hide a release from the updater — a mistyped or miscased tag, a tag whose
-version disagrees with `package.json`, a release left as a draft or ticked as a
-pre-release, a missing artifact or checksum file — all fail *silently*: nothing
-errors, the release is simply invisible, and nobody updates. This is the only
-step that catches that.
-
-It exits non-zero when the release would not be offered, so it can gate a
-release script. To check a specific release:
-
-```bash
-npm run release:verify -- --tag Release_v3.0.0
-```
-
-When `dist/SHA256SUMS.txt` from the build is still present, it also compares the
-published checksums against it, which catches artifacts rebuilt between
-generating the manifest and uploading it.
-
-The upload command requires both executables, an existing release, and an
-authenticated GitHub CLI. It always uploads the installer, portable build, and
-their shared checksum file together, so the manifest always describes the full
-binary set and split uploads cannot collide on it. It does not use `--clobber`,
-so it will not delete an existing asset to replace it. Upload to a draft before
-publishing when immutable releases are enabled; names and labels cannot be
-changed after publication in that mode.
-
-Use `--dry-run` to print the exact `gh` command without writing or uploading:
-
-```bash
-npm run release:upload -- --tag Release_v3.0.0 --dry-run
-```
-
-### Checking what reached the release
-
-After uploading, the command reads the release back and prints each asset with
-the size GitHub reports, next to the size of the file on disk.
-
-This exists because GitHub's own release editor is misleading here: assets
-uploaded through the API or the CLI are shown on the **Edit release** page as
-*"Upload failed. Delete and try uploading this file again"*, no matter how
-completely they uploaded. Following that advice deletes a working download. The
-API's view of the release is the truth, and that is what this prints.
-
-If an asset is missing or short, the command says which one and leaves
-`CHANGELOG.md` alone — a changelog saying a version shipped is wrong if its
-assets did not arrive. If the release cannot be read back at all, that is
-reported and nothing fails: the upload has already succeeded by then.
-
-### Closing the Unreleased section
-
-After a successful upload, the command rewrites `CHANGELOG.md`:
-
-- everything under `## [Unreleased]` moves under a new `## [<version>] - <date>`
-  heading, so entries end up beneath the release that shipped them;
-- `[<version>]` gains a compare link from the previous release's tag to this
-  one, because a version with no link definition renders as literal brackets;
-- `[Unreleased]` is re-based onto the new tag, so it compares against the
-  release that just shipped rather than an older one.
-
-The guidance comment stays under `## [Unreleased]`, ready for the next release.
-The repository URL is read from the link definitions already in the file, so a
-fork gets its own links without editing anything here.
-
-The edit is left in the working tree; nothing is committed for you. Review it
-and commit it with the release.
-
-This runs after `gh release upload` succeeds, never before — a changelog saying
-a version shipped is wrong if its assets never reached the release. It is also
-safe to re-run: a version that already has a section, or an Unreleased section
-with nothing in it, is reported and left alone rather than duplicated. A failure
-here is a warning, not a failed release, since the release is already public by
-then.
-
-`--dry-run` reports what it would do. Pass `--no-changelog` to skip the step:
-
-```bash
-npm run release:upload -- --no-changelog
-```
+After a verified upload it also closes the Unreleased section of
+`CHANGELOG.md`, for a release that was not prepared with
+`npm run release:prepare`; `--no-changelog` leaves the file alone. A version
+that already has a section is left alone either way.
 
 ## Build targets in detail
 
@@ -455,6 +436,21 @@ npm run build-standalone
 Same portable target, written to `dist-standalone/` instead of `dist/` so it
 does not collide with an installer build.
 
+### macOS disk image
+
+On a Mac only:
+
+```bash
+npx electron-builder --mac
+```
+
+Produces `dist/Multi-Git-Client-macOS-<version>.dmg`, a universal build for
+Apple silicon and Intel. Configured in `package.json` under `build.mac` and
+`build.dmg`. Its icon is `docs/images/multi-git_icon.svg`, rasterized by
+Electron Builder; the Windows `.ico` is 256px, below the 512px an `.icns`
+needs. Without a signing certificate in the keychain, add `-c.mac.identity=-`
+for the ad-hoc signature the Release workflow uses.
+
 ### After-pack step
 
 `scripts/after-pack.js` runs automatically after packaging. It stamps the
@@ -479,6 +475,12 @@ value with PowerShell and compare it with the matching line:
 
 ```powershell
 Get-FileHash -Algorithm SHA256 -LiteralPath .\Multi-Git-Client-Setup-3.0.0.exe
+```
+
+On a Mac, in Terminal:
+
+```bash
+shasum -a 256 Multi-Git-Client-macOS-3.0.0.dmg
 ```
 
 Expect a few hundred megabytes per build. Delete the folder between releases

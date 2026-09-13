@@ -22,8 +22,9 @@
     "release": "node scripts/release.js",
     "release:installer": "node scripts/release.js --target installer",
     "release:portable": "node scripts/release.js --target portable",
+    "release:prepare": "node scripts/prepare-release.js",
+    "release:notes": "node scripts/release-notes.js",
     "release:upload": "node scripts/upload-release-assets.js",
-    "release:ship": "node scripts/ship.js",
     "release:verify": "node scripts/verify-release.js"
   },
   "engines": {
@@ -84,6 +85,21 @@
     },
     "portable": {
       "artifactName": "Multi-Git-Client-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "icon": "docs/images/multi-git_icon.svg",
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "artifactName": "Multi-Git-Client-macOS-${version}.${ext}"
     }
   }
 }

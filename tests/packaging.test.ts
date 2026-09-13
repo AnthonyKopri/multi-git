@@ -5,6 +5,7 @@
 // DOM id the client looks up but the HTML never defines.
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 
 import { fromAppRoot } from '../src/server/app-root';
 
@@ -17,8 +18,15 @@ interface PackageManifest {
     icon?: string;
     nsis?: { artifactName?: string };
     portable?: { artifactName?: string };
+    mac?: { icon?: string; target?: Array<{ target: string; arch: string[] }> };
+    dmg?: { artifactName?: string };
   };
 }
+
+const require = createRequire(import.meta.url);
+const { RELEASE_ASSETS } = require('../scripts/release-assets.js') as {
+  RELEASE_ASSETS: Record<'installer' | 'portable' | 'macos', { basename(version: string): string }>;
+};
 
 function readManifest(): PackageManifest {
   return JSON.parse(fs.readFileSync(fromAppRoot('package.json'), 'utf8')) as PackageManifest;
@@ -39,6 +47,29 @@ describe('packaging', () => {
     expect(manifest.build?.portable?.artifactName).toBe(
       'Multi-Git-Client-Portable-${version}.${ext}'
     );
+  });
+
+  it('names the macOS disk image what the upload looks for', () => {
+    // Built on GitHub Actions and fetched by name, so a rename on one side
+    // only shows up as a missing file in the middle of a release.
+    const built = (manifest.build?.dmg?.artifactName ?? '')
+      .replace('${version}', '3.0.0')
+      .replace('${ext}', 'dmg');
+
+    expect(built).toBe(RELEASE_ASSETS.macos.basename('3.0.0'));
+  });
+
+  it('builds one disk image for both Apple silicon and Intel Macs', () => {
+    expect(manifest.build?.mac?.target).toEqual([{ target: 'dmg', arch: ['universal'] }]);
+  });
+
+  it('gives the macOS build an icon that exists', () => {
+    // The Windows .ico is 256px, below the 512px electron-builder requires
+    // for an .icns, so macOS has its own source.
+    const icon = manifest.build?.mac?.icon ?? '';
+
+    expect(icon).not.toBe('');
+    expect(fs.existsSync(fromAppRoot(...icon.split('/')))).toBe(true);
   });
 
   it('ships the template bodies the new-repository wizard reads', () => {

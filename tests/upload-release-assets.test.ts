@@ -1,4 +1,7 @@
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 interface UploadOptions {
@@ -6,6 +9,7 @@ interface UploadOptions {
   repo: string | null;
   dryRun: boolean;
   changelog: boolean;
+  clobber: boolean;
   help: boolean;
 }
 
@@ -24,6 +28,12 @@ interface VerifyOptions {
 
 interface UploadScriptApi {
   parseArgs(argv: string[]): UploadOptions;
+  missingAssets(version: string, outputDir?: string): string[];
+  assertDraft(options: {
+    tag: string;
+    repo?: string;
+    read: (args: string[]) => Promise<string | null>;
+  }): Promise<void>;
   quoteForDisplay(value: string): string;
   verifyUpload(options: VerifyOptions): Promise<'ok' | 'mismatch' | 'unknown'>;
 }
@@ -40,6 +50,8 @@ describe('release upload command', () => {
       // Closing the Unreleased section is part of publishing a release, so it
       // is on unless it is turned off.
       changelog: true,
+      // Replacing an asset someone may have downloaded is never a default.
+      clobber: false,
       help: false
     });
   });
@@ -63,8 +75,53 @@ describe('release upload command', () => {
     expect(uploadScript.parseArgs(['--no-changelog']).changelog).toBe(false);
   });
 
+  it('can be told to replace what is already on a draft', () => {
+    expect(uploadScript.parseArgs(['--clobber']).clobber).toBe(true);
+  });
+
+  it('replaces assets on a draft only, never on a published release', async () => {
+    // A published download may already have been checked against its
+    // checksum; swapping it out from under that is not a recovery.
+    const reading = (output: string | null) => async () => output;
+
+    await expect(
+      uploadScript.assertDraft({ tag: 'Release_v3.0.0', read: reading('{"isDraft":true}') })
+    ).resolves.toBeUndefined();
+    await expect(
+      uploadScript.assertDraft({ tag: 'Release_v3.0.0', read: reading('{"isDraft":false}') })
+    ).rejects.toThrow('Release_v3.0.0 is published');
+    // Not being able to look is not permission.
+    await expect(uploadScript.assertDraft({ tag: 'Release_v3.0.0', read: reading(null) })).rejects.toThrow(
+      'only replaces assets on a draft'
+    );
+    await expect(uploadScript.assertDraft({ tag: 'Release_v3.0.0', read: reading('not json') })).rejects.toThrow(
+      'only replaces assets on a draft'
+    );
+  });
+
+  it('names every missing build at once, including the ones no local build makes', () => {
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-upload-'));
+    try {
+      expect(uploadScript.missingAssets('3.0.0', outputDir)).toEqual([
+        'Multi-Git-Client-Setup-3.0.0.exe',
+        'Multi-Git-Client-Portable-3.0.0.exe',
+        'Multi-Git-Client-macOS-3.0.0.dmg'
+      ]);
+
+      // What `npm run release` leaves behind: the Windows builds only.
+      fs.writeFileSync(path.join(outputDir, 'Multi-Git-Client-Setup-3.0.0.exe'), 'setup');
+      fs.writeFileSync(path.join(outputDir, 'Multi-Git-Client-Portable-3.0.0.exe'), 'portable');
+      expect(uploadScript.missingAssets('3.0.0', outputDir)).toEqual(['Multi-Git-Client-macOS-3.0.0.dmg']);
+
+      fs.writeFileSync(path.join(outputDir, 'Multi-Git-Client-macOS-3.0.0.dmg'), 'image');
+      expect(uploadScript.missingAssets('3.0.0', outputDir)).toEqual([]);
+    } finally {
+      fs.rmSync(outputDir, { recursive: true, force: true });
+    }
+  });
+
   it('rejects unknown options and missing values before any upload', () => {
-    expect(() => uploadScript.parseArgs(['--clobber'])).toThrow('Unknown option');
+    expect(() => uploadScript.parseArgs(['--force'])).toThrow('Unknown option');
     expect(() => uploadScript.parseArgs(['--target', 'portable'])).toThrow('Unknown option');
     expect(() => uploadScript.parseArgs(['--tag', '--dry-run'])).toThrow(
       '--tag requires a value'

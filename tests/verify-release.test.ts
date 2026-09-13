@@ -12,6 +12,7 @@ interface VerifyScriptApi {
   parseArgs(argv: string[]): Record<string, string | boolean>;
   parseChecksumManifest(text: string): Map<string, string>;
   highestOffer(releases: unknown[], version: string): string | null;
+  authHeaders(env: Record<string, string | undefined>): Record<string, string>;
   RELEASE_TAG: RegExp;
 }
 
@@ -125,5 +126,22 @@ describe('argument parsing', () => {
     expect(() => verify.parseArgs(['--tag'])).toThrow(/needs a value/);
     expect(() => verify.parseArgs(['--tag', '--repo'])).toThrow(/needs a value/);
     expect(() => verify.parseArgs(['--nope'])).toThrow(/Unknown option/);
+  });
+});
+
+describe('asking as the Release workflow', () => {
+  it('uses a token from the environment when there is one, and asks anonymously otherwise', () => {
+    // A shared runner address has usually used up the anonymous rate limit.
+    expect(verify.authHeaders({ GH_TOKEN: 'abc' })).toEqual({ Authorization: 'Bearer abc' });
+    expect(verify.authHeaders({ GITHUB_TOKEN: 'def' })).toEqual({ Authorization: 'Bearer def' });
+    expect(verify.authHeaders({ GH_TOKEN: '', GITHUB_TOKEN: '' })).toEqual({});
+    expect(verify.authHeaders({})).toEqual({});
+  });
+
+  it('never offers a draft, which a token makes visible', () => {
+    // With a token the draft is in the list the checks read, so it has to be
+    // excluded by its flag rather than by its absence.
+    const draft = { ...release('3.2.0'), draft: true };
+    expect(verify.highestOffer([draft], '3.2.0')).toBeNull();
   });
 });
