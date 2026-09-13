@@ -175,8 +175,8 @@ async function main() {
   const missing = missingAssets(version);
   if (missing.length > 0) {
     throw new Error(
-      `Not in dist/: ${missing.join(', ')}. A release carries every build, and the ` +
-        'macOS one can only be made on a Mac, so releases are built by the Release workflow.'
+      `Not in dist/: ${missing.join(', ')}. A release carries every build, and each ` +
+        'platform builds on its own runner, so releases are built by the Release workflow.'
     );
   }
 

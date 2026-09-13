@@ -147,7 +147,7 @@ export function usableReleases(releases: unknown): ReleaseCandidate[] {
 }
 
 /** The release asset a build needs, named in scripts/release-assets.js. */
-export type UpdateArtifact = 'installer' | 'portable' | 'macos';
+export type UpdateArtifact = 'installer' | 'portable' | 'macos' | 'appimage' | 'deb' | 'rpm';
 
 export interface SelectUpdateInput {
   releases: unknown;
@@ -166,8 +166,9 @@ export interface SelectUpdateInput {
  * shipped shape. A portable user must fall through to the newest release that
  * actually has a portable exe rather than being offered one it cannot use.
  *
- * The same holds for a Mac copy, which downloads nothing itself: a release
- * with no disk image would send the user to a page with nothing for them on it.
+ * The same holds for a copy that downloads nothing itself, on a Mac or from a
+ * Linux .deb or .rpm: a release without its package would send the user to a
+ * page with nothing for them on it.
  *
  * The checksum manifest is required for the same reason the download verifies
  * against it: without one there is nothing to check, and an unverifiable
@@ -227,11 +228,17 @@ export function assetBasename(kind: UpdateArtifact, version: string): string {
       return `Multi-Git-Client-Portable-${version}.exe`;
     case 'macos':
       return `Multi-Git-Client-macOS-${version}.dmg`;
+    case 'appimage':
+      return `Multi-Git-Client-Linux-${version}-x86_64.AppImage`;
+    case 'deb':
+      return `Multi-Git-Client-Linux-${version}-amd64.deb`;
+    case 'rpm':
+      return `Multi-Git-Client-Linux-${version}-x86_64.rpm`;
   }
 }
 
 /**
- * The page a Mac copy opens for a release.
+ * The page a copy updated by hand opens for a release.
  *
  * Built from the tag rather than taken from the API's `html_url`, so the host
  * and repository are this module's constants whatever the response said. The

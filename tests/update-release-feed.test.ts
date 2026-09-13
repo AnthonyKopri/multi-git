@@ -142,6 +142,23 @@ describe('selecting an update', () => {
     expect(pick([windowsOnly], '3.1.1', 'macos')).toBeNull();
   });
 
+  it('tells each Linux build only about a release that carries its own package', () => {
+    const windowsOnly = release('3.4.0');
+    const appImageOnly = release('3.3.0', {}, ['Multi-Git-Client-Linux-3.3.0-x86_64.AppImage', CHECKSUM_ASSET]);
+    const allLinux = release('3.2.0', {}, [
+      'Multi-Git-Client-Linux-3.2.0-x86_64.AppImage',
+      'Multi-Git-Client-Linux-3.2.0-amd64.deb',
+      'Multi-Git-Client-Linux-3.2.0-x86_64.rpm',
+      CHECKSUM_ASSET
+    ]);
+    const releases = [windowsOnly, appImageOnly, allLinux];
+
+    expect(pick(releases, '3.1.1', 'appimage')?.version).toBe('3.3.0');
+    expect(pick(releases, '3.1.1', 'deb')?.version).toBe('3.2.0');
+    expect(pick(releases, '3.1.1', 'rpm')?.version).toBe('3.2.0');
+    expect(pick([windowsOnly], '3.1.1', 'appimage')).toBeNull();
+  });
+
   it('refuses a release that published no checksum manifest', () => {
     const unverifiable = release('3.2.0', {}, ['Multi-Git-Client-Setup-3.2.0.exe']);
     expect(pick([unverifiable], '3.1.1')).toBeNull();
@@ -240,14 +257,15 @@ describe('agreement with the release pipeline', () => {
   };
 
   it('expects the artifact names the release script actually writes', () => {
+    const kinds: UpdateArtifact[] = ['installer', 'portable', 'macos', 'appimage', 'deb', 'rpm'];
+    // Every asset a release carries is one some build looks for, and no build
+    // looks for one the release does not carry.
+    expect(Object.keys(releaseAssets.RELEASE_ASSETS).sort()).toEqual([...kinds].sort());
+
     for (const version of ['3.2.0', '10.0.14']) {
-      expect(assetBasename('installer', version)).toBe(
-        releaseAssets.RELEASE_ASSETS.installer.basename(version)
-      );
-      expect(assetBasename('portable', version)).toBe(
-        releaseAssets.RELEASE_ASSETS.portable.basename(version)
-      );
-      expect(assetBasename('macos', version)).toBe(releaseAssets.RELEASE_ASSETS.macos.basename(version));
+      for (const kind of kinds) {
+        expect(assetBasename(kind, version), kind).toBe(releaseAssets.RELEASE_ASSETS[kind].basename(version));
+      }
     }
   });
 

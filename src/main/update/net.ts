@@ -302,7 +302,15 @@ export const httpsFetcher: Fetcher = (url, headers) =>
  * and copying across volumes can half-finish, which for the portable build
  * would mean a truncated exe sitting under the name the user double-clicks.
  */
-export const fileSinkFactory: SinkFactory = async (destPath) => {
+export interface FileSinkOptions {
+  /** Makes the file executable before it takes its name, as an AppImage must be. */
+  executable?: boolean;
+}
+
+export const fileSinkFactory = async (
+  destPath: string,
+  options: FileSinkOptions = {}
+): Promise<FileSink> => {
   const partPath = `${destPath}.part`;
   await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
   await fs.promises.rm(partPath, { force: true });
@@ -324,7 +332,18 @@ export const fileSinkFactory: SinkFactory = async (destPath) => {
     finish: close,
     commit: async () => {
       await close();
-      await fs.promises.rm(destPath, { force: true });
+      if (options.executable) {
+        // Before the rename, so the name never belongs to a file that cannot
+        // be started: an AppImage replaced by one without the bit set would
+        // leave the user nothing to open.
+        await fs.promises.chmod(partPath, 0o755);
+      }
+      // Elsewhere rename replaces the destination in one step, which is what
+      // lets an AppImage be updated where it is: there is no moment at which
+      // its path is empty. Windows keeps removing the old file first.
+      if (process.platform === 'win32') {
+        await fs.promises.rm(destPath, { force: true });
+      }
       await fs.promises.rename(partPath, destPath);
     },
     discard: async () => {

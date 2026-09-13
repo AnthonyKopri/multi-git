@@ -5,9 +5,10 @@
 #
 #   gh workflow run release.yml
 #
-# Nothing is built on anyone's machine. Windows is built on a Windows runner
-# and macOS on a Mac, in parallel, while the run waits for CI to pass on the
-# same commit. Then the release is created as a draft, every build and
+# Nothing is built on anyone's machine. Windows is built on a Windows runner,
+# macOS on a Mac and Linux on Ubuntu, in parallel, while the run waits for CI
+# to pass on the same commit. The Linux packages are then installed on Debian,
+# Fedora and openSUSE. Then the release is created as a draft, every build and
 # SHA256SUMS.txt are attached and read back, and only then is it published, so
 # an installed copy never sees a release with a download missing, and the tag
 # does not exist until everything it names does.
@@ -40,6 +41,7 @@ on:
       - package.json
       - package-lock.json
       - docs/images/multi-git-logo.ico
+      - docs/images/multi-git-logo.png
       - docs/images/multi-git_icon.svg
       - scripts/after-pack.js
       - scripts/changelog.js
@@ -416,15 +418,302 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+  linux:
+    name: build (Linux)
+    needs: plan
+    # Pinned rather than -latest: the packages installed below are named for
+    # this Ubuntu release, and the .deb is installed and launched on it.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      product: ${{ steps.verify.outputs.product }}
+      executable: ${{ steps.verify.outputs.executable }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install the tools to build and run the packages
+        # rpmbuild makes the .rpm. libfuse2 is what an AppImage needs to run,
+        # on a user's machine as here, and xvfb gives the launches a display.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rpm libfuse2t64 xvfb
+          if ! command -v fusermount >/dev/null && ! command -v fusermount3 >/dev/null; then
+            sudo apt-get install -y --no-install-recommends fuse3
+          fi
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Package
+        # The AppImage, the .deb and the .rpm, all x86_64, from build.linux.
+        run: npx electron-builder --linux --publish never
+
+      - name: Verify the packages
+        id: verify
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          product=$(node -p "require('./package.json').build.productName")
+          # electron-builder names the executable and the package after this.
+          executable=$(node -p "require('./package.json').name")
+          echo "product=$product" >> "$GITHUB_OUTPUT"
+          echo "executable=$executable" >> "$GITHUB_OUTPUT"
+
+          asset() {
+            node -e "console.log(require('./scripts/release-assets').resolveReleaseAssets({ version: process.argv[1], targetName: 'release' }).find((a) => a.key === process.argv[2]).path)" "$VERSION" "$1"
+          }
+          appimage=$(asset appimage)
+          deb=$(asset deb)
+          rpm=$(asset rpm)
+
+          for file in "$appimage" "$deb" "$rpm"; do
+            if [ ! -f "$file" ]; then
+              echo "::error::electron-builder did not produce $file."
+              ls -la dist
+              exit 1
+            fi
+          done
+
+          # A .deb and an .rpm record a prerelease's '-' as '~'.
+          packaged=$(printf '%s' "$VERSION" | sed 's/-/~/g')
+
+          # The AppImage, looked inside without mounting it.
+          if [ ! -x "$appimage" ]; then
+            echo "::error::$appimage is not executable."
+            exit 1
+          fi
+          extract="$RUNNER_TEMP/appimage"
+          mkdir -p "$extract"
+          (cd "$extract" && "$appimage" --appimage-extract >/dev/null)
+          root="$extract/squashfs-root"
+
+          if ! grep -qx "X-AppImage-Version=$VERSION" "$root/$executable.desktop"; then
+            echo "::error::The AppImage does not say it is $VERSION:"
+            cat "$root/$executable.desktop"
+            exit 1
+          fi
+
+          # electron-builder falls back to Electron's own icon, with only a
+          # log line, when it cannot use the one configured.
+          icon=$(readlink -f "$root/.DirIcon")
+          if ! cmp -s "$icon" docs/images/multi-git-logo.png; then
+            echo "::error::The AppImage's icon is $icon, not docs/images/multi-git-logo.png."
+            exit 1
+          fi
+
+          # Whether build.files still covers what the app loads at runtime.
+          if ! npx --yes @electron/asar list "$root/resources/app.asar" | grep 'out/node/main/main.js' >/dev/null; then
+            echo "::error::app.asar does not contain out/node/main/main.js."
+            exit 1
+          fi
+
+          # The .deb.
+          field() { dpkg-deb --field "$deb" "$1"; }
+          if [ "$(field Package)" != "$executable" ] || [ "$(field Architecture)" != amd64 ]; then
+            echo "::error::The .deb is $(field Package) for $(field Architecture), expected $executable for amd64."
+            exit 1
+          fi
+          case "$(field Version)" in
+            "$packaged" | "$packaged"-*) ;;
+            *) echo "::error::The .deb is version $(field Version), expected $packaged."; exit 1 ;;
+          esac
+          if ! dpkg-deb --contents "$deb" | grep -F "./opt/$product/$executable" >/dev/null; then
+            echo "::error::The .deb does not install /opt/$product/$executable."
+            exit 1
+          fi
+
+          # The .rpm.
+          query() { rpm -qp --queryformat "$1" "$rpm" 2>/dev/null; }
+          if [ "$(query '%{NAME}')" != "$executable" ] || [ "$(query '%{ARCH}')" != x86_64 ] \
+            || [ "$(query '%{VERSION}')" != "$packaged" ]; then
+            echo "::error::The .rpm is $(query '%{NAME} %{VERSION} %{ARCH}'), expected $executable $packaged x86_64."
+            exit 1
+          fi
+          if ! rpm -qlp "$rpm" 2>/dev/null | grep -xF "/opt/$product/$executable" >/dev/null; then
+            echo "::error::The .rpm does not install /opt/$product/$executable."
+            exit 1
+          fi
+
+          echo "Verified $product $VERSION: $(basename "$appimage"), $(basename "$deb"), $(basename "$rpm")"
+
+      - name: Install the .deb, and launch it and the AppImage
+        # What only shows when the app starts: a module missing from the asar,
+        # a library nothing installed, a Chromium sandbox the install left
+        # unusable. A boot failure opens an error window rather than exiting,
+        # so the log is checked as well as the process.
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          PRODUCT: ${{ steps.verify.outputs.product }}
+          EXECUTABLE: ${{ steps.verify.outputs.executable }}
+        run: |
+          asset() {
+            node -e "console.log(require('./scripts/release-assets').resolveReleaseAssets({ version: process.argv[1], targetName: 'release' }).find((a) => a.key === process.argv[2]).path)" "$VERSION" "$1"
+          }
+
+          sudo apt-get install -y "$(asset deb)"
+          # How the app recognises a copy installed from the .deb, to send it
+          # to the release page: DPKG_FILE_LIST in src/main/update/install-target.ts.
+          if [ ! -f "/var/lib/dpkg/info/$EXECUTABLE.list" ]; then
+            echo "::error::dpkg keeps no /var/lib/dpkg/info/$EXECUTABLE.list, so the app would not recognise its .deb install."
+            exit 1
+          fi
+
+          launch() {
+            local label=$1
+            shift
+            local home="$RUNNER_TEMP/launch-$label"
+            local log="$RUNNER_TEMP/launch-$label.log"
+            mkdir -p "$home"
+
+            # Its own session, so the app, the AppImage runtime and Xvfb stop together.
+            HOME="$home" setsid xvfb-run --auto-servernum "$@" --user-data-dir="$home/chromium" >"$log" 2>&1 &
+            local pid=$!
+            sleep 20
+
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$log"
+              echo "::error::The $label build exited within 20 seconds of launch."
+              return 1
+            fi
+
+            kill -- "-$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            echo "::group::$label log"
+            cat "$log"
+            echo "::endgroup::"
+
+            if grep -q 'Failed to boot desktop app' "$log"; then
+              echo "::error::The $label build started but could not boot."
+              return 1
+            fi
+          }
+
+          launch deb "/opt/$PRODUCT/$EXECUTABLE"
+          launch AppImage "$(asset appimage)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-linux
+          path: |
+            dist/Multi-Git-Client-Linux-*.AppImage
+            dist/Multi-Git-Client-Linux-*.deb
+            dist/Multi-Git-Client-Linux-*.rpm
+          if-no-files-found: error
+          # All three are already compressed.
+          compression-level: 0
+          retention-days: 14
+
+  linux-install:
+    name: install (${{ matrix.distribution }})
+    needs: [plan, linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # A clean system with only the distribution's base image, so every library
+    # the app needs has to arrive through the dependencies the package names,
+    # under that distribution's own package names.
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distribution: Debian
+            image: debian:stable
+            format: deb
+          - distribution: Fedora
+            image: fedora:latest
+            format: rpm
+          - distribution: openSUSE
+            image: opensuse/tumbleweed
+            format: rpm
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-linux
+          path: dist
+
+      - name: Install the package
+        shell: bash
+        env:
+          DISTRIBUTION: ${{ matrix.distribution }}
+          FORMAT: ${{ matrix.format }}
+          PRODUCT: ${{ needs.linux.outputs.product }}
+          EXECUTABLE: ${{ needs.linux.outputs.executable }}
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          shopt -s nullglob
+          packages=(dist/*."$FORMAT")
+          if [ "${#packages[@]}" -ne 1 ]; then
+            echo "::error::Expected one .$FORMAT in the build, found ${#packages[@]}."
+            exit 1
+          fi
+          package="$PWD/${packages[0]}"
+
+          if command -v apt-get >/dev/null; then
+            apt-get update
+            apt-get install -y "$package"
+          elif command -v dnf >/dev/null; then
+            dnf install -y "$package"
+          else
+            zypper --non-interactive install --allow-unsigned-rpm "$package"
+          fi
+
+          app="/opt/$PRODUCT/$EXECUTABLE"
+          if [ ! -x "$app" ] || [ ! -e "/usr/bin/$EXECUTABLE" ]; then
+            echo "::error::The package installed without $app, or without /usr/bin/$EXECUTABLE."
+            exit 1
+          fi
+          if ! command -v git >/dev/null; then
+            echo "::error::Installing the package did not install Git."
+            exit 1
+          fi
+
+          if command -v ldd >/dev/null; then
+            missing=$(ldd "$app" | grep 'not found' || true)
+            if [ -n "$missing" ]; then
+              echo "::error::The app links against libraries its package does not depend on:"
+              echo "$missing"
+              exit 1
+            fi
+          else
+            echo "::warning::No ldd here, so the app's libraries were not checked."
+          fi
+
+          # How the app recognises a copy installed from this package, to send
+          # it to the release page: see src/main/update/install-target.ts.
+          if [ "$FORMAT" = deb ]; then
+            if [ ! -f "/var/lib/dpkg/info/$EXECUTABLE.list" ]; then
+              echo "::error::dpkg keeps no /var/lib/dpkg/info/$EXECUTABLE.list here."
+              exit 1
+            fi
+          else
+            rpm -q "$EXECUTABLE"
+            if [ ! -d /var/lib/rpm ] && [ ! -d /usr/lib/sysimage/rpm ]; then
+              echo "::error::rpm keeps its database somewhere the app does not look."
+              exit 1
+            fi
+          fi
+
+          echo "Installed $(basename "$package") on $DISTRIBUTION."
+
   publish:
     name: publish
-    needs: [plan, ci, windows, macos]
+    needs: [plan, ci, windows, macos, linux, linux-install]
     # `ci` is skipped on a dry run, which would otherwise skip this too.
     if: >-
       !cancelled()
       && needs.plan.result == 'success'
       && needs.windows.result == 'success'
       && needs.macos.result == 'success'
+      && needs.linux.result == 'success'
+      && needs.linux-install.result == 'success'
       && (needs.ci.result == 'success' || (needs.ci.result == 'skipped' && needs.plan.outputs.mode == 'dry-run'))
     runs-on: ubuntu-latest
     timeout-minutes: 30

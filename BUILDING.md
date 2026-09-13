@@ -1,8 +1,9 @@
 # Building And Releasing Multi-Git
 
 How to run the project from source, check it, and release it: the **NSIS
-installer** and the **portable executable** for Windows, and the **macOS disk
-image**, all built and published by GitHub Actions.
+installer** and the **portable executable** for Windows, the **macOS disk
+image**, and the Linux **AppImage**, **.deb** and **.rpm**, all built and
+published by GitHub Actions.
 
 For contribution rules and coding conventions see [CONTRIBUTING.md](CONTRIBUTING.md).
 For what the app does see [README.md](README.md).
@@ -29,9 +30,10 @@ For what the app does see [README.md](README.md).
 | Windows | 10 or 11 | required to build the Windows artifacts locally |
 
 Building the Windows targets on macOS or Linux is not supported by this
-project's configuration, and the macOS disk image can only be built on a Mac.
-Develop anywhere: releases are built on GitHub Actions, one runner per
-platform — see [Releasing a new version](#releasing-a-new-version).
+project's configuration, the macOS disk image can only be built on a Mac, and
+the Linux packages need Linux. Develop anywhere: releases are built on GitHub
+Actions, one runner per platform — see
+[Releasing a new version](#releasing-a-new-version).
 
 The GitHub CLI (`gh`) is optional. It is used at runtime by the new-repository
 dialog and the pull-request creator, and to start a release from the command
@@ -122,9 +124,9 @@ because a third-party site was briefly down.
 
 CI runs both, plus a packaging smoke test, on every pull request. See
 [.github/workflows/ci.yml](.github/workflows/ci.yml). The matrix covers Windows
-and Linux on Node 22.12 and Node 24 — Windows because the published artifacts
-are Windows-only and because process-tree termination, case-folded repository
-paths, and file replacement all behave differently there.
+and Linux on Node 22.12 and Node 24 — Windows because most copies run there
+and because process-tree termination, case-folded repository paths, and file
+replacement all behave differently there.
 
 Beyond that, verification is manual. The paths worth walking before a release:
 
@@ -152,8 +154,9 @@ Beyond that, verification is manual. The paths worth walking before a release:
 Releases are built and published by GitHub Actions, in
 [`.github/workflows/release.yml`](.github/workflows/release.yml). Nothing is
 built on your machine and nothing is uploaded from it, so a release does not
-depend on which computer it was cut from, and the macOS build — which can only
-be made on a Mac — comes out of the same run as the Windows ones.
+depend on which computer it was cut from, and the macOS and Linux builds —
+which can only be made on those systems — come out of the same run as the
+Windows ones.
 
 A release is two steps.
 
@@ -181,9 +184,11 @@ It releases whatever version `package.json` on `main` carries:
    or its tag already points somewhere else;
 2. **wait for CI** waits for CI on the same commit to pass — so running this
    straight after the merge is fine — and stops if it fails;
-3. **build (Windows)** and **build (macOS)** run meanwhile, each on its own
-   runner, and each checks what it built (below);
-4. **publish** creates the release as a draft, titled `Multi-Git v<version>`
+3. **build (Windows)**, **build (macOS)** and **build (Linux)** run meanwhile,
+   each on its own runner, and each checks what it built (below);
+4. **install (Debian)**, **install (Fedora)** and **install (openSUSE)** install
+   the Linux packages on those distributions;
+5. **publish** creates the release as a draft, titled `Multi-Git v<version>`
    on a `Release_v<version>` tag, attaches every build and `SHA256SUMS.txt`,
    reads the release back to confirm each asset arrived at full size, publishes
    it, and checks that an installed copy would be offered it.
@@ -216,6 +221,17 @@ The macOS disk image is universal: one download for Apple silicon and Intel
 Macs. The build mounts it and checks the bundle's version, both architectures,
 that `app.asar` holds the app's entry point, and the code signature, then
 launches the app and fails if it exits or cannot boot.
+
+The Linux build makes three packages for x86_64: an AppImage, which runs on
+any distribution, a `.deb` for Debian, Ubuntu and their derivatives, and an
+`.rpm` for Fedora, RHEL and openSUSE. It opens the AppImage to check its
+version, icon and `app.asar`, reads the name, version and architecture each
+package records, then installs the `.deb` on the Ubuntu runner and launches
+both it and the AppImage, failing if either exits or cannot boot. The install
+jobs then put the `.deb` on a clean Debian and the `.rpm` on clean Fedora and
+openSUSE, through each distribution's own package manager, which has to find
+every dependency the package names. They fail if Git did not come with it, or
+if `ldd` finds a library the app links against that nothing installed.
 
 ### What goes into the release notes
 
@@ -261,6 +277,11 @@ notarizes instead, once these repository secrets exist:
 The certificate alone signs without notarizing, and the build warns about it:
 Gatekeeper still blocks a build that is signed but not notarized.
 
+The Linux packages are not signed either. `apt`, `dnf` and `zypper` install a
+local package file without asking for a signature (`zypper` needs
+`--allow-unsigned-rpm`); the signatures they otherwise check belong to a
+package repository, which this project does not run.
+
 ### Verifying the release is discoverable
 
 The workflow's last step runs this, and it can be run by hand at any time:
@@ -276,9 +297,10 @@ with `package.json`, a release left as a draft or ticked as a pre-release, a
 missing artifact or checksum file — all fail *silently*: nothing errors, the
 release is simply invisible, and nobody updates. This is what catches that.
 
-It exits non-zero when the release would not be offered. A missing build for a
-platform the updater does not serve, such as macOS, is reported as a warning
-instead: every installed copy still finds the release. To check a specific one:
+It exits non-zero when the release would not be offered. That includes any
+missing build: every build, from the portable `.exe` to the `.rpm`, has
+installed copies that look for their own file, and cannot see a release without
+it. To check a specific one:
 
 ```bash
 npm run release:verify -- --tag Release_v3.0.0
@@ -359,8 +381,9 @@ npm run release:installer
 npm run release:portable
 ```
 
-A macOS build cannot be made this way. For one to try, run the Release workflow
-with **dry run** ticked and download `build-macos` from the run.
+macOS and Linux builds cannot be made this way. For one to try, run the Release
+workflow with **dry run** ticked and download `build-macos` or `build-linux`
+from the run.
 
 ### Uploading by hand
 
@@ -371,15 +394,19 @@ builds to an existing release yourself:
 npm run release:upload -- --tag Release_v3.0.0
 ```
 
-It needs every build of the release in `dist/` — both Windows executables and
-the macOS disk image, which a dry run's artifacts provide — and stops before
-writing anything if one is missing. It regenerates `SHA256SUMS.txt` from exactly
-the files it is about to upload, so the manifest always describes the full set,
-then runs `gh release upload` with these display labels:
+It needs every build of the release in `dist/` — both Windows executables, the
+macOS disk image and the three Linux packages, which a dry run's artifacts
+provide — and stops before writing anything if one is missing. It regenerates
+`SHA256SUMS.txt` from exactly the files it is about to upload, so the manifest
+always describes the full set, then runs `gh release upload` with these display
+labels:
 
 - `Windows installer (recommended)`
 - `Portable Windows executable`
 - `macOS disk image (Apple silicon and Intel)`
+- `Linux AppImage (x86_64, any distribution)`
+- `Linux .deb package (Debian, Ubuntu, Linux Mint; amd64)`
+- `Linux .rpm package (Fedora, RHEL, openSUSE; x86_64)`
 - `SHA-256 checksums`
 
 It will not replace an asset that is already on the release unless given
@@ -451,6 +478,54 @@ Electron Builder; the Windows `.ico` is 256px, below the 512px an `.icns`
 needs. Without a signing certificate in the keychain, add `-c.mac.identity=-`
 for the ad-hoc signature the Release workflow uses.
 
+### Linux packages
+
+On Linux only, with `rpmbuild` installed for the `.rpm` (`sudo apt install rpm`
+on Debian or Ubuntu):
+
+```bash
+npx electron-builder --linux
+```
+
+Produces, for x86_64:
+
+- `dist/Multi-Git-Client-Linux-<version>-x86_64.AppImage`, a single file that
+  runs on any distribution. It needs FUSE 2 to start, which Ubuntu 22.04 and
+  later leave out: `sudo apt install libfuse2t64` (`libfuse2` before 24.04).
+  Run it with `--appimage-extract-and-run` to do without.
+- `dist/Multi-Git-Client-Linux-<version>-amd64.deb`, installed with
+  `sudo apt install ./Multi-Git-Client-Linux-<version>-amd64.deb`.
+- `dist/Multi-Git-Client-Linux-<version>-x86_64.rpm`, installed with
+  `sudo dnf install ./Multi-Git-Client-Linux-<version>-x86_64.rpm`, or
+  `sudo zypper install --allow-unsigned-rpm` on openSUSE.
+
+Configured in `package.json` under `build.linux`, `build.appImage`, `build.deb`
+and `build.rpm`. The packages install to `/opt/Multi-Git Client` with a
+`multi-git` command, and depend on Git and on the libraries Electron loads,
+listed under each distribution family's own names: `depends` replaces
+Electron Builder's defaults rather than adding to them, so keep its entries
+when adding one. Their icon is `docs/images/multi-git-logo.png`, which the app
+also uses for its windows on Linux, since Linux cannot read the `.ico`.
+
+The Chromium sandbox is set up by the packages' install script, which on
+Ubuntu 24.04 and later adds an AppArmor profile. The AppImage cannot do that,
+and starts without the sandbox on a system that does not allow it
+unprivileged.
+
+How each build takes an update:
+
+- The **AppImage** downloads the new AppImage beside itself, checks it against
+  `SHA256SUMS.txt`, and renames it over the file it runs from — which a running
+  AppImage allows — then restarts. The file keeps the name it had.
+- A **.deb** or **.rpm** copy is told about the release and opens its page,
+  like a Mac. Replacing a package needs root and belongs to the package
+  manager.
+
+The app tells the three apart at startup: an AppImage by the `APPIMAGE` and
+`APPDIR` variables its runtime sets, a `.deb` by dpkg's
+`/var/lib/dpkg/info/multi-git.list`, and an `.rpm` by the rpm database being
+there. See `src/main/update/install-target.ts`.
+
 ### After-pack step
 
 `scripts/after-pack.js` runs automatically after packaging. It stamps the
@@ -481,6 +556,12 @@ On a Mac, in Terminal:
 
 ```bash
 shasum -a 256 Multi-Git-Client-macOS-3.0.0.dmg
+```
+
+On Linux:
+
+```bash
+sha256sum Multi-Git-Client-Linux-3.0.0-x86_64.AppImage
 ```
 
 Expect a few hundred megabytes per build. Delete the folder between releases

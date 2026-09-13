@@ -3,7 +3,11 @@ import { BrowserWindow, dialog } from 'electron';
 
 import { appTitle, fromAppRoot } from '../server/app-root';
 
-const ICON = (): string => fromAppRoot('docs', 'images', 'multi-git-logo.ico');
+// Windows reads the .ico. Linux cannot load one, and without a window icon a
+// window not matched to the desktop entry, as an AppImage's is not until it is
+// integrated, shows a generic one. macOS ignores this and uses the bundle's.
+const ICON = (): string =>
+  fromAppRoot('docs', 'images', process.platform === 'win32' ? 'multi-git-logo.ico' : 'multi-git-logo.png');
 
 /**
  * Stops the loaded page from replacing the window title.

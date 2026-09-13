@@ -147,13 +147,6 @@ function createReport() {
         lines.push(`        -> ${remedy}`);
       }
     },
-    /** Worth saying, but not a reason the updater would miss the release. */
-    warn(message, remedy) {
-      lines.push(`  warn  ${message}`);
-      if (remedy) {
-        lines.push(`        -> ${remedy}`);
-      }
-    },
     note(message) {
       lines.push(`        ${message}`);
     },
@@ -254,38 +247,21 @@ async function verify(options) {
     report.pass('The release is not marked as a pre-release.');
   }
 
-  // 4. Assets, by the exact names the updater looks for.
+  // 4. Assets, by the exact names the updater looks for. Every build has an
+  //    updater that looks for its own file, so each one missing hides the
+  //    release from the copies that use it.
   const names = assetNames(release);
-  const expected = {
-    installer: RELEASE_ASSETS.installer.basename(version),
-    portable: RELEASE_ASSETS.portable.basename(version)
-  };
+  const expected = Object.fromEntries(
+    Object.entries(RELEASE_ASSETS).map(([kind, spec]) => [kind, spec.basename(version)])
+  );
 
   for (const [kind, basename] of Object.entries(expected)) {
     if (names.has(basename)) {
       report.pass(`${basename} is attached.`);
     } else {
       report.fail(
-        `${basename} is missing, so ${kind} users will not be offered this release.`,
+        `${basename} is missing, so copies installed from the ${RELEASE_ASSETS[kind].label} will not be offered this release.`,
         'Upload with "npm run release:upload", or re-run the Release workflow; both attach every build together.'
-      );
-    }
-  }
-
-  // The updater is Windows-only, so a missing build for another platform
-  // hides the release from nobody's updater. It does leave that platform with
-  // nothing to download, which is worth saying without failing over.
-  for (const [kind, spec] of Object.entries(RELEASE_ASSETS)) {
-    if (Object.hasOwn(expected, kind)) {
-      continue;
-    }
-    const basename = spec.basename(version);
-    if (names.has(basename)) {
-      report.pass(`${basename} is attached.`);
-    } else {
-      report.warn(
-        `${basename} is missing. Installed copies are unaffected, but there is no ${spec.label} to download.`,
-        'Re-run the Release workflow, which attaches every build together.'
       );
     }
   }
@@ -382,12 +358,13 @@ function highestOffer(releases, version) {
 
     const candidate = match.slice(1, 4).join('.');
     const names = assetNames(release);
-    const hasBoth =
-      names.has(RELEASE_ASSETS.installer.basename(candidate)) &&
-      names.has(RELEASE_ASSETS.portable.basename(candidate)) &&
+    // Offered to every installed copy, whichever build it is, only when every
+    // build is there to be found.
+    const hasEveryBuild =
+      Object.values(RELEASE_ASSETS).every((spec) => names.has(spec.basename(candidate))) &&
       names.has(CHECKSUM_BASENAME);
 
-    if (!hasBoth) {
+    if (!hasEveryBuild) {
       continue;
     }
 

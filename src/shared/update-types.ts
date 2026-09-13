@@ -10,12 +10,24 @@
 /**
  * How the running copy was installed, which decides what an update means.
  *
- * `installer` and `portable` download and start the new build themselves.
- * `macos` does neither: the app is ad-hoc signed, and replacing a signed app
- * bundle from inside it is only dependable with a real Developer ID. So a Mac
- * copy announces the release and opens its page, and the user installs it.
+ * `installer`, `portable` and `appimage` download and start the new build
+ * themselves. An AppImage is a single file the user owns, so it is replaced
+ * where it is and restarted.
+ *
+ * `macos`, `deb` and `rpm` do neither. The Mac app is ad-hoc signed, and
+ * replacing a signed app bundle from inside it is only dependable with a real
+ * Developer ID. A `.deb` or `.rpm` belongs to the system package manager and
+ * can only be replaced as root. So those copies announce the release and open
+ * its page, and the user installs it.
  */
-export type InstallKind = 'installer' | 'portable' | 'macos' | 'unsupported';
+export type InstallKind =
+  | 'installer'
+  | 'portable'
+  | 'macos'
+  | 'appimage'
+  | 'deb'
+  | 'rpm'
+  | 'unsupported';
 
 /**
  * True for a build that is updated from the release page rather than in place.
@@ -25,7 +37,7 @@ export type InstallKind = 'installer' | 'portable' | 'macos' | 'unsupported';
  * those are.
  */
 export function updatesFromReleasePage(kind: InstallKind): boolean {
-  return kind === 'macos';
+  return kind === 'macos' || kind === 'deb' || kind === 'rpm';
 }
 
 export type UpdatePhase =
@@ -59,8 +71,9 @@ export interface UpdateReleaseInfo {
 export interface UpdateState {
   phase: UpdatePhase;
   /**
-   * False on Linux, in browser mode, and when running unpackaged. The renderer
-   * shows no update UI at all in that case.
+   * False in browser mode, when running unpackaged, and on a Linux copy that
+   * did not come from a release package. The renderer shows no update UI at
+   * all in that case.
    */
   supported: boolean;
   installKind: InstallKind;
