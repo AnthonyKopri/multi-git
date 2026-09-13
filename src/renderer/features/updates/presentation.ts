@@ -5,9 +5,10 @@
 // part with cases worth testing, and it needs no DOM to check.
 
 import type { UpdateState } from '../../../shared/update-types';
+import { updatesFromReleasePage } from '../../../shared/update-types';
 
 /** What clicking the primary button should do in this phase. */
-export type PrimaryIntent = 'download' | 'install' | 'check' | 'none';
+export type PrimaryIntent = 'download' | 'install' | 'open-release' | 'check' | 'none';
 
 /**
  * Whether the navbar shows the icon.
@@ -64,6 +65,9 @@ export function headline(state: UpdateState): string {
 
 /** What actually happens on this machine, spelled out before it happens. */
 function installSentence(state: UpdateState): string {
+  if (updatesFromReleasePage(state.installKind)) {
+    return 'Its page on GitHub opens in your browser. Download the disk image there, and drag Multi-Git Client into Applications to replace this copy.';
+  }
   if (state.installKind === 'portable') {
     return 'The new version will be saved next to this one and opened. Your current file stays where it is.';
   }
@@ -103,14 +107,14 @@ export function primaryLabel(state: UpdateState): string {
     case 'error':
       return 'Try again';
     default:
-      return 'Download & install';
+      return updatesFromReleasePage(state.installKind) ? 'Open download page' : 'Download & install';
   }
 }
 
 export function primaryIntent(state: UpdateState): PrimaryIntent {
   switch (state.phase) {
     case 'available':
-      return 'download';
+      return updatesFromReleasePage(state.installKind) ? 'open-release' : 'download';
     case 'ready':
       return 'install';
     // A failure can come from either step, and the check is the cheap one that

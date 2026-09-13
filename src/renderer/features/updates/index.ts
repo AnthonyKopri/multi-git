@@ -4,9 +4,10 @@
 // an update comes from or where it lands — it asks for "the update" the main
 // process already resolved. See src/shared/desktop-api.ts.
 //
-// In browser mode, on anything but Windows, and in an unpackaged dev run there
-// is no bridge or the bridge reports `supported: false`, and this module
-// registers nothing and shows nothing.
+// In browser mode, on Linux, and in an unpackaged dev run there is no bridge or
+// the bridge reports `supported: false`, and this module shows nothing. On
+// macOS the notice is the same as on Windows, but its button opens the release
+// page instead of downloading.
 
 import { setHidden } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
@@ -99,6 +100,14 @@ async function runPrimary(): Promise<void> {
       await window.desktopApi?.downloadUpdate?.();
     } else if (intent === 'install') {
       await window.desktopApi?.installUpdate?.();
+    } else if (intent === 'open-release') {
+      await window.desktopApi?.openUpdateReleasePage?.();
+      // The rest happens in the browser. Unless opening it failed, which the
+      // broadcast renders into this modal, there is nothing left to show here;
+      // the icon stays until the new version is the one running.
+      if (current?.phase !== 'error') {
+        closeModal();
+      }
     } else if (intent === 'check') {
       await window.desktopApi?.checkForUpdate?.();
     }
@@ -122,8 +131,9 @@ export async function checkNow(): Promise<void> {
 export function initUpdates(elements: Elements): void {
   ui = elements;
 
-  // The single early return that covers browser mode, macOS and Linux, and a
-  // dev run from a checkout: no listeners, no requests, nothing shown.
+  // The single early return that covers browser mode and a dev run from a
+  // checkout: no listeners, no requests, nothing shown. An unsupported
+  // packaged build (Linux) has a bridge, and is kept quiet by its state.
   if (!isSupported()) {
     return;
   }

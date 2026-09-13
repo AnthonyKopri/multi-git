@@ -121,6 +121,13 @@ export interface DesktopApi {
   downloadUpdate: () => Promise<void>;
   installUpdate: () => Promise<void>;
   skipUpdateVersion: () => Promise<void>;
+  /**
+   * Opens the resolved release's page in the browser, on a build that is
+   * updated by hand (macOS). No arguments either: a channel that opened a URL
+   * the page supplied would let it send the user anywhere, looking like the
+   * app's own update prompt. The main process builds the URL from the tag.
+   */
+  openUpdateReleasePage: () => Promise<void>;
 
   /** Fires on every state change, in every window, for the navbar icon. */
   onUpdateState: (listener: (state: UpdateState) => void) => Unsubscribe;
@@ -168,6 +175,7 @@ export const IPC_CHANNELS = {
   downloadUpdate: 'update:download',
   installUpdate: 'update:install',
   skipUpdateVersion: 'update:skip-version',
+  openUpdateReleasePage: 'update:open-release-page',
   // The two below travel the other way, main to renderer. They are the only
   // push channels in the app; everything else is invoke/handle.
   updateState: 'update:state',

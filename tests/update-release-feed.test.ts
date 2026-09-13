@@ -11,9 +11,11 @@ import {
   parseChecksumManifest,
   parseReleaseTag,
   parseVersion,
+  releasePageUrl,
   selectUpdate,
   usableReleases
 } from '../src/main/update/release-feed';
+import type { UpdateArtifact } from '../src/main/update/release-feed';
 
 /** A release as the GitHub API returns it, with both artifacts and checksums. */
 function release(
@@ -42,7 +44,7 @@ function release(
   };
 }
 
-function pick(releases: unknown[], currentVersion: string, kind: 'installer' | 'portable' = 'installer') {
+function pick(releases: unknown[], currentVersion: string, kind: UpdateArtifact = 'installer') {
   return selectUpdate({ releases, currentVersion, installKind: kind });
 }
 
@@ -126,6 +128,20 @@ describe('selecting an update', () => {
     expect(pick([installerOnly, both], '3.1.1', 'portable')?.version).toBe('3.2.0');
   });
 
+  it('tells a Mac copy only about a release that has a disk image and checksums', () => {
+    const windowsOnly = release('3.3.0');
+    const withMac = release('3.2.0', {}, [
+      'Multi-Git-Client-Setup-3.2.0.exe',
+      'Multi-Git-Client-macOS-3.2.0.dmg',
+      CHECKSUM_ASSET
+    ]);
+    const macWithoutChecksums = release('3.4.0', {}, ['Multi-Git-Client-macOS-3.4.0.dmg']);
+
+    // Sending a Mac user to 3.3.0's page would show them nothing to download.
+    expect(pick([windowsOnly, withMac, macWithoutChecksums], '3.1.1', 'macos')?.version).toBe('3.2.0');
+    expect(pick([windowsOnly], '3.1.1', 'macos')).toBeNull();
+  });
+
   it('refuses a release that published no checksum manifest', () => {
     const unverifiable = release('3.2.0', {}, ['Multi-Git-Client-Setup-3.2.0.exe']);
     expect(pick([unverifiable], '3.1.1')).toBeNull();
@@ -167,6 +183,24 @@ describe('asset matching', () => {
   });
 });
 
+describe('the release page a Mac copy opens', () => {
+  it('is on this repository, whatever the API response claimed', () => {
+    expect(releasePageUrl('Release_v3.2.0')).toBe(
+      'https://github.com/AnthonyKopri/multi-git/releases/tag/Release_v3.2.0'
+    );
+  });
+
+  it('cannot be steered off the tag path by what the tag contains', () => {
+    // Unreachable today, since the tag has already matched RELEASE_TAG; this
+    // is what keeps it harmless if that pattern ever loosens.
+    const url = new URL(releasePageUrl('../../../evil?x=#y'));
+    expect(url.origin).toBe('https://github.com');
+    expect(url.pathname.startsWith('/AnthonyKopri/multi-git/releases/tag/')).toBe(true);
+    expect(url.search).toBe('');
+    expect(url.hash).toBe('');
+  });
+});
+
 describe('checksum manifest', () => {
   const digest = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
 
@@ -200,7 +234,7 @@ describe('agreement with the release pipeline', () => {
   // the one class of bug that shipping a new release cannot fix.
   const require = createRequire(import.meta.url);
   const releaseAssets = require('../scripts/release-assets.js') as {
-    RELEASE_ASSETS: Record<'installer' | 'portable', { basename(version: string): string }>;
+    RELEASE_ASSETS: Record<UpdateArtifact, { basename(version: string): string }>;
     CHECKSUM_BASENAME: string;
     releaseTag(version: string): string;
   };
@@ -213,6 +247,7 @@ describe('agreement with the release pipeline', () => {
       expect(assetBasename('portable', version)).toBe(
         releaseAssets.RELEASE_ASSETS.portable.basename(version)
       );
+      expect(assetBasename('macos', version)).toBe(releaseAssets.RELEASE_ASSETS.macos.basename(version));
     }
   });
 

@@ -18,13 +18,14 @@ import {
   findAsset,
   lookupChecksum,
   parseChecksumManifest,
+  releasePageUrl,
   selectUpdate
 } from './release-feed';
-import type { ReleaseCandidate } from './release-feed';
+import type { ReleaseCandidate, UpdateArtifact } from './release-feed';
 import { installCommand } from './install-target';
 import type { StagedDownload } from './net';
 import type { InstallKind, UpdateState } from '../../shared/update-types';
-import { idleUpdateState } from '../../shared/update-types';
+import { idleUpdateState, updatesFromReleasePage } from '../../shared/update-types';
 
 /** Release notes are shown as text; a novel in the modal helps nobody. */
 /**
@@ -61,6 +62,8 @@ export interface UpdateServiceDeps {
   isRateLimit: (error: unknown) => boolean;
   /** Starts the downloaded file. Throws if it could not be started. */
   spawnDetached: (file: string, args: string[]) => void;
+  /** Opens a URL in the user's browser. Rejects if it could not be opened. */
+  openExternal: (url: string) => Promise<void>;
   quit: () => void;
   broadcastState: (state: UpdateState) => void;
   /** Asks the one chosen window to show the popup. */
@@ -74,12 +77,21 @@ export interface UpdateService {
   check: () => Promise<UpdateState>;
   download: () => Promise<UpdateState>;
   install: () => Promise<UpdateState>;
+  /** For a build updated by hand: opens the resolved release's page. */
+  openReleasePage: () => Promise<UpdateState>;
   skipCurrent: () => Promise<UpdateState>;
 }
 
 function describe(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : String(error ?? '');
   return message.trim() === '' ? fallback : message;
+}
+
+/** The asset a release must carry to be offered to this build. */
+function artifactFor(kind: InstallKind): UpdateArtifact {
+  if (kind === 'portable') return 'portable';
+  if (kind === 'macos') return 'macos';
+  return 'installer';
 }
 
 export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
@@ -141,7 +153,7 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     const candidate = selectUpdate({
       releases,
       currentVersion: deps.currentVersion,
-      installKind: deps.installKind === 'portable' ? 'portable' : 'installer',
+      installKind: artifactFor(deps.installKind),
       skippedVersion: deps.readSettings().skippedUpdateVersion
     });
 
@@ -175,7 +187,10 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
   }
 
   async function download(): Promise<UpdateState> {
-    if (!state.supported || !resolved) {
+    // A build updated by hand has nothing to download into and nothing that
+    // would run what arrived. The renderer never asks; this is so that a
+    // request which did reach the channel anyway still does nothing.
+    if (!state.supported || !resolved || updatesFromReleasePage(deps.installKind)) {
       return state;
     }
     if (state.phase === 'downloading' || state.phase === 'installing') {
@@ -183,8 +198,7 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     }
 
     const release = resolved;
-    const kind = deps.installKind === 'portable' ? 'portable' : 'installer';
-    const basename = assetBasename(kind, release.version);
+    const basename = assetBasename(artifactFor(deps.installKind), release.version);
 
     let destination: string;
     try {
@@ -271,6 +285,22 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     return state;
   }
 
+  async function openReleasePage(): Promise<UpdateState> {
+    if (!state.supported || !resolved || !updatesFromReleasePage(deps.installKind)) {
+      return state;
+    }
+
+    // The URL comes from the release this process resolved, never from the
+    // request, and the state stays `available`: opening the page is not
+    // updating, and the notice should stay until the new version is running.
+    try {
+      await deps.openExternal(releasePageUrl(resolved.tag));
+    } catch (error) {
+      return fail(error, 'Could not open the release page in your browser.');
+    }
+    return state;
+  }
+
   async function skipCurrent(): Promise<UpdateState> {
     if (!resolved) {
       return state;
@@ -287,6 +317,7 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     check,
     download,
     install,
+    openReleasePage,
     skipCurrent
   };
 }

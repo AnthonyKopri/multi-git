@@ -638,7 +638,7 @@ The panel is a record, not an interactive shell — you read it here and type in
 
 ## Local Data, Privacy, And Security
 
-Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when the current UI loads its fonts and Material Symbols from Google Fonts, when a window you opened asks `gh` about this repository's pull requests — the pull-request preflight and the Maintenance tab's survey both do — and, on packaged Windows builds, when the app asks GitHub whether a newer release exists.
+Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when the current UI loads its fonts and Material Symbols from Google Fonts, when a window you opened asks `gh` about this repository's pull requests — the pull-request preflight and the Maintenance tab's survey both do — and, on packaged Windows and macOS builds, when the app asks GitHub whether a newer release exists.
 
 The update check is the only request Multi-Git makes that you did not start. It is an unauthenticated `GET` to `api.github.com` for this project's public release list, made once about ten seconds after launch and every six hours after that. It sends no account, no repository, and no identifying information beyond what any HTTPS request carries. Nothing is downloaded until you ask for it. Set `settings.checkForUpdates` to `false` in the configuration file to turn it off entirely.
 

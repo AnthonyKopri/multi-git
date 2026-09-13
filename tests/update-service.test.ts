@@ -7,12 +7,15 @@ import type { InstallKind, UpdateState } from '../src/shared/update-types';
 
 const DIGEST = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
 
-function releases(version = '3.2.0'): unknown {
-  const names = [
+function releases(
+  version = '3.2.0',
+  names = [
     `Multi-Git-Client-Setup-${version}.exe`,
     `Multi-Git-Client-Portable-${version}.exe`,
+    `Multi-Git-Client-macOS-${version}.dmg`,
     'SHA256SUMS.txt'
-  ];
+  ]
+): unknown {
 
   return [
     {
@@ -41,6 +44,7 @@ interface Harness {
   deps: UpdateServiceDeps;
   states: UpdateState[];
   spawned: { file: string; args: string[] }[];
+  opened: string[];
   commits: string[];
   discards: string[];
   popups: number;
@@ -56,10 +60,13 @@ function harness(
     fetchJson?: UpdateServiceDeps['fetchJson'];
     spawnDetached?: UpdateServiceDeps['spawnDetached'];
     isRateLimit?: UpdateServiceDeps['isRateLimit'];
+    openExternal?: UpdateServiceDeps['openExternal'];
+    fetchText?: UpdateServiceDeps['fetchText'];
   } = {}
 ): Harness {
   const states: UpdateState[] = [];
   const spawned: { file: string; args: string[] }[] = [];
+  const opened: string[] = [];
   const commits: string[] = [];
   const discards: string[] = [];
   const skipped: string[] = [];
@@ -71,7 +78,7 @@ function harness(
     portableDir: 'D:\\Tools\\MultiGit',
     tempDir: 'C:\\Temp',
     fetchJson: overrides.fetchJson ?? (() => Promise.resolve(releases())),
-    fetchText: () => Promise.resolve(manifest()),
+    fetchText: overrides.fetchText ?? (() => Promise.resolve(manifest())),
     downloadToFile: (_url, destPath) =>
       Promise.resolve({
         sha256: overrides.digest ?? DIGEST,
@@ -92,6 +99,11 @@ function harness(
     quit: () => {
       shared.quits += 1;
     },
+    openExternal:
+      overrides.openExternal ??
+      (async (url) => {
+        opened.push(url);
+      }),
     broadcastState: (state) => states.push(state),
     requestPopup: () => {
       shared.popups += 1;
@@ -104,6 +116,7 @@ function harness(
     deps,
     states,
     spawned,
+    opened,
     commits,
     discards,
     skipped,
@@ -327,6 +340,86 @@ describe('installing', () => {
 
     expect(h.spawned).toEqual([]);
     expect(h.quits).toBe(0);
+  });
+});
+
+describe('a Mac copy, updated from the release page', () => {
+  it('announces a release that carries the disk image, once, like any other build', async () => {
+    const h = harness({ installKind: 'macos' });
+    const service = createUpdateService(h.deps);
+
+    const state = await service.check();
+    expect(state.supported).toBe(true);
+    expect(state.phase).toBe('available');
+    expect(state.latest?.version).toBe('3.2.0');
+    expect(h.popups).toBe(1);
+  });
+
+  it('is not told about a release with nothing for a Mac on it', async () => {
+    const windowsOnly = releases('3.2.0', [
+      'Multi-Git-Client-Setup-3.2.0.exe',
+      'Multi-Git-Client-Portable-3.2.0.exe',
+      'SHA256SUMS.txt'
+    ]);
+    const h = harness({ installKind: 'macos', fetchJson: () => Promise.resolve(windowsOnly) });
+
+    const state = await createUpdateService(h.deps).check();
+    expect(state.phase).toBe('up-to-date');
+    expect(h.popups).toBe(0);
+  });
+
+  it('opens the page of the release it resolved, and stays announcing it', async () => {
+    const h = harness({ installKind: 'macos' });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    const state = await service.openReleasePage();
+
+    expect(h.opened).toEqual(['https://github.com/AnthonyKopri/multi-git/releases/tag/Release_v3.2.0']);
+    // Opening the page is not updating; the notice stays until 3.2.0 runs.
+    expect(state.phase).toBe('available');
+  });
+
+  it('downloads, verifies, starts and quits nothing, even when asked to', async () => {
+    const fetchText = vi.fn().mockResolvedValue(manifest());
+    const h = harness({ installKind: 'macos', fetchText });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    await service.download();
+    await service.install();
+
+    expect(fetchText).not.toHaveBeenCalled();
+    expect(h.commits).toEqual([]);
+    expect(h.spawned).toEqual([]);
+    expect(h.quits).toBe(0);
+    expect(service.getState().phase).toBe('available');
+  });
+
+  it('opens nothing before a release is resolved, or on a build that updates in place', async () => {
+    const mac = harness({ installKind: 'macos' });
+    await createUpdateService(mac.deps).openReleasePage();
+    expect(mac.opened).toEqual([]);
+
+    const windows = harness();
+    const service = createUpdateService(windows.deps);
+    await service.check();
+    await service.openReleasePage();
+    expect(windows.opened).toEqual([]);
+  });
+
+  it('says so when the browser could not be opened', async () => {
+    const h = harness({
+      installKind: 'macos',
+      openExternal: () => Promise.reject(new Error('No application knows how to open the URL'))
+    });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    const state = await service.openReleasePage();
+
+    expect(state.phase).toBe('error');
+    expect(state.message).toMatch(/No application/);
   });
 });
 
