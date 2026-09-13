@@ -4,8 +4,8 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 
-type ArtifactKey = 'installer' | 'portable';
-type TargetName = ArtifactKey | 'both';
+type ArtifactKey = 'installer' | 'portable' | 'macos';
+type TargetName = 'installer' | 'portable' | 'both' | 'release';
 
 interface ArtifactSpec {
   label: string;
@@ -46,6 +46,7 @@ interface ReleaseAssetsApi {
     version: string;
     outputDir?: string;
     repo?: string;
+    clobber?: boolean;
   }): string[];
 }
 
@@ -84,10 +85,26 @@ describe('release artifact metadata', () => {
     expect(releaseAssets.RELEASE_ASSETS.portable.label).toBe('Portable Windows executable');
   });
 
+  it('names the macOS disk image the way electron-builder is told to', () => {
+    // package.json build.dmg.artifactName; tests/packaging.test.ts checks
+    // that side, so the two cannot drift apart.
+    expect(releaseAssets.RELEASE_ASSETS.macos.basename('3.0.0')).toBe(
+      'Multi-Git-Client-macOS-3.0.0.dmg'
+    );
+    expect(releaseAssets.RELEASE_ASSETS.macos.label).toBe(
+      'macOS disk image (Apple silicon and Intel)'
+    );
+  });
+
   it('maps each release target and keeps both in installer-first order', () => {
     expect(releaseAssets.selectedAssetKinds('installer')).toEqual(['installer']);
     expect(releaseAssets.selectedAssetKinds('portable')).toEqual(['portable']);
     expect(releaseAssets.selectedAssetKinds('both')).toEqual(['installer', 'portable']);
+  });
+
+  it('keeps the macOS build out of what release.js builds, and in what a release carries', () => {
+    expect(releaseAssets.selectedAssetKinds('both')).not.toContain('macos');
+    expect(releaseAssets.selectedAssetKinds('release')).toEqual(['installer', 'portable', 'macos']);
   });
 
   it('returns a copy so callers cannot mutate the central target mapping', () => {
@@ -167,6 +184,26 @@ describe('SHA256SUMS.txt', () => {
     expect(result.contents).not.toContain('Setup');
   });
 
+  it('describes the macOS build in the same manifest as the Windows ones', async () => {
+    // One manifest for the release, so the Windows updater, which reads its
+    // own lines by name, and a Mac user checking a download read the same file.
+    fs.writeFileSync(artifactPath('installer'), 'abc');
+    fs.writeFileSync(artifactPath('portable'), '');
+    fs.writeFileSync(artifactPath('macos'), 'abc');
+
+    const result = await releaseAssets.writeChecksumManifest({
+      version: '3.0.0',
+      targetName: 'release',
+      outputDir
+    });
+
+    expect(result.contents).toBe(
+      `${INSTALLER_SHA256}  Multi-Git-Client-Setup-3.0.0.exe\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Client-Portable-3.0.0.exe\n` +
+        `${INSTALLER_SHA256}  Multi-Git-Client-macOS-3.0.0.dmg\n`
+    );
+  });
+
   it('fails on a missing selected artifact without replacing the previous manifest', async () => {
     fs.writeFileSync(artifactPath('installer'), 'abc');
     const checksumPath = path.join(outputDir, releaseAssets.CHECKSUM_BASENAME);
@@ -204,11 +241,25 @@ describe('GitHub release upload arguments', () => {
       'Release_v3.0.0',
       `${artifactPath('installer')}#Windows installer (recommended)`,
       `${artifactPath('portable')}#Portable Windows executable`,
+      `${artifactPath('macos')}#macOS disk image (Apple silicon and Intel)`,
       `${path.join(outputDir, 'SHA256SUMS.txt')}#SHA-256 checksums`,
       '--repo',
       'AnthonyKopri/multi-git'
     ]);
     expect(args).not.toContain('--clobber');
+  });
+
+  it('replaces existing assets only when asked to', () => {
+    // The Release workflow asks when re-running onto its own draft, after a
+    // run that failed partway through the upload.
+    const args = releaseAssets.buildGhUploadArgs({
+      tag: 'Release_v3.0.0',
+      version: '3.0.0',
+      outputDir,
+      clobber: true
+    });
+
+    expect(args.at(-1)).toBe('--clobber');
   });
 
   it('rejects an empty repository override', () => {

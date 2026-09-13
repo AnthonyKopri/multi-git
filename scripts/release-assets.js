@@ -19,13 +19,22 @@ const RELEASE_ASSETS = Object.freeze({
   portable: Object.freeze({
     label: 'Portable Windows executable',
     basename: (version) => `Multi-Git-Client-Portable-${version}.exe`
+  }),
+  // Built on GitHub Actions rather than here, since releases are cut on
+  // Windows. Must match build.dmg.artifactName in package.json.
+  macos: Object.freeze({
+    label: 'macOS disk image (Apple silicon and Intel)',
+    basename: (version) => `Multi-Git-Client-macOS-${version}.dmg`
   })
 });
 
+// `installer`, `portable` and `both` are what release.js can build. `release`
+// is everything a release carries, and is what the upload attaches.
 const TARGET_ASSET_KINDS = Object.freeze({
   installer: Object.freeze(['installer']),
   portable: Object.freeze(['portable']),
-  both: Object.freeze(['installer', 'portable'])
+  both: Object.freeze(['installer', 'portable']),
+  release: Object.freeze(['installer', 'portable', 'macos'])
 });
 
 function assertVersion(version) {
@@ -39,7 +48,9 @@ function selectedAssetKinds(targetName) {
     ? TARGET_ASSET_KINDS[targetName]
     : undefined;
   if (!keys) {
-    throw new Error(`Invalid release target "${targetName}"; expected installer, portable, or both.`);
+    throw new Error(
+      `Invalid release target "${targetName}"; expected installer, portable, both, or release.`
+    );
   }
   return [...keys];
 }
@@ -136,13 +147,14 @@ function buildGhUploadArgs({
   tag,
   version,
   outputDir = DEFAULT_OUTPUT_DIR,
-  repo
+  repo,
+  clobber = false
 }) {
   if (typeof tag !== 'string' || tag.trim() === '') {
     throw new Error('GitHub release tag must be a non-empty string.');
   }
 
-  const artifacts = resolveReleaseAssets({ version, targetName: 'both', outputDir });
+  const artifacts = resolveReleaseAssets({ version, targetName: 'release', outputDir });
   const checksumPath = path.join(path.resolve(outputDir), CHECKSUM_BASENAME);
   const args = [
     'release',
@@ -157,6 +169,12 @@ function buildGhUploadArgs({
       throw new Error('GitHub repository must be a non-empty OWNER/REPO string.');
     }
     args.push('--repo', repo);
+  }
+
+  // Only ever asked for when re-running onto a draft, where nobody can have
+  // downloaded the asset being replaced.
+  if (clobber) {
+    args.push('--clobber');
   }
 
   return args;

@@ -1,0 +1,513 @@
+# Builds every platform and publishes the release.
+#
+# Once main carries the version to release (npm run release:prepare, merged
+# through a pull request), run this from Actions > Release > Run workflow, or:
+#
+#   gh workflow run release.yml
+#
+# Nothing is built on anyone's machine. Windows is built on a Windows runner
+# and macOS on a Mac, in parallel, while the run waits for CI to pass on the
+# same commit. Then the release is created as a draft, every build and
+# SHA256SUMS.txt are attached and read back, and only then is it published, so
+# an installed copy never sees a release with a download missing, and the tag
+# does not exist until everything it names does.
+#
+# A failed run is safe to re-run: a draft it left behind is reused, and its
+# assets replaced.
+name: Release
+
+run-name: >-
+  ${{ (github.event_name == 'pull_request' || inputs.dry_run) && 'Release dry run'
+      || (inputs.draft && 'Release draft' || 'Release') }} from ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: Stop at a draft, to edit the notes before publishing it yourself
+        type: boolean
+        default: false
+      dry_run:
+        description: Build and assemble everything, but create no release
+        type: boolean
+        default: false
+  # A dry run on pull requests that could break a release, because this
+  # workflow cannot otherwise be tried until it is on main, and a release is
+  # the worst time to find out that one of its builds does not work.
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - package.json
+      - package-lock.json
+      - docs/images/multi-git-logo.ico
+      - docs/images/multi-git_icon.svg
+      - scripts/after-pack.js
+      - scripts/changelog.js
+      - scripts/release-assets.js
+      - scripts/release-notes.js
+      - scripts/upload-release-assets.js
+      - scripts/verify-release.js
+
+# One release at a time, and never cancelled halfway through publishing. Dry
+# runs on a pull request supersede each other.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('release-dry-run-{0}', github.ref) || 'release' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      mode: ${{ steps.plan.outputs.mode }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      existing: ${{ steps.plan.outputs.existing }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+
+      - name: Decide what this run releases
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          DRAFT: ${{ inputs.draft }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          # releaseTag() refuses a version the release scripts cannot name.
+          tag=$(node -e "console.log(require('./scripts/release-assets').releaseTag(process.argv[1]))" "$version")
+
+          if [ "$EVENT" = pull_request ] || [ "$DRY_RUN" = true ]; then
+            mode=dry-run
+          elif [ "$DRAFT" = true ]; then
+            mode=draft
+          else
+            mode=publish
+          fi
+
+          # The updater never offers a prerelease, and GitHub is told the same.
+          case "$version" in
+            *-*) prerelease=true ;;
+            *) prerelease=false ;;
+          esac
+
+          existing=none
+          if [ "$mode" != dry-run ]; then
+            if [ "$mode" = publish ] && [ "$GITHUB_REF" != refs/heads/main ]; then
+              echo "::error::Releases are published from main, and this run is on $GITHUB_REF_NAME. Run it on main, or tick 'draft' or 'dry run' to try a branch."
+              exit 1
+            fi
+
+            if state=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null); then
+              if [ "$state" != true ]; then
+                echo "::error::$tag is already released. Prepare the next version first: npm run release:prepare -- --bump patch"
+                exit 1
+              fi
+              existing=draft
+              echo "::notice::A draft of $tag is left from an earlier run. It will be pointed at this commit, its assets replaced, and its notes kept."
+            fi
+
+            tagged=$(git ls-remote --tags origin "refs/tags/$tag" | cut -f1)
+            if [ -n "$tagged" ] && [ "$tagged" != "$GITHUB_SHA" ]; then
+              echo "::error::The tag $tag already exists at ${tagged:0:12}, not at this commit (${GITHUB_SHA:0:12})."
+              exit 1
+            fi
+          fi
+
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "mode=$mode"
+            echo "prerelease=$prerelease"
+            echo "existing=$existing"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### $tag"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Version | $version |"
+            echo "| Mode | $mode |"
+            echo "| Commit | ${GITHUB_SHA:0:12} on $GITHUB_REF_NAME |"
+            echo "| Prerelease | $prerelease |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  ci:
+    name: wait for CI
+    needs: plan
+    if: needs.plan.outputs.mode != 'dry-run'
+    runs-on: ubuntu-latest
+    # Longer than a CI run, so a slow one is waited for rather than abandoned.
+    timeout-minutes: 75
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Wait for CI to pass on this commit
+        # The builds run meanwhile; this is what stops a commit whose tests
+        # fail from being published, including one released straight after
+        # its merge, while CI on it is still going.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          started=$SECONDS
+          last=
+          while :; do
+            run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" \
+              --limit 1 --json status,conclusion,url --jq '.[0] // empty')
+
+            if [ -z "$run" ]; then
+              if [ $((SECONDS - started)) -ge 300 ]; then
+                echo "::error::CI has not run on ${GITHUB_SHA:0:12}. Start it with 'gh workflow run ci.yml --ref $GITHUB_REF_NAME', then re-run this job."
+                exit 1
+              fi
+              state='not started'
+            else
+              state=$(jq -r .status <<<"$run")
+              if [ "$state" = completed ]; then
+                conclusion=$(jq -r .conclusion <<<"$run")
+                url=$(jq -r .url <<<"$run")
+                if [ "$conclusion" = success ]; then
+                  echo "CI passed: $url"
+                  exit 0
+                fi
+                echo "::error::CI on this commit ended as '$conclusion': $url. Re-run its failed jobs, and once it passes, re-run the failed jobs here."
+                exit 1
+              fi
+            fi
+
+            if [ "$state" != "$last" ]; then
+              echo "CI is $state ($(( (SECONDS - started) / 60 )) min)"
+              last=$state
+            fi
+            sleep 30
+          done
+
+  windows:
+    name: build (Windows)
+    needs: plan
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Package
+        run: npx electron-builder --win nsis portable --publish never
+
+      - name: Verify the executables
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          $expected = @(node -e "for (const a of require('./scripts/release-assets').resolveReleaseAssets({ version: process.argv[1], targetName: 'both' })) console.log(a.path)" $env:VERSION)
+          if ($expected.Count -ne 2) { throw "Expected two Windows builds, resolved: $expected" }
+          foreach ($file in $expected) {
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+              Get-ChildItem dist | Format-Table Name, Length
+              throw "electron-builder did not produce $file"
+            }
+          }
+
+          # The same metadata check as the packaging smoke in ci.yml, on the
+          # executable both builds wrap.
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $exe = Get-Item -LiteralPath "dist/win-unpacked/$($package.build.productName).exe"
+          $info = $exe.VersionInfo
+          $expectedStrings = @{
+            ProductName = $package.build.productName
+            FileDescription = $package.description
+            OriginalFilename = "$($package.build.productName).exe"
+          }
+          foreach ($field in $expectedStrings.Keys) {
+            if ($info.$field -ne $expectedStrings[$field]) {
+              throw "$field is '$($info.$field)', expected '$($expectedStrings[$field])'"
+            }
+          }
+          if (-not $info.ProductVersion.StartsWith(($env:VERSION -split '-')[0])) {
+            throw "ProductVersion is '$($info.ProductVersion)', expected $env:VERSION"
+          }
+
+          Write-Output "Verified $($info.ProductName) $($info.ProductVersion): $($expected -join ', ')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-windows
+          path: |
+            dist/Multi-Git-Client-Setup-*.exe
+            dist/Multi-Git-Client-Portable-*.exe
+          if-no-files-found: error
+          # Both are already compressed archives.
+          compression-level: 0
+          retention-days: 14
+
+  macos:
+    name: build (macOS)
+    needs: plan
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Package
+        # Signed and notarized when the Apple secrets exist (see BUILDING.md),
+        # ad-hoc signed when they do not. Ad-hoc is not a real signature, but
+        # with none at all an Apple silicon Mac calls the downloaded app
+        # "damaged" instead of offering to open it anyway.
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            if [ -z "$APPLE_ID" ]; then
+              echo "::warning::Signed but not notarized: APPLE_ID is not set, so Gatekeeper will still block the app."
+            fi
+            npx electron-builder --mac --publish never
+          else
+            echo "::warning::No MACOS_CERTIFICATE secret, so the app is ad-hoc signed and not notarized. macOS blocks it until it is allowed under System Settings > Privacy & Security."
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+            npx electron-builder --mac --publish never -c.mac.identity=-
+          fi
+
+      - name: Verify the disk image
+        id: verify
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          product=$(node -p "require('./package.json').build.productName")
+          dmg=$(node -e "console.log(require('./scripts/release-assets').resolveReleaseAssets({ version: process.argv[1], targetName: 'release' }).find((a) => a.key === 'macos').path)" "$VERSION")
+
+          if [ ! -f "$dmg" ]; then
+            echo "::error::electron-builder did not produce $dmg."
+            ls -la dist
+            exit 1
+          fi
+
+          mount="$RUNNER_TEMP/dmg"
+          mkdir -p "$mount"
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount"
+          app="$mount/$product.app"
+          echo "mount=$mount" >> "$GITHUB_OUTPUT"
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+
+          if [ ! -d "$app" ]; then
+            echo "::error::$product.app is not in the disk image."
+            exit 1
+          fi
+
+          bundled=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")
+          if [ "$bundled" != "$VERSION" ]; then
+            echo "::error::The app says it is $bundled, expected $VERSION."
+            exit 1
+          fi
+
+          archs=$(lipo -archs "$app/Contents/MacOS/$product")
+          for arch in arm64 x86_64; do
+            case " $archs " in
+              *" $arch "*) ;;
+              *) echo "::error::The executable is built for '$archs', without $arch."; exit 1 ;;
+            esac
+          done
+
+          # Whether build.files still covers what the app loads at runtime.
+          if ! npx --yes @electron/asar list "$app/Contents/Resources/app.asar" | grep -q 'out/node/main/main.js'; then
+            echo "::error::app.asar does not contain out/node/main/main.js."
+            exit 1
+          fi
+
+          codesign --verify --deep --strict --verbose=2 "$app"
+
+          echo "Verified $product $bundled ($archs)"
+
+      - name: Launch the packaged app
+        # A signature the loader rejects, or a module missing from the asar,
+        # only shows when the app starts. A boot failure opens an error window
+        # rather than exiting, so the log is checked as well as the process.
+        env:
+          APP: ${{ steps.verify.outputs.app }}
+        run: |
+          product=$(node -p "require('./package.json').build.productName")
+          home="$RUNNER_TEMP/launch-home"
+          log="$RUNNER_TEMP/launch.log"
+          mkdir -p "$home"
+
+          HOME="$home" "$APP/Contents/MacOS/$product" --user-data-dir="$home/chromium" >"$log" 2>&1 &
+          pid=$!
+          sleep 20
+
+          if ! kill -0 "$pid" 2>/dev/null; then
+            cat "$log"
+            echo "::error::The packaged app exited within 20 seconds of launch."
+            exit 1
+          fi
+
+          kill "$pid"
+          wait "$pid" 2>/dev/null || true
+          cat "$log"
+
+          if grep -q 'Failed to boot desktop app' "$log"; then
+            echo "::error::The packaged app started but could not boot."
+            exit 1
+          fi
+
+      - name: Detach the disk image
+        if: always() && steps.verify.outputs.mount != ''
+        env:
+          MOUNT: ${{ steps.verify.outputs.mount }}
+        run: hdiutil detach "$MOUNT" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-macos
+          path: dist/Multi-Git-Client-macOS-*.dmg
+          if-no-files-found: error
+          # A disk image is already compressed.
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    name: ${{ needs.plan.outputs.mode == 'dry-run' && 'assemble (dry run)' || 'publish' }}
+    needs: [plan, ci, windows, macos]
+    # `ci` is skipped on a dry run, which would otherwise skip this too.
+    if: >-
+      !cancelled()
+      && needs.plan.result == 'success'
+      && needs.windows.result == 'success'
+      && needs.macos.result == 'success'
+      && (needs.ci.result == 'success' || (needs.ci.result == 'skipped' && needs.plan.outputs.mode == 'dry-run'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      MODE: ${{ needs.plan.outputs.mode }}
+      PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+      EXISTING: ${{ needs.plan.outputs.existing }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-*
+          path: dist
+          merge-multiple: true
+
+      - name: Write the release notes
+        run: |
+          node scripts/release-notes.js --version "$VERSION" --tag "$TAG" --out "$RUNNER_TEMP/notes.md"
+          {
+            echo '### Release notes'
+            echo
+            cat "$RUNNER_TEMP/notes.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Assemble without releasing
+        if: env.MODE == 'dry-run'
+        run: |
+          node scripts/upload-release-assets.js --tag "$TAG" --repo "$GITHUB_REPOSITORY" --no-changelog --dry-run
+          # Fails on a missing build, exactly as the real upload would.
+          node -e "require('./scripts/release-assets').writeChecksumManifest({ version: process.argv[1], targetName: 'release' }).then((m) => process.stdout.write(m.contents))" "$VERSION"
+          cp "$RUNNER_TEMP/notes.md" dist/RELEASE_NOTES.md
+
+      - uses: actions/upload-artifact@v4
+        if: env.MODE == 'dry-run'
+        with:
+          name: release-preview
+          path: |
+            dist/SHA256SUMS.txt
+            dist/RELEASE_NOTES.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create the draft
+        if: env.MODE != 'dry-run'
+        run: |
+          if [ "$EXISTING" = draft ]; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA"
+          else
+            flags=()
+            if [ "$PRERELEASE" = true ]; then
+              flags+=(--prerelease)
+            fi
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft \
+              --target "$GITHUB_SHA" --title "Multi-Git v$VERSION" \
+              --notes-file "$RUNNER_TEMP/notes.md" "${flags[@]}"
+          fi
+
+      - name: Upload every build and check what arrived
+        if: env.MODE != 'dry-run'
+        # Writes SHA256SUMS.txt from the files it uploads, then reads the
+        # release back and fails on a missing or short asset. --clobber is
+        # refused unless the release is a draft, which here it always is.
+        run: node scripts/upload-release-assets.js --tag "$TAG" --repo "$GITHUB_REPOSITORY" --no-changelog --clobber
+
+      - name: Publish
+        if: env.MODE == 'publish'
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+
+      - name: Check an installed copy will be offered it
+        if: env.MODE == 'publish' && env.PRERELEASE == 'false'
+        run: |
+          # GitHub's release list can lag a few seconds behind publishing.
+          for attempt in 1 2 3 4; do
+            sleep 15
+            if node scripts/verify-release.js --repo "$GITHUB_REPOSITORY" --version "$VERSION" --tag "$TAG"; then
+              exit 0
+            fi
+            echo "Attempt $attempt did not pass."
+          done
+          exit 1
+
+      - name: Say where it is
+        if: env.MODE != 'dry-run'
+        run: |
+          url=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url)
+          if [ "$MODE" = draft ]; then
+            echo "### Draft ready: [$TAG]($url)" >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::$TAG is a draft with every build attached. Publish it from $url when the notes are ready."
+          else
+            echo "### Released: [$TAG]($url)" >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Released $TAG: $url"
+          fi

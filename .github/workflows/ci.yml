@@ -1,7 +1,8 @@
 # Continuous integration.
 #
-# Windows is not an afterthought here, it is the primary target: the published
-# artifacts are Windows-only, and three of the behaviours this project depends
+# Windows is not an afterthought here, it is the primary target: it is where
+# releases are cut and the only platform the updater serves, and three of the
+# behaviours this project depends
 # on differ there in ways a Linux-only run would never show — killing a process
 # tree has no signal-based equivalent, the filesystem folds case when deciding
 # what a repository path means, and replacing a file that another handle has

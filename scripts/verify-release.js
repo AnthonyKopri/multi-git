@@ -93,14 +93,27 @@ function readVersion() {
   return version;
 }
 
+/**
+ * A token, when one is in the environment.
+ *
+ * Only for the rate limit: the Release workflow runs this from a shared runner
+ * address that has usually spent its 60 unauthenticated requests an hour. A
+ * token also makes drafts visible, which the updater never sees, so the checks
+ * below look at the draft flag themselves rather than relying on its absence.
+ */
+function authHeaders(env = process.env) {
+  const token = env.GH_TOKEN || env.GITHUB_TOKEN;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function getJson(url) {
   const response = await fetch(url, {
-    headers: { 'User-Agent': USER_AGENT, Accept: 'application/vnd.github+json' }
+    headers: { 'User-Agent': USER_AGENT, Accept: 'application/vnd.github+json', ...authHeaders() }
   });
 
   if (response.status === 403 || response.status === 429) {
     throw new Error(
-      'GitHub rate limit reached. Unauthenticated requests are capped at 60 an hour; wait and retry.'
+      'GitHub rate limit reached. Unauthenticated requests are capped at 60 an hour; wait and retry, or set GH_TOKEN.'
     );
   }
   if (!response.ok) {
@@ -130,6 +143,13 @@ function createReport() {
     fail(message, remedy) {
       failures += 1;
       lines.push(`  FAIL  ${message}`);
+      if (remedy) {
+        lines.push(`        -> ${remedy}`);
+      }
+    },
+    /** Worth saying, but not a reason the updater would miss the release. */
+    warn(message, remedy) {
+      lines.push(`  warn  ${message}`);
       if (remedy) {
         lines.push(`        -> ${remedy}`);
       }
@@ -182,9 +202,14 @@ async function verify(options) {
   }
 
   // 1. Visible at all. Drafts are never returned to unauthenticated callers,
-  //    which is exactly what the app is, so "missing" and "still a draft" are
-  //    the same observation from here.
+  //    which is exactly what the app is. With a token they are, so a draft is
+  //    reported as the failure it would be to the app.
   const release = releases.find((entry) => entry?.tag_name === tag);
+  if (release?.draft === true) {
+    report.fail(`${tag} is still a draft, so no installed copy can see it.`, 'Publish the draft.');
+    report.print();
+    return report.failures;
+  }
   if (!release) {
     report.fail(
       `No published release is tagged ${tag}.`,
@@ -242,7 +267,25 @@ async function verify(options) {
     } else {
       report.fail(
         `${basename} is missing, so ${kind} users will not be offered this release.`,
-        'Upload with "npm run release:upload", which always attaches both builds together.'
+        'Upload with "npm run release:upload", or re-run the Release workflow; both attach every build together.'
+      );
+    }
+  }
+
+  // The updater is Windows-only, so a missing build for another platform
+  // hides the release from nobody's updater. It does leave that platform with
+  // nothing to download, which is worth saying without failing over.
+  for (const [kind, spec] of Object.entries(RELEASE_ASSETS)) {
+    if (Object.hasOwn(expected, kind)) {
+      continue;
+    }
+    const basename = spec.basename(version);
+    if (names.has(basename)) {
+      report.pass(`${basename} is attached.`);
+    } else {
+      report.warn(
+        `${basename} is missing. Installed copies are unaffected, but there is no ${spec.label} to download.`,
+        'Re-run the Release workflow, which attaches every build together.'
       );
     }
   }
@@ -403,4 +446,4 @@ if (require.main === module) {
   void main();
 }
 
-module.exports = { parseArgs, parseChecksumManifest, highestOffer, RELEASE_TAG };
+module.exports = { parseArgs, parseChecksumManifest, highestOffer, authHeaders, RELEASE_TAG };

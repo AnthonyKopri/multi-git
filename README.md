@@ -714,9 +714,11 @@ multi-git/
 |-- tests/              # Vitest: unit, integration, and pre-release checks
 |-- scripts/
 |   |-- build.mjs                # esbuild bundling and static asset copy
-|   |-- release.js               # Version bump, build, and checksum driver
+|   |-- release.js               # Local Windows build, version bump, and checksums
+|   |-- prepare-release.js       # Version bump and changelog section for a release
+|   |-- release-notes.js         # Release notes written from CHANGELOG.md
 |   |-- release-assets.js        # Release filenames, labels, and checksums
-|   |-- upload-release-assets.js # Explicit GitHub asset upload
+|   |-- upload-release-assets.js # GitHub asset upload, run by the Release workflow
 |   `-- after-pack.js            # Windows executable icon and version metadata
 |-- out/                # Compiled output (generated, not committed)
 |-- package.json        # Scripts, dependencies, and Electron Builder config

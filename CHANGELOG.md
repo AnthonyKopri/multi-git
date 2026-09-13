@@ -12,6 +12,24 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Added
+
+- **A macOS download.** Each release now carries
+  `Multi-Git-Client-macOS-<version>.dmg` beside the two Windows builds: one disk
+  image that runs on both Apple silicon and Intel Macs, listed in the same
+  `SHA256SUMS.txt`. Before it is attached, the build mounts it, checks its
+  version, architectures and signature, and launches it. The in-app updater
+  stays Windows-only for now, so on a Mac a new version is downloaded from the
+  Releases page.
+
+### Changed
+
+- **Releases are built by GitHub Actions.** Every build — Windows and macOS —
+  now comes out of one workflow run, each on its own platform's runner, only
+  once CI has passed on the commit being released. The release is attached and
+  read back in full before it is published, so an installed copy never finds a
+  release with a download missing.
+
 ## [4.1.4] - 2026-09-12
 
 ### Changed

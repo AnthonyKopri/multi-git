@@ -1,8 +1,12 @@
-// Version bump + Windows build + checksum driver. Run with `npm run release`.
+// Version bump + local Windows build + checksum driver. Run with
+// `npm run release`.
+//
+// For building the Windows artifacts on this machine, to try them before a
+// release. Releases themselves are built and published by
+// .github/workflows/release.yml.
 //
 // Prompts for the new version and which artifacts to produce, then hands off
-// to electron-builder. Every prompt can be answered up front with a flag so
-// the same script works in CI:
+// to electron-builder. Every prompt can be answered up front with a flag:
 //
 //   node scripts/release.js --bump patch --target both --yes
 //   node scripts/release.js --bump 2.0.0 --target installer
@@ -299,12 +303,14 @@ async function main() {
   if (version !== current) {
     console.log('The version bump is not committed or tagged — do that yourself when the build looks right.');
   }
-  if (targetName === 'both') {
-    console.log('After the tag and draft GitHub release exist, run "npm run release:upload".');
-  }
+  console.log('Releases themselves are built and published by the Release workflow; see BUILDING.md.');
 }
 
-main().catch((err) => {
-  console.error(`\nRelease failed: ${err.message}`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(`\nRelease failed: ${err.message}`);
+    process.exit(1);
+  });
+}
+
+module.exports = { nextVersion, applyVersion };
