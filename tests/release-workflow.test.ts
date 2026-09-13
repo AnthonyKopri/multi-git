@@ -99,6 +99,21 @@ describe('the Release workflow', () => {
     expect(fs.existsSync(fromAppRoot('.github', 'workflows', 'ci.yml'))).toBe(true);
   });
 
+  it('checks the installed Linux packages leave what the updater recognises them by', async () => {
+    // The app tells a .deb and an .rpm install apart by the package manager's
+    // records. If those move, the install jobs are where it shows.
+    const { DPKG_FILE_LIST, LINUX_PACKAGE_NAME, RPM_DATABASES } = await import(
+      '../src/main/update/install-target'
+    );
+
+    expect(DPKG_FILE_LIST.replace(LINUX_PACKAGE_NAME, '$EXECUTABLE')).toBe('/var/lib/dpkg/info/$EXECUTABLE.list');
+    expect(workflow).toContain('/var/lib/dpkg/info/$EXECUTABLE.list');
+    for (const database of RPM_DATABASES) {
+      expect(workflow).toContain(`-d ${database} `);
+    }
+    expect(workflow).toMatch(/needs: \[plan, ci, windows, macos, linux, linux-install\]/);
+  });
+
   it('uploads with a replace that the upload script confines to drafts', () => {
     expect(workflow).toContain('upload-release-assets.js --tag "$TAG" --repo "$GITHUB_REPOSITORY" --no-changelog --clobber');
   });

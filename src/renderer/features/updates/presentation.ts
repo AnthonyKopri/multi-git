@@ -65,13 +65,33 @@ export function headline(state: UpdateState): string {
 
 /** What actually happens on this machine, spelled out before it happens. */
 function installSentence(state: UpdateState): string {
-  if (updatesFromReleasePage(state.installKind)) {
-    return 'Its page on GitHub opens in your browser. Download the disk image there, and drag Multi-Git Client into Applications to replace this copy.';
+  switch (state.installKind) {
+    case 'macos':
+      return 'Its page on GitHub opens in your browser. Download the disk image there, and drag Multi-Git Client into Applications to replace this copy.';
+    case 'deb':
+    case 'rpm':
+      return `Its page on GitHub opens in your browser. Download the .${state.installKind} package there and install it the way you installed this one; it replaces this copy.`;
+    case 'appimage':
+      return 'The new version replaces this AppImage file, keeping its name and place, then Multi-Git restarts on it.';
+    case 'portable':
+      return 'The new version will be saved next to this one and opened. Your current file stays where it is.';
+    default:
+      return 'It installs in the background, then Multi-Git restarts on the new version.';
   }
-  if (state.installKind === 'portable') {
-    return 'The new version will be saved next to this one and opened. Your current file stays where it is.';
+}
+
+/** What a finished, verified download means for this build. */
+function readySentence(state: UpdateState, version: string): string {
+  switch (state.installKind) {
+    case 'portable':
+      return `Version ${version} is downloaded and verified. Opening it will close this window.`;
+    // Already in place: quitting now and opening the AppImage later also
+    // starts the new version.
+    case 'appimage':
+      return `Version ${version} is downloaded, verified, and has replaced this AppImage. Restarting closes Multi-Git and opens the new version.`;
+    default:
+      return `Version ${version} is downloaded and verified. Installing will close Multi-Git and reopen it.`;
   }
-  return 'It installs in the background, then Multi-Git restarts on the new version.';
 }
 
 export function bodyText(state: UpdateState): string {
@@ -85,12 +105,10 @@ export function bodyText(state: UpdateState): string {
     return `Getting version ${version}. It is checked against the release checksum before anything runs.`;
   }
   if (state.phase === 'ready') {
-    return state.installKind === 'portable'
-      ? `Version ${version} is downloaded and verified. Opening it will close this window.`
-      : `Version ${version} is downloaded and verified. Installing will close Multi-Git and reopen it.`;
+    return readySentence(state, version);
   }
   if (state.phase === 'installing') {
-    return 'Starting the installer…';
+    return state.installKind === 'appimage' ? 'Starting the new version…' : 'Starting the installer…';
   }
 
   return `Version ${version} is available. You are on ${state.currentVersion}. ${installSentence(state)}`;
@@ -101,7 +119,8 @@ export function primaryLabel(state: UpdateState): string {
     case 'downloading':
       return `Downloading… ${state.percent ?? 0}%`;
     case 'ready':
-      return state.installKind === 'portable' ? 'Open new version' : 'Restart & install';
+      if (state.installKind === 'portable') return 'Open new version';
+      return state.installKind === 'appimage' ? 'Restart now' : 'Restart & install';
     case 'installing':
       return 'Starting…';
     case 'error':

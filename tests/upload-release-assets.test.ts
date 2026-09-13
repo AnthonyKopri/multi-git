@@ -105,15 +105,26 @@ describe('release upload command', () => {
       expect(uploadScript.missingAssets('3.0.0', outputDir)).toEqual([
         'Multi-Git-Client-Setup-3.0.0.exe',
         'Multi-Git-Client-Portable-3.0.0.exe',
-        'Multi-Git-Client-macOS-3.0.0.dmg'
+        'Multi-Git-Client-macOS-3.0.0.dmg',
+        'Multi-Git-Client-Linux-3.0.0-x86_64.AppImage',
+        'Multi-Git-Client-Linux-3.0.0-amd64.deb',
+        'Multi-Git-Client-Linux-3.0.0-x86_64.rpm'
       ]);
 
       // What `npm run release` leaves behind: the Windows builds only.
       fs.writeFileSync(path.join(outputDir, 'Multi-Git-Client-Setup-3.0.0.exe'), 'setup');
       fs.writeFileSync(path.join(outputDir, 'Multi-Git-Client-Portable-3.0.0.exe'), 'portable');
-      expect(uploadScript.missingAssets('3.0.0', outputDir)).toEqual(['Multi-Git-Client-macOS-3.0.0.dmg']);
+      const builtElsewhere = [
+        'Multi-Git-Client-macOS-3.0.0.dmg',
+        'Multi-Git-Client-Linux-3.0.0-x86_64.AppImage',
+        'Multi-Git-Client-Linux-3.0.0-amd64.deb',
+        'Multi-Git-Client-Linux-3.0.0-x86_64.rpm'
+      ];
+      expect(uploadScript.missingAssets('3.0.0', outputDir)).toEqual(builtElsewhere);
 
-      fs.writeFileSync(path.join(outputDir, 'Multi-Git-Client-macOS-3.0.0.dmg'), 'image');
+      for (const name of builtElsewhere) {
+        fs.writeFileSync(path.join(outputDir, name), 'build');
+      }
       expect(uploadScript.missingAssets('3.0.0', outputDir)).toEqual([]);
     } finally {
       fs.rmSync(outputDir, { recursive: true, force: true });

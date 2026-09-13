@@ -20,11 +20,27 @@ const RELEASE_ASSETS = Object.freeze({
     label: 'Portable Windows executable',
     basename: (version) => `Multi-Git-Client-Portable-${version}.exe`
   }),
-  // Built on GitHub Actions rather than here, since releases are cut on
-  // Windows. Must match build.dmg.artifactName in package.json.
+  // Built on GitHub Actions, on a Mac. Must match build.dmg.artifactName in
+  // package.json.
   macos: Object.freeze({
     label: 'macOS disk image (Apple silicon and Intel)',
     basename: (version) => `Multi-Git-Client-macOS-${version}.dmg`
+  }),
+  // The three Linux builds, also made on GitHub Actions. Each must match the
+  // artifactName under build.appImage, build.deb and build.rpm in
+  // package.json. The architecture is in the name the way each format spells
+  // it, so the file a user downloads says what it is for.
+  appimage: Object.freeze({
+    label: 'Linux AppImage (x86_64, any distribution)',
+    basename: (version) => `Multi-Git-Client-Linux-${version}-x86_64.AppImage`
+  }),
+  deb: Object.freeze({
+    label: 'Linux .deb package (Debian, Ubuntu, Linux Mint; amd64)',
+    basename: (version) => `Multi-Git-Client-Linux-${version}-amd64.deb`
+  }),
+  rpm: Object.freeze({
+    label: 'Linux .rpm package (Fedora, RHEL, openSUSE; x86_64)',
+    basename: (version) => `Multi-Git-Client-Linux-${version}-x86_64.rpm`
   })
 });
 
@@ -34,7 +50,7 @@ const TARGET_ASSET_KINDS = Object.freeze({
   installer: Object.freeze(['installer']),
   portable: Object.freeze(['portable']),
   both: Object.freeze(['installer', 'portable']),
-  release: Object.freeze(['installer', 'portable', 'macos'])
+  release: Object.freeze(['installer', 'portable', 'macos', 'appimage', 'deb', 'rpm'])
 });
 
 function assertVersion(version) {

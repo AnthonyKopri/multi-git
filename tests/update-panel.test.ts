@@ -305,6 +305,51 @@ describe('on a Mac, which is updated from the release page', () => {
   });
 });
 
+describe('from a Linux .deb or .rpm, which is updated from the release page', () => {
+  for (const kind of ['deb', 'rpm'] as const) {
+    it(`names the .${kind} to download, and opens the page rather than downloading`, async () => {
+      await mount(bridge);
+      push(bridge, state({ installKind: kind }));
+      popup(bridge);
+
+      expect($('update-message').textContent).toContain(`.${kind} package`);
+      expect($('update-message').textContent).not.toMatch(/Applications|restarts/);
+      expect($('btn-update-install').textContent).toMatch(/open download page/i);
+
+      $('btn-update-install').click();
+      await vi.waitFor(() => expect(bridge.openUpdateReleasePage).toHaveBeenCalledTimes(1));
+      expect(bridge.downloadUpdate).not.toHaveBeenCalled();
+    });
+  }
+});
+
+describe('an AppImage, which replaces itself', () => {
+  const appImage = (overrides: Partial<UpdateState> = {}) => state({ installKind: 'appimage', ...overrides });
+
+  it('says the file is replaced where it is, and downloads when asked', async () => {
+    await mount(bridge);
+    push(bridge, appImage());
+    popup(bridge);
+
+    expect($('update-message').textContent).toMatch(/replaces this AppImage/);
+    expect($('btn-update-install').textContent).toMatch(/download & install/i);
+
+    $('btn-update-install').click();
+    await vi.waitFor(() => expect(bridge.downloadUpdate).toHaveBeenCalledTimes(1));
+    expect(bridge.openUpdateReleasePage).not.toHaveBeenCalled();
+  });
+
+  it('offers a restart once the new version is in place', async () => {
+    await mount(bridge);
+    push(bridge, appImage({ phase: 'ready', percent: 100 }));
+
+    expect($('update-message').textContent).toMatch(/has replaced this AppImage/);
+    expect($('btn-update-install').textContent).toMatch(/restart now/i);
+    $('btn-update-install').click();
+    expect(bridge.installUpdate).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('a window opened after the check', () => {
   it('seeds itself rather than waiting for the next broadcast', async () => {
     bridge.getUpdateState.mockResolvedValue(state());

@@ -6,12 +6,13 @@
 // testable without an Electron build.
 
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 
 import { app, BrowserWindow, shell } from 'electron';
 
 import { createUpdateService } from './service';
 import type { UpdateService, UpdateSettings } from './service';
-import { detectInstallKind, portableDirectory } from './install-target';
+import { appImageFile, detectInstallKind, portableDirectory } from './install-target';
 import type { InstallEnvironment } from './install-target';
 import {
   RateLimitedError,
@@ -35,7 +36,9 @@ function environment(): InstallEnvironment {
   return {
     platform: process.platform,
     isPackaged: app.isPackaged,
-    env: process.env
+    env: process.env,
+    execPath: process.execPath,
+    exists: (filePath) => fs.existsSync(filePath)
   };
 }
 
@@ -94,27 +97,38 @@ export function createUpdateWiring(targets: TargetWindows): UpdateService {
     currentVersion: appVersion(),
     installKind,
     portableDir: portableDirectory(environment()),
+    appImagePath: appImageFile(environment()),
     tempDir: app.getPath('temp'),
     fetchJson: (url) => fetchJson(url, httpsFetcher),
     fetchText: (url) => fetchText(url, httpsFetcher),
     downloadToFile: (url, destPath, onProgress) =>
       downloadToFile(url, destPath, {
         fetcher: httpsFetcher,
-        openSink: fileSinkFactory,
+        openSink: (sinkPath) =>
+          fileSinkFactory(sinkPath, { executable: installKind === 'appimage' }),
         onProgress
       }),
     isRateLimit: (error) => error instanceof RateLimitedError,
     // Detached and unref'd: the installer has to outlive the process that
     // started it, because the next thing that happens is this one quitting.
-    spawnDetached: (file, args) => {
-      const child = spawn(file, args, {
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: true,
-        shell: false
-      });
-      child.unref();
-    },
+    // Settled only once the OS has started it or refused to: a file that cannot
+    // be run -- say, an AppImage on a noexec mount -- is reported by an `error`
+    // event after spawn() has returned, and quitting before hearing it would
+    // close the app into nothing.
+    spawnDetached: (file, args) =>
+      new Promise<void>((resolve, reject) => {
+        const child = spawn(file, args, {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+          shell: false
+        });
+        child.once('error', reject);
+        child.once('spawn', () => {
+          child.unref();
+          resolve();
+        });
+      }),
     // app.quit(), never app.exit(): `before-quit` is where main.ts flushes the
     // window layout, and exit() would silently discard it on every update.
     quit: () => app.quit(),

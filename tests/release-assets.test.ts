@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 
-type ArtifactKey = 'installer' | 'portable' | 'macos';
+type ArtifactKey = 'installer' | 'portable' | 'macos' | 'appimage' | 'deb' | 'rpm';
 type TargetName = 'installer' | 'portable' | 'both' | 'release';
 
 interface ArtifactSpec {
@@ -96,15 +96,35 @@ describe('release artifact metadata', () => {
     );
   });
 
+  it('names the Linux builds for their format and architecture', () => {
+    // package.json build.appImage, build.deb and build.rpm artifactName;
+    // tests/packaging.test.ts checks that side.
+    expect(releaseAssets.RELEASE_ASSETS.appimage.basename('3.0.0')).toBe(
+      'Multi-Git-Client-Linux-3.0.0-x86_64.AppImage'
+    );
+    expect(releaseAssets.RELEASE_ASSETS.deb.basename('3.0.0')).toBe('Multi-Git-Client-Linux-3.0.0-amd64.deb');
+    expect(releaseAssets.RELEASE_ASSETS.rpm.basename('3.0.0')).toBe('Multi-Git-Client-Linux-3.0.0-x86_64.rpm');
+    expect(releaseAssets.RELEASE_ASSETS.appimage.label).toMatch(/AppImage/);
+    expect(releaseAssets.RELEASE_ASSETS.deb.label).toMatch(/Ubuntu/);
+    expect(releaseAssets.RELEASE_ASSETS.rpm.label).toMatch(/Fedora/);
+  });
+
   it('maps each release target and keeps both in installer-first order', () => {
     expect(releaseAssets.selectedAssetKinds('installer')).toEqual(['installer']);
     expect(releaseAssets.selectedAssetKinds('portable')).toEqual(['portable']);
     expect(releaseAssets.selectedAssetKinds('both')).toEqual(['installer', 'portable']);
   });
 
-  it('keeps the macOS build out of what release.js builds, and in what a release carries', () => {
-    expect(releaseAssets.selectedAssetKinds('both')).not.toContain('macos');
-    expect(releaseAssets.selectedAssetKinds('release')).toEqual(['installer', 'portable', 'macos']);
+  it('keeps the macOS and Linux builds out of what release.js builds, and in what a release carries', () => {
+    expect(releaseAssets.selectedAssetKinds('both')).toEqual(['installer', 'portable']);
+    expect(releaseAssets.selectedAssetKinds('release')).toEqual([
+      'installer',
+      'portable',
+      'macos',
+      'appimage',
+      'deb',
+      'rpm'
+    ]);
   });
 
   it('returns a copy so callers cannot mutate the central target mapping', () => {
@@ -184,12 +204,15 @@ describe('SHA256SUMS.txt', () => {
     expect(result.contents).not.toContain('Setup');
   });
 
-  it('describes the macOS build in the same manifest as the Windows ones', async () => {
-    // One manifest for the release, so the Windows updater, which reads its
-    // own lines by name, and a Mac user checking a download read the same file.
+  it('describes every platform’s builds in the one manifest', async () => {
+    // One manifest for the release, so the updaters, which read their own
+    // lines by name, and a user checking a download read the same file.
     fs.writeFileSync(artifactPath('installer'), 'abc');
     fs.writeFileSync(artifactPath('portable'), '');
     fs.writeFileSync(artifactPath('macos'), 'abc');
+    fs.writeFileSync(artifactPath('appimage'), '');
+    fs.writeFileSync(artifactPath('deb'), 'abc');
+    fs.writeFileSync(artifactPath('rpm'), '');
 
     const result = await releaseAssets.writeChecksumManifest({
       version: '3.0.0',
@@ -200,7 +223,10 @@ describe('SHA256SUMS.txt', () => {
     expect(result.contents).toBe(
       `${INSTALLER_SHA256}  Multi-Git-Client-Setup-3.0.0.exe\n` +
         `${PORTABLE_SHA256}  Multi-Git-Client-Portable-3.0.0.exe\n` +
-        `${INSTALLER_SHA256}  Multi-Git-Client-macOS-3.0.0.dmg\n`
+        `${INSTALLER_SHA256}  Multi-Git-Client-macOS-3.0.0.dmg\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Client-Linux-3.0.0-x86_64.AppImage\n` +
+        `${INSTALLER_SHA256}  Multi-Git-Client-Linux-3.0.0-amd64.deb\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Client-Linux-3.0.0-x86_64.rpm\n`
     );
   });
 
@@ -242,6 +268,9 @@ describe('GitHub release upload arguments', () => {
       `${artifactPath('installer')}#Windows installer (recommended)`,
       `${artifactPath('portable')}#Portable Windows executable`,
       `${artifactPath('macos')}#macOS disk image (Apple silicon and Intel)`,
+      `${artifactPath('appimage')}#Linux AppImage (x86_64, any distribution)`,
+      `${artifactPath('deb')}#Linux .deb package (Debian, Ubuntu, Linux Mint; amd64)`,
+      `${artifactPath('rpm')}#Linux .rpm package (Fedora, RHEL, openSUSE; x86_64)`,
       `${path.join(outputDir, 'SHA256SUMS.txt')}#SHA-256 checksums`,
       '--repo',
       'AnthonyKopri/multi-git'

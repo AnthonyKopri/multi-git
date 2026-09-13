@@ -10,7 +10,10 @@ import { createRequire } from 'node:module';
 import { fromAppRoot } from '../src/server/app-root';
 
 interface PackageManifest {
+  name?: string;
   version?: string;
+  homepage?: string;
+  desktopName?: string;
   main?: string;
   scripts?: Record<string, string>;
   build?: {
@@ -20,12 +23,24 @@ interface PackageManifest {
     portable?: { artifactName?: string };
     mac?: { icon?: string; target?: Array<{ target: string; arch: string[] }> };
     dmg?: { artifactName?: string };
+    linux?: {
+      icon?: string;
+      maintainer?: string;
+      executableName?: string;
+      target?: Array<{ target: string; arch: string[] }>;
+    };
+    appImage?: { artifactName?: string };
+    deb?: { artifactName?: string; depends?: string[] };
+    rpm?: { artifactName?: string; depends?: string[] };
   };
 }
 
 const require = createRequire(import.meta.url);
 const { RELEASE_ASSETS } = require('../scripts/release-assets.js') as {
-  RELEASE_ASSETS: Record<'installer' | 'portable' | 'macos', { basename(version: string): string }>;
+  RELEASE_ASSETS: Record<
+    'installer' | 'portable' | 'macos' | 'appimage' | 'deb' | 'rpm',
+    { basename(version: string): string }
+  >;
 };
 
 function readManifest(): PackageManifest {
@@ -70,6 +85,63 @@ describe('packaging', () => {
 
     expect(icon).not.toBe('');
     expect(fs.existsSync(fromAppRoot(...icon.split('/')))).toBe(true);
+  });
+
+  it('names the Linux packages what the upload and the updater look for', () => {
+    const cases = [
+      ['appimage', manifest.build?.appImage?.artifactName, 'AppImage'],
+      ['deb', manifest.build?.deb?.artifactName, 'deb'],
+      ['rpm', manifest.build?.rpm?.artifactName, 'rpm']
+    ] as const;
+
+    for (const [kind, pattern, ext] of cases) {
+      const built = (pattern ?? '').replace('${version}', '3.0.0').replace('${ext}', ext);
+      expect(built, kind).toBe(RELEASE_ASSETS[kind].basename('3.0.0'));
+    }
+  });
+
+  it('builds the AppImage, the .deb and the .rpm, for the x86_64 their names claim', () => {
+    expect(manifest.build?.linux?.target).toEqual([
+      { target: 'AppImage', arch: ['x64'] },
+      { target: 'deb', arch: ['x64'] },
+      { target: 'rpm', arch: ['x64'] }
+    ]);
+  });
+
+  it('gives the .deb and .rpm what electron-builder refuses to package without', () => {
+    // A homepage, and a maintainer when package.json has no author email.
+    expect(manifest.homepage ?? '').toMatch(/^https:\/\/github\.com\//);
+    expect(manifest.build?.linux?.maintainer ?? '').toMatch(/^.+ <[^@\s]+@[^@\s]+>$/);
+  });
+
+  it('names the Linux package the way the updater looks it up', async () => {
+    // detectInstallKind reads dpkg's file list for this package name, and
+    // electron-builder names the package, and the executable, from `name`.
+    const { LINUX_PACKAGE_NAME } = await import('../src/main/update/install-target');
+
+    expect(manifest.name).toBe(LINUX_PACKAGE_NAME);
+    expect(manifest.build?.linux?.executableName).toBeUndefined();
+    // Electron's window class on Linux, which the desktop entry matches.
+    expect(manifest.desktopName).toBe(`${LINUX_PACKAGE_NAME}.desktop`);
+  });
+
+  it('has the packages install Git, which the app cannot work without', () => {
+    expect(manifest.build?.deb?.depends).toContain('git');
+    expect(manifest.build?.rpm?.depends).toContain('git');
+  });
+
+  it('gives Linux a PNG icon, which it can use for windows as well as the packages', () => {
+    // Linux cannot load the .ico, and src/main/windows.ts loads this at runtime.
+    const icon = 'docs/images/multi-git-logo.png';
+    const png = fs.readFileSync(fromAppRoot(...icon.split('/')));
+
+    expect(manifest.build?.linux?.icon).toBe(icon);
+    expect(packaged).toContain(icon);
+    expect(png.subarray(1, 4).toString('ascii')).toBe('PNG');
+    // Width and height, from the IHDR chunk: large enough to scale down cleanly.
+    expect(png.readUInt32BE(16)).toBeGreaterThanOrEqual(512);
+    expect(png.readUInt32BE(20)).toBe(png.readUInt32BE(16));
+    expect(fs.readFileSync(fromAppRoot('src', 'main', 'windows.ts'), 'utf8')).toContain('multi-git-logo.png');
   });
 
   it('ships the template bodies the new-repository wizard reads', () => {

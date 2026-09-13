@@ -1,10 +1,14 @@
 import crypto from 'node:crypto';
-import { describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   RateLimitedError,
   downloadToFile,
   fetchJson,
+  fileSinkFactory,
   isAllowedUpdateUrl,
   openUrl
 } from '../src/main/update/net';
@@ -213,5 +217,86 @@ describe('downloading an artifact', () => {
         openSink: async () => sink
       })
     ).rejects.toThrow(/larger than expected/);
+  });
+});
+
+describe('the file a download is written to', () => {
+  const posix = process.platform !== 'win32';
+  const folders: string[] = [];
+
+  afterEach(() => {
+    while (folders.length > 0) {
+      fs.rmSync(folders.pop() as string, { recursive: true, force: true });
+    }
+  });
+
+  function folder(): string {
+    const created = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-git-sink-'));
+    folders.push(created);
+    return created;
+  }
+
+  async function write(destPath: string, contents: string, options = {}) {
+    const sink = await fileSinkFactory(destPath, options);
+    await sink.write(Buffer.from(contents));
+    await sink.finish();
+    return sink;
+  }
+
+  it('stays staged beside the destination until committed', async () => {
+    const dest = path.join(folder(), 'Multi-Git.AppImage');
+    const sink = await write(dest, 'new');
+
+    expect(fs.existsSync(dest)).toBe(false);
+    expect(fs.readFileSync(`${dest}.part`, 'utf8')).toBe('new');
+
+    await sink.commit();
+    expect(fs.readFileSync(dest, 'utf8')).toBe('new');
+    expect(fs.existsSync(`${dest}.part`)).toBe(false);
+  });
+
+  it('replaces the file already at the destination', async () => {
+    const dest = path.join(folder(), 'Multi-Git.AppImage');
+    fs.writeFileSync(dest, 'old');
+
+    await (await write(dest, 'new')).commit();
+    expect(fs.readFileSync(dest, 'utf8')).toBe('new');
+  });
+
+  it('leaves the destination untouched when discarded', async () => {
+    const dest = path.join(folder(), 'Multi-Git.AppImage');
+    fs.writeFileSync(dest, 'old');
+
+    await (await write(dest, 'bad')).discard();
+    expect(fs.readFileSync(dest, 'utf8')).toBe('old');
+    expect(fs.existsSync(`${dest}.part`)).toBe(false);
+  });
+
+  it.runIf(posix)('marks the file executable only when asked, and before it takes its name', async () => {
+    const executable = path.join(folder(), 'Multi-Git.AppImage');
+    await (await write(executable, 'new', { executable: true })).commit();
+    expect(fs.statSync(executable).mode & 0o111).toBe(0o111);
+
+    const plain = path.join(folder(), 'Setup.exe');
+    await (await write(plain, 'new')).commit();
+    expect(fs.statSync(plain).mode & 0o111).toBe(0);
+  });
+
+  it.runIf(posix)('swaps the file in one step, so what has the old one open keeps reading it', async () => {
+    // What a running AppImage is: a mount reading the file it was started from.
+    const dest = path.join(folder(), 'Multi-Git.AppImage');
+    fs.writeFileSync(dest, 'old version');
+    const running = fs.openSync(dest, 'r');
+
+    try {
+      await (await write(dest, 'new version', { executable: true })).commit();
+
+      const buffer = Buffer.alloc(11);
+      fs.readSync(running, buffer, 0, 11, 0);
+      expect(buffer.toString('utf8')).toBe('old version');
+      expect(fs.readFileSync(dest, 'utf8')).toBe('new version');
+    } finally {
+      fs.closeSync(running);
+    }
   });
 });
