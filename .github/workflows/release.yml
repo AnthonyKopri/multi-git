@@ -339,6 +339,19 @@ jobs:
             exit 1
           fi
 
+          # electron-builder falls back to Electron's own icon, with only a
+          # log line, when it cannot use the one configured.
+          icon=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$app/Contents/Info.plist")
+          case "$icon" in
+            *.icns) ;;
+            *) icon="$icon.icns" ;;
+          esac
+          if [ "$icon" = electron.icns ] || [ ! -f "$app/Contents/Resources/$icon" ]; then
+            echo "::error::The app's icon is '$icon', not one made from docs/images/multi-git_icon.svg."
+            exit 1
+          fi
+          echo "Icon: $icon ($(sips -g pixelWidth "$app/Contents/Resources/$icon" | awk '/pixelWidth/ { print $2 }')px)"
+
           archs=$(lipo -archs "$app/Contents/MacOS/$product")
           for arch in arm64 x86_64; do
             case " $archs " in
