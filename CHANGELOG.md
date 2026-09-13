@@ -26,14 +26,33 @@ or Security. Remove empty headings when preparing a release.
   Applications. It is only told about releases that have a Mac download.
   Updating in place needs the app to be signed with an Apple Developer ID,
   which it is not yet.
+- **Linux downloads.** Each release now carries three Linux builds for x86_64:
+  `Multi-Git-Client-Linux-<version>-x86_64.AppImage`, which runs on any
+  distribution, `Multi-Git-Client-Linux-<version>-amd64.deb` for Debian,
+  Ubuntu and Linux Mint, and `Multi-Git-Client-Linux-<version>-x86_64.rpm` for
+  Fedora, RHEL and openSUSE. The packages install Git with the app. Before
+  they are attached, the .deb is installed and launched on Ubuntu, the
+  AppImage is launched, and the packages are installed on clean Debian, Fedora
+  and openSUSE systems with a check that nothing the app links against is
+  left out.
+- **The Linux AppImage updates itself.** It is offered new versions like the
+  Windows builds are. After the download matches the release checksum, it
+  replaces the AppImage file where it is, under the same name, so whatever
+  you open it from opens the new version, and Multi-Git restarts on it. A copy
+  installed from the .deb or .rpm shows the same notice as a Mac instead, and
+  opens the release page, since those belong to the system package manager.
 
 ### Changed
 
-- **Releases are built by GitHub Actions.** Every build — Windows and macOS —
-  now comes out of one workflow run, each on its own platform's runner, only
-  once CI has passed on the commit being released. The release is attached and
-  read back in full before it is published, so an installed copy never finds a
-  release with a download missing.
+- **A release fails its final check when any platform's build is missing.**
+  `npm run release:verify` used to only warn about a missing macOS build, when
+  only Windows copies looked for updates. Every build now has copies that look
+  for their own file.
+- **Releases are built by GitHub Actions.** Every build — Windows, macOS and
+  Linux — now comes out of one workflow run, each on its own platform's
+  runner, only once CI has passed on the commit being released. The release is
+  attached and read back in full before it is published, so an installed copy
+  never finds a release with a download missing.
 
 ## [4.1.4] - 2026-09-12
 

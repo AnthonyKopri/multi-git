@@ -7,6 +7,9 @@ import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 import { CHECKSUM_ASSET, assetBasename, parseReleaseTag } from '../src/main/update/release-feed';
+import type { UpdateArtifact } from '../src/main/update/release-feed';
+
+const EVERY_BUILD: UpdateArtifact[] = ['installer', 'portable', 'macos', 'appimage', 'deb', 'rpm'];
 
 interface VerifyScriptApi {
   parseArgs(argv: string[]): Record<string, string | boolean>;
@@ -22,11 +25,7 @@ const verify = require('../scripts/verify-release.js') as VerifyScriptApi;
 const DIGEST = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
 
 function release(version: string, overrides: Record<string, unknown> = {}, assetNames?: string[]) {
-  const names = assetNames ?? [
-    assetBasename('installer', version),
-    assetBasename('portable', version),
-    CHECKSUM_ASSET
-  ];
+  const names = assetNames ?? [...EVERY_BUILD.map((kind) => assetBasename(kind, version)), CHECKSUM_ASSET];
 
   return {
     tag_name: `Release_v${version}`,
@@ -90,21 +89,24 @@ describe('working out what would be offered', () => {
   });
 
   it('ignores a release that is missing an artifact or its checksums', () => {
-    const noPortable = release('3.2.0', {}, [assetBasename('installer', '3.2.0'), CHECKSUM_ASSET]);
-    const noChecksums = release('3.2.0', {}, [
-      assetBasename('installer', '3.2.0'),
-      assetBasename('portable', '3.2.0')
-    ]);
-
-    expect(verify.highestOffer([noPortable], '3.2.0')).toBeNull();
+    const noChecksums = release('3.2.0', {}, EVERY_BUILD.map((kind) => assetBasename(kind, '3.2.0')));
     expect(verify.highestOffer([noChecksums], '3.2.0')).toBeNull();
+
+    // Every build has copies looking for it, so none can be missing: a
+    // release without the .rpm is invisible to every copy installed from one.
+    for (const missing of EVERY_BUILD) {
+      const without = release('3.2.0', {}, [
+        ...EVERY_BUILD.filter((kind) => kind !== missing).map((kind) => assetBasename(kind, '3.2.0')),
+        CHECKSUM_ASSET
+      ]);
+      expect(verify.highestOffer([without], '3.2.0'), `without the ${missing}`).toBeNull();
+    }
   });
 
   it('spots a tag whose version does not match its assets', () => {
     // Tagged 3.3.0, but built from a package.json still saying 3.2.0.
     const mismatched = release('3.3.0', { tag_name: 'Release_v3.3.0' }, [
-      assetBasename('installer', '3.2.0'),
-      assetBasename('portable', '3.2.0'),
+      ...EVERY_BUILD.map((kind) => assetBasename(kind, '3.2.0')),
       CHECKSUM_ASSET
     ]);
 

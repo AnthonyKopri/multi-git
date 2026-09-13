@@ -13,6 +13,9 @@ function releases(
     `Multi-Git-Client-Setup-${version}.exe`,
     `Multi-Git-Client-Portable-${version}.exe`,
     `Multi-Git-Client-macOS-${version}.dmg`,
+    `Multi-Git-Client-Linux-${version}-x86_64.AppImage`,
+    `Multi-Git-Client-Linux-${version}-amd64.deb`,
+    `Multi-Git-Client-Linux-${version}-x86_64.rpm`,
     'SHA256SUMS.txt'
   ]
 ): unknown {
@@ -36,9 +39,12 @@ function manifest(version = '3.2.0'): string {
   return [
     `${DIGEST}  Multi-Git-Client-Setup-${version}.exe`,
     `${DIGEST}  Multi-Git-Client-Portable-${version}.exe`,
+    `${DIGEST}  Multi-Git-Client-Linux-${version}-x86_64.AppImage`,
     ''
   ].join('\n');
 }
+
+const APPIMAGE = '/home/ada/Apps/Multi-Git-Client-Linux-3.1.1-x86_64.AppImage';
 
 interface Harness {
   deps: UpdateServiceDeps;
@@ -55,6 +61,7 @@ interface Harness {
 function harness(
   overrides: {
     installKind?: InstallKind;
+    appImagePath?: string | null;
     settings?: Partial<UpdateSettings>;
     digest?: string;
     fetchJson?: UpdateServiceDeps['fetchJson'];
@@ -76,6 +83,7 @@ function harness(
     currentVersion: '3.1.1',
     installKind: overrides.installKind ?? 'installer',
     portableDir: 'D:\\Tools\\MultiGit',
+    appImagePath: overrides.appImagePath === undefined ? APPIMAGE : overrides.appImagePath,
     tempDir: 'C:\\Temp',
     fetchJson: overrides.fetchJson ?? (() => Promise.resolve(releases())),
     fetchText: overrides.fetchText ?? (() => Promise.resolve(manifest())),
@@ -331,6 +339,23 @@ describe('installing', () => {
     expect(h.quits).toBe(0);
   });
 
+  it('stays open when the new process fails after spawn() has returned', async () => {
+    // How an unrunnable file is reported: an `error` event, not a throw.
+    const h = harness({
+      installKind: 'appimage',
+      spawnDetached: () => Promise.reject(new Error('spawn EACCES'))
+    });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    await service.download();
+    const state = await service.install();
+
+    expect(state.phase).toBe('error');
+    expect(state.message).toMatch(/EACCES/);
+    expect(h.quits).toBe(0);
+  });
+
   it('cannot be installed before it has been downloaded', async () => {
     const h = harness();
     const service = createUpdateService(h.deps);
@@ -421,6 +446,111 @@ describe('a Mac copy, updated from the release page', () => {
     expect(state.phase).toBe('error');
     expect(state.message).toMatch(/No application/);
   });
+});
+
+describe('an AppImage, which replaces itself', () => {
+  it('is only told about a release that carries an AppImage', async () => {
+    const offered = harness({ installKind: 'appimage' });
+    expect((await createUpdateService(offered.deps).check()).phase).toBe('available');
+
+    const packagesOnly = releases('3.2.0', [
+      'Multi-Git-Client-Linux-3.2.0-amd64.deb',
+      'Multi-Git-Client-Linux-3.2.0-x86_64.rpm',
+      'SHA256SUMS.txt'
+    ]);
+    const skipped = harness({ installKind: 'appimage', fetchJson: () => Promise.resolve(packagesOnly) });
+    expect((await createUpdateService(skipped.deps).check()).phase).toBe('up-to-date');
+  });
+
+  it('verifies the download and only then puts it over the running AppImage', async () => {
+    const h = harness({ installKind: 'appimage' });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    const state = await service.download();
+
+    expect(state.phase).toBe('ready');
+    // In place and under the user's own name for it, not the release's, so
+    // whatever they open it from opens the new version.
+    expect(h.commits).toEqual([APPIMAGE]);
+    expect(h.discards).toEqual([]);
+  });
+
+  it('leaves the running AppImage alone when the download does not match', async () => {
+    const h = harness({ installKind: 'appimage', digest: 'f'.repeat(64) });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    const state = await service.download();
+
+    expect(state.phase).toBe('error');
+    expect(h.commits).toEqual([]);
+    expect(h.discards).toEqual([APPIMAGE]);
+  });
+
+  it('starts the replaced AppImage, then quits', async () => {
+    const h = harness({ installKind: 'appimage' });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    await service.download();
+    await service.install();
+
+    expect(h.spawned).toEqual([{ file: APPIMAGE, args: [] }]);
+    expect(h.quits).toBe(1);
+  });
+
+  it('downloads nothing when it cannot tell which file it runs from', async () => {
+    const h = harness({ installKind: 'appimage', appImagePath: null });
+    const service = createUpdateService(h.deps);
+
+    await service.check();
+    const state = await service.download();
+
+    expect(state.phase).toBe('error');
+    expect(state.message).toMatch(/which AppImage/);
+    expect(h.commits).toEqual([]);
+  });
+});
+
+describe('a .deb or .rpm copy, updated from the release page', () => {
+  const packages = {
+    deb: 'Multi-Git-Client-Linux-3.2.0-amd64.deb',
+    rpm: 'Multi-Git-Client-Linux-3.2.0-x86_64.rpm'
+  } as const;
+
+  for (const [kind, own] of Object.entries(packages) as ['deb' | 'rpm', string][]) {
+    it(`announces a release with the ${kind}, and opens its page instead of downloading`, async () => {
+      const fetchText = vi.fn().mockResolvedValue(manifest());
+      const h = harness({ installKind: kind, fetchText });
+      const service = createUpdateService(h.deps);
+
+      const state = await service.check();
+      expect(state.phase).toBe('available');
+      expect(h.popups).toBe(1);
+
+      await service.download();
+      await service.install();
+      await service.openReleasePage();
+
+      expect(fetchText).not.toHaveBeenCalled();
+      expect(h.commits).toEqual([]);
+      expect(h.spawned).toEqual([]);
+      expect(h.quits).toBe(0);
+      expect(h.opened).toEqual(['https://github.com/AnthonyKopri/multi-git/releases/tag/Release_v3.2.0']);
+    });
+
+    it(`is not told about a release without the ${kind}`, async () => {
+      const other = Object.values(packages).find((name) => name !== own)!;
+      const h = harness({
+        installKind: kind,
+        fetchJson: () => Promise.resolve(releases('3.2.0', [other, 'SHA256SUMS.txt']))
+      });
+
+      expect((await createUpdateService(h.deps).check()).phase).toBe('up-to-date');
+      expect(h.popups).toBe(0);
+    });
+  }
 });
 
 describe('skipping a version', () => {

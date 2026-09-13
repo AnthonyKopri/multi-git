@@ -4,10 +4,11 @@
 // an update comes from or where it lands — it asks for "the update" the main
 // process already resolved. See src/shared/desktop-api.ts.
 //
-// In browser mode, on Linux, and in an unpackaged dev run there is no bridge or
-// the bridge reports `supported: false`, and this module shows nothing. On
-// macOS the notice is the same as on Windows, but its button opens the release
-// page instead of downloading.
+// In browser mode, in an unpackaged dev run, and on a Linux copy that did not
+// come from a release package there is no bridge or the bridge reports
+// `supported: false`, and this module shows nothing. On macOS and from a Linux
+// .deb or .rpm the notice is the same as on Windows, but its button opens the
+// release page instead of downloading.
 
 import { setHidden } from '../../dom/create';
 import type { Elements } from '../../dom/elements';
@@ -133,7 +134,8 @@ export function initUpdates(elements: Elements): void {
 
   // The single early return that covers browser mode and a dev run from a
   // checkout: no listeners, no requests, nothing shown. An unsupported
-  // packaged build (Linux) has a bridge, and is kept quiet by its state.
+  // packaged build (Linux, unpacked by hand) has a bridge, and is kept quiet
+  // by its state.
   if (!isSupported()) {
     return;
   }

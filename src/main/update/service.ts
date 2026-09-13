@@ -48,6 +48,8 @@ export interface UpdateServiceDeps {
   installKind: InstallKind;
   /** Where a portable replacement goes: beside the running exe. */
   portableDir: string | null;
+  /** The AppImage file this copy runs from, which its update replaces. */
+  appImagePath: string | null;
   /** Where an installer is staged. */
   tempDir: string;
   fetchJson: (url: string) => Promise<unknown>;
@@ -60,8 +62,8 @@ export interface UpdateServiceDeps {
   ) => Promise<StagedDownload>;
   /** True when the failure was GitHub's hourly limit, which is not an error. */
   isRateLimit: (error: unknown) => boolean;
-  /** Starts the downloaded file. Throws if it could not be started. */
-  spawnDetached: (file: string, args: string[]) => void;
+  /** Starts the downloaded file. Throws or rejects if it could not be started. */
+  spawnDetached: (file: string, args: string[]) => void | Promise<void>;
   /** Opens a URL in the user's browser. Rejects if it could not be opened. */
   openExternal: (url: string) => Promise<void>;
   quit: () => void;
@@ -89,9 +91,16 @@ function describe(error: unknown, fallback: string): string {
 
 /** The asset a release must carry to be offered to this build. */
 function artifactFor(kind: InstallKind): UpdateArtifact {
-  if (kind === 'portable') return 'portable';
-  if (kind === 'macos') return 'macos';
-  return 'installer';
+  switch (kind) {
+    case 'portable':
+    case 'macos':
+    case 'appimage':
+    case 'deb':
+    case 'rpm':
+      return kind;
+    default:
+      return 'installer';
+  }
 }
 
 export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
@@ -118,6 +127,16 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
         throw new Error('Could not work out where this portable copy lives.');
       }
       return path.join(deps.portableDir, basename);
+    }
+    // In place, under the name the user launches it by, so a menu entry or a
+    // shortcut opens the new version. Unlike a running .exe, a running
+    // AppImage can be replaced: its mount keeps reading the file it opened,
+    // and the staged download is renamed over it in one step.
+    if (deps.installKind === 'appimage') {
+      if (!deps.appImagePath) {
+        throw new Error('Could not work out which AppImage this copy runs from.');
+      }
+      return deps.appImagePath;
     }
     return path.join(deps.tempDir, 'multi-git-update', basename);
   }
@@ -274,7 +293,7 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     const command = installCommand(deps.installKind, downloadedPath);
 
     try {
-      deps.spawnDetached(command.file, command.args);
+      await deps.spawnDetached(command.file, command.args);
     } catch (error) {
       // Quitting here would close the app into nothing. Stay open and say so.
       return fail(error, 'The update could not be started.');
