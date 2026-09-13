@@ -18,9 +18,14 @@ or Security. Remove empty headings when preparing a release.
   `Multi-Git-Client-macOS-<version>.dmg` beside the two Windows builds: one disk
   image that runs on both Apple silicon and Intel Macs, listed in the same
   `SHA256SUMS.txt`. Before it is attached, the build mounts it, checks its
-  version, architectures and signature, and launches it. The in-app updater
-  stays Windows-only for now, so on a Mac a new version is downloaded from the
-  Releases page.
+  version, architectures and signature, and launches it.
+- **A Mac copy says when there is a new version.** It checks for releases the
+  way the Windows builds do, and shows the same one-time notice and toolbar
+  icon, but its button opens the release's page on GitHub in your browser
+  instead of installing: download the disk image there and drag the app into
+  Applications. It is only told about releases that have a Mac download.
+  Updating in place needs the app to be signed with an Apple Developer ID,
+  which it is not yet.
 
 ### Changed
 

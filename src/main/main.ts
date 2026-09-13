@@ -357,6 +357,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.skipUpdateVersion, async () => {
     await updates?.skipCurrent();
   });
+  ipcMain.handle(IPC_CHANNELS.openUpdateReleasePage, async () => {
+    await updates?.openReleasePage();
+  });
 }
 
 /**

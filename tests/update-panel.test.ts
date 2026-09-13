@@ -3,10 +3,11 @@
 // The update notice in the navbar and the modal behind it.
 //
 // The two things worth pinning here are the degradation and the intents. In a
-// browser tab, on macOS, and in a dev run there is no bridge or the bridge says
-// unsupported, and this feature has to register nothing and show nothing. When
-// it is supported, each button must send the intent the current phase implies —
-// the renderer has no other way to act, because it is never told a URL.
+// browser tab, on Linux, and in a dev run there is no bridge or the bridge says
+// unsupported, and this feature has to show nothing. When it is supported, each
+// button must send the intent the current phase implies — the renderer has no
+// other way to act, because it is never told a URL. On macOS that intent is
+// opening the release page, never a download.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 
@@ -21,6 +22,7 @@ interface Bridge {
   downloadUpdate: ReturnType<typeof vi.fn>;
   installUpdate: ReturnType<typeof vi.fn>;
   skipUpdateVersion: ReturnType<typeof vi.fn>;
+  openUpdateReleasePage: ReturnType<typeof vi.fn>;
   onUpdateState: ReturnType<typeof vi.fn>;
   onUpdatePopup: ReturnType<typeof vi.fn>;
 }
@@ -43,6 +45,7 @@ function makeBridge(): Bridge {
     downloadUpdate: vi.fn().mockResolvedValue(undefined),
     installUpdate: vi.fn().mockResolvedValue(undefined),
     skipUpdateVersion: vi.fn().mockResolvedValue(undefined),
+    openUpdateReleasePage: vi.fn().mockResolvedValue(undefined),
     onUpdateState: vi.fn(),
     onUpdatePopup: vi.fn()
   };
@@ -242,6 +245,63 @@ describe('acting on an update', () => {
 
     push(bridge, state({ phase: 'ready' }));
     expect(hidden('btn-update-skip')).toBe(true);
+  });
+});
+
+describe('on a Mac, which is updated from the release page', () => {
+  const mac = (overrides: Partial<UpdateState> = {}) => state({ installKind: 'macos', ...overrides });
+
+  it('announces the release the same way, and says the user installs it', async () => {
+    await mount(bridge);
+    push(bridge, mac());
+    popup(bridge);
+
+    expect(hidden('btn-update')).toBe(false);
+    expect(hidden('update-modal')).toBe(false);
+    expect($('update-message').textContent).toMatch(/3\.2\.0/);
+    expect($('update-message').textContent).toMatch(/browser/i);
+    expect($('update-message').textContent).toMatch(/Applications/);
+    expect($('update-message').textContent).not.toMatch(/restarts/i);
+    expect($('btn-update-install').textContent).toMatch(/open download page/i);
+  });
+
+  it('asks to open the release page, downloads nothing, and gets out of the way', async () => {
+    await mount(bridge);
+    push(bridge, mac());
+    popup(bridge);
+
+    $('btn-update-install').click();
+    await vi.waitFor(() => expect(bridge.openUpdateReleasePage).toHaveBeenCalledTimes(1));
+
+    expect(bridge.downloadUpdate).not.toHaveBeenCalled();
+    expect(bridge.installUpdate).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(hidden('update-modal')).toBe(true));
+    // Opening the page is not updating, so the notice stays reachable.
+    expect(hidden('btn-update')).toBe(false);
+  });
+
+  it('keeps the popup open to show why, when the page could not be opened', async () => {
+    await mount(bridge);
+    push(bridge, mac());
+    popup(bridge);
+    bridge.openUpdateReleasePage.mockImplementation(async () => {
+      push(bridge, mac({ phase: 'error', message: 'Could not open the release page in your browser.' }));
+    });
+
+    $('btn-update-install').click();
+    await vi.waitFor(() => expect(bridge.openUpdateReleasePage).toHaveBeenCalledTimes(1));
+    // Let the click handler finish, so a close that follows the request would
+    // already have happened.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(hidden('update-modal')).toBe(false);
+    expect($('update-message').textContent).toMatch(/Could not open the release page/);
+  });
+
+  it('still offers to skip the version', async () => {
+    await mount(bridge);
+    push(bridge, mac());
+    expect(hidden('btn-update-skip')).toBe(false);
   });
 });
 

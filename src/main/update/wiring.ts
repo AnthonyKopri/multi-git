@@ -7,7 +7,7 @@
 
 import { spawn } from 'node:child_process';
 
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 
 import { createUpdateService } from './service';
 import type { UpdateService, UpdateSettings } from './service';
@@ -118,6 +118,9 @@ export function createUpdateWiring(targets: TargetWindows): UpdateService {
     // app.quit(), never app.exit(): `before-quit` is where main.ts flushes the
     // window layout, and exit() would silently discard it on every update.
     quit: () => app.quit(),
+    // The system browser, not a BrowserWindow: the app's windows carry the
+    // preload bridge, and GitHub is not a page to hand it to.
+    openExternal: (url) => shell.openExternal(url),
     broadcastState: (state) => broadcastState(targets, state),
     requestPopup: () => requestPopup(targets),
     readSettings: readUpdateSettings,

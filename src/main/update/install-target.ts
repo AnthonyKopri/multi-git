@@ -16,9 +16,17 @@ export interface InstallEnvironment {
 }
 
 export function detectInstallKind(environment: InstallEnvironment): InstallKind {
-  // Only Windows artifacts are published, and an unpackaged run is a checkout
-  // that npm, not an installer, is responsible for.
-  if (environment.platform !== 'win32' || !environment.isPackaged) {
+  // An unpackaged run is a checkout that npm, not an installer, is
+  // responsible for.
+  if (!environment.isPackaged) {
+    return 'unsupported';
+  }
+  // Releases carry a macOS disk image, whose copies are told about new
+  // versions rather than updated in place. Nothing is published for Linux.
+  if (environment.platform === 'darwin') {
+    return 'macos';
+  }
+  if (environment.platform !== 'win32') {
     return 'unsupported';
   }
 

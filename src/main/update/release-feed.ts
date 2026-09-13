@@ -146,11 +146,14 @@ export function usableReleases(releases: unknown): ReleaseCandidate[] {
   return candidates;
 }
 
+/** The release asset a build needs, named in scripts/release-assets.js. */
+export type UpdateArtifact = 'installer' | 'portable' | 'macos';
+
 export interface SelectUpdateInput {
   releases: unknown;
   currentVersion: string;
   /** Which artifact this build needs, so a release without it is skipped. */
-  installKind: 'installer' | 'portable';
+  installKind: UpdateArtifact;
   /** Version the user chose to skip, if any. */
   skippedVersion?: string | undefined;
 }
@@ -163,14 +166,15 @@ export interface SelectUpdateInput {
  * shipped shape. A portable user must fall through to the newest release that
  * actually has a portable exe rather than being offered one it cannot use.
  *
+ * The same holds for a Mac copy, which downloads nothing itself: a release
+ * with no disk image would send the user to a page with nothing for them on it.
+ *
  * The checksum manifest is required for the same reason the download verifies
  * against it: without one there is nothing to check, and an unverifiable
- * release is not an update this app will offer.
+ * release is not an update this app will offer — even to a user who downloads
+ * it by hand, and might check it against that manifest.
  */
-function hasNeededAssets(
-  candidate: ReleaseCandidate,
-  installKind: 'installer' | 'portable'
-): boolean {
+function hasNeededAssets(candidate: ReleaseCandidate, installKind: UpdateArtifact): boolean {
   return (
     findAsset(candidate, assetBasename(installKind, candidate.version)) !== null &&
     findAsset(candidate, CHECKSUM_ASSET) !== null
@@ -215,10 +219,27 @@ export function selectUpdate(input: SelectUpdateInput): ReleaseCandidate | null 
 }
 
 /** Basenames must match scripts/release-assets.js RELEASE_ASSETS exactly. */
-export function assetBasename(kind: 'installer' | 'portable', version: string): string {
-  return kind === 'installer'
-    ? `Multi-Git-Client-Setup-${version}.exe`
-    : `Multi-Git-Client-Portable-${version}.exe`;
+export function assetBasename(kind: UpdateArtifact, version: string): string {
+  switch (kind) {
+    case 'installer':
+      return `Multi-Git-Client-Setup-${version}.exe`;
+    case 'portable':
+      return `Multi-Git-Client-Portable-${version}.exe`;
+    case 'macos':
+      return `Multi-Git-Client-macOS-${version}.dmg`;
+  }
+}
+
+/**
+ * The page a Mac copy opens for a release.
+ *
+ * Built from the tag rather than taken from the API's `html_url`, so the host
+ * and repository are this module's constants whatever the response said. The
+ * tag has already matched RELEASE_TAG, which leaves nothing in it to escape;
+ * it is encoded anyway, so that stays true if the pattern ever loosens.
+ */
+export function releasePageUrl(tag: string): string {
+  return `https://github.com/${UPDATE_REPO}/releases/tag/${encodeURIComponent(tag)}`;
 }
 
 /** Looks an asset up by exact name; a near-miss is a failure, not a guess. */

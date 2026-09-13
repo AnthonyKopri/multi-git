@@ -27,11 +27,16 @@ describe('detecting how this copy was installed', () => {
     expect(detectInstallKind(environment({ isPackaged: false }))).toBe('unsupported');
   });
 
-  it('updates nothing off Windows, whatever the environment says', () => {
-    for (const platform of ['darwin', 'linux']) {
-      const env = environment({ platform, env: { PORTABLE_EXECUTABLE_DIR: '/tmp/x' } });
-      expect(detectInstallKind(env)).toBe('unsupported');
-    }
+  it('treats a packaged Mac build as one updated from the release page', () => {
+    // Whatever the environment says: the portable variable means nothing there.
+    const env = environment({ platform: 'darwin', env: { PORTABLE_EXECUTABLE_DIR: '/tmp/x' } });
+    expect(detectInstallKind(env)).toBe('macos');
+    expect(detectInstallKind(environment({ platform: 'darwin', isPackaged: false }))).toBe('unsupported');
+  });
+
+  it('updates nothing on Linux, which has no published build', () => {
+    const env = environment({ platform: 'linux', env: { PORTABLE_EXECUTABLE_DIR: '/tmp/x' } });
+    expect(detectInstallKind(env)).toBe('unsupported');
   });
 
   it('ignores a blank variable rather than treating it as a directory', () => {
@@ -58,5 +63,6 @@ describe('starting the downloaded file', () => {
 
   it('refuses to build a command for a build that cannot update', () => {
     expect(() => installCommand('unsupported', 'C:\\x.exe')).toThrow(/does not install updates/);
+    expect(() => installCommand('macos', '/tmp/x.dmg')).toThrow(/does not install updates/);
   });
 });

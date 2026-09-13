@@ -7,8 +7,26 @@
 // that a crafted repository managed to get script into can therefore ask for
 // the update the main process already chose, and nothing else.
 
-/** How the running copy was installed, which decides what gets downloaded. */
-export type InstallKind = 'installer' | 'portable' | 'unsupported';
+/**
+ * How the running copy was installed, which decides what an update means.
+ *
+ * `installer` and `portable` download and start the new build themselves.
+ * `macos` does neither: the app is ad-hoc signed, and replacing a signed app
+ * bundle from inside it is only dependable with a real Developer ID. So a Mac
+ * copy announces the release and opens its page, and the user installs it.
+ */
+export type InstallKind = 'installer' | 'portable' | 'macos' | 'unsupported';
+
+/**
+ * True for a build that is updated from the release page rather than in place.
+ *
+ * Shared so the main process, which refuses to download for such a build, and
+ * the renderer, which never offers to, cannot disagree about which builds
+ * those are.
+ */
+export function updatesFromReleasePage(kind: InstallKind): boolean {
+  return kind === 'macos';
+}
 
 export type UpdatePhase =
   | 'idle'
@@ -41,8 +59,8 @@ export interface UpdateReleaseInfo {
 export interface UpdateState {
   phase: UpdatePhase;
   /**
-   * False on non-Windows, in browser mode, and when running unpackaged. The
-   * renderer shows no update UI at all in that case.
+   * False on Linux, in browser mode, and when running unpackaged. The renderer
+   * shows no update UI at all in that case.
    */
   supported: boolean;
   installKind: InstallKind;

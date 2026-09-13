@@ -124,6 +124,8 @@ const desktopApi: DesktopApi = {
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.downloadUpdate) as Promise<void>,
   installUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.installUpdate) as Promise<void>,
   skipUpdateVersion: () => ipcRenderer.invoke(IPC_CHANNELS.skipUpdateVersion) as Promise<void>,
+  openUpdateReleasePage: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.openUpdateReleasePage) as Promise<void>,
 
   onUpdateState: (listener) => subscribe<UpdateState>(IPC_CHANNELS.updateState, listener),
   onUpdatePopup: (listener) => subscribe<void>(IPC_CHANNELS.updatePopup, () => listener())
