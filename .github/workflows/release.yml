@@ -301,7 +301,10 @@ jobs:
           else
             echo "::warning::No MACOS_CERTIFICATE secret, so the app is ad-hoc signed and not notarized. macOS blocks it until it is allowed under System Settings > Privacy & Security."
             unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
-            npx electron-builder --mac --publish never -c.mac.identity=-
+            # electron-builder skips all signing on a pull request, ad-hoc
+            # included, which would leave the dry run testing an unsigned app
+            # that no release ships. No certificate is involved here.
+            CSC_FOR_PULL_REQUEST=true npx electron-builder --mac --publish never -c.mac.identity=-
           fi
 
       - name: Verify the disk image
@@ -401,7 +404,7 @@ jobs:
           retention-days: 14
 
   publish:
-    name: ${{ needs.plan.outputs.mode == 'dry-run' && 'assemble (dry run)' || 'publish' }}
+    name: publish
     needs: [plan, ci, windows, macos]
     # `ci` is skipped on a dry run, which would otherwise skip this too.
     if: >-
