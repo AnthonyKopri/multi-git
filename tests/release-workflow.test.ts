@@ -15,7 +15,10 @@ const { RELEASE_ASSETS } = require('../scripts/release-assets.js') as {
   RELEASE_ASSETS: Record<string, { basename(version: string): string }>;
 };
 
-const workflow = fs.readFileSync(fromAppRoot('.github', 'workflows', 'release.yml'), 'utf8');
+// Normalized: a Windows checkout has the workflow with CRLF endings.
+const workflow = fs
+  .readFileSync(fromAppRoot('.github', 'workflows', 'release.yml'), 'utf8')
+  .replace(/\r\n/g, '\n');
 
 /** Every path glob under an upload-artifact step's `path:`, one entry per line. */
 function uploadedGlobs(): string[] {
