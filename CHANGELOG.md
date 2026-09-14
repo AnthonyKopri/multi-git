@@ -30,11 +30,12 @@ or Security. Remove empty headings when preparing a release.
   `Multi-Git-Client-Linux-<version>-x86_64.AppImage`, which runs on any
   distribution, `Multi-Git-Client-Linux-<version>-amd64.deb` for Debian,
   Ubuntu and Linux Mint, and `Multi-Git-Client-Linux-<version>-x86_64.rpm` for
-  Fedora, RHEL and openSUSE. The packages install Git with the app. Before
-  they are attached, the .deb is installed and launched on Ubuntu, the
-  AppImage is launched, and the packages are installed on clean Debian, Fedora
-  and openSUSE systems with a check that nothing the app links against is
-  left out.
+  Fedora, RHEL and openSUSE. The packages install Git with the app. The
+  AppImage needs FUSE 2, which Ubuntu 22.04 and later leave out; its download
+  says so, and how to add it. Before they are attached, the .deb is installed
+  and launched on Ubuntu, the AppImage is launched, and the packages are
+  installed on clean Debian, Fedora and openSUSE systems with a check that
+  nothing the app links against is left out.
 - **The Linux AppImage updates itself.** It is offered new versions like the
   Windows builds are. After the download matches the release checksum, it
   replaces the AppImage file where it is, under the same name, so whatever

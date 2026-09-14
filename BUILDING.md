@@ -404,7 +404,7 @@ labels:
 - `Windows installer (recommended)`
 - `Portable Windows executable`
 - `macOS disk image (Apple silicon and Intel)`
-- `Linux AppImage (x86_64, any distribution)`
+- `Linux AppImage (x86_64, any distribution; needs FUSE 2)`
 - `Linux .deb package (Debian, Ubuntu, Linux Mint; amd64)`
 - `Linux .rpm package (Fedora, RHEL, openSUSE; x86_64)`
 - `SHA-256 checksums`

@@ -31,7 +31,13 @@ const RELEASE_ASSETS = Object.freeze({
   // package.json. The architecture is in the name the way each format spells
   // it, so the file a user downloads says what it is for.
   appimage: Object.freeze({
-    label: 'Linux AppImage (x86_64, any distribution)',
+    // The label is what the release page lists the file as, which is the one
+    // place to warn before it is run: an AppImage without FUSE 2 fails before
+    // any of the app's own code starts, silently when double-clicked.
+    label: 'Linux AppImage (x86_64, any distribution; needs FUSE 2)',
+    note:
+      'It needs FUSE 2, which Ubuntu 22.04 and later do not install by default: ' +
+      'run `sudo apt install libfuse2t64` first (`libfuse2` on 22.04), or use the .deb instead.',
     basename: (version) => `Multi-Git-Client-Linux-${version}-x86_64.AppImage`
   }),
   deb: Object.freeze({

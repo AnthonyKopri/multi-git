@@ -78,7 +78,7 @@ function changelogSections(source, version) {
 function downloadsSection(version) {
   return [
     ...Object.values(RELEASE_ASSETS).map(
-      (spec) => `- **${spec.label}:** \`${spec.basename(version)}\``
+      (spec) => `- **${spec.label}:** \`${spec.basename(version)}\`${spec.note ? `. ${spec.note}` : ''}`
     ),
     `- **${CHECKSUM_LABEL}:** \`${CHECKSUM_BASENAME}\``
   ].join('\n');
