@@ -268,7 +268,7 @@ describe('GitHub release upload arguments', () => {
       `${artifactPath('installer')}#Windows installer (recommended)`,
       `${artifactPath('portable')}#Portable Windows executable`,
       `${artifactPath('macos')}#macOS disk image (Apple silicon and Intel)`,
-      `${artifactPath('appimage')}#Linux AppImage (x86_64, any distribution)`,
+      `${artifactPath('appimage')}#Linux AppImage (x86_64, any distribution; needs FUSE 2)`,
       `${artifactPath('deb')}#Linux .deb package (Debian, Ubuntu, Linux Mint; amd64)`,
       `${artifactPath('rpm')}#Linux .rpm package (Fedora, RHEL, openSUSE; x86_64)`,
       `${path.join(outputDir, 'SHA256SUMS.txt')}#SHA-256 checksums`,

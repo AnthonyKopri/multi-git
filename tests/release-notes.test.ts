@@ -159,7 +159,7 @@ describe('downloadsSection', () => {
         '- **Windows installer (recommended):** `Multi-Git-Client-Setup-2.1.0.exe`',
         '- **Portable Windows executable:** `Multi-Git-Client-Portable-2.1.0.exe`',
         '- **macOS disk image (Apple silicon and Intel):** `Multi-Git-Client-macOS-2.1.0.dmg`',
-        '- **Linux AppImage (x86_64, any distribution):** `Multi-Git-Client-Linux-2.1.0-x86_64.AppImage`',
+        '- **Linux AppImage (x86_64, any distribution; needs FUSE 2):** `Multi-Git-Client-Linux-2.1.0-x86_64.AppImage`. It needs FUSE 2, which Ubuntu 22.04 and later do not install by default: run `sudo apt install libfuse2t64` first (`libfuse2` on 22.04), or use the .deb instead.',
         '- **Linux .deb package (Debian, Ubuntu, Linux Mint; amd64):** `Multi-Git-Client-Linux-2.1.0-amd64.deb`',
         '- **Linux .rpm package (Fedora, RHEL, openSUSE; x86_64):** `Multi-Git-Client-Linux-2.1.0-x86_64.rpm`',
         '- **SHA-256 checksums:** `SHA256SUMS.txt`'
