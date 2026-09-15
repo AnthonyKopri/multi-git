@@ -21,6 +21,7 @@
     "build": "npm run compile && electron-builder",
     "build-win": "npm run compile && electron-builder --win nsis portable",
     "build-standalone": "npm run compile && electron-builder --win portable --config.directories.output=dist-standalone",
+    "test-drive": "node scripts/test-drive.js",
     "release": "node scripts/release.js",
     "release:installer": "node scripts/release.js --target installer",
     "release:portable": "node scripts/release.js --target portable",

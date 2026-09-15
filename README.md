@@ -715,6 +715,7 @@ multi-git/
 |-- scripts/
 |   |-- build.mjs                # esbuild bundling and static asset copy
 |   |-- release.js               # Local Windows build, version bump, and checksums
+|   |-- test-drive.js            # Build this computer's platform to try, changing nothing
 |   |-- prepare-release.js       # Version bump and changelog section for a release
 |   |-- release-notes.js         # Release notes written from CHANGELOG.md
 |   |-- release-assets.js        # Release filenames, labels, and checksums
@@ -764,6 +765,7 @@ Then open `http://localhost:3000`. Desktop mode chooses a free local port automa
 | `npm test` | Type-check every source and run the Vitest suite. |
 | `npm run typecheck` | Type-check without running the tests. |
 | `npm run compile` | Build the TypeScript sources into `out/`. |
+| `npm run test-drive` | Build this computer's platform (Windows, macOS or Linux) at the current version into `dist/`, with no prompts, to try before releasing. Name builds to limit it: `npm run test-drive -- portable`. |
 | `npm run release` | Bump the version, build, and create `dist/SHA256SUMS.txt`, prompting for both targets. |
 | `npm run release:installer` | Prompt for a version, then build only the installer. |
 | `npm run release:portable` | Prompt for a version, then build only the portable executable. |
