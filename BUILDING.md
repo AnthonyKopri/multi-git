@@ -554,7 +554,7 @@ there. See `src/main/update/install-target.ts`.
 ### After-pack step
 
 `scripts/after-pack.js` runs automatically after packaging. It stamps the
-Windows executable icon and metadata with `rcedit`, because
+Windows executable icon and metadata with `resedit`, because
 `win.signAndEditExecutable` is `false` in the Electron Builder config. If you
 change the icon, product name, description, or version, check the resulting
 `.exe` properties.
