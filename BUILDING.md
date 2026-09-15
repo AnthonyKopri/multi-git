@@ -325,6 +325,35 @@ API's view of the release is the truth, and that is what this prints.
 
 ### Building locally
 
+To try what is on `main` before releasing it, build this computer's platform
+at the current version, without prompts:
+
+```bash
+npm run test-drive
+```
+
+It makes every build this computer can, into `dist/`, under the names a
+release uses, and lists them when it is done:
+
+| Computer | Builds | Name one to build only it |
+| --- | --- | --- |
+| Windows | installer and portable executable | `installer`, `portable` |
+| Mac | disk image, ad-hoc signed | `dmg` |
+| Linux | AppImage, `.deb`, and `.rpm` when `rpmbuild` is installed | `appimage`, `deb`, `rpm` |
+
+```bash
+npm run test-drive -- portable
+```
+
+It changes nothing else: no version bump, no git, no upload, so nothing runs on
+GitHub. Run `npm ci` first when the merged changes touched dependencies. Each
+platform builds only on itself; asking for another's build says so, and to take
+it from a Release workflow dry run instead.
+
+On Windows, the portable build is the one to try without replacing an
+installed copy; the installer installs over it. Every build carries the
+released version number, so it offers no update.
+
 `npm run release` builds the Windows artifacts on this machine, to try them
 before releasing. It bumps the version, builds, and writes SHA-256 checksums,
 asking about both:
@@ -335,12 +364,8 @@ npm run release
 
 It works locally only. Nothing is uploaded, no GitHub token is needed, and the
 version bump is left uncommitted. If compilation, packaging, or checksum
-generation fails, the bump is rolled back. To build without changing the
-version, which is what trying a change usually wants:
-
-```bash
-node scripts/release.js --bump none --target both
-```
+generation fails, the bump is rolled back. `npm run test-drive` is this with
+`--bump none --target both --yes`.
 
 ```text
 Current version: 1.0.5
@@ -381,9 +406,9 @@ npm run release:installer
 npm run release:portable
 ```
 
-macOS and Linux builds cannot be made this way. For one to try, run the Release
-workflow with **dry run** ticked and download `build-macos` or `build-linux`
-from the run.
+`npm run release` builds Windows only. On a Mac or a Linux computer use
+`npm run test-drive`; to try either without one, run the Release workflow with
+**dry run** ticked and download `build-macos` or `build-linux` from the run.
 
 ### Uploading by hand
 

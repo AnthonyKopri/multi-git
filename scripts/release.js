@@ -313,4 +313,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { nextVersion, applyVersion };
+module.exports = { nextVersion, applyVersion, resolveElectronBuilder, runCompile, runBuild };

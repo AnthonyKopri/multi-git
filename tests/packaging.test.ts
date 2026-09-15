@@ -205,6 +205,17 @@ describe('packaging', () => {
     );
   });
 
+  it('test-drives through a script that compiles, and never publishes', () => {
+    // scripts/release.js's runBuild passes --publish never, and runCompile
+    // builds out/; tests/test-drive.test.ts covers what each platform builds.
+    const driver = fs.readFileSync(fromAppRoot('scripts', 'test-drive.js'), 'utf8');
+
+    expect(manifest.scripts?.['test-drive']).toBe('node scripts/test-drive.js');
+    expect(driver).toContain('await runCompile()');
+    expect(driver.indexOf('await runCompile()')).toBeLessThan(driver.indexOf('await runBuild('));
+    expect(driver).not.toContain('applyVersion');
+  });
+
   it('keeps GitHub release upload an explicit command', () => {
     expect(manifest.scripts?.['release:upload']).toBe('node scripts/upload-release-assets.js');
   });
