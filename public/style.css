@@ -80,6 +80,24 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Icons are ligatures: a span reading "folder_open" only becomes one glyph
+   once Material Symbols has downloaded. Until then the browser lays the name
+   out as (invisible) text in a fallback font, so every icon was as wide as its
+   word and the welcome screen rendered stretched on first launch. A one-em box
+   is exactly what the loaded font produces, so nothing moves when it arrives.
+   content-box keeps padding, such as the welcome icon's circle, outside the em;
+   clip rather than hidden, which would drop an inline icon's baseline to its
+   bottom edge and lift it off the text beside it.
+   Declared before every other rule so a component that sizes its icon wins. */
+.material-symbols-outlined {
+  display: inline-block;
+  box-sizing: content-box;
+  width: 1em;
+  height: 1em;
+  overflow: clip;
+  flex-shrink: 0;
+}
+
 /* Scrollbar Customization */
 ::-webkit-scrollbar {
   width: 8px;
