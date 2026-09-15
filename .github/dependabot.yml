@@ -39,7 +39,7 @@ updates:
           - electron
           - electron-builder
           - "@electron/*"
-          - rcedit
+          - resedit
         update-types:
           - minor
           - patch

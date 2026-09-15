@@ -1,16 +1,23 @@
+const fs = require('fs/promises');
 const path = require('path');
 
+/** US English, Unicode: what rcedit and electron-builder fall back to. */
+const DEFAULT_LANGUAGE = { lang: 1033, codepage: 1200 };
+
 /**
- * electron-builder normally uses winCodeSign to edit the executable. Its
- * archive contains macOS symlinks, which Windows may refuse to extract when
- * Developer Mode is disabled. Use node-rcedit's Windows-only binary instead.
+ * electron-builder's own resource editing is switched off by
+ * `win.signAndEditExecutable: false`, which also skips signing. Stamp the
+ * Windows executable's icon and version metadata here instead, with resedit:
+ * the pure-JavaScript editor electron-builder itself uses, so this needs no
+ * native binary and nothing extracted from a signing-tool archive. It replaced
+ * node-rcedit, which npm now marks as no longer supported.
  */
 module.exports = async (context) => {
   if (context.electronPlatformName !== 'win32') {
     return;
   }
 
-  const { rcedit } = await import('rcedit');
+  const ResEdit = await import('resedit');
   const { appInfo } = context.packager;
   const executablePath = path.join(
     context.appOutDir,
@@ -23,21 +30,39 @@ module.exports = async (context) => {
     'multi-git-logo.ico'
   );
 
-  // signAndEditExecutable is disabled because electron-builder's signing-tool
-  // archive can fail to extract on Windows without Developer Mode. That also
-  // means Electron's generic version resource survives unless this hook
-  // replaces it along with the icon.
-  await rcedit(executablePath, {
-    icon: iconPath,
-    'file-version': appInfo.shortVersion || appInfo.buildVersion,
-    'product-version': appInfo.shortVersionWindows || appInfo.getVersionInWeirdWindowsForm(),
-    'version-string': {
-      CompanyName: appInfo.companyName || '',
-      FileDescription: appInfo.description,
-      InternalName: appInfo.productFilename,
-      LegalCopyright: appInfo.copyright,
-      OriginalFilename: `${appInfo.productFilename}.exe`,
-      ProductName: appInfo.productName
-    }
+  const executable = ResEdit.NtExecutable.from(await fs.readFile(executablePath));
+  const resources = ResEdit.NtExecutableResource.from(executable);
+
+  // Electron's generic version resource survives unless this replaces it.
+  const [existing] = ResEdit.Resource.VersionInfo.fromEntries(resources.entries);
+  const versionInfo = existing ?? ResEdit.Resource.VersionInfo.createEmpty();
+  const [language = DEFAULT_LANGUAGE] = versionInfo.getAllLanguagesForStringValues();
+  const fileVersion = appInfo.shortVersion || appInfo.buildVersion;
+
+  versionInfo.setFileVersion(fileVersion);
+  versionInfo.setProductVersion(
+    appInfo.shortVersionWindows || appInfo.getVersionInWeirdWindowsForm()
+  );
+  versionInfo.setStringValues(language, {
+    CompanyName: appInfo.companyName || '',
+    FileDescription: appInfo.description,
+    // setFileVersion writes the four-part form; keep the version as released.
+    FileVersion: fileVersion,
+    InternalName: appInfo.productFilename,
+    LegalCopyright: appInfo.copyright,
+    OriginalFilename: `${appInfo.productFilename}.exe`,
+    ProductName: appInfo.productName
   });
+  versionInfo.outputToResourceEntries(resources.entries);
+
+  const icon = ResEdit.Data.IconFile.from(await fs.readFile(iconPath));
+  ResEdit.Resource.IconGroupEntry.replaceIconsForResource(
+    resources.entries,
+    1,
+    language.lang,
+    icon.icons.map((item) => item.data)
+  );
+
+  resources.outputResource(executable);
+  await fs.writeFile(executablePath, Buffer.from(executable.generate()));
 };

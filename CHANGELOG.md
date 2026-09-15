@@ -54,6 +54,17 @@ or Security. Remove empty headings when preparing a release.
   runner, only once CI has passed on the commit being released. The release is
   attached and read back in full before it is published, so an installed copy
   never finds a release with a download missing.
+- **The Windows build stamps its icon and version details with `resedit`.**
+  It replaces `rcedit`, which npm now reports as no longer supported on every
+  install. The executable's icon and properties are unchanged.
+
+### Fixed
+
+- **The welcome screen no longer opens stretched.** Until the icon font
+  finished downloading, each icon took up the width of its name, so the
+  circle behind the logo became a wide oval and the Open Folder, New Repo and
+  Clone buttons ran out of the card. Icons now keep their final size from the
+  first frame.
 
 ## [4.1.4] - 2026-09-12
 
