@@ -12,8 +12,16 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.0.0] - 2026-09-16
+
 ### Added
 
+- **macOS installation guidance.** The macOS build is not signed with an
+  Apple Developer ID and is not notarized. After dragging it to Applications
+  and trying to open it, use **System Settings → Privacy & Security → Open
+  Anyway** if macOS blocks it. Only approve a copy downloaded from this
+  repository's official release page. The build uses an ad-hoc signature,
+  which does not verify the developer's identity.
 - **A macOS download.** Each release now carries
   `Multi-Git-Client-macOS-<version>.dmg` beside the two Windows builds: one disk
   image that runs on both Apple silicon and Intel Macs, listed in the same
@@ -766,7 +774,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.4...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.0...HEAD
+[5.0.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.4...Release_v5.0.0
 [4.1.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.3...Release_v4.1.4
 [4.1.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.2...Release_v4.1.3
 [4.1.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.1...Release_v4.1.2

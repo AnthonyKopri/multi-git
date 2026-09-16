@@ -1,8 +1,8 @@
 # Multi-Git Client
 
-**A free, open-source, local-first Windows Git client for multiple repositories, accounts, and SSH identities.**
+**A free, open-source, local-first Git client for Windows, macOS and Linux, with multiple repositories, accounts, and SSH identities.**
 
-[**Download for Windows →**](https://github.com/AnthonyKopri/multi-git/releases/latest) ·
+[**Download for Windows, macOS and Linux →**](https://github.com/AnthonyKopri/multi-git/releases/latest) ·
 [Five-minute guide](#five-minute-guide) ·
 [Full feature guide](#feature-guide)
 
@@ -16,7 +16,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/AnthonyKopri/multi-git?display_name=tag&sort=semver)](https://github.com/AnthonyKopri/multi-git/releases/latest)
 [![CI](https://github.com/AnthonyKopri/multi-git/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AnthonyKopri/multi-git/actions/workflows/ci.yml)
-[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078d4.svg)](https://github.com/AnthonyKopri/multi-git/releases/latest)
+[![Platforms: Windows, macOS and Linux](https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux-0078d4.svg)](https://github.com/AnthonyKopri/multi-git/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Why Multi-Git?
@@ -31,7 +31,7 @@
 
 ### Windows: installer or portable app
 
-Packaged releases are currently provided for Windows.
+Choose the installer for a normal installation, or the portable executable to run without installing.
 
 1. Install [Git for Windows](https://git-scm.com/download/win) if `git` is not already available on your system.
 2. Open the [latest Multi-Git release](https://github.com/AnthonyKopri/multi-git/releases/latest).
@@ -48,9 +48,37 @@ Once installed, Multi-Git keeps itself current. It checks GitHub for a newer sta
 The Windows packages are not currently code-signed, so Windows may show a SmartScreen warning. Only continue if the file came from this repository's official Releases page.
 
 Each release also includes `SHA256SUMS.txt`, a plain-text list of the expected
-SHA-256 fingerprint for each executable. To verify a download in PowerShell,
+SHA-256 fingerprint for each download. To verify a download in PowerShell,
 run `Get-FileHash -Algorithm SHA256 <downloaded-file>` and compare its `Hash`
 with the matching line in that file.
+
+### macOS: Apple silicon and Intel
+
+Download `Multi-Git-Client-macOS-<version>.dmg` from the
+[latest release](https://github.com/AnthonyKopri/multi-git/releases/latest), open
+the disk image, and drag **Multi-Git Client** into **Applications**. The same
+download supports Apple silicon and Intel Macs. Git must be installed and
+available on your system.
+
+> [!IMPORTANT]
+> **The macOS build is currently unsigned by an identified developer and is not notarized.** It has an ad-hoc signature only. If macOS blocks the app after you first try to open it, go to **System Settings → Privacy & Security → Open Anyway** and confirm. Only approve the app if you downloaded it from this repository's official release page. See [Apple's instructions](https://support.apple.com/en-us/102445).
+
+The app tells you when a new release is available and opens its download page.
+Install the new disk image manually to update.
+
+### Linux: AppImage, Debian/Ubuntu, or Fedora/openSUSE
+
+Download an **x86_64 / amd64** package from the
+[latest release](https://github.com/AnthonyKopri/multi-git/releases/latest):
+
+- **Debian, Ubuntu and Linux Mint:** install the `.deb` with `sudo apt install ./Multi-Git-Client-Linux-<version>-amd64.deb`.
+- **Fedora:** install the `.rpm` with `sudo dnf install ./Multi-Git-Client-Linux-<version>-x86_64.rpm`. On **openSUSE**, use `sudo zypper install --allow-unsigned-rpm ./Multi-Git-Client-Linux-<version>-x86_64.rpm`.
+- **AppImage:** install Git and FUSE 2, mark the downloaded `.AppImage` executable with `chmod +x`, then open it. On Ubuntu 24.04 and later, FUSE 2 is available as `libfuse2t64`; on Ubuntu 22.04, use `libfuse2`. The `.deb` avoids this extra FUSE requirement.
+
+Replace `<version>` with the version you downloaded. The `.deb` and `.rpm`
+packages install Git as a dependency and add the app to your applications menu.
+AppImage updates are downloaded and checksum-verified inside the app; `.deb`
+and `.rpm` installations open the release page so you can install the new package.
 
 ## Five-Minute Guide
 

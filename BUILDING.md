@@ -252,6 +252,27 @@ npm run release:notes
 `--intro <file>` and `--verification <file>` add an opening paragraph and a
 Verification section, for a release whose notes are written by hand.
 
+For a milestone with custom notes, keep the Markdown in `docs/` and run a
+draft release. For example, after merging the 5.0.0 version preparation:
+
+```bash
+gh workflow run release.yml --ref main -f draft=true
+gh run list --workflow release.yml --limit 1
+```
+
+Wait for that run to finish successfully (`gh run watch <run-id> --exit-status`),
+then apply the notes, publish the assembled draft and verify it:
+
+```bash
+gh release edit Release_v5.0.0 --notes-file docs/release-notes-5.0.0.md
+gh release edit Release_v5.0.0 --draft=false --latest
+npm run release:verify -- --tag Release_v5.0.0
+```
+
+The notes file is the release body; its links should use the release tag so
+they keep pointing to the version being described. For future releases,
+substitute their version and notes file in these commands.
+
 ### Signing and notarization
 
 The Windows builds are not code-signed, and Windows may show a SmartScreen
