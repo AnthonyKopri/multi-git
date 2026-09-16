@@ -18,6 +18,8 @@
 // mouse.
 import { closeAllDropdowns, registerDropdown } from '../../ui/dropdown';
 import { el, fragment, icon } from '../../dom/create';
+import { formatShortcut } from '../../ui/shortcuts';
+import { isMacHost } from '../../ui/platform';
 import type { Elements } from '../../dom/elements';
 import type { Command } from '../palette';
 
@@ -85,7 +87,7 @@ function menuRow(command: Command): HTMLLIElement {
       el('span', { text: command.title }),
       command.shortcut === undefined
         ? null
-        : el('span', { className: 'app-menu-shortcut', text: command.shortcut })
+        : el('span', { className: 'app-menu-shortcut', text: formatShortcut(command.shortcut, isMacHost()) })
     ]
   }) as HTMLLIElement;
 

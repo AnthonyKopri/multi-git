@@ -55,8 +55,20 @@ export function matchesShortcut(spec: string, event: KeyboardEvent): boolean {
     ctrl === chord.ctrl &&
     event.shiftKey === chord.shift &&
     event.altKey === chord.alt &&
-    pressed === chord.key
+    (pressed === chord.key || (event.altKey && physicalKey(event) === chord.key))
   );
+}
+
+/**
+ * The letter or digit printed on the key, from its position.
+ *
+ * Only consulted with Alt held. On macOS, Option turns a letter into another
+ * character -- Cmd+Option+F reports `ƒ` -- so `event.key` alone would leave
+ * every Ctrl+Alt shortcut unreachable on a Mac.
+ */
+function physicalKey(event: KeyboardEvent): string | null {
+  const match = /^(?:Key([A-Z])|Digit(\d))$/.exec(event.code);
+  return match ? (match[1] ?? match[2] ?? '').toLowerCase() : null;
 }
 
 /**
@@ -80,4 +92,64 @@ export function isTypingTarget(event: KeyboardEvent): boolean {
     target.isContentEditable ||
     ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
   );
+}
+
+const MAC_MODIFIERS: Readonly<Record<string, string>> = {
+  ctrl: '⌘',
+  cmd: '⌘',
+  alt: '⌥',
+  shift: '⇧'
+};
+
+/** Apple's order for modifier symbols: Option, Shift, Command. */
+const MAC_ORDER = ['⌥', '⇧', '⌘'];
+
+/**
+ * A shortcut as the person reading it would write it.
+ *
+ * The bindings are declared once, as `Ctrl+Shift+B`, and matched with Cmd
+ * standing in for Ctrl. On a Mac the hint says so, in the symbols the rest of
+ * the system uses, rather than naming a key that does something else there.
+ */
+export function formatShortcut(spec: string, mac: boolean): string {
+  if (!mac) {
+    return spec;
+  }
+
+  const parts = spec.split('+').map((part) => part.trim()).filter(Boolean);
+  const key = parts.at(-1);
+  if (key === undefined) {
+    return spec;
+  }
+
+  const symbols = parts
+    .slice(0, -1)
+    .map((part) => MAC_MODIFIERS[part.toLowerCase()] ?? part)
+    .sort((a, b) => MAC_ORDER.indexOf(a) - MAC_ORDER.indexOf(b));
+
+  return `${symbols.join('')}${key === 'Enter' ? '↩' : key.toUpperCase()}`;
+}
+
+/**
+ * Rewrites the `Ctrl+…` hints written into the static markup, on a Mac.
+ *
+ * Tooltips and placeholders in index.html name their shortcut inline, and
+ * duplicating that markup per platform would be two copies to keep in step.
+ */
+export function localizeShortcutHints(root: ParentNode, mac: boolean): void {
+  if (!mac) {
+    return;
+  }
+
+  const hint = /Ctrl(?:\+(?:Alt|Shift))*\+(?:Enter|F\d{1,2}|[A-Za-z0-9])/g;
+
+  for (const attribute of ['title', 'placeholder']) {
+    for (const element of root.querySelectorAll<HTMLElement>(`[${attribute}]`)) {
+      const value = element.getAttribute(attribute) ?? '';
+      const localized = value.replace(hint, (spec) => formatShortcut(spec, true));
+      if (localized !== value) {
+        element.setAttribute(attribute, localized);
+      }
+    }
+  }
 }

@@ -373,7 +373,7 @@ export async function onManageSshConfigChanged(enabled: boolean): Promise<boolea
 
   if (!enabled) {
     const { confirmed, checked } = await confirmDialog(
-      'External tools such as Git Bash and your IDE will stop following the key selected here.',
+      'Other tools that read ~/.ssh/config, such as your terminal and your IDE, will stop following the key selected here.',
       {
         title: 'Stop managing ~/.ssh/config?',
         confirmLabel: 'Turn Off',

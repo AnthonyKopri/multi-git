@@ -497,7 +497,7 @@ export const ELEMENT_MAP = {
   btnSshHealthOpen: 'btn-ssh-health-open',
 
   // Application updates. The markup is in every build; the feature hides
-  // itself unless the desktop bridge says this is a packaged Windows app.
+  // itself unless the desktop bridge says this is a packaged release build.
   btnUpdate: 'btn-update',
   updateBadge: 'update-badge',
   updateModal: 'update-modal',

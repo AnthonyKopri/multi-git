@@ -10,6 +10,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { closeAllDropdowns } from '../../ui/dropdown';
 import { withButtonBusy } from '../../ui/busy';
+import { isMacHost, isWindowsHost } from '../../ui/platform';
 import { attachPasswordReveal, maskPasswordField } from '../../ui/password-reveal';
 import {
   applyConfigSnapshot,
@@ -25,6 +26,14 @@ let ui: Elements;
 
 export function initSshManager(elements: Elements): void {
   ui = elements;
+
+  // The path is used as typed, with no `~` expansion, so the example is a full
+  // path in the shape this operating system writes one.
+  asInput(ui.sshKeyPath).placeholder = isWindowsHost()
+    ? 'e.g. C:\\Users\\you\\.ssh\\id_ed25519'
+    : isMacHost()
+      ? 'e.g. /Users/you/.ssh/id_ed25519'
+      : 'e.g. /home/you/.ssh/id_ed25519';
 
   attachPasswordReveal(ui.sshPassphrase, ui.btnSshPassphraseReveal);
   attachPasswordReveal(ui.sshGeneratePassphrase, ui.btnSshGeneratePassphraseReveal);

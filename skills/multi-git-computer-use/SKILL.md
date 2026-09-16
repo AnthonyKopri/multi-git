@@ -25,13 +25,13 @@ Use one observed action at a time and refresh after it. Prefer accessible contro
 
 The row under **Unstaged Changes** stages a file. The diff icon opens **File Diff** without changing staging; the trash icon begins discard. Click the precise target. In **Staged Changes**, clicking the row unstages it. Inspect the changed lines and staged list before committing; **Commit** includes the whole index, including changes staged before this task.
 
-Enter the intended commit message, then use **Commit** or Ctrl+Enter while the message box is focused. Verify the new history entry and the remaining staged/unstaged files. Do not interpret a spinner or toast alone as proof of success.
+Enter the intended commit message, then use **Commit** or Ctrl+Enter (Cmd+Enter on macOS) while the message box is focused. Verify the new history entry and the remaining staged/unstaged files. Do not interpret a spinner or toast alone as proof of success.
 
 **Publish** is the first push of a branch without an upstream; **Push** is subsequent synchronization. Review origin, branch and SSH identity before an authorized push. Cancel any unexpected force-push, wrong-account, discard, reset, or conflict-resolution prompt and inspect it. User authorization persists; seek additional input only for a choice or action outside the authorized scope or required by the active tool's rules.
 
 ## Navigate and inspect
 
-Ctrl+K opens the command palette. Search visible actions there when toolbar labels are hidden. Escape closes the current modal/palette. **Settings → Git and GitHub → Agent CLI connection** exposes the current local server address for a CLI handoff.
+Ctrl+K (Cmd+K on macOS) opens the command palette. Search visible actions there when toolbar labels are hidden. Escape closes the current modal/palette. **Settings → Git and GitHub → Agent CLI connection** exposes the current local server address for a CLI handoff.
 
 Test native Open/Save dialogs as separate windows if the parent snapshot does not show them. In multi-window workflows, reselect the window and recheck its repository path after each switch. Do not type terminal commands through the app, terminal windows, File Explorer or file dialogs; a path field is for a path only.
 

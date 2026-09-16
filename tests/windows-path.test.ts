@@ -160,4 +160,17 @@ describe('detectPrerequisites', () => {
     expect(runner.callsTo('reg.exe').length).toBeGreaterThan(0);
     expect(report.tools.find((tool) => tool.id === 'git')?.installed).toBe(true);
   });
+
+  it('lists Git Bash only on Windows, where it can exist', async () => {
+    // On macOS and Linux a Git Bash row could never be ticked, which kept
+    // "Finish setting up" on the welcome screen with a Git for Windows note.
+    const runner = new FakeRunner()
+      .on(command('git'), { stdout: 'git version 2.52.0' })
+      .on(command('gh'), { stdout: 'gh version 2.63.2' });
+
+    for (const platform of ['darwin', 'linux'] as const) {
+      const report = await withPlatform(platform, () => detectPrerequisites(runner));
+      expect(report.tools.map((tool) => tool.id)).toEqual(['git', 'gh']);
+    }
+  });
 });
