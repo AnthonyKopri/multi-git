@@ -26,13 +26,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { buildLaunchEnv } from '../agents/launch';
+import { buildLaunchEnv, linuxTerminalPlans } from '../agents/launch';
 import type { LaunchPlan } from '../agents/launch';
 import { readRepoSshCommand } from '../ssh/repo-routing';
 import { sshCommandPrefix } from '../ssh/openssh-path';
 
 /**
- * `terminal` is the platform's own -- Windows Terminal, Terminal.app. It is
+ * `terminal` is the platform's own -- Windows Terminal, Terminal.app, or the
+ * Linux desktop's terminal emulator. It is
  * where `gh` is reached, since `gh` is a command rather than a shell and wants
  * somewhere to be typed.
  */
@@ -153,14 +154,8 @@ function terminalPlan(repoPath: string, env: NodeJS.ProcessEnv): LaunchPlan {
     };
   }
 
-  return {
-    executable: 'x-terminal-emulator',
-    args: [],
-    cwd: repoPath,
-    env,
-    visible: true,
-    preview: `x-terminal-emulator (in ${repoPath})`
-  };
+  // The first choice only; openShellAt tries the rest when it is not installed.
+  return linuxTerminalPlans(repoPath, env)[0]!;
 }
 
 /**

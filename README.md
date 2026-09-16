@@ -29,6 +29,9 @@
 
 ## Download and Install
 
+> [!NOTE]
+> **Multi-Git is not code-signed yet.** This is an early-build limitation: the Windows and macOS downloads do not carry a developer certificate, so Windows or macOS may warn you before the app opens the first time. Signing is planned for a future release. Until then, only download Multi-Git from this repository's [official Releases page](https://github.com/AnthonyKopri/multi-git/releases/latest), and compare the file against `SHA256SUMS.txt` if you want to be sure it has not been changed. The Windows and macOS sections below explain the warning and how to continue.
+
 ### Windows: installer or portable app
 
 Choose the installer for a normal installation, or the portable executable to run without installing.
@@ -45,7 +48,8 @@ Once installed, Multi-Git keeps itself current. It checks GitHub for a newer sta
 - The **installer** build reinstalls in the background and reopens on the new version.
 - The **portable** build saves the new `.exe` next to the one you are running and opens it. Your current file is left in place, so you can go back to it by launching it again; delete it yourself when you no longer want it.
 
-The Windows packages are not currently code-signed, so Windows may show a SmartScreen warning. Only continue if the file came from this repository's official Releases page.
+> [!IMPORTANT]
+> **Windows may show a SmartScreen warning ("Windows protected your PC").** This is because early builds are not code-signed yet, and it will go away once signing is added in a later release. To continue, select **More info → Run anyway**. Only do this if the file came from this repository's official Releases page.
 
 Each release also includes `SHA256SUMS.txt`, a plain-text list of the expected
 SHA-256 fingerprint for each download. To verify a download in PowerShell,
@@ -61,7 +65,7 @@ download supports Apple silicon and Intel Macs. Git must be installed and
 available on your system.
 
 > [!IMPORTANT]
-> **The macOS build is currently unsigned by an identified developer and is not notarized.** It has an ad-hoc signature only. If macOS blocks the app after you first try to open it, go to **System Settings → Privacy & Security → Open Anyway** and confirm. Only approve the app if you downloaded it from this repository's official release page. See [Apple's instructions](https://support.apple.com/en-us/102445).
+> **macOS may say the app cannot be opened or that Apple could not verify it.** This is because early builds are not signed with an Apple Developer ID or notarized yet (they have an ad-hoc signature only), and it will be fixed once signing is added in a later release. If macOS blocks the app after you first try to open it, go to **System Settings → Privacy & Security → Open Anyway** and confirm. Only approve the app if you downloaded it from this repository's official release page. See [Apple's instructions](https://support.apple.com/en-us/102445).
 
 The app tells you when a new release is available and opens its download page.
 Install the new disk image manually to update.
@@ -79,6 +83,7 @@ Replace `<version>` with the version you downloaded. The `.deb` and `.rpm`
 packages install Git as a dependency and add the app to your applications menu.
 AppImage updates are downloaded and checksum-verified inside the app; `.deb`
 and `.rpm` installations open the release page so you can install the new package.
+The `.rpm` is not GPG-signed yet, which is why openSUSE needs `--allow-unsigned-rpm`.
 
 ## Five-Minute Guide
 
@@ -658,7 +663,7 @@ A single refresh runs more than forty Git commands and nearly all of them are qu
 Two buttons hand the repository to a real shell:
 
 - **Git Bash** opens Git for Windows' shell in the repository. Shown only where it is installed.
-- **Terminal** opens Windows Terminal — or PowerShell where that is not present — in the repository. This is where `gh` lives, since `gh` is a command rather than a shell.
+- **Terminal** opens a terminal in the repository: Windows Terminal (or PowerShell where that is not present) on Windows, Terminal on macOS, and on Linux the terminal named by `TERMINAL`, `x-terminal-emulator`, or the first installed of GNOME Terminal, Ptyxis, Console, Konsole, Xfce Terminal and others. This is where `gh` lives, since `gh` is a command rather than a shell.
 
 Both carry the repository's SSH identity. That is the reason they exist rather than being a bookmark to the folder: Multi-Git writes `core.sshCommand` into each repository so Git finds the right key, but that setting names a bare `ssh`, and in Git Bash a bare `ssh` is the MSYS build inside Git for Windows, which cannot see the agent Multi-Git loads your keys into. Opened by hand, Git Bash asks for the passphrase of a key that is already unlocked. Opened from here, the shell is given a `GIT_SSH_COMMAND` naming the agent-capable build with the same key, so `git push` works with the right account and no prompt.
 

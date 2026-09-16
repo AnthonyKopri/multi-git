@@ -65,6 +65,26 @@ export const INHERITED_ENV_KEYS: readonly string[] = [
   'COLORTERM'
 ];
 
+/**
+ * What a graphical program needs to reach the desktop on Linux.
+ *
+ * Kept apart from INHERITED_ENV_KEYS because a coding agent has no use for
+ * them, and DISPLAY in particular is refused there so ssh never looks for an
+ * askpass. A terminal window, an editor and a file manager are different: with
+ * no DISPLAY or WAYLAND_DISPLAY they have no screen to open on, and exit before
+ * showing anything. SSH_ASKPASS stays excluded, so Multi-Git's own bridge is
+ * still unreachable from what they start.
+ */
+const DESKTOP_SESSION_KEYS: readonly string[] = [
+  'DISPLAY',
+  'WAYLAND_DISPLAY',
+  'XAUTHORITY',
+  'XDG_RUNTIME_DIR',
+  'XDG_SESSION_TYPE',
+  'XDG_CURRENT_DESKTOP',
+  'DBUS_SESSION_BUS_ADDRESS'
+];
+
 /** Environment variables that must never reach a launched tool. */
 const NEVER_INHERITED = new Set([
   // Multi-Git's own askpass bridge, which answers with a stored passphrase.
@@ -109,6 +129,89 @@ export function buildLaunchEnv(
   }
 
   return env;
+}
+
+/**
+ * Adds the desktop session to an environment meant for a window.
+ *
+ * Only off Windows and macOS: Windows has no such variables, and macOS starts
+ * Terminal.app through LaunchServices, which does not read them.
+ */
+export function withDesktopSession(
+  env: NodeJS.ProcessEnv,
+  parentEnv: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  if (process.platform === 'win32' || process.platform === 'darwin') {
+    return env;
+  }
+
+  const withSession = { ...env };
+  for (const key of DESKTOP_SESSION_KEYS) {
+    const value = parentEnv[key];
+    if (value !== undefined) {
+      withSession[key] = value;
+    }
+  }
+  return withSession;
+}
+
+/**
+ * The terminal emulators tried on Linux, in order.
+ *
+ * `x-terminal-emulator` is Debian's name for the one the user chose, so it
+ * comes first -- but Fedora, openSUSE and Arch have no such command, and there
+ * the desktop's own terminal has to be found by name. Each is told the folder
+ * explicitly as well as being started in it, because several (gnome-terminal,
+ * Ptyxis, Console) hand the window to an already running server that would
+ * otherwise open it in the home directory.
+ */
+const LINUX_TERMINALS: ReadonlyArray<{ executable: string; args: (folder: string) => string[] }> = [
+  { executable: 'x-terminal-emulator', args: () => [] },
+  { executable: 'gnome-terminal', args: (folder) => [`--working-directory=${folder}`] },
+  { executable: 'ptyxis', args: (folder) => ['--new-window', `--working-directory=${folder}`] },
+  { executable: 'kgx', args: (folder) => [`--working-directory=${folder}`] },
+  { executable: 'konsole', args: (folder) => ['--workdir', folder] },
+  { executable: 'xfce4-terminal', args: (folder) => [`--working-directory=${folder}`] },
+  { executable: 'mate-terminal', args: (folder) => [`--working-directory=${folder}`] },
+  { executable: 'tilix', args: (folder) => [`--working-directory=${folder}`] },
+  { executable: 'alacritty', args: (folder) => ['--working-directory', folder] },
+  { executable: 'kitty', args: (folder) => ['--directory', folder] },
+  { executable: 'foot', args: (folder) => [`--working-directory=${folder}`] },
+  { executable: 'xterm', args: () => [] }
+];
+
+/**
+ * Every way to open a terminal in `folder` on Linux, most preferred first.
+ *
+ * A `TERMINAL` naming a single program is the user saying which one they want,
+ * so it leads. One carrying arguments is skipped rather than split, since
+ * splitting it would mean parsing a command line.
+ */
+export function linuxTerminalPlans(
+  folder: string,
+  env: NodeJS.ProcessEnv,
+  parentEnv: NodeJS.ProcessEnv = process.env
+): LaunchPlan[] {
+  const windowEnv = withDesktopSession(env, parentEnv);
+  const preferred = parentEnv['TERMINAL']?.trim();
+  const candidates = [...LINUX_TERMINALS];
+
+  if (preferred && /^[\w./+-]+$/.test(preferred)) {
+    const known = candidates.find((terminal) => terminal.executable === path.basename(preferred));
+    candidates.unshift({ executable: preferred, args: known?.args ?? (() => []) });
+  }
+
+  return candidates.map(({ executable, args }) => {
+    const argv = args(folder);
+    return {
+      executable,
+      args: argv,
+      cwd: folder,
+      env: windowEnv,
+      visible: true,
+      preview: argv.length > 0 ? describeCommand(executable, argv) : `${executable} (in ${folder})`
+    };
+  });
 }
 
 /**
@@ -275,14 +378,8 @@ export function terminalPlanFor(worktreePath: string, parentEnv = process.env): 
     };
   }
 
-  return {
-    executable: 'x-terminal-emulator',
-    args: [],
-    cwd: worktreePath,
-    env,
-    visible: true,
-    preview: `x-terminal-emulator (in ${worktreePath})`
-  };
+  // The first choice only; the service tries the rest when it is not installed.
+  return linuxTerminalPlans(worktreePath, env, parentEnv)[0]!;
 }
 
 /** The Windows fallback when Windows Terminal is not installed. */
@@ -311,7 +408,7 @@ export function editorPlanFor(worktreePath: string, parentEnv = process.env): La
     executable: process.platform === 'win32' ? 'code.cmd' : 'code',
     args: [worktreePath],
     cwd: worktreePath,
-    env,
+    env: withDesktopSession(env, parentEnv),
     visible: false,
     preview: `code "${worktreePath}"`
   };
@@ -327,7 +424,7 @@ export function revealPlanFor(worktreePath: string, parentEnv = process.env): La
     executable,
     args: [worktreePath],
     cwd: path.dirname(worktreePath),
-    env,
+    env: withDesktopSession(env, parentEnv),
     visible: false,
     preview: `${executable} "${worktreePath}"`
   };

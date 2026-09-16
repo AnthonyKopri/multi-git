@@ -8,7 +8,7 @@ npm run compile
 node scripts/multi-git.cjs help
 ```
 
-Optionally run `npm link` to install the `multi-git` command on PATH. No global installation is needed when invoking the script directly. This is a source-checkout CLI; the Windows installer does not install Node or add the command to PATH.
+Optionally run `npm link` to install the `multi-git` command on PATH. No global installation is needed when invoking the script directly. This is a source-checkout CLI; the packaged desktop app does not install Node or add the command to PATH.
 
 Start `npm start` or the desktop app. In **Settings → Git and GitHub**, copy **Agent CLI connection**. Pass it with `--server` (or set `MULTI_GIT_URL`). The default is `http://127.0.0.1:3000`; desktop mode chooses a new port on launch.
 

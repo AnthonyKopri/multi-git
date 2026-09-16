@@ -71,6 +71,6 @@ These are targets for a volunteer-maintained project, not guaranteed service-lev
 
 Release binaries are **not** code-signed, and `SHA256SUMS.txt` is served unsigned from the same GitHub release as the binary it describes. The checksum therefore proves that the file you received is the file that release published — it detects a corrupted, truncated, or tampered *transfer*. It does not, and cannot, protect against a malicious or compromised release: anyone able to publish a release controls both the binary and its hash.
 
-Because the binaries are unsigned, Windows SmartScreen may warn when the downloaded installer runs, exactly as it does for a manually downloaded one.
+Because the binaries are unsigned, Windows SmartScreen may warn when the downloaded installer runs, exactly as it does for a manually downloaded one, and macOS Gatekeeper may block a downloaded disk image until it is approved under **Privacy & Security**.
 
 These controls reduce risk but do not make the application a replacement for operating-system security, full-disk encryption, backups, or careful key management.
