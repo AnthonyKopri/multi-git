@@ -81,7 +81,9 @@ export async function detectPrerequisites(
   // Git Bash ships inside Git for Windows, so it is a property of that install
   // rather than a separate thing to fetch -- which is worth saying, because
   // offering an "install" button for it would be offering the same download
-  // twice.
+  // twice. It does not exist on macOS or Linux, where the Terminal button is
+  // the shell, so it is not listed there at all: a row that can never be ticked
+  // would keep "Finish setting up" on screen forever.
   const bash: PrerequisiteState = {
     id: 'git-bash',
     label: 'Git Bash',
@@ -108,7 +110,7 @@ export async function detectPrerequisites(
   };
 
   return {
-    tools: [git, bash, gh],
+    tools: process.platform === 'win32' ? [git, bash, gh] : [git, gh],
     // Only git blocks. The rest degrade.
     blocked: !git.installed,
     canInstall

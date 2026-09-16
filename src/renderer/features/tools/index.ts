@@ -15,6 +15,7 @@ import { getState } from '../../state/store';
 import { confirmDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { withButtonBusy } from '../../ui/busy';
+import { isWindowsHost } from '../../ui/platform';
 import { registerHubTab, openRepoHub } from '../repo-hub';
 import { EXTERNAL_TOOL_KINDS } from '../../../shared/config-types';
 import { TOOL_PLACEHOLDER_HELP } from '../../../shared/tool-types';
@@ -127,6 +128,8 @@ async function renderPanel(panel: HTMLElement): Promise<void> {
     }
   }
 
+  const shellIntegration = buildShellIntegration();
+
   panel.replaceChildren(
     el('p', {
       className: 'modal-desc',
@@ -136,7 +139,7 @@ async function renderPanel(panel: HTMLElement): Promise<void> {
     buildToolbar(),
     buildList(),
     buildEditor(),
-    buildShellIntegration()
+    ...(shellIntegration ? [shellIntegration] : [])
   );
 }
 
@@ -304,13 +307,22 @@ function buildEditor(): HTMLElement {
   });
 }
 
-function buildShellIntegration(): HTMLElement {
+/**
+ * The File Explorer right-click entry, on Windows only.
+ *
+ * macOS and Linux have no such menu to add to, so rather than a heading that
+ * explains a Windows feature is missing, those get nothing at all.
+ */
+function buildShellIntegration(): HTMLElement | null {
   if (!shellStatus) {
+    if (!isWindowsHost()) {
+      return null;
+    }
     return el('section', {
       children: [
         el('div', {
           className: 'section-header',
-          children: [el('h4', { text: 'Windows Explorer' })]
+          children: [el('h4', { text: 'File Explorer' })]
         }),
         el('p', {
           className: 'modal-desc',
@@ -321,15 +333,7 @@ function buildShellIntegration(): HTMLElement {
   }
 
   if (!shellStatus.supported) {
-    return el('section', {
-      children: [
-        el('div', {
-          className: 'section-header',
-          children: [el('h4', { text: 'Windows Explorer' })]
-        }),
-        el('p', { className: 'modal-desc', text: shellStatus.reason ?? 'Not available here.' })
-      ]
-    });
+    return null;
   }
 
   const action = el('button', {
@@ -345,7 +349,7 @@ function buildShellIntegration(): HTMLElement {
     children: [
       el('div', {
         className: 'section-header',
-        children: [el('h4', { text: 'Windows Explorer' })]
+        children: [el('h4', { text: 'File Explorer' })]
       }),
       el('p', {
         className: 'modal-desc',

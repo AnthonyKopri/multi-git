@@ -20,6 +20,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { formatRelativeTime } from '../../ui/format';
 import { withButtonBusy } from '../../ui/busy';
+import { isWindowsHost } from '../../ui/platform';
 import { ensureKeyUsable } from '../accounts/unlock';
 import type { AgentLaunchRecord, ExternalAgentDefinition } from '../../../shared/config-types';
 import { focusFirst } from '../../ui/focus';
@@ -35,6 +36,18 @@ let launchTarget = '';
 
 export function initAgents(elements: Elements): void {
   ui = elements;
+
+  // Windows Terminal and PowerShell are Windows launch modes, and the server
+  // refuses them anywhere else. Hidden rather than removed, so a definition
+  // written on Windows still shows what it was set to when opened here.
+  if (!isWindowsHost()) {
+    for (const option of asSelect(ui.agentTerminalSelect).options) {
+      if (option.value === 'windows-terminal' || option.value === 'powershell') {
+        option.hidden = true;
+        option.disabled = true;
+      }
+    }
+  }
 }
 
 export function canLaunch(): boolean {
@@ -185,7 +198,7 @@ function resetAgentForm(): void {
   asInput(ui.agentExecutableInput).value = '';
   asInput(ui.agentArgsInput).value = '';
   asSelect(ui.agentTerminalSelect).value =
-    navigator.userAgent.includes('Windows') ? 'windows-terminal' : 'direct';
+    isWindowsHost() ? 'windows-terminal' : 'direct';
   asInput(ui.agentPromptModeCheckbox).checked = true;
 }
 

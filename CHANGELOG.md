@@ -12,6 +12,30 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.0.2] - 2026-09-16
+
+### Fixed
+
+- **The welcome screen stops asking for Git Bash on macOS and Linux.** Git Bash
+  only exists on Windows, but every copy listed it as missing, so "Finish
+  setting up" never went away there. The Git download button also opened the
+  Git for Windows page everywhere; it now opens the page for your system.
+- **Cmd+Option shortcuts work on a Mac.** Option changes the character a key
+  types, so fetch, pull, push and stage everything (`⌥⌘F`, `⌥⌘P`, `⌥⌘U`,
+  `⌥⌘S`) never fired. Shortcuts are now matched by the key pressed.
+
+### Changed
+
+- **No Windows-only wording on macOS and Linux.** Shortcut hints show `⌘`, `⌥`
+  and `⇧` on a Mac. The File Explorer menu section, and the Windows Terminal
+  and PowerShell choices for coding agents, appear only on Windows. The SSH key
+  path example matches your system, the `~/.ssh/config` setting names your
+  terminal rather than Git Bash, and browser mode explains why it has no folder
+  picker outside Windows.
+- **Documentation for every platform.** The README gives checksum, Git install
+  and port commands for macOS and Linux as well as Windows, and the agent CLI
+  guide no longer assumes PowerShell.
+
 ## [5.0.1] - 2026-09-16
 
 ### Fixed
@@ -794,7 +818,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.1...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.2...HEAD
+[5.0.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.1...Release_v5.0.2
 [5.0.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.0...Release_v5.0.1
 [5.0.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.4...Release_v5.0.0
 [4.1.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.3...Release_v4.1.4

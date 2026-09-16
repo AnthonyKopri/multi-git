@@ -313,6 +313,23 @@ export function availableShells(): { gitBash: boolean } {
 }
 
 /**
+ * Where to get Git on this operating system. Git for Windows is only the answer
+ * on Windows; macOS and Linux have their own pages on the same site.
+ */
+function gitDownloadPage(): string {
+  switch (process.platform) {
+    case 'win32':
+      return 'https://git-scm.com/download/win';
+    case 'darwin':
+      return 'https://git-scm.com/download/mac';
+    case 'linux':
+      return 'https://git-scm.com/download/linux';
+    default:
+      return 'https://git-scm.com/downloads';
+  }
+}
+
+/**
  * What each installable prerequisite is, to winget and to a browser.
  *
  * A fixed table, and the only thing that ever reaches the winget command line.
@@ -364,8 +381,11 @@ export async function installPrerequisite(
   const launcher = dependencies.launcher ?? detachedLauncher;
 
   if (process.platform !== 'win32' || (await resolveExecutable('winget.exe', runner)) === null) {
-    await openUrlExternally(pkg.page, launcher);
-    return { started: false, via: 'browser', url: pkg.page };
+    // The table's Git page is Git for Windows, which is the wrong download
+    // anywhere else, so Git is looked up for the platform this is running on.
+    const page = pkg.id === 'Git.Git' ? gitDownloadPage() : pkg.page;
+    await openUrlExternally(page, launcher);
+    return { started: false, via: 'browser', url: page };
   }
 
   // `--id ... -e` pins the exact package rather than matching a search, and

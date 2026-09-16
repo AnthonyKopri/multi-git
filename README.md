@@ -52,9 +52,11 @@ Once installed, Multi-Git keeps itself current. It checks GitHub for a newer sta
 > **Windows may show a SmartScreen warning ("Windows protected your PC").** This is because early builds are not code-signed yet, and it will go away once signing is added in a later release. To continue, select **More info → Run anyway**. Only do this if the file came from this repository's official Releases page.
 
 Each release also includes `SHA256SUMS.txt`, a plain-text list of the expected
-SHA-256 fingerprint for each download. To verify a download in PowerShell,
-run `Get-FileHash -Algorithm SHA256 <downloaded-file>` and compare its `Hash`
-with the matching line in that file.
+SHA-256 fingerprint for each download. To verify a download, calculate its
+fingerprint and compare it with the matching line in that file: in PowerShell on
+Windows run `Get-FileHash -Algorithm SHA256 <downloaded-file>` and read `Hash`;
+on macOS run `shasum -a 256 <downloaded-file>`; on Linux run
+`sha256sum <downloaded-file>`.
 
 ### macOS: Apple silicon and Intel
 
@@ -119,7 +121,7 @@ Add Auto-Select Rules such as `github.com/company` → **Work** to make this aut
 2. Click a row under **Unstaged Changes** to stage it. Click a staged row to unstage it.
 3. Use the file's **diff icon** to review its changes before committing.
 4. Enter a commit message. Optionally select `feat`, `fix`, `docs`, or another template and add a scope.
-5. Click **Commit**, or press `Ctrl+Enter` in the message box.
+5. Click **Commit**, or press `Ctrl+Enter` in the message box. On macOS, every `Ctrl` shortcut in this guide is `Cmd` instead, and the app shows it that way.
 6. Click the **Push** icon in the top toolbar when you are ready to send it to origin. On a branch the remote has never seen, that button reads **Publish** instead.
 
 The row and its action icons intentionally do different things: clicking the row toggles staging; clicking the diff icon opens **File Diff**; clicking the trash icon starts a confirmed discard.
@@ -137,7 +139,7 @@ The top toolbar contains the normal remote workflow:
 | **Auto-pull** chip | Toggles whether a fetch that leaves this branch purely behind fast-forwards it on its own. | `git pull origin <branch>` |
 | **Create pull request** | Opens the preflight, rather than sending anything immediately. | `gh pr create` |
 | **SSH / HTTPS** | In the menu. Converts a compatible origin URL between GitHub-style SSH and HTTPS forms. | `git remote set-url origin …` |
-| **Terminal** | The panel along the bottom, or a separate window from the menu. Every command the app runs, as it ran, with buttons to open Git Bash or a terminal here with this repository's SSH key. | Read-only record; the shells are yours |
+| **Terminal** | The panel along the bottom, or a separate window from the menu. Every command the app runs, as it ran, with buttons to open a terminal here, and Git Bash on Windows, with this repository's SSH key. | Read-only record; the shells are yours |
 | **Refresh** | In the menu, or `F5`. Reloads status, branches, history, origin, stashes, tags, and Safety Net. | Multiple read-only Git queries |
 
 Fetch, pull, push, the pull-request button and the auto-pull chip are the five
@@ -539,7 +541,7 @@ Auto-Select Rules match text anywhere in a repository's origin URL. Rules are ev
 
 #### Keep `~/.ssh/config` in sync
 
-By default, Multi-Git maintains a clearly marked block in `~/.ssh/config` for the active repository host. This makes external tools such as Git Bash and IDEs use the same active key. Selecting **System SSH** removes Multi-Git's entry for that host.
+By default, Multi-Git maintains a clearly marked block in `~/.ssh/config` for the active repository host. This makes external tools such as terminals, Git Bash on Windows, and IDEs use the same active key. Selecting **System SSH** removes Multi-Git's entry for that host.
 
 If you manage SSH aliases or advanced host rules yourself, turn off **Keep `~/.ssh/config` in sync with the active key** in SSH Profile Manager. You can optionally remove the managed block at the same time. In-app operations still use the selected key through `GIT_SSH_COMMAND` even when config synchronization is disabled.
 
@@ -616,7 +618,7 @@ Nothing is ever purged from a rule directly. The rules produce a list, every row
 
 **Tools** stores definitions for external diff, merge, editor, terminal, and file-manager programs. **Detect installed** fills in a definition for each tool found on your PATH, including the arguments it expects. In 3.0 the conflict resolver can launch the configured merge tool and shows the exact command for first-use approval. The other definitions can be detected and edited here but are not yet connected to launch buttons in their normal workflows. An external merge tool never marks a file resolved on your behalf: Multi-Git re-reads Git's state afterwards rather than assuming.
 
-The same tab can add **Open in Multi-Git** to the Windows Explorer right-click menu. It writes two registry keys under your own user account — no administrator rights, no file associations — and shows you exactly which two before it writes or removes them.
+On Windows, the same tab can add **Open in Multi-Git** to the File Explorer right-click menu; macOS and Linux do not show this option. It writes two registry keys under your own user account — no administrator rights, no file associations — and shows you exactly which two before it writes or removes them.
 
 ### Settings
 
@@ -662,7 +664,7 @@ A single refresh runs more than forty Git commands and nearly all of them are qu
 
 Two buttons hand the repository to a real shell:
 
-- **Git Bash** opens Git for Windows' shell in the repository. Shown only where it is installed.
+- **Git Bash** opens Git for Windows' shell in the repository. Shown only on Windows, and only where it is installed.
 - **Terminal** opens a terminal in the repository: Windows Terminal (or PowerShell where that is not present) on Windows, Terminal on macOS, and on Linux the terminal named by `TERMINAL`, `x-terminal-emulator`, or the first installed of GNOME Terminal, Ptyxis, Console, Konsole, Xfce Terminal and others. This is where `gh` lives, since `gh` is a command rather than a shell.
 
 Both carry the repository's SSH identity. That is the reason they exist rather than being a bookmark to the folder: Multi-Git writes `core.sshCommand` into each repository so Git finds the right key, but that setting names a bare `ssh`, and in Git Bash a bare `ssh` is the MSYS build inside Git for Windows, which cannot see the agent Multi-Git loads your keys into. Opened by hand, Git Bash asks for the passphrase of a key that is already unlocked. Opened from here, the shell is given a `GIT_SSH_COMMAND` naming the agent-capable build with the same key, so `git push` works with the right account and no prompt.
@@ -905,11 +907,13 @@ The API is an internal application interface rather than a versioned public cont
 
 ### Multi-Git cannot find Git
 
-Install Git and make sure `git` is available to desktop applications through the system `PATH`, then restart Multi-Git. From PowerShell, verify with:
+Install Git and make sure `git` is available to desktop applications through the system `PATH`, then restart Multi-Git. From PowerShell on Windows, or a terminal on macOS and Linux, verify with:
 
-```powershell
+```bash
 git --version
 ```
+
+On Windows, install [Git for Windows](https://git-scm.com/download/win). On macOS, run `xcode-select --install` or use one of the options on [git-scm.com](https://git-scm.com/download/mac). On Linux, install the `git` package from your distribution, for example `sudo apt install git` or `sudo dnf install git`.
 
 ### Key generation or testing fails
 
@@ -941,11 +945,17 @@ Authentication decides which remote account Git uses; identity decides what name
 
 ### Port 3000 is already in use
 
-Desktop mode automatically chooses an available port. For browser mode, set another one:
+Desktop mode automatically chooses an available port. For browser mode, set another one. In PowerShell on Windows:
 
 ```powershell
 $env:PORT = "3001"
 npm start
+```
+
+On macOS and Linux:
+
+```bash
+PORT=3001 npm start
 ```
 
 ### A risky action needs to be undone

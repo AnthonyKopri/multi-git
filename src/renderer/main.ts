@@ -19,7 +19,8 @@ import { initOverflowMenus } from './ui/overflow-menu';
 import { initPanes, toggleSide } from './ui/panes';
 import { trapTab } from './ui/focus';
 import { initDock, isPanel } from './ui/dock';
-import { isTypingTarget, matchesShortcut } from './ui/shortcuts';
+import { isTypingTarget, localizeShortcutHints, matchesShortcut } from './ui/shortcuts';
+import { isMacHost, isWindowsHost } from './ui/platform';
 import { initCollapsibleSections } from './ui/sections';
 import { attachHorizontalWheel } from './ui/wheel-scroll';
 import { logToTerminal, openLogWindow } from './ui/log';
@@ -870,7 +871,7 @@ function buildCommands(): palette.Command[] {
     { id: 'bisect', needsRepo: true, group: 'History', title: 'Bisect', keywords: 'good bad regression find', run: () => repoHub.openRepoHub('bisect') },
     { id: 'notes', needsRepo: true, group: 'History', title: 'Git notes', keywords: 'annotate note ref', run: () => repoHub.openRepoHub('notes') },
     { id: 'maintenance', needsRepo: true, menu: 'Repository', icon: 'mop', group: 'Repository', title: 'Repository maintenance', keywords: 'stale worktrees purge merged branches cleanup abandoned', run: () => repoHub.openRepoHub('maintenance') },
-    { id: 'external-tools', group: 'Repository', title: 'External tool and Explorer settings', keywords: 'diff merge editor terminal explorer context menu', run: () => repoHub.openRepoHub('tools') },
+    { id: 'external-tools', group: 'Repository', title: isWindowsHost() ? 'External tool and Explorer settings' : 'External tool settings', keywords: isWindowsHost() ? 'diff merge editor terminal explorer context menu' : 'diff merge editor terminal', run: () => repoHub.openRepoHub('tools') },
     { id: 'toggle-sidebar', shortcut: 'Ctrl+B', needsRepo: true, group: 'View', title: 'Show or hide the branches panel', keywords: 'collapse expand sidebar left panel', run: () => toggleSide('sidebar') },
     { id: 'toggle-history', shortcut: 'Ctrl+Shift+B', needsRepo: true, group: 'View', title: 'Show or hide the commit history', keywords: 'collapse expand right panel', run: () => toggleSide('history') },
     { id: 'logs', group: 'View', title: 'Open the Terminal Log', run: () => openLogWindow() },
@@ -1062,9 +1063,12 @@ async function start(): Promise<void> {
   // The same list the palette indexes, filtered by the `menu` field: two
   // surfaces, one registry, so they cannot offer different things.
   appMenu.initAppMenu(ui, buildCommands);
-  // Returns immediately in browser mode and on unpackaged or non-Windows
-  // builds, leaving the update icon and modal hidden.
+  // Returns immediately in browser mode, in unpackaged builds and on a Linux
+  // copy that did not come from a release package, leaving the update icon and
+  // modal hidden.
   updates.initUpdates(ui);
+  // The markup names its shortcuts as Ctrl; on a Mac they are Cmd.
+  localizeShortcutHints(document, isMacHost());
 
   wireHeader();
   wireWorkspaceTabs();

@@ -139,7 +139,7 @@ folderRouter.get(
     }
     if (os.platform() !== 'win32') {
       throw new HttpError(
-        'Folder selection endpoint is only available on Windows web mode',
+        'Browser mode can only show a folder picker on Windows. The desktop app has one on every platform.',
         501
       );
     }

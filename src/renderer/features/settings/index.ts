@@ -273,7 +273,7 @@ function buildSync(current: AppSettings): HTMLElement {
     ),
     toggle(
       'Keep ~/.ssh/config in sync with the active key',
-      'Multi-Git maintains its own block in that file so Git Bash and your IDE use the same key. Turning it off asks whether to remove the block it already wrote.',
+      'Multi-Git maintains its own block in that file so your terminal and your IDE use the same key. Turning it off asks whether to remove the block it already wrote.',
       current.manageSshConfig !== false,
       (value) => {
         void onManageSshConfigChanged(value).then(() => refresh());

@@ -59,12 +59,12 @@ Requires a separately authorized test account with gh installed and signed in be
 ### CU-07 — Commit message focus and keyboard submission
 
 - Stage only README in the working copy. Leave `new file.txt` untracked.
-- Focus the commit message box and type `test: GUI smoke commit`. Verify the text before pressing Ctrl+Enter.
+- Focus the commit message box and type `test: GUI smoke commit`. Verify the text before pressing Ctrl+Enter (Cmd+Enter on macOS).
 - Expect the new history entry, no staged README, and `new file.txt` still untracked. Read status/history if a toast or timeout is ambiguous before attempting another commit.
 
 ### CU-08 — Palette, modal dismissal and CLI connection
 
-- Open Ctrl+K, search Settings, and activate it. Expect Settings and a selectable **Agent CLI server URL** under Git and GitHub.
+- Open Ctrl+K (Cmd+K on macOS), search Settings, and activate it. Expect Settings and a selectable **Agent CLI server URL** under Git and GitHub.
 - Copy/read that URL and run `node scripts/multi-git.cjs app.info --server <url>` from the shell. Expect JSON success from this app instance.
 - Escape Settings. Reopen Clone through the palette. Expect keyboard navigation to work after changing modal types.
 

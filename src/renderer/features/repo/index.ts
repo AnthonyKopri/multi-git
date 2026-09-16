@@ -1,6 +1,6 @@
 // Opening, remembering, and cloning repositories.
 import * as api from '../../api/endpoints';
-import { errorMessage, isStale, setActiveRepo } from '../../api/client';
+import { ApiError, errorMessage, isStale, setActiveRepo } from '../../api/client';
 import { asInput, asSelect } from '../../dom/elements';
 import type { Elements } from '../../dom/elements';
 import { setHidden } from '../../dom/create';
@@ -86,7 +86,15 @@ export async function browseAndOpen(): Promise<void> {
     // An empty path means the user cancelled; say nothing.
   } catch (error) {
     logToTerminal(`Could not open folder dialog: ${errorMessage(error)}`, 'error');
-    showToast('Could not open the folder dialog. Is the backend server running?', 'error');
+    // A 501 is the server saying this platform has no picker in browser mode,
+    // which is worth reading; anything else is most likely the server itself.
+    showToast(
+      error instanceof ApiError && error.status === 501
+        ? error.message
+        : 'Could not open the folder dialog. Is the backend server running?',
+      'error',
+      8000
+    );
   }
 }
 
