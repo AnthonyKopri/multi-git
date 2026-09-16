@@ -69,6 +69,10 @@ body:
       options:
         - Windows installer
         - Windows portable executable
+        - macOS disk image
+        - Linux AppImage
+        - Linux .deb package
+        - Linux .rpm package
         - Electron from source
         - Browser mode from source
         - Other
@@ -79,7 +83,7 @@ body:
     id: operating-system
     attributes:
       label: Operating system
-      placeholder: Windows 11 24H2
+      placeholder: Windows 11 24H2, macOS 15.5, or Ubuntu 24.04
     validations:
       required: true
 
@@ -88,7 +92,7 @@ body:
     attributes:
       label: Git version
       description: Run `git --version`.
-      placeholder: git version 2.x.x.windows.x
+      placeholder: git version 2.x.x
     validations:
       required: true
 

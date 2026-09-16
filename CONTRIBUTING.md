@@ -18,7 +18,7 @@ You will need:
 - Git available on `PATH`.
 - OpenSSH tools, including `ssh` and `ssh-keygen`.
 - A disposable Git repository for workflow testing.
-- Windows when testing the currently published installer and portable build targets.
+- The matching operating system when testing a published build: Windows for the installer and portable executable, macOS for the disk image, Linux for the AppImage, `.deb` and `.rpm` packages.
 
 Fork the repository, clone your fork, and install dependencies:
 
@@ -110,7 +110,7 @@ Use a disposable repository and test the normal path plus relevant failure paths
 - merge, rebase, cherry-pick, or revert conflicts;
 - paths containing spaces and non-ASCII characters;
 - app restart behavior and persistence;
-- Windows installer or portable builds when packaging is affected.
+- the Windows, macOS, or Linux packages when packaging is affected.
 
 Never test destructive operations against a repository containing work you cannot restore.
 

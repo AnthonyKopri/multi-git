@@ -12,6 +12,26 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.0.1] - 2026-09-16
+
+### Fixed
+
+- **Terminal opens on Linux.** The Terminal buttons asked only for
+  `x-terminal-emulator`, which Fedora, openSUSE and Arch do not have, and
+  started it without the desktop session, so on those systems no window
+  appeared. Multi-Git now tries `TERMINAL`, `x-terminal-emulator`, then GNOME
+  Terminal, Ptyxis, Console, Konsole, Xfce Terminal and others, opens the
+  window in the repository folder, and says so when no terminal is installed.
+  Opening a worktree in VS Code or the file manager gets the same desktop
+  session.
+
+### Changed
+
+- **Clearer notes about unsigned builds.** The README explains that Windows
+  SmartScreen and macOS Gatekeeper warnings come from early builds not being
+  code-signed yet, and that signing is planned. The contributing guide and bug
+  report form now cover macOS and Linux as well as Windows.
+
 ## [5.0.0] - 2026-09-16
 
 ### Added
@@ -774,7 +794,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.0...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.1...HEAD
+[5.0.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.0...Release_v5.0.1
 [5.0.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.4...Release_v5.0.0
 [4.1.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.3...Release_v4.1.4
 [4.1.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.2...Release_v4.1.3

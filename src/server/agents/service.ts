@@ -19,10 +19,12 @@ import {
   buildLaunchPlan,
   editorPlanFor,
   fallbackTerminalPlan,
+  linuxTerminalPlans,
   revealPlanFor,
   runLaunchPlan,
   terminalPlanFor
 } from './launch';
+import type { LaunchPlan } from './launch';
 import type { DetachedLauncher, ExecutableRunner } from '../process/runner';
 import { detachedLauncher, executableRunner } from '../process/runner';
 import { ensureAgentForRepo, findProfile, profileForRepo } from '../ssh/agent-session';
@@ -193,6 +195,11 @@ export async function openTerminalAt(
 
   const preferred = terminalPlanFor(target);
 
+  if (process.platform === 'linux') {
+    await runLaunchPlan(await installedLinuxTerminal(target, preferred.env, runner), launcher);
+    return true;
+  }
+
   if (process.platform === 'win32' && (await resolveExecutable('wt.exe', runner)) === null) {
     await runLaunchPlan(fallbackTerminalPlan(target), launcher);
     return true;
@@ -257,6 +264,11 @@ export async function openShellAt(
     throw new AgentLaunchError((error as Error).message);
   }
 
+  if (kind === 'terminal' && process.platform === 'linux') {
+    await runLaunchPlan(await installedLinuxTerminal(target, plan.env, runner), launcher);
+    return true;
+  }
+
   // Same fallback as openTerminalAt: PowerShell has shipped with every
   // supported version of Windows, so the button never simply does nothing.
   if (
@@ -270,6 +282,29 @@ export async function openShellAt(
 
   await runLaunchPlan(plan, launcher);
   return true;
+}
+
+/**
+ * The first terminal emulator this Linux machine actually has.
+ *
+ * Linux has no one terminal every distribution ships, so asking for a missing
+ * one would fail with ENOENT and a button that did nothing. Refused with a
+ * message that says what to do instead.
+ */
+async function installedLinuxTerminal(
+  folder: string,
+  env: NodeJS.ProcessEnv,
+  runner: ExecutableRunner
+): Promise<LaunchPlan> {
+  for (const plan of linuxTerminalPlans(folder, env)) {
+    if ((await resolveExecutable(plan.executable, runner)) !== null) {
+      return plan;
+    }
+  }
+
+  throw new AgentLaunchError(
+    'No terminal emulator was found. Install one such as GNOME Terminal or Konsole, or set TERMINAL to the one you use.'
+  );
 }
 
 /** Whether each shell can be offered here, so the UI need not guess. */
