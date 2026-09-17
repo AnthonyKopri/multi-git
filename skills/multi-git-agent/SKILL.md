@@ -11,11 +11,21 @@ Use the running Multi-Git backend so repository locks, SSH profiles, operation t
 
 Locate the Multi-Git source checkout. After `npm ci` and `npm run compile`, invoke `node <checkout>/scripts/multi-git.cjs`. An optional `npm link` makes `multi-git` available on PATH; installation is not required. Do not assume a globally installed executable is this checkout.
 
-Read `help` first: its JSON command catalogue includes input fields, HTTP method and whether a repository is required. All output is one JSON envelope with `schemaVersion: 1`, `success`, and either `data` or `error`. Exit 0 means success, 1 means transport/API failure, 2 means invalid input or refused write. With npm, use `npm run --silent agent -- ...` to keep stdout parseable.
+Read `help` first: its JSON command catalogue includes input fields, HTTP method, whether a repository is required, and effect metadata. All output is one JSON envelope with `schemaVersion: 1` and `success`; help has top-level `usage`, `input` and `commands`, while execution has `data` or `error`. Exit 0 means success, 1 means transport/API failure, 2 means invalid input or refused write. With npm, use `npm run --silent agent -- ...` to keep stdout parseable.
 
 Start the desktop app or `npm start`. Copy **Settings → Git and GitHub → Agent CLI connection** and pass it with `--server`. Desktop ports change at restart. Browser mode defaults to `http://127.0.0.1:3000`; `MULTI_GIT_URL` can override it. Run `app.info` to verify the connection. Only loopback HTTP origins are accepted, and redirects are refused.
 
 ## Work on an explicit repository
+
+Inspect each command's `effects`: `mutates` indicates state-changing intent, `local` lists possible local changes, and `remote` is `none`, `read` or `write` for interaction with a remote repository/service (excluding the loopback CLI connection). Dry-run includes the same object at `data.effects`, alongside `request` and `note`. For example:
+
+- `stage`: `{"mutates":true,"local":["index"],"remote":"none"}`.
+- `fetch`: `{"mutates":true,"local":["object-database","local-refs","ref-prune"],"remote":"read"}`; pruning removes local tracking refs, not remote branches.
+- `push`: `{"mutates":true,"local":["local-refs","repo-config"],"remote":"write"}`; it publishes remotely and can set local tracking configuration.
+
+These are conservative possible effects across supported inputs, not a prediction of success. Creation effects include initialization of the new repository/worktree; `local-history` includes creating commits and advancing HEAD. Branch/worktree creation can write tracking configuration, and a detached worktree preview still includes effects possible in other branch modes. See the [effect definitions](../../docs/agent-cli.md#command-effects) for the full vocabulary.
+
+Metadata is descriptive, not authorization or a sandbox guarantee. It excludes incidental logs, caches, authentication helpers, arbitrary hooks and effects introduced by custom Git configuration or external programs. Compare the effects and exact request with the user's authorized task; the CLI does not enforce granular permissions. Keep using `--allow-write` for every executed POST. Tolerate additive JSON fields, but require policy review for missing metadata or unfamiliar effect identifiers/enum values. Help and dry-run do not query repository state to refine these descriptions.
 
 Pass `--repo <absolute-path>` for every repository command; the CLI never guesses from the active GUI tab. Paths are sent as UTF-8/base64 headers, including spaces and non-ASCII characters.
 
