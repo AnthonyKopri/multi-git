@@ -12,6 +12,17 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.0.3] - 2026-09-18
+
+### Added
+
+- **Agent CLI commands describe their effects.** The JSON help catalogue and
+  dry-run output now identify local changes and remote reads or writes, so
+  automation can distinguish staging, branch changes, fetch pruning and remote
+  publication. The descriptions include conditional tracking configuration
+  changes when creating branches or worktrees. They are policy information;
+  the existing `--allow-write` gate and command execution remain unchanged.
+
 ## [5.0.2] - 2026-09-16
 
 ### Fixed
@@ -818,7 +829,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.2...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.3...HEAD
+[5.0.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.2...Release_v5.0.3
 [5.0.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.1...Release_v5.0.2
 [5.0.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.0...Release_v5.0.1
 [5.0.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v4.1.4...Release_v5.0.0

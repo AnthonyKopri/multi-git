@@ -66,7 +66,11 @@ export function prepareRequest(args: string[], input: Record<string, unknown> = 
 }
 
 export async function executeRequest(request: CliRequest, fetcher: typeof fetch = fetch): Promise<unknown> {
-  if (request.dryRun) return { request, note: 'Preview only; server validation and execution have not run.' };
+  if (request.dryRun) return {
+    request,
+    effects: commands[request.command]!.effects,
+    note: 'Preview only; server validation and execution have not run.'
+  };
   let response: Response;
   try {
     response = await fetcher(request.url, {
