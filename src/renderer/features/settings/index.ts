@@ -30,14 +30,13 @@ import type { Elements } from '../../dom/elements';
 import type { AppSettings } from '../../../shared/config-types';
 import type { StaleRules } from '../../../shared/maintenance-types';
 import { sectionHeading, settingGroup, settingItem, settingNote, switchInput } from '../../ui/setting-rows';
+import { createSectionNav } from '../../ui/section-nav';
+import type { SectionNav } from '../../ui/section-nav';
 
 let ui: Elements;
 let settings: AppSettings | null = null;
 let loadError = '';
-/** The section a nav click is scrolling to, while that scroll is under way. */
-let jumpingTo: string | null = null;
-/** Space left above a section heading the nav scrolls to. */
-const SECTION_GAP_PX = 16;
+let nav: SectionNav;
 
 export function initSettings(elements: Elements): void {
   ui = elements;
@@ -51,18 +50,7 @@ export function initSettings(elements: Elements): void {
     }
   });
 
-  ui.settingsNav.addEventListener('click', (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLElement>('.settings-nav-item');
-    const key = button?.dataset['section'];
-    if (key !== undefined) {
-      jumpToSection(key);
-    }
-  });
-
-  ui.settingsBody.addEventListener('scroll', () => markActiveSection(), { passive: true });
-  ui.settingsBody.addEventListener('scrollend', () => {
-    jumpingTo = null;
-  });
+  nav = createSectionNav({ nav: ui.settingsNav, body: ui.settingsBody });
 }
 
 export async function openSettings(): Promise<void> {
@@ -430,84 +418,7 @@ function checkNowRow(current: AppSettings): HTMLElement | null {
 // ---------- section navigation ----------
 
 function renderNav(): void {
-  ui.settingsNav.replaceChildren(
-    ...Object.values(SECTIONS).map((info) =>
-      el('button', {
-        className: 'settings-nav-item',
-        data: { section: info.key },
-        attrs: { type: 'button' },
-        children: [icon(info.icon, 18), el('span', { text: info.title })]
-      })
-    )
-  );
-  markActiveSection();
-}
-
-function jumpToSection(key: string): void {
-  const target = ui.settingsBody.querySelector<HTMLElement>(`.settings-section[data-section="${key}"]`);
-  if (target === null) {
-    return;
-  }
-
-  // The body is the sections' offset parent (position: relative), so a
-  // section's offsetTop is already a scroll position; the gap keeps the
-  // heading off the pane's top edge.
-  const body = ui.settingsBody;
-  const top = Math.max(0, Math.min(target.offsetTop - SECTION_GAP_PX, body.scrollHeight - body.clientHeight));
-  setActiveNav(key);
-
-  if (Math.abs(top - body.scrollTop) > 1) {
-    // Held until the scroll settles: a short section near the end can never
-    // reach the top of the pane, and the scroll spy would otherwise hand the
-    // highlight to the last section instead of the one that was asked for.
-    jumpingTo = key;
-    body.scrollTo({ top, behavior: 'smooth' });
-
-    // scrollend is the usual release, but an interrupted or skipped animation
-    // may never send one, and the spy must not stay switched off.
-    window.setTimeout(() => {
-      if (jumpingTo === key) {
-        jumpingTo = null;
-      }
-    }, 1000);
-  }
-}
-
-function setActiveNav(key: string): void {
-  for (const button of ui.settingsNav.querySelectorAll<HTMLElement>('.settings-nav-item')) {
-    const active = button.dataset['section'] === key;
-    button.classList.toggle('active', active);
-    if (active) {
-      button.setAttribute('aria-current', 'true');
-    } else {
-      button.removeAttribute('aria-current');
-    }
-  }
-}
-
-/** Highlights the section the reader has scrolled to. */
-function markActiveSection(): void {
-  if (jumpingTo !== null) {
-    return;
-  }
-
-  const body = ui.settingsBody;
-  const sections = [...body.querySelectorAll<HTMLElement>('.settings-section')];
-  if (sections.length === 0) {
-    return;
-  }
-
-  // Scrolled to the end, the last section is the one being read even when it
-  // is too short to reach the top of the pane.
-  const atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 4;
-  // A section counts as the one being read once its heading is in the top
-  // third of the pane, not only once it has reached the very top.
-  const line = body.scrollTop + body.clientHeight / 3;
-  const current = atEnd
-    ? sections[sections.length - 1]
-    : sections.filter((element) => element.offsetTop <= line).pop() ?? sections[0];
-
-  setActiveNav(current?.dataset['section'] ?? '');
+  nav.render(Object.values(SECTIONS));
 }
 
 function render(): void {

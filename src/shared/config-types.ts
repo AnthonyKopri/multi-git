@@ -142,6 +142,25 @@ export interface RepoGroup {
  * install hooks, read the tool's own session state, or report what it is doing:
  * "launched" means the process started, and nothing more is claimed.
  */
+/**
+ * How a definition gets its window.
+ *
+ * `direct` spawns the tool itself, which is right for one that makes its own
+ * window and wrong for one that needs a console: on macOS and Linux a detached
+ * spawn has no terminal at all. `system-terminal` is the answer for those —
+ * the platform's own terminal emulator, opened on the worktree, running the
+ * tool. The two Windows modes name a specific host and are refused elsewhere.
+ */
+export type AgentTerminalMode = 'direct' | 'system-terminal' | 'windows-terminal' | 'powershell';
+
+/** Every launch mode this build has a branch for, in the order it offers them. */
+export const AGENT_TERMINAL_MODES: readonly AgentTerminalMode[] = [
+  'system-terminal',
+  'direct',
+  'windows-terminal',
+  'powershell'
+];
+
 export interface ExternalAgentDefinition {
   id: string;
   label: string;
@@ -149,13 +168,28 @@ export interface ExternalAgentDefinition {
   executable: string;
   /** Argument vector, kept as separate values all the way to spawn. */
   args: string[];
-  terminal: 'direct' | 'windows-terminal' | 'powershell';
+  terminal: AgentTerminalMode;
   enabled: boolean;
   /**
    * How an initial prompt is handed over. `none` means the definition takes no
-   * prompt; `argument` appends it as one more argv element.
+   * prompt; `argument` appends it as one more argv element; `flag` puts
+   * {@link ExternalAgentDefinition.promptArgs} in front of it first, which is
+   * what a tool wanting `-i <prompt>` needs.
    */
-  promptMode?: 'none' | 'argument';
+  promptMode?: 'none' | 'argument' | 'flag';
+  /**
+   * For `flag` mode: the argv elements that precede the prompt.
+   *
+   * Appended only when there is a prompt, so a launch without one does not
+   * leave a dangling flag on the command line.
+   */
+  promptArgs?: string[];
+  /**
+   * Which entry in the known-agent catalogue this came from, when it came from
+   * one. Carries no authority — it is how the interface finds the tool's model
+   * presets and summary again, and an unknown value simply has neither.
+   */
+  catalogueId?: string;
   /** Extra environment for the launched process, filtered before use. */
   env?: Record<string, string>;
 }
@@ -257,6 +291,9 @@ export interface AgentLaunchRecord {
   ok: boolean;
   /** The command as it would read in the Terminal Log, already redacted. */
   commandPreview: string;
+  /** The model preset the launch used, when one was chosen. */
+  modelId?: string;
+  modelLabel?: string;
   pid?: number;
   error?: string;
 }

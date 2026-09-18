@@ -12,8 +12,57 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Added
+
+- **Coding agents know fourteen tools, and which models each one can use.**
+  The known-tool list was Claude Code and Codex; it now also covers Gemini CLI,
+  Qwen Code, Cursor CLI, Aider, Kimi CLI, OpenCode, Crush, Goose, GitHub
+  Copilot CLI, Amp, Droid and Continue CLI, each with what it is, where it
+  lives, and whether this machine has it. A seeded definition carries that
+  tool's own prompt convention rather than a guess — Gemini and Qwen take `-i`
+  in front of a prompt, and a tool with no interactive prompt is configured not
+  to be handed one, which the previous single default got wrong for every tool
+  but two.
+- **A model to launch against.** Claude Code can be pointed at Opus, Sonnet or
+  Haiku, Codex and Gemini and Qwen at their own models, and Aider at its model
+  shortcuts. DeepSeek, Kimi K2 and GLM are reached through the same list:
+  each publishes an Anthropic-compatible endpoint, so the preset sets a base URL
+  as environment rather than as an argument. No API key is ever stored — a
+  preset names the variable to export and the launch passes it through.
+- **The launch window says what will run before it runs it.** It shows the
+  folder and its branch, the account it will push as, a card per agent with the
+  tool's vendor and summary, the models it offers, and a multi-line prompt box.
+  *What will run* carries the command on one line and opens to show the
+  environment and the window it opens in; neither ever carries the prompt, which
+  is still passed as one argument and recorded nowhere. Ctrl+Enter launches, and
+  the window opens on the agent that last actually started.
+- **Agent management.** Definitions can be copied for a second model and turned
+  off without being deleted; the known-tool browser sorts what this machine has
+  to the top, filters by name or vendor and adds one tool at a time; the launch
+  history records the model and can be cleared.
+
+### Fixed
+
+- **An agent launched on macOS or Linux has a terminal to run in.** A detached
+  spawn there gets no console, so an interactive tool had nowhere to print and
+  nowhere to be answered. Launches now open the platform's own terminal by
+  default — Terminal.app, or whichever emulator the Linux desktop has, with
+  Windows Terminal and PowerShell still named explicitly on Windows. The macOS
+  bridge is a fixed script reading NUL-separated files, so no folder name,
+  branch name or prompt is ever part of a string a shell parses.
+- **A coding agent can reach its model provider.** The launch environment is an
+  allowlist, and it listed nothing a model client needs, so a tool
+  authenticating by API key rather than by a file in its own configuration could
+  not sign in. Agent launches now also inherit an allowlist of model-provider
+  variables and the proxy settings they are useless without. Terminals, editors
+  and file managers keep the shorter list, and keys that address a git host
+  rather than a model provider are still refused.
+
 ### Changed
 
+- **The coding agents window looks like Settings.** It opens centred rather than
+  docked, with its four sections — your agents, known tools, add or edit, launch
+  history — listed down the left instead of stacked in one scrolling column.
 - **Settings is laid out as a set of things you can change.** Sections are
   listed down the left and each one opens as cards of rows, with what a setting
   does on the left and its control on the right. Checkboxes are now on/off

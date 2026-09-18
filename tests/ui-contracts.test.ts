@@ -81,17 +81,17 @@ describe('the modal layer', () => {
 });
 
 describe('which overlays dock and which cover', () => {
-  // Six surfaces are things you want open beside the work rather than
+  // Five surfaces are things you want open beside the work rather than
   // stacked on top of it: you cannot watch a rebase and read the conflict's
   // diff at once if opening one dims and freezes everything else. The
-  // Repository window used to be a seventh; it is laid out like Settings now,
-  // with its eight sections down the side, which a dock has no width for.
+  // Repository window used to be one, and the coding agents window was
+  // another; both are laid out like Settings now, with their sections down
+  // the side, which a dock has no width for.
   const PANELS = [
     'rebase-modal',
     'search-modal',
     'branch-admin-modal',
     'recovery-modal',
-    'agents-modal',
     'worktree-modal'
   ];
 
@@ -101,7 +101,7 @@ describe('which overlays dock and which cover', () => {
     );
   }
 
-  it('docks exactly the six that belong beside the work', () => {
+  it('docks exactly the five that belong beside the work', () => {
     expect(panelIds().sort()).toEqual([...PANELS].sort());
   });
 
@@ -111,7 +111,7 @@ describe('which overlays dock and which cover', () => {
     // is a worse question.
     const docked = new Set(panelIds());
 
-    for (const id of ['confirm-modal', 'prompt-modal', 'vault-setup-modal', 'new-repo-modal', 'clone-modal', 'settings-modal', 'repo-hub-modal']) {
+    for (const id of ['confirm-modal', 'prompt-modal', 'vault-setup-modal', 'new-repo-modal', 'clone-modal', 'settings-modal', 'repo-hub-modal', 'agents-modal']) {
       expect(docked.has(id), `${id} should stay modal`).toBe(false);
     }
   });

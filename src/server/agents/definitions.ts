@@ -15,7 +15,10 @@ import { executableRunner } from '../process/runner';
 import type { ExecutableRunner } from '../process/runner';
 import { readConfig, writeConfig } from '../config/store';
 import { MAX_AGENT_LAUNCHES } from '../config/validate';
+import { AGENT_TERMINAL_MODES } from '../../shared/config-types';
 import type { AgentLaunchRecord, ExternalAgentDefinition } from '../../shared/config-types';
+import { AGENT_CATALOGUE } from '../../shared/agent-catalogue';
+import type { AgentCatalogueEntry } from '../../shared/agent-catalogue';
 import type { DetectedAgent } from '../../shared/agent-types';
 
 export class AgentDefinitionError extends Error {
@@ -27,11 +30,23 @@ export class AgentDefinitionError extends Error {
   }
 }
 
-/** Tools looked for on PATH, to seed an editable definition from. */
-export const KNOWN_AGENTS: readonly { id: string; label: string; executable: string }[] = [
-  { id: 'claude', label: 'Claude Code', executable: 'claude' },
-  { id: 'codex', label: 'Codex', executable: 'codex' }
-];
+/**
+ * Tools looked for on PATH, to seed an editable definition from.
+ *
+ * The catalogue itself, re-exported under the name the rest of the server
+ * already used for it. It is a list of things that *may* be offered, never a
+ * list of things that may run: a launch reads a saved definition, and every
+ * entry here has to become one before it can start anything.
+ */
+export const KNOWN_AGENTS: readonly AgentCatalogueEntry[] = AGENT_CATALOGUE;
+
+/** The launch mode a freshly seeded definition gets on this platform. */
+export function defaultTerminalMode(): ExternalAgentDefinition['terminal'] {
+  // Windows Terminal where it exists; everywhere else the platform's own
+  // terminal, because a detached spawn on macOS or Linux has no console and an
+  // interactive agent started that way has nowhere to print.
+  return process.platform === 'win32' ? 'windows-terminal' : 'system-terminal';
+}
 
 export function listAgentDefinitions(): ExternalAgentDefinition[] {
   return readConfig().externalAgents ?? [];
@@ -57,15 +72,14 @@ export function assertUsableDefinition(definition: ExternalAgentDefinition): voi
       `"${definition.label}" has an executable containing characters that cannot be part of a program name.`
     );
   }
-  if (
-    definition.terminal !== 'direct' &&
-    definition.terminal !== 'windows-terminal' &&
-    definition.terminal !== 'powershell'
-  ) {
+  if (!AGENT_TERMINAL_MODES.includes(definition.terminal)) {
     throw new AgentDefinitionError(`"${definition.label}" has an unknown terminal mode.`);
   }
   if (definition.args.some((value) => typeof value !== 'string' || value.includes('\0'))) {
     throw new AgentDefinitionError(`"${definition.label}" has an unusable argument.`);
+  }
+  if ((definition.promptArgs ?? []).some((value) => typeof value !== 'string' || value.includes('\0'))) {
+    throw new AgentDefinitionError(`"${definition.label}" has an unusable prompt argument.`);
   }
   if (definition.terminal === 'windows-terminal' && process.platform !== 'win32') {
     throw new AgentDefinitionError(
@@ -103,41 +117,68 @@ export async function resolveExecutable(
   }
 }
 
-/** The known tools that are installed, and whether they are already configured. */
+/**
+ * The whole catalogue, each entry marked with what this machine has.
+ *
+ * Every entry is returned rather than only the installed ones. An uninstalled
+ * tool is worth showing: "Gemini CLI, not installed, here is where it lives"
+ * answers a question, where leaving the row out only raises one. The lookups
+ * run together because each is a `which` that spends most of its time waiting.
+ */
 export async function detectAgents(
   runner: ExecutableRunner = executableRunner
 ): Promise<DetectedAgent[]> {
-  const configured = new Set(listAgentDefinitions().map((agent) => agent.executable.toLowerCase()));
-  const detected: DetectedAgent[] = [];
+  const agents = listAgentDefinitions();
+  const configuredExecutables = new Set(agents.map((agent) => agent.executable.toLowerCase()));
+  const configuredEntries = new Set(
+    agents.map((agent) => agent.catalogueId ?? '').filter((id) => id !== '')
+  );
 
-  for (const known of KNOWN_AGENTS) {
-    const resolvedPath = await resolveExecutable(known.executable, runner);
-    if (resolvedPath === null) {
-      continue;
-    }
+  const resolved = await Promise.all(
+    KNOWN_AGENTS.map((known) => resolveExecutable(known.executable, runner))
+  );
 
-    detected.push({
-      ...known,
-      resolvedPath,
-      configured: configured.has(known.executable.toLowerCase())
-    });
-  }
+  return KNOWN_AGENTS.map((known, index) => {
+    const resolvedPath = resolved[index] ?? null;
 
-  return detected;
+    return {
+      id: known.id,
+      label: known.label,
+      vendor: known.vendor,
+      summary: known.summary,
+      homepage: known.homepage,
+      executable: known.executable,
+      resolvedPath: resolvedPath ?? '',
+      installed: resolvedPath !== null,
+      configured:
+        configuredEntries.has(known.id) ||
+        configuredExecutables.has(known.executable.toLowerCase()),
+      hasModels: (known.models ?? []).length > 0
+    };
+  });
 }
 
-/** A definition seeded from a detected tool, ready to be edited. */
+/**
+ * A definition seeded from a catalogue entry, ready to be edited.
+ *
+ * The prompt mode comes from the catalogue rather than being assumed: the old
+ * default said every tool takes its prompt as a bare first argument, which is
+ * true of Claude Code and Codex and wrong for the rest — Gemini and Qwen want
+ * `-i` in front of it, and several take no interactive prompt at all.
+ */
 export function definitionFromDetected(detected: DetectedAgent): ExternalAgentDefinition {
+  const entry = KNOWN_AGENTS.find((known) => known.id === detected.id);
+
   return {
     id: randomUUID(),
     label: detected.label,
     executable: detected.executable,
-    args: [],
-    // A coding agent is something the user talks to, so it needs a window.
-    // Windows Terminal where it exists, a plain console everywhere else.
-    terminal: process.platform === 'win32' ? 'windows-terminal' : 'direct',
+    args: [...(entry?.args ?? [])],
+    terminal: defaultTerminalMode(),
     enabled: true,
-    promptMode: 'argument'
+    promptMode: entry?.promptMode ?? 'none',
+    ...(entry?.promptArgs ? { promptArgs: [...entry.promptArgs] } : {}),
+    catalogueId: detected.id
   };
 }
 
@@ -155,6 +196,8 @@ export function saveAgentDefinition(
     terminal: input.terminal,
     enabled: input.enabled !== false,
     ...(input.promptMode ? { promptMode: input.promptMode } : {}),
+    ...(input.promptArgs ? { promptArgs: input.promptArgs.map((value) => String(value)) } : {}),
+    ...(input.catalogueId ? { catalogueId: input.catalogueId } : {}),
     ...(input.env ? { env: input.env } : {})
   };
 
@@ -202,4 +245,11 @@ export function recordLaunch(record: AgentLaunchRecord): void {
 
 export function listLaunches(): AgentLaunchRecord[] {
   return readConfig().agentLaunches ?? [];
+}
+
+/** Empties the launch history. Nothing outside it depends on what it held. */
+export function clearLaunches(): void {
+  const config = readConfig();
+  config.agentLaunches = [];
+  writeConfig(config);
 }

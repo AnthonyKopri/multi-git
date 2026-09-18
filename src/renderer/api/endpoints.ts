@@ -88,6 +88,7 @@ import type {
 } from '../../shared/config-types';
 import type { DetectedTool } from '../../shared/tool-types';
 import type { DetectedAgent } from '../../shared/agent-types';
+import type { AgentCatalogueEntry } from '../../shared/agent-catalogue';
 import type { IntegrationKind, IntegrationPreflight } from '../../shared/integrate-types';
 import type { PrerequisiteReport } from '../../shared/prerequisite-types';
 
@@ -826,10 +827,12 @@ export const fetchRepoGroup = (id: string) =>
 // ---------- external agents ----------
 
 export const getAgents = () =>
-  api.get<{ success: true; agents: ExternalAgentDefinition[]; launches: AgentLaunchRecord[] }>(
-    '/api/agents',
-    global
-  );
+  api.get<{
+    success: true;
+    agents: ExternalAgentDefinition[];
+    launches: AgentLaunchRecord[];
+    catalogue: AgentCatalogueEntry[];
+  }>('/api/agents', global);
 
 export const detectAgents = () =>
   api.get<{ success: true; detected: DetectedAgent[] }>('/api/agents/detect', global);
@@ -848,6 +851,9 @@ export const saveAgent = (agent: Partial<ExternalAgentDefinition>) =>
 
 export const deleteAgent = (id: string) =>
   api.delete<Api.ConfigMutationResponse>('/api/agents', { ...global, body: { id } });
+
+export const clearAgentLaunches = () =>
+  api.delete<Api.ConfigMutationResponse>('/api/agents/launches', { ...global, body: {} });
 
 // ---------- remotes ----------
 

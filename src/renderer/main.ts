@@ -572,8 +572,14 @@ function wireGroups(): void {
 function wireAgents(): void {
   ui.btnCloseAgentsModal.addEventListener('click', () => agents.closeAgentManager());
   ui.btnDetectAgents.addEventListener('click', () => void agents.detectInstalledAgents());
+  ui.btnClearAgentHistory.addEventListener('click', () => void agents.clearLaunchHistory());
   delegate(ui.agentList, 'click', '[data-agent-id]', agents.handleAgentAction);
+  delegate(ui.agentCatalogueList, 'click', '[data-catalogue-id]', agents.handleCatalogueAction);
 
+  ui.agentCatalogueFilter.addEventListener('input', () => agents.filterCatalogue());
+
+  ui.btnResetAgentForm.addEventListener('click', () => agents.resetAgentForm());
+  ui.agentPromptModeSelect.addEventListener('change', () => agents.onPromptModeChanged());
   ui.agentForm.addEventListener('submit', (event) => {
     event.preventDefault();
     void agents.submitAgentForm();
@@ -581,7 +587,20 @@ function wireAgents(): void {
 
   ui.btnCloseAgentLaunch.addEventListener('click', () => agents.closeLaunchDialog());
   ui.btnCancelAgentLaunch.addEventListener('click', () => agents.closeLaunchDialog());
-  ui.agentLaunchSelect.addEventListener('change', () => agents.onLaunchAgentChanged());
+  delegate(ui.agentLaunchPicker, 'click', '[data-agent-id]', agents.handleLaunchPickerClick);
+  ui.agentLaunchModel.addEventListener('change', () => agents.onLaunchModelChanged());
+  ui.agentLaunchPrompt.addEventListener('input', () => agents.onLaunchPromptChanged());
+
+  // A prompt is a textarea now, so Enter belongs to it. Ctrl+Enter is the
+  // submit a multi-line field conventionally keeps, and the hint beside the
+  // button says so rather than leaving it to be discovered.
+  ui.agentLaunchPrompt.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      void agents.submitLaunch();
+    }
+  });
+
   ui.agentLaunchForm.addEventListener('submit', (event) => {
     event.preventDefault();
     void agents.submitLaunch();

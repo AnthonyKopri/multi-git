@@ -17,6 +17,16 @@ export interface AgentLaunchInput {
   /** Optional first instruction. Passed as one argv element, never a string
    *  the shell would parse. Not written to launch history. */
   initialPrompt?: string;
+  /**
+   * A model preset from the definition's catalogue entry.
+   *
+   * An id, like `agentId` is, and for the same reason: the arguments and the
+   * environment it stands for come from the table compiled into this build,
+   * so a page cannot name a flag or a base URL of its own. An id the entry
+   * does not have is ignored rather than refused — the tool's own default is
+   * always a valid thing to launch.
+   */
+  modelId?: string;
 }
 
 export interface AgentLaunchResult {
@@ -29,15 +39,28 @@ export interface AgentLaunchResult {
   sshWarning?: string;
 }
 
-/** An executable found on PATH that a definition could be seeded from. */
+/**
+ * One entry of the known-agent catalogue, as this machine finds it.
+ *
+ * Every entry is reported, installed or not, so the interface can show what a
+ * tool is and where to get it rather than leaving a gap where an uninstalled
+ * one would be. `installed` is the field that decides whether a definition can
+ * be seeded from it.
+ */
 export interface DetectedAgent {
   id: string;
   label: string;
+  vendor: string;
+  summary: string;
+  homepage: string;
   executable: string;
-  /** Absolute path the lookup resolved to, for display. */
+  /** Absolute path the lookup resolved to, or '' when it is not installed. */
   resolvedPath: string;
+  installed: boolean;
   /** True when a definition for it already exists. */
   configured: boolean;
+  /** True when the entry offers model presets. */
+  hasModels: boolean;
 }
 
 export interface AgentDetectResponse {

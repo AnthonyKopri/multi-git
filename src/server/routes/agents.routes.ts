@@ -12,6 +12,7 @@ import { sanitizeConfigForClient } from '../config/sanitize';
 import { readConfig } from '../config/store';
 import {
   AgentDefinitionError,
+  clearLaunches,
   definitionFromDetected,
   deleteAgentDefinition,
   detectAgents,
@@ -19,6 +20,8 @@ import {
   listLaunches,
   saveAgentDefinition
 } from '../agents/definitions';
+import { AGENT_CATALOGUE } from '../../shared/agent-catalogue';
+import { AGENT_TERMINAL_MODES } from '../../shared/config-types';
 import type { ExternalAgentDefinition } from '../../shared/config-types';
 
 export const agentsRouter: Router = Router();
@@ -34,7 +37,16 @@ function rethrow(error: unknown): never {
 agentsRouter.get(
   '/api/agents',
   asyncRoute(async (_req, res) => {
-    res.json({ success: true, agents: listAgentDefinitions(), launches: listLaunches() });
+    res.json({
+      success: true,
+      agents: listAgentDefinitions(),
+      launches: listLaunches(),
+      // The catalogue travels with the list so the page can show a tool's
+      // summary and its model presets without a second round trip. It is a
+      // constant table, not machine state: what is installed comes from
+      // /api/agents/detect, which has to run `which` to find out.
+      catalogue: AGENT_CATALOGUE
+    });
   })
 );
 
@@ -58,7 +70,7 @@ agentsRouter.post(
     const added: ExternalAgentDefinition[] = [];
 
     for (const detected of await detectAgents()) {
-      if (detected.configured) {
+      if (detected.configured || !detected.installed) {
         continue;
       }
 
@@ -85,11 +97,8 @@ agentsRouter.post(
     if (typeof body.executable !== 'string' || body.executable.trim() === '') {
       throw new HttpError('An agent needs an executable.', 400);
     }
-    if (
-      body.terminal !== 'direct' &&
-      body.terminal !== 'windows-terminal' &&
-      body.terminal !== 'powershell'
-    ) {
+    const terminal = body.terminal as ExternalAgentDefinition['terminal'];
+    if (!AGENT_TERMINAL_MODES.includes(terminal)) {
       throw new HttpError('Choose how the agent should be launched.', 400);
     }
 
@@ -99,9 +108,13 @@ agentsRouter.post(
         label: typeof body.label === 'string' ? body.label : '',
         executable: body.executable,
         args: Array.isArray(body.args) ? body.args.map((value) => String(value)) : [],
-        terminal: body.terminal,
+        terminal,
         enabled: body.enabled !== false,
         ...(body.promptMode ? { promptMode: body.promptMode } : {}),
+        ...(Array.isArray(body.promptArgs)
+          ? { promptArgs: body.promptArgs.map((value) => String(value)) }
+          : {}),
+        ...(body.catalogueId ? { catalogueId: String(body.catalogueId) } : {}),
         ...(body.env ? { env: body.env } : {})
       });
 
@@ -121,6 +134,15 @@ agentsRouter.delete(
       throw new HttpError('That agent is no longer configured.', 404);
     }
 
+    res.json({ success: true, config: sanitizeConfigForClient(readConfig()) });
+  })
+);
+
+/** Empties the launch history. It holds no prompt text, only what was started. */
+agentsRouter.delete(
+  '/api/agents/launches',
+  asyncRoute(async (_req, res) => {
+    clearLaunches();
     res.json({ success: true, config: sanitizeConfigForClient(readConfig()) });
   })
 );
