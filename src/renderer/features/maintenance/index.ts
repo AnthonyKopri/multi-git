@@ -21,6 +21,7 @@ import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { withButtonBusy } from '../../ui/busy';
 import { registerHubTab } from '../repo-hub';
+import { settingGroup, settingItem } from '../../ui/setting-rows';
 import { buildMatchSelect, buildStaleRulesForm } from './rules-form';
 import { DEFAULT_STALE_RULES } from '../../../shared/maintenance-types';
 import type {
@@ -173,17 +174,15 @@ function buildRules(): HTMLElement {
 
   return el('section', {
     children: [
-      el('div', {
-        className: 'section-header',
-        children: [
-          el('h4', { text: 'What counts as stale' }),
-          el('div', {
-            className: 'checkbox-row',
-            children: [el('span', { text: 'The ticked rules' }), buildMatchSelect(form)]
-          })
-        ]
-      }),
-      buildStaleRulesForm(form)
+      el('div', { className: 'section-header', children: [el('h4', { text: 'What counts as stale' })] }),
+      settingGroup([
+        settingItem({
+          label: 'How the rules combine',
+          description: 'Whether a branch has to meet every rule switched on below, or just one of them.',
+          control: buildMatchSelect(form)
+        }),
+        buildStaleRulesForm(form)
+      ])
     ]
   });
 }

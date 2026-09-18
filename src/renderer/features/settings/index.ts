@@ -29,11 +29,15 @@ import { DEFAULT_STALE_RULES } from '../../../shared/maintenance-types';
 import type { Elements } from '../../dom/elements';
 import type { AppSettings } from '../../../shared/config-types';
 import type { StaleRules } from '../../../shared/maintenance-types';
-import { focusFirst } from '../../ui/focus';
+import { sectionHeading, settingGroup, settingItem, settingNote, switchInput } from '../../ui/setting-rows';
 
 let ui: Elements;
 let settings: AppSettings | null = null;
 let loadError = '';
+/** The section a nav click is scrolling to, while that scroll is under way. */
+let jumpingTo: string | null = null;
+/** Space left above a section heading the nav scrolls to. */
+const SECTION_GAP_PX = 16;
 
 export function initSettings(elements: Elements): void {
   ui = elements;
@@ -46,12 +50,30 @@ export function initSettings(elements: Elements): void {
       closeSettings();
     }
   });
+
+  ui.settingsNav.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLElement>('.settings-nav-item');
+    const key = button?.dataset['section'];
+    if (key !== undefined) {
+      jumpToSection(key);
+    }
+  });
+
+  ui.settingsBody.addEventListener('scroll', () => markActiveSection(), { passive: true });
+  ui.settingsBody.addEventListener('scrollend', () => {
+    jumpingTo = null;
+  });
 }
 
 export async function openSettings(): Promise<void> {
   setHidden(ui.settingsModal, false);
-  focusFirst(ui.settingsModal);
+  ui.settingsBody.scrollTop = 0;
+  ui.btnCloseSettings.focus();
   await refresh();
+
+  // The section list rather than the first field: the first field is a
+  // read-only address, and a focus ring on it reads as "edit this".
+  ui.settingsNav.querySelector<HTMLElement>('.settings-nav-item.active')?.focus({ preventScroll: true });
 }
 
 export function closeSettings(): void {
@@ -115,22 +137,7 @@ function toggle(
   checked: boolean,
   onChange: (value: boolean) => void
 ): HTMLElement {
-  const box = el('input', { className: 'branch-select' }) as HTMLInputElement;
-  box.type = 'checkbox';
-  box.checked = checked;
-  box.setAttribute('aria-label', label);
-  box.addEventListener('change', () => onChange(box.checked));
-
-  return el('div', {
-    className: 'settings-row',
-    children: [
-      el('label', {
-        className: 'checkbox-row',
-        children: [box, el('span', { text: label })]
-      }),
-      el('p', { className: 'modal-desc', text: description })
-    ]
-  });
+  return settingItem({ label, description, control: switchInput(label, checked, onChange) });
 }
 
 /**
@@ -144,36 +151,82 @@ function field(
   description: string,
   value: string,
   attrs: Record<string, string>,
-  onCommit: (value: string) => void
+  onCommit: (value: string) => void,
+  suffix?: string
 ): HTMLElement {
   const input = el('input', { className: 'settings-field', attrs }) as HTMLInputElement;
   input.value = value;
   input.setAttribute('aria-label', label);
   input.addEventListener('change', () => onCommit(input.value.trim()));
 
-  return el('div', {
-    className: 'settings-row',
-    children: [
-      el('div', {
-        className: 'settings-field-row',
-        children: [el('span', { className: 'settings-label', text: label }), input]
-      }),
-      el('p', { className: 'modal-desc', text: description })
-    ]
-  });
+  const isNumber = attrs['type'] === 'number';
+  const control = suffix === undefined
+    ? input
+    : el('div', {
+        className: 'settings-input-suffix',
+        children: [input, el('span', { text: suffix })]
+      });
+
+  return settingItem({ label, description, control, stacked: !isNumber });
 }
 
-function section(title: string, children: (Node | null)[]): HTMLElement {
+interface SectionInfo {
+  key: string;
+  icon: string;
+  title: string;
+  subtitle: string;
+}
+
+const SECTIONS = {
+  integrations: { key: 'integrations', icon: 'hub', title: 'Git and GitHub', subtitle: 'The tools Multi-Git runs, and how agents reach it.' },
+  sync: { key: 'sync', icon: 'sync', title: 'Syncing', subtitle: 'What happens after a fetch, and which key your other tools use.' },
+  stale: { key: 'stale', icon: 'auto_delete', title: 'Stale branches', subtitle: 'Used by the Maintenance tab to offer worktrees for purging, and by Branch Maintenance to mark a branch stale.' },
+  safety: { key: 'safety', icon: 'shield', title: 'Safety Net', subtitle: 'Recovery points taken before anything that rewrites history.' },
+  worktrees: { key: 'worktrees', icon: 'account_tree', title: 'Worktrees and agents', subtitle: 'Where new worktrees go.' },
+  application: { key: 'application', icon: 'tune', title: 'Application', subtitle: 'Windows and updates.' }
+} satisfies Record<string, SectionInfo>;
+
+function section(info: SectionInfo, children: (Node | null)[]): HTMLElement {
   return el('section', {
     className: 'settings-section',
+    data: { section: info.key },
+    attrs: { 'aria-labelledby': `settings-section-${info.key}` },
     children: [
-      el('div', { className: 'section-header', children: [el('h4', { text: title })] }),
+      sectionHeading(info.icon, info.title, info.subtitle, `settings-section-${info.key}`),
       ...children.filter((child): child is Node => child !== null)
     ]
   });
 }
 
 // ---------- the panel ----------
+
+function buildAgentAddress(): HTMLElement {
+  const address = window.location.origin;
+  const input = el('input', {
+    className: 'settings-field',
+    attrs: { type: 'text', readonly: '', 'aria-label': 'Agent CLI server URL', value: address }
+  });
+
+  const copy = el('button', {
+    className: 'btn btn-secondary',
+    attrs: { type: 'button', title: 'Copy the address' },
+    children: [icon('content_copy', 16), el('span', { text: 'Copy' })]
+  });
+
+  copy.addEventListener('click', () => {
+    void navigator.clipboard.writeText(address).then(
+      () => showToast('Address copied.', 'success'),
+      () => showToast('Could not copy the address.', 'error')
+    );
+  });
+
+  return settingItem({
+    label: 'Agent CLI connection',
+    description: 'Use this address with the Multi-Git CLI --server option. It changes when the desktop app restarts.',
+    control: el('div', { className: 'settings-input-row', children: [input, copy] }),
+    stacked: true
+  });
+}
 
 /**
  * The tools this application leans on, and how to get them.
@@ -185,51 +238,26 @@ function section(title: string, children: (Node | null)[]): HTMLElement {
 function buildIntegrations(): HTMLElement {
   const report = prerequisites();
 
-  const rows: (Node | null)[] = [
-    el('div', {
-      className: 'settings-row',
-      children: [
-        el('span', { className: 'settings-label', text: 'Agent CLI connection' }),
-        el('p', { className: 'modal-desc', text: 'Use this address with the Multi-Git CLI --server option. It changes when the desktop app restarts.' }),
-        el('input', { attrs: { type: 'text', readonly: '', 'aria-label': 'Agent CLI server URL', value: window.location.origin } })
-      ]
-    }),
-    el('p', {
-      className: 'modal-desc',
-      text: 'Multi-Git runs Git for everything. The GitHub CLI is optional and unlocks repository browsing, pull requests and publishing a new repository to GitHub.'
-    })
-  ];
-
-  for (const tool of report?.tools ?? []) {
+  const tools = (report?.tools ?? []).map((tool) => {
     const usable = tool.installed && tool.signedIn !== false;
 
-    rows.push(
-      el('div', {
-        className: 'settings-row',
+    return settingItem({
+      label: tool.version ? `${tool.label} — ${tool.version}` : tool.label,
+      description: tool.detail,
+      control: el('span', {
+        className: `setup-badge ${usable ? 'setup-badge-ok' : 'setup-badge-missing'}`,
         children: [
-          el('div', {
-            className: 'settings-field-row',
-            children: [
-              el('span', {
-                className: 'settings-label',
-                text: tool.version ? `${tool.label} — ${tool.version}` : tool.label
-              }),
-              el('span', {
-                className: `setup-badge ${usable ? 'setup-badge-ok' : 'setup-badge-missing'}`,
-                text: usable ? 'Ready' : tool.installed ? 'Not signed in' : 'Not installed'
-              })
-            ]
-          }),
-          el('p', { className: 'modal-desc', text: tool.detail })
+          icon(usable ? 'check_circle' : 'error', 14),
+          el('span', { text: usable ? 'Ready' : tool.installed ? 'Not signed in' : 'Not installed' })
         ]
       })
-    );
-  }
+    });
+  });
 
   const recheck = el('button', {
-    className: 'btn btn-secondary btn-sm',
-    text: 'Check again',
-    attrs: { type: 'button' }
+    className: 'btn btn-secondary',
+    attrs: { type: 'button' },
+    children: [icon('refresh', 16), el('span', { text: 'Check again' })]
   });
 
   recheck.addEventListener('click', () => {
@@ -241,44 +269,41 @@ function buildIntegrations(): HTMLElement {
     });
   });
 
-  rows.push(
-    el('div', {
-      className: 'settings-row',
-      children: [
-        el('div', {
-          className: 'settings-field-row',
-          children: [
-            el('span', { className: 'settings-label', text: 'Re-check what is installed' }),
-            recheck
-          ]
-        }),
-        el('p', {
-          className: 'modal-desc',
-          text: 'Press this after installing something, or after signing in with gh auth login.'
-        })
-      ]
-    })
-  );
-
-  return section('Git and GitHub', rows);
+  return section(SECTIONS.integrations, [
+    settingGroup([buildAgentAddress()]),
+    el('p', {
+      className: 'settings-group-caption',
+      text: 'Multi-Git runs Git for everything. The GitHub CLI is optional and unlocks repository browsing, pull requests and publishing a new repository to GitHub.'
+    }),
+    settingGroup([
+      ...tools,
+      settingItem({
+        label: 'Re-check what is installed',
+        description: 'After installing something, or after signing in with gh auth login.',
+        control: recheck
+      })
+    ])
+  ]);
 }
 
 function buildSync(current: AppSettings): HTMLElement {
-  return section('Syncing', [
-    toggle(
-      'Pull automatically after a fetch',
-      'Only ever a fast-forward. Local commits, a dirty tree, a detached HEAD or an operation in progress all hold it back.',
-      current.autoPull === true,
-      (value) => void save({ autoPull: value })
-    ),
-    toggle(
-      'Keep ~/.ssh/config in sync with the active key',
-      'Multi-Git maintains its own block in that file so your terminal and your IDE use the same key. Turning it off asks whether to remove the block it already wrote.',
-      current.manageSshConfig !== false,
-      (value) => {
-        void onManageSshConfigChanged(value).then(() => refresh());
-      }
-    )
+  return section(SECTIONS.sync, [
+    settingGroup([
+      toggle(
+        'Pull automatically after a fetch',
+        'Only ever a fast-forward. Local commits, a dirty tree, a detached HEAD or an operation in progress all hold it back.',
+        current.autoPull === true,
+        (value) => void save({ autoPull: value })
+      ),
+      toggle(
+        'Keep ~/.ssh/config in sync with the active key',
+        'Multi-Git maintains its own block in that file so your terminal and your IDE use the same key. Turning it off asks whether to remove the block it already wrote.',
+        current.manageSshConfig !== false,
+        (value) => {
+          void onManageSshConfigChanged(value).then(() => refresh());
+        }
+      )
+    ])
   ]);
 }
 
@@ -286,78 +311,86 @@ function buildStale(current: AppSettings): HTMLElement {
   const rules: StaleRules = { ...DEFAULT_STALE_RULES, ...(current.staleRules ?? {}) };
   const form = { rules, onChange: (next: StaleRules) => void save({ staleRules: next }) };
 
-  return section('What counts as a stale branch', [
-    el('p', {
-      className: 'modal-desc',
-      text: 'Used by the Maintenance tab to decide which worktrees to offer for purging, and by the Branch Maintenance window to mark a branch stale.'
-    }),
-    el('div', {
-      className: 'checkbox-row',
-      children: [el('span', { text: 'The ticked rules' }), buildMatchSelect(form)]
-    }),
-    buildStaleRulesForm(form)
+  return section(SECTIONS.stale, [
+    settingGroup([
+      settingItem({
+        label: 'How the rules combine',
+        description: 'Whether a branch has to meet every rule switched on below, or just one of them.',
+        control: buildMatchSelect(form)
+      }),
+      // The shared form, drawn here as one switch per rule; see
+      // .settings-group .maintenance-rules in style.css.
+      buildStaleRulesForm(form)
+    ])
   ]);
 }
 
 function buildSafetyNet(current: AppSettings): HTMLElement {
   const retention = current.recoveryRetentionDays;
 
-  return section('Safety Net', [
-    field(
-      'Keep recovery points for',
-      'Days before a recovery point expires. 0 keeps them until you remove them by hand. Nothing expires while an operation is unfinished.',
-      retention === undefined ? '' : String(retention),
-      { type: 'number', min: '0', max: '3650', placeholder: '14' },
-      (value) => {
-        const parsed = Number.parseInt(value, 10);
-        if (Number.isFinite(parsed) && parsed >= 0) {
-          void save({ recoveryRetentionDays: parsed });
-        } else {
-          // An empty or unreadable box means "leave it alone" rather than
-          // "expire everything now", which is what 0 would have meant.
-          render();
-        }
-      }
-    )
+  return section(SECTIONS.safety, [
+    settingGroup([
+      field(
+        'Keep recovery points for',
+        'Days before a recovery point expires. 0 keeps them until you remove them by hand. Nothing expires while an operation is unfinished.',
+        retention === undefined ? '' : String(retention),
+        { type: 'number', min: '0', max: '3650', placeholder: '14' },
+        (value) => {
+          const parsed = Number.parseInt(value, 10);
+          if (Number.isFinite(parsed) && parsed >= 0) {
+            void save({ recoveryRetentionDays: parsed });
+          } else {
+            // An empty or unreadable box means "leave it alone" rather than
+            // "expire everything now", which is what 0 would have meant.
+            render();
+          }
+        },
+        'days'
+      )
+    ])
   ]);
 }
 
 function buildWorktrees(current: AppSettings): HTMLElement {
-  return section('Worktrees and agents', [
-    field(
-      'Create worktrees in',
-      'Where a new worktree is suggested. Empty means a sibling of the repository named <repo>.worktrees.',
-      current.worktreeParentDir ?? '',
-      { type: 'text', placeholder: 'D:\\work' },
-      (value) => void save({ worktreeParentDir: value })
-    ),
-    // There is deliberately no control for keeping agent prompt text. Nothing
-    // records it: buildLaunchPlan builds the launch history entry from the
-    // arguments without the prompt, and recordLaunch takes no prompt parameter
-    // at all, so there is no path by which one could be written. A switch here
-    // could only have promised something the design refuses to do.
-    el('p', {
-      className: 'modal-desc',
-      text: 'The text of an agent prompt is never recorded. Launch history keeps the command and the folder, and nothing else.'
-    })
+  return section(SECTIONS.worktrees, [
+    settingGroup([
+      field(
+        'Create worktrees in',
+        'Where a new worktree is suggested. Empty means a sibling of the repository named <repo>.worktrees.',
+        current.worktreeParentDir ?? '',
+        { type: 'text', placeholder: 'D:\\work' },
+        (value) => void save({ worktreeParentDir: value })
+      ),
+      // There is deliberately no control for keeping agent prompt text. Nothing
+      // records it: buildLaunchPlan builds the launch history entry from the
+      // arguments without the prompt, and recordLaunch takes no prompt parameter
+      // at all, so there is no path by which one could be written. A switch here
+      // could only have promised something the design refuses to do.
+      settingNote(
+        'lock',
+        'The text of an agent prompt is never recorded. Launch history keeps the command and the folder, and nothing else.'
+      )
+    ])
   ]);
 }
 
 function buildApplication(current: AppSettings): HTMLElement {
-  return section('Application', [
-    toggle(
-      'Reopen the windows that were open at quit',
-      'With nothing recorded, the app opens one window as it always did.',
-      current.restoreWindowsOnStartup !== false,
-      (value) => void save({ restoreWindowsOnStartup: value })
-    ),
-    toggle(
-      'Check GitHub for a newer version',
-      'The only request Multi-Git makes that you did not start. It sends no account and no repository, and nothing is downloaded until you ask for it.',
-      current.checkForUpdates !== false,
-      (value) => void save({ checkForUpdates: value })
-    ),
-    checkNowRow(current)
+  return section(SECTIONS.application, [
+    settingGroup([
+      toggle(
+        'Reopen the windows that were open at quit',
+        'With nothing recorded, the app opens one window as it always did.',
+        current.restoreWindowsOnStartup !== false,
+        (value) => void save({ restoreWindowsOnStartup: value })
+      ),
+      toggle(
+        'Check GitHub for a newer version',
+        'The only request Multi-Git makes that you did not start. It sends no account and no repository, and nothing is downloaded until you ask for it.',
+        current.checkForUpdates !== false,
+        (value) => void save({ checkForUpdates: value })
+      ),
+      checkNowRow(current)
+    ])
   ]);
 }
 
@@ -376,9 +409,9 @@ function checkNowRow(current: AppSettings): HTMLElement | null {
   }
 
   const button = el('button', {
-    className: 'btn btn-secondary btn-sm',
-    text: 'Check now',
-    attrs: { type: 'button' }
+    className: 'btn btn-secondary',
+    attrs: { type: 'button' },
+    children: [icon('update', 16), el('span', { text: 'Check now' })]
   });
 
   button.addEventListener('click', () => {
@@ -387,26 +420,99 @@ function checkNowRow(current: AppSettings): HTMLElement | null {
     });
   });
 
-  return el('div', {
-    className: 'settings-row',
-    children: [
-      el('div', {
-        className: 'settings-field-row',
-        children: [
-          el('span', { className: 'settings-label', text: 'Check for updates now' }),
-          button
-        ]
-      }),
-      el('p', {
-        className: 'modal-desc',
-        text: 'Asks GitHub once. Anything found opens the update window; nothing is downloaded until you choose to.'
-      })
-    ]
+  return settingItem({
+    label: 'Check for updates now',
+    description: 'Asks GitHub once. Anything found opens the update window; nothing is downloaded until you choose to.',
+    control: button
   });
+}
+
+// ---------- section navigation ----------
+
+function renderNav(): void {
+  ui.settingsNav.replaceChildren(
+    ...Object.values(SECTIONS).map((info) =>
+      el('button', {
+        className: 'settings-nav-item',
+        data: { section: info.key },
+        attrs: { type: 'button' },
+        children: [icon(info.icon, 18), el('span', { text: info.title })]
+      })
+    )
+  );
+  markActiveSection();
+}
+
+function jumpToSection(key: string): void {
+  const target = ui.settingsBody.querySelector<HTMLElement>(`.settings-section[data-section="${key}"]`);
+  if (target === null) {
+    return;
+  }
+
+  // The body is the sections' offset parent (position: relative), so a
+  // section's offsetTop is already a scroll position; the gap keeps the
+  // heading off the pane's top edge.
+  const body = ui.settingsBody;
+  const top = Math.max(0, Math.min(target.offsetTop - SECTION_GAP_PX, body.scrollHeight - body.clientHeight));
+  setActiveNav(key);
+
+  if (Math.abs(top - body.scrollTop) > 1) {
+    // Held until the scroll settles: a short section near the end can never
+    // reach the top of the pane, and the scroll spy would otherwise hand the
+    // highlight to the last section instead of the one that was asked for.
+    jumpingTo = key;
+    body.scrollTo({ top, behavior: 'smooth' });
+
+    // scrollend is the usual release, but an interrupted or skipped animation
+    // may never send one, and the spy must not stay switched off.
+    window.setTimeout(() => {
+      if (jumpingTo === key) {
+        jumpingTo = null;
+      }
+    }, 1000);
+  }
+}
+
+function setActiveNav(key: string): void {
+  for (const button of ui.settingsNav.querySelectorAll<HTMLElement>('.settings-nav-item')) {
+    const active = button.dataset['section'] === key;
+    button.classList.toggle('active', active);
+    if (active) {
+      button.setAttribute('aria-current', 'true');
+    } else {
+      button.removeAttribute('aria-current');
+    }
+  }
+}
+
+/** Highlights the section the reader has scrolled to. */
+function markActiveSection(): void {
+  if (jumpingTo !== null) {
+    return;
+  }
+
+  const body = ui.settingsBody;
+  const sections = [...body.querySelectorAll<HTMLElement>('.settings-section')];
+  if (sections.length === 0) {
+    return;
+  }
+
+  // Scrolled to the end, the last section is the one being read even when it
+  // is too short to reach the top of the pane.
+  const atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 4;
+  // A section counts as the one being read once its heading is in the top
+  // third of the pane, not only once it has reached the very top.
+  const line = body.scrollTop + body.clientHeight / 3;
+  const current = atEnd
+    ? sections[sections.length - 1]
+    : sections.filter((element) => element.offsetTop <= line).pop() ?? sections[0];
+
+  setActiveNav(current?.dataset['section'] ?? '');
 }
 
 function render(): void {
   if (loadError !== '') {
+    ui.settingsNav.replaceChildren();
     ui.settingsBody.replaceChildren(el('div', { className: 'inline-warning', text: loadError }));
     return;
   }
@@ -417,15 +523,6 @@ function render(): void {
   }
 
   ui.settingsBody.replaceChildren(
-    el('p', {
-      className: 'modal-desc',
-      children: [
-        icon('info', 14),
-        el('span', {
-          text: ' These apply to Multi-Git itself, whatever repository is open, and are saved as you change them. Settings for one repository live in the Repository window.'
-        })
-      ]
-    }),
     buildIntegrations(),
     buildSync(current),
     buildStale(current),
@@ -433,4 +530,5 @@ function render(): void {
     buildWorktrees(current),
     buildApplication(current)
   );
+  renderNav();
 }
