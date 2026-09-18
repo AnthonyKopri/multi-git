@@ -296,6 +296,25 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
   background-color: var(--bg-input-focus);
   box-shadow: 0 0 0 3px var(--color-primary-glow);
 }
+/* Search fields get the same look at zero specificity, so a class of their
+   own (the terminal filter) still wins. Without this the coding agents filter
+   was drawn as a white browser default. */
+:where(input[type="search"]) {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+}
+:where(input[type="search"]):focus {
+  border-color: var(--color-primary);
+  background-color: var(--bg-input-focus);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
+}
 select {
   cursor: pointer;
   appearance: none;
@@ -1245,6 +1264,15 @@ body.pane-resizing-y * {
   gap: 2px;
   flex-shrink: 0;
 }
+/* An empty list says so quietly, in the middle, rather than as a bold row
+   that reads like a result. */
+.recovery-list > .empty-state {
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+}
+
 /* Command palette */
 .palette-card {
   margin-top: 12vh;
@@ -2243,6 +2271,17 @@ body.pane-resizing-y * {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+/* In the profile table the cell has to stay a table cell: as a flex box it
+   drops out of the row and its borders stop lining up with the others. */
+.ssh-profiles-table td.action-buttons {
+  display: table-cell;
+  text-align: right;
+  white-space: nowrap;
+}
+.ssh-profiles-table td.action-buttons .btn + .btn {
+  margin-left: 6px;
 }
 
 .action-buttons .btn {
@@ -5325,6 +5364,303 @@ label.settings-item:hover {
   font-size: 0.875rem;
 }
 
+/* ============ SSH PROFILE MANAGER ============
+   The Settings layout, with the profile table, the key forms and the rules
+   list sitting inside its cards rather than drawing borders of their own. */
+.ssh-card .ssh-profiles-group .table-wrapper {
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}
+.ssh-card .ssh-profiles-table th {
+  background: color-mix(in srgb, var(--bg-app) 45%, transparent);
+}
+.ssh-card .ssh-profiles-table td {
+  padding: 10px 12px;
+}
+.ssh-card .ssh-key-form-section {
+  margin: 12px 0 0;
+  background: var(--bg-card);
+}
+.ssh-card .ssh-key-form-section .modal-form {
+  margin-bottom: 0;
+}
+.ssh-card .keep-password-row {
+  margin-top: 0;
+}
+.ssh-card .rule-add-row {
+  gap: 8px;
+  margin: 0;
+}
+.ssh-card .rule-add-row input {
+  min-width: 0;
+}
+.ssh-card .rule-profile-wrapper {
+  flex: 0 0 190px;
+}
+.ssh-card .account-rules-list {
+  gap: 0;
+}
+.ssh-card .account-rules-list > * + * {
+  border-top: 1px solid var(--border-color);
+}
+.ssh-card .rule-item {
+  padding: 10px 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.ssh-card .account-rules-list .empty-state {
+  padding: 14px 16px;
+}
+.ssh-card .vault-status-card {
+  align-items: center;
+  margin-bottom: 0;
+  padding: 16px;
+}
+.ssh-card .vault-status {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+.ssh-card .vault-status-detail {
+  font-size: 0.8125rem;
+}
+
+/* ============ DOCKED PANELS ============
+   Search, Compare and Branch Maintenance: the form in a card at the top,
+   each list under a small caps label, and filters as chips kept apart from
+   the buttons that change the repository. */
+.panel-card {
+  padding: 14px;
+  margin-bottom: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.search-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.search-field > span {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.search-field-wide,
+.search-form-footer {
+  grid-column: 1 / -1;
+}
+.search-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.search-form-footer .field-hint {
+  margin: 0;
+}
+.search-form-footer .btn {
+  flex-shrink: 0;
+}
+.panel-list-label {
+  margin: 18px 0 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.panel-card + .panel-list-label {
+  margin-top: 0;
+}
+.panel-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+.panel-toolbar-actions {
+  display: flex;
+  gap: 6px;
+}
+.panel-toolbar-actions .btn .material-symbols-outlined {
+  font-size: 16px;
+}
+/* A docked panel is as tall as the window, so its main list can be too. */
+#branch-admin-list {
+  max-height: none;
+}
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.filter-chips-label {
+  margin-right: 2px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+/* A checkbox drawn as a pill: the box is hidden but still focusable. */
+.filter-chip {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+.filter-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.filter-chip span {
+  padding: 4px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.filter-chip:hover span {
+  border-color: var(--border-color-hover);
+  color: var(--text-main);
+}
+.filter-chip input:checked + span {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  color: var(--text-main);
+}
+.filter-chip input:focus-visible + span {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* ============ FORM DIALOGS ============
+   Clone and New Repository: a short window of questions, grouped into cards
+   with a titled header each, and the buttons pinned to the bottom edge so the
+   answer is always one click away however far the form has scrolled. */
+.form-dialog {
+  width: min(620px, 100%);
+}
+.form-dialog .modal-header {
+  align-items: flex-start;
+}
+.form-dialog-subtitle {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.form-dialog .modal-form {
+  gap: 14px;
+  margin-bottom: 0;
+}
+.form-card {
+  padding: 14px 16px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.form-card > .form-group:last-child,
+.form-card > .form-row:last-child .form-group {
+  margin-bottom: 0;
+}
+.form-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.form-card-title .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--color-primary);
+}
+.form-card-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+.form-card-details > summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+.form-card-details[open] > summary {
+  margin-bottom: 12px;
+}
+.label-optional {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+/* A switch with its explanation, for the one yes-or-no in a form. */
+.form-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.form-switch-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.form-switch-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+.form-switch-text .field-hint {
+  margin-top: 2px;
+}
+.form-switch-row:has(input:disabled) {
+  cursor: default;
+}
+.form-switch-row:has(input:disabled) .form-switch-label,
+.settings-switch:disabled {
+  opacity: 0.55;
+}
+/* A card of switch rows only, one row per switch with a rule between. */
+.form-card-flush {
+  padding: 0;
+}
+.form-card-flush > .form-switch-row {
+  margin: 0;
+  padding: 12px 16px;
+  transition: background-color 0.15s ease;
+}
+.form-card-flush > .form-switch-row:hover {
+  background: var(--bg-card-hover);
+}
+.form-card-flush > .form-switch-row + .form-switch-row {
+  border-top: 1px solid var(--border-color);
+}
+.form-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 0;
+  padding: 14px 0 2px;
+  background: var(--bg-panel);
+  box-shadow: 0 -12px 12px -12px rgba(0, 0, 0, 0.5);
+}
+
 /* Narrow windows: the section list becomes a strip of chips above the
    settings rather than eating a third of the width. */
 @media (max-width: 720px) {
@@ -6058,7 +6394,33 @@ tr:hover .profile-star:hover {
 /* The remote list scrolls independently so destination controls stay reachable. */
 .clone-repository-results { display: grid; gap: 6px; max-height: 180px; overflow-y: auto; }
 .clone-repository { text-align: left; white-space: normal; overflow-wrap: anywhere; justify-content: flex-start; }
-#clone-browser { margin-bottom: 16px; }
-#clone-browser summary { cursor: pointer; margin-bottom: 10px; }
-.clone-browser-info { padding: 12px; margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-input); }
-.clone-browser-info p { margin: 0 0 10px; font-size: 0.875rem; color: var(--text-secondary); }
+/* The CLI status is one line with its buttons beside it, not a paragraph. */
+.clone-browser-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-app) 45%, transparent);
+}
+.clone-browser-info > .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--color-info);
+}
+.clone-browser-info p {
+  flex: 1 1 220px;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.clone-browser-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 12px;
+}
+#clone-browser .field-hint {
+  margin: 0 0 10px;
+}

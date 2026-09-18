@@ -12,6 +12,8 @@ import { closeAllDropdowns } from '../../ui/dropdown';
 import { withButtonBusy } from '../../ui/busy';
 import { isMacHost, isWindowsHost } from '../../ui/platform';
 import { attachPasswordReveal, maskPasswordField } from '../../ui/password-reveal';
+import { createSectionNav } from '../../ui/section-nav';
+import type { NavSection, SectionNav } from '../../ui/section-nav';
 import {
   applyConfigSnapshot,
   loadConfig,
@@ -23,9 +25,18 @@ import type { ClientSshProfile } from '../../../shared/config-types';
 import type { GenerateKeyResponse } from '../../../shared/api-types';
 
 let ui: Elements;
+let nav: SectionNav;
+
+const SECTIONS: readonly NavSection[] = [
+  { key: 'profiles', icon: 'key', title: 'Profiles' },
+  { key: 'add', icon: 'add_circle', title: 'Add a key' },
+  { key: 'rules', icon: 'rule', title: 'Auto-select rules' },
+  { key: 'vault', icon: 'lock', title: 'Passphrase vault' }
+];
 
 export function initSshManager(elements: Elements): void {
   ui = elements;
+  nav = createSectionNav({ nav: ui.sshNav, body: ui.sshBody });
 
   // The path is used as typed, with no `~` expansion, so the example is a full
   // path in the shape this operating system writes one.
@@ -82,11 +93,13 @@ export function showKeyForm(type: 'existing' | 'generate'): void {
   setHidden(ui.sshGenerateSection, showExisting);
   ui.btnShowAddKey.setAttribute('aria-expanded', String(showExisting));
   ui.btnShowGenerateKey.setAttribute('aria-expanded', String(!showExisting));
+  nav.jumpTo('add');
 
   const firstField = section.querySelector<HTMLElement>('input:not([type="hidden"]), select');
   if (firstField) {
-    // The section is hidden when focus() is called, so defer past the reflow.
-    setTimeout(() => firstField.focus(), 30);
+    // The section is hidden when focus() is called, so defer past the reflow,
+    // and leave the scrolling to the section nav rather than jump twice.
+    setTimeout(() => firstField.focus({ preventScroll: true }), 30);
   }
 }
 
@@ -121,6 +134,8 @@ export function openSshModal(options: { showForm?: 'existing' | 'generate' } = {
   closeAllDropdowns();
 
   setHidden(ui.sshModal, false);
+  nav.render(SECTIONS);
+  ui.sshBody.scrollTop = 0;
   void refreshVaultStatus();
 
   if (options.showForm) {

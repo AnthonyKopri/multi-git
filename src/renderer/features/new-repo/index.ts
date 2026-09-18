@@ -166,9 +166,9 @@ function renderGithubCliStatus(): void {
   const account = status.account ? ` as ${status.account}` : '';
   setFieldHint(
     ui.newRepoGhStatus,
-    // Says that ticking this commits, because that is the one thing here that
+    // Says that turning this on commits, because that is the one thing here that
     // writes history rather than files, and it is not obvious from the label.
-    `GitHub CLI is signed in${account}. Ticking this commits the folder's contents and pushes them; origin is switched to SSH first.`,
+    `GitHub CLI is signed in${account}. Turning this on commits the folder's contents and pushes them; origin is switched to SSH first.`,
     'success'
   );
 }
