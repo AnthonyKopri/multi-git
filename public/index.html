@@ -1976,96 +1976,228 @@
   </div>
 
   <!-- EXTERNAL AGENTS -->
-  <div id="agents-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="agents-modal-title">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h2 id="agents-modal-title">Coding agents</h2>
-        <button id="btn-close-agents-modal" class="btn-close">
+  <div id="agents-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="agents-modal-title">
+    <div class="modal-card settings-card">
+      <div class="modal-header settings-header">
+        <div>
+          <h2 id="agents-modal-title">Coding agents</h2>
+          <p class="settings-subtitle">
+            Multi-Git starts a tool you configure, in the worktree you choose, with the account that
+            worktree uses already loaded. It does not monitor what the tool does afterwards.
+          </p>
+        </div>
+        <button id="btn-close-agents-modal" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <div class="modal-body">
-        <p class="modal-desc">
-          Multi-Git starts a tool you configure, in the worktree you choose, with the account that
-          worktree uses already loaded. It does not monitor what the tool does afterwards.
-        </p>
-        <div id="agent-desktop-only-note" class="inline-warning hidden">
-          Launching is only available in the desktop app. Definitions can still be edited here.
+      <div class="settings-layout">
+        <nav id="agents-nav" class="settings-nav" aria-label="Coding agent sections"></nav>
+        <div class="modal-body settings-body" id="agents-body">
+          <div id="agent-desktop-only-note" class="inline-warning hidden">
+            Launching is only available in the desktop app. Definitions can still be edited here.
+          </div>
+
+          <section class="settings-section" data-section="configured" aria-labelledby="agents-section-configured">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">smart_toy</span></span>
+              <div>
+                <h3 id="agents-section-configured">Your agents</h3>
+                <p class="settings-section-subtitle">What the launch window offers. Copy one to pin the same tool to a second model.</p>
+              </div>
+            </header>
+            <div class="settings-group">
+              <ul id="agent-list" class="agent-list">
+                <li class="empty-state">No agents configured</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="settings-section" data-section="catalogue" aria-labelledby="agents-section-catalogue">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">apps</span></span>
+              <div>
+                <h3 id="agents-section-catalogue">Known tools</h3>
+                <p class="settings-section-subtitle">The CLIs Multi-Git can fill in for you, and whether this machine has them.</p>
+              </div>
+            </header>
+            <div class="agent-catalogue-toolbar">
+              <input type="search" id="agent-catalogue-filter" class="settings-field" placeholder="Filter by name or vendor" autocomplete="off" aria-label="Filter the known tools">
+              <button type="button" id="btn-detect-agents" class="btn btn-secondary btn-sm" title="Look again for known tools on your PATH">
+                <span class="material-symbols-outlined">search</span>
+                <span>Add everything installed</span>
+              </button>
+            </div>
+            <div class="settings-group">
+              <ul id="agent-catalogue-list" class="agent-list">
+                <li class="empty-state">Looking for installed tools…</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="settings-section" data-section="editor" aria-labelledby="agents-section-editor">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">edit_note</span></span>
+              <div>
+                <h3 id="agents-section-editor">Add or edit by hand</h3>
+                <p class="settings-section-subtitle">Any executable, with its own arguments and launch mode.</p>
+              </div>
+            </header>
+            <form id="agent-form" class="settings-group agent-form">
+              <p id="agent-form-editing" class="agent-form-editing hidden"></p>
+              <div class="settings-item settings-item-stacked">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Name</span>
+                  <span class="settings-item-desc">What the launch window calls it.</span>
+                </div>
+                <div class="settings-item-control">
+                  <input type="text" id="agent-label-input" class="settings-field" placeholder="Claude Code" autocomplete="off" aria-label="Name">
+                </div>
+              </div>
+              <div class="settings-item settings-item-stacked">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Executable</span>
+                  <span class="settings-item-desc">A program name found on your PATH, or an absolute path. Never a command line.</span>
+                </div>
+                <div class="settings-item-control">
+                  <input type="text" id="agent-executable-input" class="settings-field" placeholder="claude" autocomplete="off" aria-label="Executable">
+                </div>
+              </div>
+              <div class="settings-item settings-item-stacked">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Arguments</span>
+                  <span class="settings-item-desc">Space separated here, kept as separate values all the way to spawn.</span>
+                </div>
+                <div class="settings-item-control">
+                  <input type="text" id="agent-args-input" class="settings-field" placeholder="Optional" autocomplete="off" aria-label="Arguments">
+                </div>
+              </div>
+              <div class="settings-item">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Open in</span>
+                  <span class="settings-item-desc">An interactive agent needs a window to answer in.</span>
+                </div>
+                <div class="settings-item-control">
+                  <select id="agent-terminal-select" class="settings-field" aria-label="Open in">
+                    <option value="system-terminal">Your terminal</option>
+                    <option value="direct">A window of its own</option>
+                    <option value="windows-terminal">Windows Terminal</option>
+                    <option value="powershell">A PowerShell window</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-item">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Starting prompt</span>
+                  <span class="settings-item-desc">How the first instruction reaches the tool, if it takes one.</span>
+                </div>
+                <div class="settings-item-control">
+                  <select id="agent-prompt-mode" class="settings-field" aria-label="Starting prompt">
+                    <option value="none">This tool takes no prompt</option>
+                    <option value="argument">As its first argument</option>
+                    <option value="flag">After a flag</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-item settings-item-stacked hidden" id="agent-prompt-args-row">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Prompt flag</span>
+                  <span class="settings-item-desc">Goes in front of the prompt, and only when there is one. Gemini and Qwen want <code>-i</code>.</span>
+                </div>
+                <div class="settings-item-control">
+                  <input type="text" id="agent-prompt-args-input" class="settings-field" placeholder="-i" autocomplete="off" aria-label="Prompt flag">
+                </div>
+              </div>
+              <div class="settings-item agent-form-actions">
+                <button type="button" id="btn-reset-agent-form" class="btn btn-secondary">New agent</button>
+                <button type="submit" id="btn-save-agent" class="btn btn-primary">Save agent</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="settings-section" data-section="history" aria-labelledby="agents-section-history">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">history</span></span>
+              <div>
+                <h3 id="agents-section-history">Launch history</h3>
+                <p class="settings-section-subtitle">What was started, where, and whether it started. Prompt text is never recorded.</p>
+              </div>
+            </header>
+            <div class="agent-catalogue-toolbar">
+              <button type="button" id="btn-clear-agent-history" class="btn btn-secondary btn-sm">
+                <span class="material-symbols-outlined">delete_sweep</span>
+                <span>Clear history</span>
+              </button>
+            </div>
+            <div class="settings-group">
+              <ul id="agent-history-list" class="agent-list">
+                <li class="empty-state">Nothing launched yet</li>
+              </ul>
+            </div>
+          </section>
         </div>
-
-        <div class="section-header">
-          <h4>Configured agents</h4>
-          <button id="btn-detect-agents" class="btn btn-secondary btn-sm" title="Look for known tools on your PATH">
-            <span>Detect installed</span>
-          </button>
-        </div>
-        <ul id="agent-list" class="agent-list">
-          <li class="empty-state">No agents configured</li>
-        </ul>
-
-        <h4 class="mt-4">Add or edit</h4>
-        <form id="agent-form" class="worktree-form">
-          <div class="form-row">
-            <label for="agent-label-input">Name</label>
-            <input type="text" id="agent-label-input" placeholder="Claude Code" autocomplete="off">
-          </div>
-          <div class="form-row">
-            <label for="agent-executable-input">Executable</label>
-            <input type="text" id="agent-executable-input" placeholder="claude" autocomplete="off">
-          </div>
-          <div class="form-row">
-            <label for="agent-args-input">Arguments</label>
-            <input type="text" id="agent-args-input" placeholder="Optional, space separated" autocomplete="off">
-          </div>
-          <div class="form-row">
-            <label for="agent-terminal-select">Open in</label>
-            <select id="agent-terminal-select">
-              <option value="windows-terminal">Windows Terminal</option>
-              <option value="powershell">A PowerShell window</option>
-              <option value="direct">Its own window</option>
-            </select>
-          </div>
-          <label class="amend-row">
-            <input type="checkbox" id="agent-prompt-mode" checked>
-            <span>This tool accepts a starting prompt as its first argument</span>
-          </label>
-          <div class="form-actions">
-            <button type="submit" id="btn-save-agent" class="btn btn-primary">Save agent</button>
-          </div>
-        </form>
-
-        <h4 class="mt-4">Launch history</h4>
-        <p class="modal-desc">What was started, where, and whether it started. Prompt text is not recorded.</p>
-        <ul id="agent-history-list" class="agent-list">
-          <li class="empty-state">Nothing launched yet</li>
-        </ul>
       </div>
     </div>
   </div>
 
   <!-- LAUNCH AN AGENT -->
   <div id="agent-launch-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="agent-launch-modal-title">
-    <div class="modal-card modal-small">
+    <div class="modal-card agent-launch-card">
       <div class="modal-header">
-        <h2 id="agent-launch-modal-title">Launch a coding agent</h2>
-        <button id="btn-close-agent-launch" class="btn-close">
+        <div>
+          <h2 id="agent-launch-modal-title">Launch a coding agent</h2>
+          <p class="settings-subtitle">The tool starts in this folder, with the account it uses already loaded.</p>
+        </div>
+        <button id="btn-close-agent-launch" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-desc">In: <span id="agent-launch-target" class="agent-launch-target"></span></p>
-        <form id="agent-launch-form" class="worktree-form">
-          <div class="form-row">
-            <label for="agent-launch-select">Agent</label>
-            <select id="agent-launch-select"></select>
-          </div>
-          <div class="form-row" id="agent-launch-prompt-row">
-            <label for="agent-launch-prompt">Starting prompt</label>
-            <input type="text" id="agent-launch-prompt" placeholder="Optional — passed as one argument, not stored" autocomplete="off">
-          </div>
+        <form id="agent-launch-form" class="agent-launch-form">
+          <section class="launch-section">
+            <div class="settings-group">
+              <div class="settings-item">
+                <div class="settings-item-text">
+                  <span class="settings-item-label" id="agent-launch-branch">Working folder</span>
+                  <span class="settings-item-desc agent-launch-target" id="agent-launch-target"></span>
+                </div>
+                <div class="settings-item-control">
+                  <span class="agent-chip" id="agent-launch-account">System SSH</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="launch-section">
+            <h4 class="launch-heading">Which agent</h4>
+            <div class="agent-picker" id="agent-launch-picker" role="radiogroup" aria-label="Agent"></div>
+          </section>
+
+          <section class="launch-section hidden" id="agent-launch-model-row">
+            <h4 class="launch-heading">Which model</h4>
+            <select id="agent-launch-model" class="settings-field" aria-label="Model"></select>
+            <p class="launch-note hidden" id="agent-launch-model-note"></p>
+          </section>
+
+          <section class="launch-section" id="agent-launch-prompt-row">
+            <h4 class="launch-heading">Starting prompt <span class="launch-heading-hint">optional</span></h4>
+            <textarea id="agent-launch-prompt" class="settings-field agent-launch-prompt" rows="3" placeholder="What should it start on? Passed as one argument, and never recorded." aria-label="Starting prompt"></textarea>
+          </section>
+
+          <details class="launch-details">
+            <summary class="launch-summary">
+              <span class="launch-summary-label">What will run</span>
+              <code class="launch-summary-command" id="agent-launch-command"></code>
+            </summary>
+            <p class="agent-command-preview" id="agent-launch-preview"></p>
+          </details>
+
           <div class="form-actions">
+            <span class="launch-hint">Ctrl+Enter launches</span>
             <button type="button" id="btn-cancel-agent-launch" class="btn btn-secondary">Cancel</button>
-            <button type="submit" id="btn-launch-agent" class="btn btn-primary">Launch</button>
+            <button type="submit" id="btn-launch-agent" class="btn btn-primary">
+              <span class="material-symbols-outlined">rocket_launch</span>
+              <span>Launch</span>
+            </button>
           </div>
         </form>
       </div>

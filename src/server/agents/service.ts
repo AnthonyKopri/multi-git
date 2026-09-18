@@ -16,7 +16,7 @@ import {
 } from './definitions';
 import {
   AgentLaunchError,
-  buildLaunchPlan,
+  buildLaunchPlans,
   editorPlanFor,
   fallbackTerminalPlan,
   linuxTerminalPlans,
@@ -24,6 +24,7 @@ import {
   runLaunchPlan,
   terminalPlanFor
 } from './launch';
+import { findModelPreset } from '../../shared/agent-catalogue';
 import type { LaunchPlan } from './launch';
 import type { DetachedLauncher, ExecutableRunner } from '../process/runner';
 import { detachedLauncher, executableRunner } from '../process/runner';
@@ -132,14 +133,32 @@ export async function launchAgent(
 
   const readiness = await readSshReadiness(worktreePath);
 
-  const plan = buildLaunchPlan({
+  // Looked up here rather than trusted from the caller: the id names a row in
+  // the table compiled into this build, and it is that row's arguments and
+  // base URL that reach the launch. An id with no row falls back to the tool's
+  // own default, which is always something it can be started with.
+  const modelPreset = findModelPreset(definition.catalogueId, input.modelId);
+
+  const plans = buildLaunchPlans({
     definition,
     worktreePath,
-    ...(input.initialPrompt !== undefined ? { initialPrompt: input.initialPrompt } : {})
+    ...(input.initialPrompt !== undefined ? { initialPrompt: input.initialPrompt } : {}),
+    ...(modelPreset ? { modelPreset } : {})
   });
 
+  const model = modelPreset ? { modelId: modelPreset.id, modelLabel: modelPreset.label } : {};
+
+  // Narrowed to the candidate that runs, so the log and the history name the
+  // terminal that was actually used rather than the one that was tried first.
+  // It starts on the first because choosing is itself a step that can fail,
+  // and that failure still deserves to be recorded against a command.
+  let chosen = plans[0] as LaunchPlan;
+
   try {
-    const { pid } = await runLaunchPlan(plan, dependencies.launcher ?? detachedLauncher);
+    // More than one plan means the platform has no single answer — a Linux
+    // terminal emulator, or Windows Terminal on a machine without it.
+    chosen = await firstUsablePlan(plans, runner);
+    const { pid } = await runLaunchPlan(chosen, dependencies.launcher ?? detachedLauncher);
 
     recordLaunch({
       at: new Date().toISOString(),
@@ -147,13 +166,14 @@ export async function launchAgent(
       agentLabel: definition.label,
       worktreePath,
       ok: true,
-      commandPreview: plan.preview,
+      commandPreview: chosen.preview,
+      ...model,
       ...(pid !== undefined ? { pid } : {})
     });
 
     return {
       launched: true,
-      commandPreview: plan.preview,
+      commandPreview: chosen.preview,
       ...(pid !== undefined ? { processId: pid } : {}),
       ...(readiness.warning ? { sshWarning: readiness.warning } : {})
     };
@@ -166,12 +186,45 @@ export async function launchAgent(
       agentLabel: definition.label,
       worktreePath,
       ok: false,
-      commandPreview: plan.preview,
+      commandPreview: chosen.preview,
+      ...model,
       error: message
     });
 
-    return { launched: false, commandPreview: plan.preview, error: message };
+    return { launched: false, commandPreview: chosen.preview, error: message };
   }
+}
+
+/**
+ * The first plan whose program this machine has.
+ *
+ * A single plan is used whatever the lookup says, so its own error is what the
+ * user sees rather than a guess about PATH. A list is different: it exists
+ * because no one terminal emulator ships everywhere, and "spawn
+ * x-terminal-emulator ENOENT" from the last candidate would name the one
+ * program the user is least likely to have heard of. Refused with the reason
+ * and what to do instead, the same way `openTerminalAt` refuses.
+ */
+async function firstUsablePlan(
+  plans: readonly LaunchPlan[],
+  runner: ExecutableRunner
+): Promise<LaunchPlan> {
+  if (plans.length === 1) {
+    return plans[0] as LaunchPlan;
+  }
+
+  for (const plan of plans) {
+    if ((await resolveExecutable(plan.executable, runner)) !== null) {
+      return plan;
+    }
+  }
+
+  throw new AgentLaunchError(
+    `No terminal window could be opened: none of ${plans
+      .map((plan) => plan.executable)
+      .join(', ')} is installed. Install one, set TERMINAL to the one you use, ` +
+      'or change this agent to open in a window of its own.'
+  );
 }
 
 /**

@@ -3759,7 +3759,8 @@ body.pane-resizing-y * {
 /* A definition that is turned off still shows, greyed, so it can be turned
    back on without hunting for it. */
 .agent-item.agent-disabled .agent-label,
-.agent-item.agent-disabled .agent-meta {
+.agent-item.agent-disabled .agent-meta,
+.agent-item.agent-disabled .agent-sub {
   opacity: 0.55;
 }
 
@@ -3772,6 +3773,304 @@ body.pane-resizing-y * {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   word-break: break-all;
+}
+
+/* ==========================================================================
+   CODING AGENTS
+
+   Three surfaces share these: the rows in the agents window, the known-tool
+   browser beside them, and the launch dialog's cards. A row carries three
+   lines rather than the usual two — name, command, and a sentence about how
+   it opens — because "what is this" and "what will it do" are different
+   questions and cramming both into the dim line answered neither.
+   ========================================================================== */
+
+/* The third line: prose, where .agent-meta is the monospace command. */
+.agent-sub {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+/* A small badge on a name: the vendor, the model, or a state worth a word. */
+.agent-tag {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-app);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.agent-tag-added {
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+.agent-tag-off {
+  color: var(--color-warning);
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+}
+
+/* Inside a settings card the list has the card's border already. */
+.settings-group > .agent-list {
+  margin: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  /* The card already draws the border the plain modal list draws itself. */
+  border: none;
+  border-radius: 0;
+}
+.settings-group > .agent-list > .empty-state {
+  padding: 16px;
+}
+.settings-group > .agent-list .agent-item,
+.settings-group > .agent-list .agent-launch {
+  padding: 12px 16px;
+}
+
+.agent-catalogue-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.agent-catalogue-toolbar .settings-field {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+/* Add is the row's point, so it keeps its word rather than becoming an icon. */
+.agent-catalogue-item .agent-actions {
+  align-items: center;
+  gap: 6px;
+}
+
+/* The add-or-edit form is a settings card, so its rows come from there; only
+   the strip of buttons at the bottom is its own. */
+.agent-form-editing {
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  font-size: 0.8125rem;
+  color: var(--text-main);
+}
+.settings-item.agent-form-actions {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* --- the launch dialog ---------------------------------------------------- */
+
+.agent-launch-card {
+  width: min(680px, 100%);
+  max-height: calc(100vh - 40px);
+}
+.agent-launch-card .modal-header {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.agent-launch-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.launch-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.launch-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.launch-heading-hint {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-dim);
+}
+.launch-note {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* One card per agent, two or three to a row. A grid rather than a select
+   because the choice is between tools with different characters, and a list of
+   bare names makes them look interchangeable. */
+.agent-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+  /* Two rows, then it scrolls. Copying a definition to pin it to a second
+     model is something this window encourages, so the count is open-ended and
+     the dialog must not grow with it. */
+  max-height: 212px;
+  overflow-y: auto;
+}
+.agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.agent-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-color-hover);
+}
+.agent-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.agent-card-selected {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+.agent-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-card-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-card-summary {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.agent-launch-prompt {
+  min-height: 72px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+/* What will run: one line on the summary, the rest on opening it. A boxed
+   block of all three lines sat above the Launch button competing with it; the
+   command is worth a line of the dialog, the environment and the window it
+   opens in are worth a click. */
+.launch-details {
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+.launch-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+.launch-summary::-webkit-details-marker {
+  display: none;
+}
+.launch-summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+/* A caret of our own, since the native marker is hidden to keep the row flat. */
+.launch-summary-label::before {
+  content: '▸';
+  margin-right: 6px;
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.launch-details[open] .launch-summary-label::before {
+  content: '▾';
+}
+.launch-summary-label {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.launch-summary-command {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Monospace and wrapped, because the point is to read the argument vector --
+   and it stops short of the prompt, which is never shown, logged or stored. */
+.agent-command-preview {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.agent-launch-form .form-actions {
+  align-items: center;
+  margin-top: 0;
+}
+.launch-hint {
+  margin-right: auto;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* Narrow windows: the cards go to one column and the hint gives way to the
+   buttons, which are the thing that has to stay reachable. */
+@media (max-width: 560px) {
+  .agent-picker {
+    grid-template-columns: 1fr;
+  }
+  .launch-hint {
+    display: none;
+  }
 }
 
 /* Create and edit forms: label, field, optional button on one line. */

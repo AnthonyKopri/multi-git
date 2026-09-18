@@ -584,9 +584,39 @@ The **Groups** section collects repositories that belong together. **Fetch all**
 
 ### Coding agents
 
-Multi-Git can start a tool you configure in the worktree you choose. **Detect installed** looks for known CLIs on your PATH and seeds an editable definition; you can add any executable by hand, with its own arguments and environment.
+Multi-Git can start a tool you configure in the worktree you choose. The **Coding agents** window is laid out like Settings — sections down the left, cards of rows on the right — and holds four of them.
 
-A launch sets the worktree as the working directory, passes arguments as separate values with no shell anywhere in the path, and gives the tool an allowlisted environment rather than a copy of Multi-Git's. An optional starting prompt is passed as one argument and is never recorded. Before launching, Multi-Git tries to prepare the account that worktree uses and reports its routing state; declining or failing an unlock does not block launch, so the tool may still need authentication before it can push.
+**Your agents** is what the launch window offers. Each row says what runs, how it opens, and whether it takes a starting prompt, and carries four actions: turn off without deleting, edit, copy (for the same CLI pinned to a second model), and remove.
+
+**Known tools** is a catalogue of the coding CLIs Multi-Git can fill in for you, with whether this machine has each one:
+
+| Tool | Command | Tool | Command |
+| --- | --- | --- | --- |
+| Claude Code | `claude` | Crush | `crush` |
+| Codex CLI | `codex` | Goose | `goose` |
+| Gemini CLI | `gemini` | GitHub Copilot CLI | `copilot` |
+| Qwen Code | `qwen` | Amp | `amp` |
+| Cursor CLI | `cursor-agent` | Droid | `droid` |
+| Aider | `aider` | Continue CLI | `cn` |
+| Kimi CLI | `kimi` | OpenCode | `opencode` |
+
+Every entry is listed whether or not it is installed, with a link to where it lives — a tool left out of the list only raises the question of whether it is supported. What this machine has sorts to the top, so the list reads as "yours first" without a filter to switch on. **Add** seeds an editable definition from one of them; **Add everything installed** does it for every tool found on your PATH at once. The seeded definition carries that tool's own prompt convention rather than a guess: Claude Code and Codex take the prompt as a bare first argument, Gemini and Qwen want `-i` in front of it, and several take no interactive prompt at all and are configured not to be handed one.
+
+**Add or edit by hand** takes any executable, with its own arguments, launch mode and prompt convention; the prompt-flag field appears only for the one mode that uses one. **Launch history** records what was started, where, with which model, and whether it started, and can be cleared.
+
+#### Which model
+
+Several of these tools can be pointed at more than one model, and the launch window offers the ones its catalogue entry knows — Claude Code at Opus, Sonnet or Haiku, Codex at its GPT-5 models, Gemini and Qwen at theirs, Aider at its own model shortcuts.
+
+The same list is how **DeepSeek**, **Kimi K2** and **GLM** are reached. Each of those providers publishes an Anthropic-compatible endpoint, so Claude Code talks to them with no change but a base URL, which the preset sets as environment rather than as an argument. Multi-Git never stores an API key: a preset that needs one names the variable to export — `ANTHROPIC_AUTH_TOKEN` for all three — and the launch passes it through from the environment you already set it in. The model-provider variables an agent inherits are an allowlist of their own, separate from the shorter one a terminal or an editor gets, and a token that addresses a git host rather than a model provider is not on it.
+
+#### Launching
+
+The launch window shows the folder and its branch, the account that folder will push as, a card for each agent, the models it offers, and a prompt box. Along the bottom, **What will run** carries the command line on one line; opening it adds the environment the launch gets and the window it opens in. Neither ever carries the prompt, for the same reason the history does not: a prompt is passed as one argument and is recorded nowhere. Ctrl+Enter launches.
+
+A launch sets the worktree as the working directory and passes arguments as separate values with no shell anywhere in the path. **Open in** decides where it appears: your terminal (Windows Terminal, Terminal.app, or whichever emulator this Linux desktop has), a window of its own, or a named Windows host. Your terminal is the default off Windows, because a detached process there has no console at all and an interactive agent started that way has nowhere to print. On macOS the terminal is opened through a fixed bridge script that reads the folder, the command and the environment out of two NUL-separated files beside it, so nothing from a branch name or a prompt is ever part of a string a shell parses.
+
+Before launching, Multi-Git tries to prepare the account that worktree uses and reports its routing state; declining or failing an unlock does not block launch, so the tool may still need authentication before it can push.
 
 What it does not do: install hooks, read the tool's session state, or claim to know what it is doing. **Launched** means the process started. Agent definitions can be managed in either mode, but no HTTP route launches one; launch is desktop IPC only.
 

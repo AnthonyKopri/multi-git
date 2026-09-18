@@ -13,18 +13,27 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {
+  AGENT_PROVIDER_ENV_KEYS,
   INHERITED_ENV_KEYS,
+  MACOS_BRIDGE_SCRIPT,
   POWERSHELL_BRIDGE_SCRIPT,
   buildLaunchEnv,
   buildLaunchPlan,
-  escapeForWindowsTerminal
+  buildLaunchPlans,
+  escapeForWindowsTerminal,
+  linuxAgentTerminalPlans,
+  writeMacosBridge
 } from '../src/server/agents/launch';
 import {
   AgentDefinitionError,
   assertUsableDefinition,
   definitionFromDetected,
+  detectAgents,
   resolveExecutable
 } from '../src/server/agents/definitions';
+import { AGENT_CATALOGUE, findModelPreset } from '../src/shared/agent-catalogue';
+import type { AgentCatalogueEntry } from '../src/shared/agent-catalogue';
+import type { DetectedAgent } from '../src/shared/agent-types';
 import { createDetachedLauncher } from '../src/server/process/runner';
 import { NEW_CONSOLE_BRIDGE_SCRIPT } from '../src/server/process/windows-console';
 import { FakeRunner } from './helpers/fake-runner';
@@ -69,6 +78,24 @@ function pathWith(name: string, subsystem: 2 | 3 | 'not-an-exe'): string {
   fs.writeFileSync(path.join(directory, name), file);
 
   return directory;
+}
+
+/** A catalogue entry as detection would report it, installed. */
+function detected(id: string): DetectedAgent {
+  const entry = AGENT_CATALOGUE.find((candidate) => candidate.id === id) as AgentCatalogueEntry;
+
+  return {
+    id: entry.id,
+    label: entry.label,
+    vendor: entry.vendor,
+    summary: entry.summary,
+    homepage: entry.homepage,
+    executable: entry.executable,
+    resolvedPath: `/usr/bin/${entry.executable}`,
+    installed: true,
+    configured: false,
+    hasModels: (entry.models ?? []).length > 0
+  };
 }
 
 function definition(overrides: Partial<ExternalAgentDefinition> = {}): ExternalAgentDefinition {
@@ -218,6 +245,226 @@ describe('building the launch plan', () => {
   });
 });
 
+describe('a prompt that needs a flag in front of it', () => {
+  const gemini = definition({
+    id: 'gemini',
+    label: 'Gemini CLI',
+    executable: 'gemini',
+    promptMode: 'flag',
+    promptArgs: ['-i'],
+    catalogueId: 'gemini'
+  });
+
+  it('puts the flag before the prompt, as one argument each', () => {
+    const plan = buildLaunchPlan({
+      definition: gemini,
+      worktreePath: '/work/app',
+      initialPrompt: 'rename the module',
+      parentEnv: {}
+    });
+
+    expect(plan.args).toEqual(['-i', 'rename the module']);
+  });
+
+  it('sends neither when there is no prompt', () => {
+    // `gemini -i` with nothing after it is a command line the tool refuses,
+    // so a flag with no value is never sent.
+    const plan = buildLaunchPlan({ definition: gemini, worktreePath: '/work/app', parentEnv: {} });
+
+    expect(plan.args).toEqual([]);
+  });
+
+  it('keeps the prompt out of the preview, the same as every other mode', () => {
+    const plan = buildLaunchPlan({
+      definition: gemini,
+      worktreePath: '/work/app',
+      initialPrompt: 'a secret internal design document',
+      parentEnv: {}
+    });
+
+    expect(plan.preview).toBe('gemini');
+  });
+});
+
+describe('launching against a particular model', () => {
+  const claude = definition({ catalogueId: 'claude' });
+
+  it('appends the preset arguments after the definition\'s own', () => {
+    const plan = buildLaunchPlan({
+      definition: definition({ catalogueId: 'claude', args: ['--resume'] }),
+      worktreePath: '/work/app',
+      modelPreset: findModelPreset('claude', 'opus'),
+      initialPrompt: 'go',
+      parentEnv: {}
+    });
+
+    // The model flag never swallows the prompt as its value, because the
+    // prompt is last.
+    expect(plan.args).toEqual(['--resume', '--model', 'opus', 'go']);
+  });
+
+  it('puts a preset base URL in the environment, not on the command line', () => {
+    const preset = findModelPreset('claude', 'deepseek');
+    const plan = buildLaunchPlan({
+      definition: claude,
+      worktreePath: '/work/app',
+      modelPreset: preset,
+      parentEnv: {}
+    });
+
+    expect(plan.args).toEqual([]);
+    expect(plan.env['ANTHROPIC_BASE_URL']).toBe('https://api.deepseek.com/anthropic');
+  });
+
+  it('names the key it needs without ever holding one', () => {
+    const preset = findModelPreset('claude', 'kimi-k2');
+
+    expect(preset?.requiresEnv).toEqual(['ANTHROPIC_AUTH_TOKEN']);
+    expect(JSON.stringify(preset?.env)).not.toContain('ANTHROPIC_AUTH_TOKEN');
+  });
+
+  it('lets a definition\'s own environment be overridden by the preset', () => {
+    const plan = buildLaunchPlan({
+      definition: definition({
+        catalogueId: 'claude',
+        env: { ANTHROPIC_BASE_URL: 'https://example.invalid', MY_TOOL_MODE: 'fast' }
+      }),
+      worktreePath: '/work/app',
+      modelPreset: findModelPreset('claude', 'glm'),
+      parentEnv: {}
+    });
+
+    expect(plan.env['ANTHROPIC_BASE_URL']).toBe('https://api.z.ai/api/anthropic');
+    expect(plan.env['MY_TOOL_MODE']).toBe('fast');
+  });
+
+  it('records the preset in the preview, because it changed what runs', () => {
+    const plan = buildLaunchPlan({
+      definition: claude,
+      worktreePath: '/work/app',
+      modelPreset: findModelPreset('claude', 'sonnet'),
+      parentEnv: {}
+    });
+
+    expect(plan.preview).toBe('claude --model sonnet');
+  });
+
+  it('is ignored when the id names no preset the entry has', () => {
+    expect(findModelPreset('claude', 'not-a-model')).toBeNull();
+    expect(findModelPreset(undefined, 'opus')).toBeNull();
+  });
+});
+
+describe('the platform terminal mode', () => {
+  const agent = definition({ terminal: 'system-terminal', args: ['--resume'] });
+
+  it('offers every Linux emulator, running the tool in the worktree', async () => {
+    await withPlatform('linux', async () => {
+      const plans = buildLaunchPlans({
+        definition: agent,
+        worktreePath: '/work/app',
+        initialPrompt: 'go',
+        parentEnv: {}
+      });
+
+      // A list, because no terminal emulator ships on every distribution.
+      expect(plans.length).toBeGreaterThan(5);
+
+      const gnome = plans.find((plan) => plan.executable === 'gnome-terminal');
+      expect(gnome?.args).toEqual([
+        '--working-directory=/work/app',
+        '--',
+        'claude',
+        '--resume',
+        'go'
+      ]);
+      expect(gnome?.cwd).toBe('/work/app');
+
+      // Every candidate spawns the tool as separate argv elements; none
+      // assembles a command line for the terminal to split again.
+      for (const plan of plans) {
+        expect(plan.args).toContain('claude');
+        expect(plan.args.join('|')).not.toContain('claude --resume');
+      }
+    });
+  });
+
+  it('lets TERMINAL name the emulator, when it names one this build knows', async () => {
+    await withPlatform('linux', async () => {
+      const [first] = linuxAgentTerminalPlans('/work/app', ['claude'], {}, { TERMINAL: 'konsole' });
+      expect(first?.executable).toBe('konsole');
+
+      // One carrying arguments is skipped rather than split, since splitting
+      // it would mean parsing a command line.
+      const [other] = linuxAgentTerminalPlans('/work/app', ['claude'], {}, {
+        TERMINAL: 'konsole --profile work'
+      });
+      expect(other?.executable).toBe('gnome-terminal');
+    });
+  });
+
+  it('falls back from Windows Terminal to PowerShell, which every Windows has', async () => {
+    await withPlatform('win32', async () => {
+      const plans = buildLaunchPlans({
+        definition: agent,
+        worktreePath: 'D:\\work\\app',
+        parentEnv: {}
+      });
+
+      expect(plans.map((plan) => plan.executable)).toEqual(['wt.exe', 'powershell.exe']);
+    });
+  });
+
+  it('opens Terminal.app through a bridge that parses nothing', async () => {
+    await withPlatform('darwin', async () => {
+      const plan = buildLaunchPlan({
+        definition: agent,
+        worktreePath: '/work/app',
+        initialPrompt: 'fix it; rm -rf ~',
+        parentEnv: {}
+      });
+
+      expect(plan.executable).toBe('open');
+      expect(plan.args.slice(0, 2)).toEqual(['-a', 'Terminal']);
+      // Nothing of the launch is in the script, and the script is what runs.
+      expect(MACOS_BRIDGE_SCRIPT).not.toContain('claude');
+      expect(MACOS_BRIDGE_SCRIPT).not.toContain('rm -rf');
+      expect(plan.preview).not.toContain('rm -rf');
+    });
+  });
+
+  it('writes nothing until the plan is prepared, so describing one is free', async () => {
+    await withPlatform('darwin', async () => {
+      const plan = buildLaunchPlan({
+        definition: agent,
+        worktreePath: '/work/app',
+        parentEnv: {}
+      });
+
+      // A candidate list of a dozen terminals must not leave a dozen
+      // directories behind, and a test that inspects a plan must not write one.
+      expect(fs.existsSync(plan.args[2] as string)).toBe(false);
+    });
+  });
+
+  it('hands the bridge its arguments as NUL-separated records', () => {
+    const root = createTempDir();
+    const script = path.join(root, 'launch', 'launch.command');
+    const nasty = 'fix the bug;\nthen "quote" it';
+
+    writeMacosBridge(script, '/work/app', 'claude', ['--resume', nasty], { MY_TOOL_MODE: 'fast' });
+
+    const argv = fs.readFileSync(path.join(path.dirname(script), 'argv'), 'utf8');
+    expect(argv.split('\0').slice(0, -1)).toEqual(['/work/app', 'claude', '--resume', nasty]);
+
+    const env = fs.readFileSync(path.join(path.dirname(script), 'env'), 'utf8');
+    expect(env.split('\0').slice(0, -1)).toEqual(['MY_TOOL_MODE=fast']);
+
+    // The script Terminal runs is the constant, byte for byte.
+    expect(fs.readFileSync(script, 'utf8')).toBe(MACOS_BRIDGE_SCRIPT);
+  });
+});
+
 describe('the environment a launched tool gets', () => {
   const parent: NodeJS.ProcessEnv = {
     PATH: '/usr/bin',
@@ -261,6 +508,32 @@ describe('the environment a launched tool gets', () => {
   it('applies per-agent overrides', () => {
     const env = buildLaunchEnv(parent, { MY_TOOL_MODE: 'fast' });
     expect(env['MY_TOOL_MODE']).toBe('fast');
+  });
+
+  it('carries a model provider\'s key only when the launch is an agent', () => {
+    const withKeys = { ...parent, GEMINI_API_KEY: 'g-1', HTTPS_PROXY: 'http://proxy:3128' };
+
+    // A terminal, an editor and a file manager have no model to reach.
+    expect(buildLaunchEnv(withKeys, undefined)['GEMINI_API_KEY']).toBeUndefined();
+
+    const agentEnv = buildLaunchEnv(withKeys, undefined, true);
+    expect(agentEnv['GEMINI_API_KEY']).toBe('g-1');
+    // Useless without it on a network that requires one.
+    expect(agentEnv['HTTPS_PROXY']).toBe('http://proxy:3128');
+  });
+
+  it('never re-admits a denied variable by widening the allowlist', () => {
+    const env = buildLaunchEnv({ ...parent, GH_TOKEN: 'ghp_x' }, undefined, true);
+
+    expect(env['SSH_ASKPASS']).toBeUndefined();
+    expect(env['GIT_SSH_COMMAND']).toBeUndefined();
+    // A key that addresses a git host is not a key that addresses a model,
+    // and which account a push is attributed to is the folder's to decide.
+    expect(env['GH_TOKEN']).toBeUndefined();
+
+    for (const key of Object.keys(env)) {
+      expect([...INHERITED_ENV_KEYS, ...AGENT_PROVIDER_ENV_KEYS]).toContain(key);
+    }
   });
 
   it('refuses an override that would load code before the program runs', () => {
@@ -358,23 +631,100 @@ describe('detecting an installed tool', () => {
   });
 
   it('seeds a definition that takes a prompt and opens a window', () => {
-    const seeded = definitionFromDetected({
-      id: 'claude',
-      label: 'Claude Code',
-      executable: 'claude',
-      resolvedPath: '/usr/bin/claude',
-      configured: false
-    });
+    const seeded = definitionFromDetected(detected('claude'));
 
     expect(seeded).toMatchObject({
       label: 'Claude Code',
       executable: 'claude',
       args: [],
       enabled: true,
-      promptMode: 'argument'
+      promptMode: 'argument',
+      catalogueId: 'claude'
     });
     expect(seeded.id).not.toBe('claude');
-    expect(seeded.terminal).toBe(isWindows ? 'windows-terminal' : 'direct');
+    // A detached spawn on macOS or Linux has no console at all, so an
+    // interactive agent seeded there gets the platform's terminal instead.
+    expect(seeded.terminal).toBe(isWindows ? 'windows-terminal' : 'system-terminal');
+  });
+
+  it('takes the prompt mode from the catalogue rather than assuming one', () => {
+    // The old default said every tool reads its prompt as a bare first
+    // argument. Gemini wants `-i` in front of it, and a tool that takes no
+    // interactive prompt at all must not be handed one.
+    expect(definitionFromDetected(detected('gemini'))).toMatchObject({
+      promptMode: 'flag',
+      promptArgs: ['-i']
+    });
+    expect(definitionFromDetected(detected('aider'))).toMatchObject({ promptMode: 'none' });
+  });
+
+  it('reports every known tool, installed or not', async () => {
+    const runner = new FakeRunner()
+      .otherwise({ exitCode: 1, stdout: '' })
+      .on((executable, args) => executable === finder && args[0] === 'claude', {
+        stdout: '/usr/bin/claude\n'
+      });
+
+    const all = await detectAgents(runner);
+
+    expect(all).toHaveLength(AGENT_CATALOGUE.length);
+    expect(all.find((entry) => entry.id === 'claude')).toMatchObject({
+      installed: true,
+      resolvedPath: '/usr/bin/claude',
+      hasModels: true
+    });
+    // An uninstalled tool is still reported: "not installed, here is where it
+    // lives" answers a question that leaving the row out only raises.
+    expect(all.find((entry) => entry.id === 'gemini')).toMatchObject({
+      installed: false,
+      resolvedPath: ''
+    });
+  });
+});
+
+describe('the known-agent catalogue', () => {
+  it('has a unique id and a reachable-looking home for every entry', () => {
+    const ids = AGENT_CATALOGUE.map((entry) => entry.id);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    for (const entry of AGENT_CATALOGUE) {
+      expect(entry.executable, entry.id).toMatch(/^[\w.-]+$/);
+      expect(entry.homepage, entry.id).toMatch(/^https:\/\//);
+      expect(entry.summary.length, entry.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('gives a flag to every tool whose prompt needs one, and to no other', () => {
+    for (const entry of AGENT_CATALOGUE) {
+      if (entry.promptMode === 'flag') {
+        expect((entry.promptArgs ?? []).length, entry.id).toBeGreaterThan(0);
+      } else {
+        expect(entry.promptArgs, entry.id).toBeUndefined();
+      }
+    }
+  });
+
+  it('never stores a credential in a preset, only the variable to read it from', () => {
+    for (const entry of AGENT_CATALOGUE) {
+      for (const preset of entry.models ?? []) {
+        for (const [key, value] of Object.entries(preset.env ?? {})) {
+          expect(`${key}=${value}`, `${entry.id}/${preset.id}`).not.toMatch(
+            /(KEY|TOKEN|SECRET)=\S/i
+          );
+        }
+        // A key is named so the user knows what to export, never collected.
+        for (const name of preset.requiresEnv ?? []) {
+          expect(AGENT_PROVIDER_ENV_KEYS, `${entry.id}/${preset.id}`).toContain(name);
+        }
+      }
+    }
+  });
+
+  it('keeps every preset id unique within its entry', () => {
+    for (const entry of AGENT_CATALOGUE) {
+      const ids = (entry.models ?? []).map((preset) => preset.id);
+      expect(new Set(ids).size, entry.id).toBe(ids.length);
+    }
   });
 });
 
@@ -814,6 +1164,81 @@ describe('launching, end to end against a fake launcher', () => {
 
     expect(result.launched).toBe(false);
     expect(result.error).toMatch(/not a folder that exists/i);
+  });
+
+  it('resolves the model preset itself, from an id and nothing else', async () => {
+    const worktree = createTempDir('multi-git-agent-wt-');
+    const record: { executable?: string; args?: readonly string[] } = {};
+    const { service, definitions } = await serviceWithHome([
+      definition({ catalogueId: 'claude' })
+    ]);
+
+    const result = await service.launchAgent(
+      {
+        repoPath: worktree,
+        worktreePath: worktree,
+        agentId: 'claude',
+        modelId: 'sonnet'
+      },
+      {
+        runner: new FakeRunner().otherwise({ stdout: '/usr/bin/claude' }),
+        launcher: launcherRecording(record)
+      }
+    );
+
+    expect(result.launched).toBe(true);
+    expect(record.args).toEqual(['--model', 'sonnet']);
+    // Worth recording: it changed what ran.
+    expect(definitions.listLaunches()[0]).toMatchObject({
+      ok: true,
+      modelId: 'sonnet',
+      modelLabel: 'Claude Sonnet'
+    });
+  });
+
+  it('ignores a model id the definition\'s entry does not have', async () => {
+    const worktree = createTempDir('multi-git-agent-wt-');
+    const record: { args?: readonly string[] } = {};
+    const { service } = await serviceWithHome([definition({ catalogueId: 'claude' })]);
+
+    const result = await service.launchAgent(
+      { repoPath: worktree, worktreePath: worktree, agentId: 'claude', modelId: '--evil' },
+      {
+        runner: new FakeRunner().otherwise({ stdout: '/usr/bin/claude' }),
+        launcher: launcherRecording(record)
+      }
+    );
+
+    // The tool's own default is always a valid thing to launch, and nothing a
+    // page sends becomes an argument.
+    expect(result.launched).toBe(true);
+    expect(record.args).toEqual([]);
+  });
+
+  it('says no terminal is installed rather than naming a program nobody has', async () => {
+    const worktree = createTempDir('multi-git-agent-wt-');
+    const { service, definitions } = await serviceWithHome([
+      definition({ terminal: 'system-terminal' })
+    ]);
+
+    const result = await withPlatform('linux', () =>
+      service.launchAgent(
+        { repoPath: worktree, worktreePath: worktree, agentId: 'claude' },
+        {
+          runner: new FakeRunner()
+            .otherwise({ exitCode: 1, stdout: '' })
+            .on((_executable, args) => args[0] === 'claude', { stdout: '/usr/bin/claude' }),
+          launcher: launcherRecording({})
+        }
+      )
+    );
+
+    expect(result.launched).toBe(false);
+    expect(result.error).toMatch(/No terminal window could be opened/);
+    expect(result.error).toMatch(/gnome-terminal/);
+    // Recorded like any other failure, against the command it would have run.
+    expect(definitions.listLaunches()[0]?.ok).toBe(false);
+    expect(definitions.listLaunches()[0]?.commandPreview).toContain('claude');
   });
 
   it('records a failed launch, so the history is not only good news', async () => {

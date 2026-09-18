@@ -259,7 +259,10 @@ function registerIpcHandlers(): void {
       repoPath: worktreePath,
       worktreePath,
       agentId: String(input?.agentId ?? ''),
-      ...(typeof input?.initialPrompt === 'string' ? { initialPrompt: input.initialPrompt } : {})
+      ...(typeof input?.initialPrompt === 'string' ? { initialPrompt: input.initialPrompt } : {}),
+      // An id into the catalogue compiled into this build, resolved there. A
+      // page cannot name a model flag or a base URL of its own this way.
+      ...(typeof input?.modelId === 'string' ? { modelId: input.modelId } : {})
     });
   });
 

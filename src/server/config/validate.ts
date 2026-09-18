@@ -20,6 +20,7 @@
 import type {
   AccountRule,
   AgentLaunchRecord,
+  AgentTerminalMode,
   AppConfig,
   AppSettings,
   BisectCommandDefinition,
@@ -33,7 +34,7 @@ import type {
   SshProfile,
   WindowState
 } from '../../shared/config-types';
-import { EXTERNAL_TOOL_KINDS } from '../../shared/config-types';
+import { AGENT_TERMINAL_MODES, EXTERNAL_TOOL_KINDS } from '../../shared/config-types';
 import {
   DEFAULT_STALE_RULES,
   MAX_INACTIVE_DAYS,
@@ -437,7 +438,7 @@ function validateExternalAgents(
     }
 
     const terminal = record['terminal'];
-    if (terminal !== 'direct' && terminal !== 'windows-terminal' && terminal !== 'powershell') {
+    if (!AGENT_TERMINAL_MODES.includes(terminal as AgentTerminalMode)) {
       issues.push({ path: at, message: `dropped: unknown terminal mode ${String(terminal)}` });
       return;
     }
@@ -450,6 +451,14 @@ function validateExternalAgents(
       return;
     }
 
+    // The same rule for what precedes a prompt, which is part of the same
+    // vector by the time it is spawned.
+    const rawPromptArgs = Array.isArray(record['promptArgs']) ? record['promptArgs'] : [];
+    if (rawPromptArgs.some((value) => typeof value !== 'string' || value.includes('\0'))) {
+      issues.push({ path: at, message: 'dropped: prompt arguments must all be text without null bytes' });
+      return;
+    }
+
     seen.add(record['id']);
 
     const agent: ExternalAgentDefinition = {
@@ -457,12 +466,22 @@ function validateExternalAgents(
       label: isNonEmptyString(record['label']) ? record['label'] : record['id'],
       executable: record['executable'],
       args: rawArgs as string[],
-      terminal,
+      terminal: terminal as AgentTerminalMode,
       enabled: record['enabled'] !== false
     };
 
-    if (record['promptMode'] === 'none' || record['promptMode'] === 'argument') {
+    if (
+      record['promptMode'] === 'none' ||
+      record['promptMode'] === 'argument' ||
+      record['promptMode'] === 'flag'
+    ) {
       agent.promptMode = record['promptMode'];
+    }
+    if (rawPromptArgs.length > 0) {
+      agent.promptArgs = rawPromptArgs as string[];
+    }
+    if (isNonEmptyString(record['catalogueId'])) {
+      agent.catalogueId = record['catalogueId'];
     }
 
     const env = sanitizeEnvOverrides(record['env']);
@@ -736,6 +755,12 @@ function validateAgentLaunches(raw: unknown): AgentLaunchRecord[] | undefined {
         commandPreview: isNonEmptyString(record['commandPreview']) ? record['commandPreview'] : ''
       };
 
+      if (isNonEmptyString(record['modelId'])) {
+        launch.modelId = record['modelId'];
+      }
+      if (isNonEmptyString(record['modelLabel'])) {
+        launch.modelLabel = record['modelLabel'];
+      }
       if (typeof record['pid'] === 'number' && Number.isInteger(record['pid'])) {
         launch.pid = record['pid'];
       }
