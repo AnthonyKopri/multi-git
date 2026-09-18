@@ -1000,254 +1000,309 @@
     </div>
   </div>
 
-  <!-- SSH CONFIGURATION MODAL -->
+  <!-- SSH CONFIGURATION MODAL
+       Laid out like Settings: what you have (the profiles), how to add one,
+       the rules that pick one, and the vault that keeps passphrases, each a
+       section with its own entry down the left. -->
   <div id="ssh-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ssh-modal-title">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h2 id="ssh-modal-title">SSH Profile Manager</h2>
-        <button id="btn-close-ssh-modal" class="btn-close">
+    <div class="modal-card settings-card ssh-card">
+      <div class="modal-header settings-header">
+        <div>
+          <h2 id="ssh-modal-title">SSH Profile Manager</h2>
+          <p class="settings-subtitle">
+            A profile is an SSH key a repository fetches, pulls and pushes with. Commit identity is optional and separate from SSH authentication.
+          </p>
+        </div>
+        <button id="btn-close-ssh-modal" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <div class="modal-body">
-        <p class="modal-desc">
-          Add an SSH key profile, then select it for the repositories that should use it for fetch, pull, and push. Commit identity is optional and separate from SSH authentication.
-        </p>
+      <div class="settings-layout">
+        <nav id="ssh-nav" class="settings-nav" aria-label="SSH sections"></nav>
+        <div class="modal-body settings-body" id="ssh-body">
 
-        <section id="vault-status-card" class="vault-status-card" data-vault-state="uninitialized">
-          <div class="vault-status-icon" aria-hidden="true">
-            <span id="vault-status-icon" class="material-symbols-outlined">lock</span>
-          </div>
-          <div class="vault-status-content">
-            <p id="vault-status-text" class="vault-status">Passphrase vault is not set up</p>
-            <p id="vault-status-detail" class="vault-status-detail">A vault is optional. Set one up only if you want Multi-Git to save SSH passphrases on this computer.</p>
-          </div>
-          <div class="vault-controls">
-            <button type="button" id="btn-setup-vault" class="btn btn-primary btn-sm">Set Up Vault</button>
-            <button type="button" id="btn-unlock-vault" class="btn btn-secondary btn-sm hidden">Unlock Vault</button>
-            <button type="button" id="btn-lock-vault" class="btn btn-secondary btn-sm hidden">Lock Vault</button>
-          </div>
-        </section>
-
-        <section class="ssh-key-setup">
-          <div>
-            <h3>Add an SSH key</h3>
-            <p class="modal-desc">Choose the option that matches what you have today. Both options create a profile you can select for a repository.</p>
-          </div>
-          <div class="ssh-key-setup-actions">
-            <button type="button" id="btn-show-add-key" class="btn btn-secondary" aria-expanded="false" aria-controls="ssh-existing-key-section">
-              <span class="material-symbols-outlined">folder_open</span>
-              <span>Add Key From File</span>
-            </button>
-            <button type="button" id="btn-show-generate-key" class="btn btn-primary" aria-expanded="false" aria-controls="ssh-generate-section">
-              <span class="material-symbols-outlined">vpn_key</span>
-              <span>Generate Key</span>
-            </button>
-          </div>
-        </section>
-
-        <section id="ssh-existing-key-section" class="ssh-key-form-section hidden">
-          <div class="ssh-key-form-header">
-            <div>
-              <h3 id="ssh-existing-key-heading">Add an Existing Key</h3>
-              <p class="modal-desc">Point Multi-Git to a private key file you already use, then test and save its profile.</p>
-            </div>
-            <button type="button" id="btn-hide-add-key" class="btn-close" aria-label="Close existing key form">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <form id="ssh-profile-form" class="modal-form">
-            <input type="hidden" id="ssh-profile-id">
-
-            <div class="form-group">
-              <label for="ssh-label">Profile Name / Label</label>
-              <input type="text" id="ssh-label" placeholder="e.g. Work GitLab, Personal GitHub" required>
-            </div>
-
-            <div class="form-group">
-              <label for="ssh-key-path">Path to Private Key</label>
-              <input type="text" id="ssh-key-path" placeholder="e.g. C:\Users\Username\.ssh\id_ed25519" required>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="ssh-user-name">Commit Name (optional)</label>
-                <input type="text" id="ssh-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+          <section class="settings-section" data-section="profiles" aria-labelledby="ssh-section-profiles">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">key</span></span>
+              <div>
+                <h3 id="ssh-section-profiles">Profiles</h3>
+                <p class="settings-section-subtitle">Pick one for a repository from the SSH Key menu in the header.</p>
               </div>
-              <div class="form-group">
-                <label for="ssh-user-email">Commit Email (optional)</label>
-                <input type="email" id="ssh-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+            </header>
+            <div class="settings-group ssh-profiles-group">
+              <div class="table-wrapper">
+                <table class="ssh-profiles-table">
+                  <colgroup>
+                    <col style="width: 21%;">
+                    <col style="width: 39%;">
+                    <col style="width: 12%;">
+                    <col style="width: 28%;">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Profile Name</th>
+                      <th>Key Path</th>
+                      <th>Password</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ssh-profiles-table-body">
+                    <!-- Rendered dynamically -->
+                  </tbody>
+                </table>
               </div>
             </div>
+            <div class="settings-group">
+              <label class="settings-item" id="ssh-config-setting-row">
+                <span class="settings-item-text">
+                  <span class="settings-item-label">Keep ~/.ssh/config in sync</span>
+                  <span class="settings-item-desc">Multi-Git maintains a managed block there, so terminals and IDEs use the same key as the active profile. Turn off if you manage your SSH config yourself.</span>
+                </span>
+                <span class="settings-item-control">
+                  <input type="checkbox" id="ssh-manage-config-checkbox" class="settings-switch" role="switch">
+                </span>
+              </label>
+            </div>
+          </section>
 
-            <div class="form-group">
-              <label for="ssh-passphrase">SSH Passphrase (optional)</label>
-              <div class="password-field">
-                <input type="password" id="ssh-passphrase" placeholder="Enter passphrase to test or store">
-                <button type="button" id="btn-ssh-passphrase-reveal" class="password-reveal" aria-controls="ssh-passphrase" aria-pressed="false">
-                  <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+          <section class="settings-section" data-section="add" aria-labelledby="ssh-section-add">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">add_circle</span></span>
+              <div>
+                <h3 id="ssh-section-add">Add a key</h3>
+                <p class="settings-section-subtitle">Both options create a profile you can select for a repository.</p>
+              </div>
+            </header>
+            <div class="settings-group">
+              <div class="settings-item">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Use a key you already have</span>
+                  <span class="settings-item-desc">Point Multi-Git at a private key file, then test and save it.</span>
+                </div>
+                <div class="settings-item-control">
+                  <button type="button" id="btn-show-add-key" class="btn btn-secondary" aria-expanded="false" aria-controls="ssh-existing-key-section">
+                    <span class="material-symbols-outlined">folder_open</span>
+                    <span>Add Key From File</span>
+                  </button>
+                </div>
+              </div>
+              <div class="settings-item">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Create a new key</span>
+                  <span class="settings-item-desc">Generates a key pair and its profile. Copy the public key to your Git host afterwards.</span>
+                </div>
+                <div class="settings-item-control">
+                  <button type="button" id="btn-show-generate-key" class="btn btn-primary" aria-expanded="false" aria-controls="ssh-generate-section">
+                    <span class="material-symbols-outlined">vpn_key</span>
+                    <span>Generate Key</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <section id="ssh-existing-key-section" class="ssh-key-form-section hidden">
+              <div class="ssh-key-form-header">
+                <div>
+                  <h3 id="ssh-existing-key-heading">Add an Existing Key</h3>
+                  <p class="modal-desc">Point Multi-Git to a private key file you already use, then test and save its profile.</p>
+                </div>
+                <button type="button" id="btn-hide-add-key" class="btn-close" aria-label="Close existing key form">
+                  <span class="material-symbols-outlined">close</span>
                 </button>
               </div>
-            </div>
 
-            <div class="keep-password-row">
-              <input type="checkbox" id="ssh-keep-password">
-              <label for="ssh-keep-password">Save passphrase in the encrypted vault</label>
-            </div>
+              <form id="ssh-profile-form" class="modal-form">
+                <input type="hidden" id="ssh-profile-id">
 
-            <div class="form-actions">
-              <button type="button" id="btn-test-ssh-form" class="btn btn-secondary">Test Key</button>
-              <button type="button" id="btn-cancel-ssh" class="btn btn-secondary">Close Form</button>
-              <button type="submit" id="btn-save-ssh" class="btn btn-primary">Save Profile</button>
-            </div>
-          </form>
-        </section>
+                <div class="form-group">
+                  <label for="ssh-label">Profile Name / Label</label>
+                  <input type="text" id="ssh-label" placeholder="e.g. Work GitLab, Personal GitHub" required>
+                </div>
 
-        <section id="ssh-generate-section" class="ssh-key-form-section generator-section hidden">
-          <div class="ssh-key-form-header">
-            <div>
-              <h3>Generate a New SSH Key</h3>
-              <p class="modal-desc">Create a new key pair, register its profile, then copy the public key to your Git host.</p>
-            </div>
-            <button type="button" id="btn-hide-generate-key" class="btn-close" aria-label="Close key generator">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div id="ssh-generate-feedback" class="inline-feedback hidden"></div>
+                <div class="form-group">
+                  <label for="ssh-key-path">Path to Private Key</label>
+                  <input type="text" id="ssh-key-path" placeholder="e.g. C:\Users\Username\.ssh\id_ed25519" required>
+                </div>
 
-          <form id="ssh-generate-form" class="modal-form">
-            <div class="form-group">
-              <label for="ssh-generate-label">Profile Name / Label</label>
-              <input type="text" id="ssh-generate-label" placeholder="e.g. New GitHub Key" required>
-            </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="ssh-user-name">Commit Name (optional)</label>
+                    <input type="text" id="ssh-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+                  </div>
+                  <div class="form-group">
+                    <label for="ssh-user-email">Commit Email (optional)</label>
+                    <input type="email" id="ssh-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+                  </div>
+                </div>
 
-            <div class="form-group">
-              <label for="ssh-generate-key-name">Key File Name (optional)</label>
-              <input type="text" id="ssh-generate-key-name" placeholder="e.g. id_ed25519_work">
-            </div>
+                <div class="form-group">
+                  <label for="ssh-passphrase">SSH Passphrase (optional)</label>
+                  <div class="password-field">
+                    <input type="password" id="ssh-passphrase" placeholder="Enter passphrase to test or store">
+                    <button type="button" id="btn-ssh-passphrase-reveal" class="password-reveal" aria-controls="ssh-passphrase" aria-pressed="false">
+                      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                    </button>
+                  </div>
+                </div>
 
-            <div class="form-group">
-              <label for="ssh-generate-key-type">Key Type</label>
-              <select id="ssh-generate-key-type">
-                <option value="ed25519" selected>ed25519 (recommended)</option>
-                <option value="rsa">RSA 4096</option>
-              </select>
-            </div>
+                <div class="keep-password-row">
+                  <input type="checkbox" id="ssh-keep-password">
+                  <label for="ssh-keep-password">Save passphrase in the encrypted vault</label>
+                </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label for="ssh-generate-user-name">Commit Name (optional)</label>
-                <input type="text" id="ssh-generate-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
-              </div>
-              <div class="form-group">
-                <label for="ssh-generate-user-email">Commit Email (optional)</label>
-                <input type="email" id="ssh-generate-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
-              </div>
-            </div>
+                <div class="form-actions">
+                  <button type="button" id="btn-test-ssh-form" class="btn btn-secondary">Test Key</button>
+                  <button type="button" id="btn-cancel-ssh" class="btn btn-secondary">Close Form</button>
+                  <button type="submit" id="btn-save-ssh" class="btn btn-primary">Save Profile</button>
+                </div>
+              </form>
+            </section>
 
-            <div class="form-group">
-              <label for="ssh-generate-passphrase">Passphrase (optional)</label>
-              <div class="password-field">
-                <input type="password" id="ssh-generate-passphrase" placeholder="Leave empty for no passphrase">
-                <button type="button" id="btn-ssh-generate-passphrase-reveal" class="password-reveal" aria-controls="ssh-generate-passphrase" aria-pressed="false">
-                  <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+            <section id="ssh-generate-section" class="ssh-key-form-section generator-section hidden">
+              <div class="ssh-key-form-header">
+                <div>
+                  <h3>Generate a New SSH Key</h3>
+                  <p class="modal-desc">Create a new key pair, register its profile, then copy the public key to your Git host.</p>
+                </div>
+                <button type="button" id="btn-hide-generate-key" class="btn-close" aria-label="Close key generator">
+                  <span class="material-symbols-outlined">close</span>
                 </button>
               </div>
-            </div>
+              <div id="ssh-generate-feedback" class="inline-feedback hidden"></div>
 
-            <div class="keep-password-row">
-              <input type="checkbox" id="ssh-generate-keep-password">
-              <label for="ssh-generate-keep-password">Save passphrase in the encrypted vault</label>
-            </div>
+              <form id="ssh-generate-form" class="modal-form">
+                <div class="form-group">
+                  <label for="ssh-generate-label">Profile Name / Label</label>
+                  <input type="text" id="ssh-generate-label" placeholder="e.g. New GitHub Key" required>
+                </div>
 
-            <div class="form-actions">
-              <button type="submit" id="btn-generate-ssh" class="btn btn-primary">
-                <span class="material-symbols-outlined">vpn_key</span>
-                <span>Create Key + Profile</span>
-              </button>
-            </div>
-          </form>
+                <div class="form-group">
+                  <label for="ssh-generate-key-name">Key File Name (optional)</label>
+                  <input type="text" id="ssh-generate-key-name" placeholder="e.g. id_ed25519_work">
+                </div>
 
-          <div id="ssh-generated-result" class="generated-result hidden">
-            <h4>Last Generated Key</h4>
-            <div class="generated-result-grid">
-              <div class="form-group">
-                <label for="ssh-generated-private">Private Key</label>
-                <input type="text" id="ssh-generated-private" readonly>
+                <div class="form-group">
+                  <label for="ssh-generate-key-type">Key Type</label>
+                  <select id="ssh-generate-key-type">
+                    <option value="ed25519" selected>ed25519 (recommended)</option>
+                    <option value="rsa">RSA 4096</option>
+                  </select>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="ssh-generate-user-name">Commit Name (optional)</label>
+                    <input type="text" id="ssh-generate-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+                  </div>
+                  <div class="form-group">
+                    <label for="ssh-generate-user-email">Commit Email (optional)</label>
+                    <input type="email" id="ssh-generate-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="ssh-generate-passphrase">Passphrase (optional)</label>
+                  <div class="password-field">
+                    <input type="password" id="ssh-generate-passphrase" placeholder="Leave empty for no passphrase">
+                    <button type="button" id="btn-ssh-generate-passphrase-reveal" class="password-reveal" aria-controls="ssh-generate-passphrase" aria-pressed="false">
+                      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="keep-password-row">
+                  <input type="checkbox" id="ssh-generate-keep-password">
+                  <label for="ssh-generate-keep-password">Save passphrase in the encrypted vault</label>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" id="btn-generate-ssh" class="btn btn-primary">
+                    <span class="material-symbols-outlined">vpn_key</span>
+                    <span>Create Key + Profile</span>
+                  </button>
+                </div>
+              </form>
+
+              <div id="ssh-generated-result" class="generated-result hidden">
+                <h4>Last Generated Key</h4>
+                <div class="generated-result-grid">
+                  <div class="form-group">
+                    <label for="ssh-generated-private">Private Key</label>
+                    <input type="text" id="ssh-generated-private" readonly>
+                  </div>
+                  <div class="form-group">
+                    <label for="ssh-generated-public">Public Key</label>
+                    <input type="text" id="ssh-generated-public" readonly>
+                  </div>
+                </div>
+                <div class="form-actions generated-actions">
+                  <button type="button" id="btn-open-generated-location" class="btn btn-secondary">Open Key Folder</button>
+                  <button type="button" id="btn-copy-generated-private-path" class="btn btn-secondary">Copy Private Key Path</button>
+                  <button type="button" id="btn-copy-generated-public-path" class="btn btn-secondary">Copy Public Key Path</button>
+                  <button type="button" id="btn-copy-generated-public-key" class="btn btn-secondary">Copy Public Key</button>
+                </div>
               </div>
-              <div class="form-group">
-                <label for="ssh-generated-public">Public Key</label>
-                <input type="text" id="ssh-generated-public" readonly>
+            </section>
+          </section>
+
+          <section class="settings-section" data-section="rules" aria-labelledby="ssh-section-rules">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">rule</span></span>
+              <div>
+                <h3 id="ssh-section-rules">Auto-select rules</h3>
+                <p class="settings-section-subtitle">
+                  Pick the right profile when a repository opens, from its origin remote URL.
+                  For example <code>github.com/your-org</code> &rarr; Work account.
+                </p>
               </div>
+            </header>
+            <div class="settings-group">
+              <div class="settings-item rule-add-row">
+                <input type="text" id="rule-match-input" placeholder="Remote URL contains… e.g. github.com/your-org" autocomplete="off" aria-label="Remote URL contains">
+                <div class="select-wrapper rule-profile-wrapper">
+                  <select id="rule-profile-select" aria-label="Profile to use">
+                    <!-- Accounts rendered dynamically -->
+                  </select>
+                </div>
+                <button type="button" id="btn-add-rule" class="btn btn-secondary">
+                  <span class="material-symbols-outlined">add</span>
+                  <span>Add Rule</span>
+                </button>
+              </div>
+              <ul id="account-rules-list" class="account-rules-list">
+                <li class="empty-state">No auto-select rules</li>
+              </ul>
             </div>
-            <div class="form-actions generated-actions">
-              <button type="button" id="btn-open-generated-location" class="btn btn-secondary">Open Key Folder</button>
-              <button type="button" id="btn-copy-generated-private-path" class="btn btn-secondary">Copy Private Key Path</button>
-              <button type="button" id="btn-copy-generated-public-path" class="btn btn-secondary">Copy Public Key Path</button>
-              <button type="button" id="btn-copy-generated-public-key" class="btn btn-secondary">Copy Public Key</button>
-            </div>
-          </div>
-        </section>
+          </section>
 
-        <!-- SSH config integration setting -->
-        <div class="keep-password-row" id="ssh-config-setting-row" title="When enabled, Multi-Git maintains a managed block in ~/.ssh/config so other tools (terminals, IDEs) use the same key as the active profile.">
-          <input type="checkbox" id="ssh-manage-config-checkbox">
-          <label for="ssh-manage-config-checkbox">Keep ~/.ssh/config in sync with the active key (uncheck if you manage your SSH config yourself)</label>
-        </div>
-
-        <!-- Registered Keys Table/List -->
-        <div class="profiles-list-section">
-          <h3>Registered Profiles</h3>
-          <div class="table-wrapper">
-            <table class="ssh-profiles-table">
-              <colgroup>
-                <col style="width: 21%;">
-                <col style="width: 39%;">
-                <col style="width: 12%;">
-                <col style="width: 28%;">
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>Profile Name</th>
-                  <th>Key Path</th>
-                  <th>Password</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="ssh-profiles-table-body">
-                <!-- Rendered dynamically -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Account auto-select rules -->
-        <div class="profiles-list-section">
-          <h3>Auto-Select Rules</h3>
-          <p class="modal-desc">
-            Automatically pick the right account when a repository opens, based on its origin remote URL.
-            Example: <code>github.com/your-org</code> &rarr; Work account.
-          </p>
-          <div class="rule-add-row">
-            <input type="text" id="rule-match-input" placeholder="Remote URL contains... e.g. github.com/your-org" autocomplete="off">
-            <div class="select-wrapper" style="width: 200px; flex-shrink: 0;">
-              <select id="rule-profile-select">
-                <!-- Accounts rendered dynamically -->
-              </select>
-            </div>
-            <button type="button" id="btn-add-rule" class="btn btn-secondary btn-sm">
-              <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
-              <span>Add Rule</span>
-            </button>
-          </div>
-          <ul id="account-rules-list" class="account-rules-list">
-            <li class="empty-state">No auto-select rules</li>
-          </ul>
+          <section class="settings-section" data-section="vault" aria-labelledby="ssh-section-vault">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">lock</span></span>
+              <div>
+                <h3 id="ssh-section-vault">Passphrase vault</h3>
+                <p class="settings-section-subtitle">Optional. Keeps SSH passphrases encrypted on this computer, behind one master key.</p>
+              </div>
+            </header>
+            <section id="vault-status-card" class="vault-status-card" data-vault-state="uninitialized">
+              <div class="vault-status-icon" aria-hidden="true">
+                <span id="vault-status-icon" class="material-symbols-outlined">lock</span>
+              </div>
+              <div class="vault-status-content">
+                <p id="vault-status-text" class="vault-status">Passphrase vault is not set up</p>
+                <p id="vault-status-detail" class="vault-status-detail">A vault is optional. Set one up only if you want Multi-Git to save SSH passphrases on this computer.</p>
+              </div>
+              <div class="vault-controls">
+                <button type="button" id="btn-setup-vault" class="btn btn-primary btn-sm">Set Up Vault</button>
+                <button type="button" id="btn-unlock-vault" class="btn btn-secondary btn-sm hidden">Unlock Vault</button>
+                <button type="button" id="btn-lock-vault" class="btn btn-secondary btn-sm hidden">Lock Vault</button>
+              </div>
+            </section>
+          </section>
         </div>
       </div>
     </div>
   </div>
+
 
   <!-- VAULT FIRST-TIME SETUP DIALOG -->
   <div id="vault-setup-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="vault-setup-modal-title">
@@ -1339,67 +1394,88 @@
     </div>
   </div>
 
-  <!-- CLONE REPOSITORY MODAL -->
+  <!-- CLONE REPOSITORY MODAL
+       Three cards in the order the questions come: what to clone, where it
+       goes, and which key fetches it. The buttons stay pinned at the bottom
+       so Clone is not scrolled out of sight by the GitHub browser. -->
   <div id="clone-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="clone-modal-title">
-    <div class="modal-card">
+    <div class="modal-card form-dialog">
       <div class="modal-header">
-        <h2 id="clone-modal-title">Clone Repository</h2>
-        <button id="btn-close-clone-modal" class="btn-close">
+        <div>
+          <h2 id="clone-modal-title">Clone Repository</h2>
+          <p class="form-dialog-subtitle">Paste a remote URL, or pick one of your GitHub repositories.</p>
+        </div>
+        <button id="btn-close-clone-modal" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-desc">Paste a remote URL or browse GitHub using your signed-in GitHub CLI account.</p>
         <form id="clone-form" class="modal-form">
-          <div class="form-group">
-            <label for="clone-url">Repository URL</label>
-            <input type="text" id="clone-url" placeholder="git@github.com:owner/repo.git" required autocomplete="off">
-          </div>
-          <div class="clone-browser-info" role="note" aria-label="Optional GitHub repository browsing">
-            <p>Cloning by URL works without GitHub CLI. Install the optional CLI to browse GitHub repositories and choose one here.</p>
-            <p id="clone-gh-status" role="status" aria-live="polite">Checking GitHub CLI…</p>
-            <a id="clone-install-gh" class="btn btn-secondary btn-sm hidden" href="https://cli.github.com/" target="_blank" rel="noopener noreferrer">Install GitHub CLI</a>
-            <button id="clone-check-gh" type="button" class="btn btn-secondary btn-sm">Check again</button>
-          </div>
-          <details id="clone-browser">
-            <summary>Browse GitHub repositories</summary>
-            <div class="modal-form">
-              <label for="clone-owner">GitHub user or organization (optional)</label>
-              <input id="clone-owner" type="text" placeholder="Signed-in user when empty" autocomplete="off">
-              <button id="clone-load-repositories" type="button" class="btn btn-secondary">Load repositories</button>
-              <label for="clone-repository-filter">Filter loaded repositories</label>
-              <input id="clone-repository-filter" type="text" placeholder="Repository name or description">
-              <label for="clone-protocol">Clone protocol</label>
-              <select id="clone-protocol"><option value="ssh">SSH</option><option value="https">HTTPS</option></select>
-              <p id="clone-browser-status" role="status" aria-live="polite">Lists up to 100 repositories owned by this user or organization. GitHub CLI authentication is separate from your SSH profile.</p>
-              <div id="clone-repository-results" class="clone-repository-results"></div>
+          <section class="form-card" aria-labelledby="clone-card-source">
+            <h3 class="form-card-title" id="clone-card-source"><span class="material-symbols-outlined" aria-hidden="true">link</span>Repository</h3>
+            <div class="form-group">
+              <label for="clone-url">Repository URL</label>
+              <input type="text" id="clone-url" placeholder="git@github.com:owner/repo.git" required autocomplete="off">
             </div>
-          </details>
+            <details id="clone-browser" class="form-card-details">
+              <summary>Browse GitHub repositories</summary>
+              <div class="clone-browser-info" role="note" aria-label="Optional GitHub repository browsing">
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                <p id="clone-gh-status" role="status" aria-live="polite">Checking GitHub CLI…</p>
+                <a id="clone-install-gh" class="btn btn-secondary btn-sm hidden" href="https://cli.github.com/" target="_blank" rel="noopener noreferrer">Install GitHub CLI</a>
+                <button id="clone-check-gh" type="button" class="btn btn-secondary btn-sm">Check again</button>
+              </div>
+              <div class="clone-browser-grid">
+                <div class="form-group">
+                  <label for="clone-owner">GitHub user or organization</label>
+                  <div class="input-with-button">
+                    <input id="clone-owner" type="text" placeholder="You, when empty" autocomplete="off">
+                    <button id="clone-load-repositories" type="button" class="btn btn-secondary btn-sm">Load repositories</button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="clone-protocol">Clone over</label>
+                  <select id="clone-protocol"><option value="ssh">SSH</option><option value="https">HTTPS</option></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="clone-repository-filter">Filter loaded repositories</label>
+                <input id="clone-repository-filter" type="text" placeholder="Repository name or description">
+              </div>
+              <p id="clone-browser-status" class="field-hint" role="status" aria-live="polite">Lists up to 100 repositories owned by this user or organization. GitHub CLI authentication is separate from your SSH profile.</p>
+              <div id="clone-repository-results" class="clone-repository-results"></div>
+            </details>
+          </section>
           <div id="clone-feedback" class="inline-feedback hidden"></div>
 
-          <div class="form-group">
-            <label for="clone-parent-dir">Clone into folder</label>
-            <div class="input-with-button">
-              <input type="text" id="clone-parent-dir" placeholder="Select a destination folder..." required>
-              <button type="button" id="btn-clone-browse" class="btn btn-secondary btn-sm">Browse…</button>
+          <section class="form-card" aria-labelledby="clone-card-destination">
+            <h3 class="form-card-title" id="clone-card-destination"><span class="material-symbols-outlined" aria-hidden="true">folder</span>Destination</h3>
+            <div class="form-group">
+              <label for="clone-parent-dir">Clone into folder</label>
+              <div class="input-with-button">
+                <input type="text" id="clone-parent-dir" placeholder="Select a destination folder..." required>
+                <button type="button" id="btn-clone-browse" class="btn btn-secondary btn-sm">Browse…</button>
+              </div>
             </div>
-          </div>
-
-          <div class="form-group">
-            <label for="clone-folder-name">Folder name (optional)</label>
-            <input type="text" id="clone-folder-name" placeholder="Derived from URL when empty" autocomplete="off">
-          </div>
-
-          <div class="form-group">
-            <label for="clone-profile-select">SSH Key Profile</label>
-            <div class="select-wrapper">
-              <select id="clone-profile-select">
-                <option value="">Default (System SSH)</option>
-              </select>
+            <div class="form-group">
+              <label for="clone-folder-name">Folder name <span class="label-optional">optional</span></label>
+              <input type="text" id="clone-folder-name" placeholder="Taken from the URL when empty" autocomplete="off">
             </div>
-          </div>
+          </section>
 
-          <div class="form-actions">
+          <section class="form-card" aria-labelledby="clone-card-auth">
+            <h3 class="form-card-title" id="clone-card-auth"><span class="material-symbols-outlined" aria-hidden="true">key</span>Authentication</h3>
+            <div class="form-group">
+              <label for="clone-profile-select">SSH Key Profile</label>
+              <div class="select-wrapper">
+                <select id="clone-profile-select">
+                  <option value="">Default (System SSH)</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <div class="form-actions form-dialog-actions">
             <button type="button" id="btn-cancel-clone" class="btn btn-secondary">Cancel</button>
             <button type="submit" id="btn-start-clone" class="btn btn-primary">
               <span class="material-symbols-outlined">cloud_download</span>
@@ -1501,76 +1577,91 @@
     </div>
   </div>
 
-  <!-- NEW REPOSITORY MODAL -->
+  <!-- NEW REPOSITORY MODAL
+       Cards for where it lives, whether it goes to GitHub, and what goes in it
+       before the first commit, with the buttons pinned at the bottom. -->
   <div id="new-repo-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-repo-modal-title">
-    <div class="modal-card">
+    <div class="modal-card form-dialog">
       <div class="modal-header">
-        <h2 id="new-repo-modal-title">New Repository</h2>
-        <button id="btn-close-new-repo-modal" class="btn-close">
+        <div>
+          <h2 id="new-repo-modal-title">New Repository</h2>
+          <p class="form-dialog-subtitle">Pick a folder, then choose what Multi-Git puts in it before your first commit.</p>
+        </div>
+        <button id="btn-close-new-repo-modal" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-desc">Pick a folder, then choose what Multi-Git should put in it before your first commit.</p>
         <div id="new-repo-feedback" class="inline-feedback hidden"></div>
 
         <form id="new-repo-form" class="modal-form">
-          <div class="form-group">
-            <label for="new-repo-path">Repository folder</label>
-            <div class="input-with-button">
-              <input type="text" id="new-repo-path" placeholder="Select or type a folder..." required autocomplete="off">
-              <button type="button" id="btn-new-repo-browse" class="btn btn-secondary btn-sm">Browse…</button>
-            </div>
-            <p id="new-repo-folder-hint" class="field-hint hidden"></p>
-          </div>
-
-          <div class="form-group">
-            <label for="new-repo-visibility">Visibility</label>
-            <div class="select-wrapper">
-              <select id="new-repo-visibility">
-                <option value="private" selected>Private</option>
-                <option value="public">Public</option>
-              </select>
-            </div>
-            <div class="keep-password-row">
-              <input type="checkbox" id="new-repo-create-remote">
-              <label for="new-repo-create-remote">Create it on GitHub with this visibility</label>
-            </div>
-            <p id="new-repo-gh-status" class="field-hint">Looking for the GitHub CLI…</p>
-          </div>
-
-          <div class="form-group">
-            <label for="new-repo-license">License</label>
-            <div class="select-wrapper">
-              <select id="new-repo-license">
-                <option value="none" selected>None</option>
-              </select>
-            </div>
-            <p id="new-repo-license-summary" class="field-hint hidden"></p>
-          </div>
-
-          <div id="new-repo-license-fields" class="form-row hidden">
+          <section class="form-card" aria-labelledby="new-repo-card-folder">
+            <h3 class="form-card-title" id="new-repo-card-folder"><span class="material-symbols-outlined" aria-hidden="true">folder</span>Folder</h3>
             <div class="form-group">
-              <label for="new-repo-license-year">Copyright year</label>
-              <input type="text" id="new-repo-license-year" placeholder="2026" autocomplete="off">
+              <label for="new-repo-path">Repository folder</label>
+              <div class="input-with-button">
+                <input type="text" id="new-repo-path" placeholder="Select or type a folder..." required autocomplete="off">
+                <button type="button" id="btn-new-repo-browse" class="btn btn-secondary btn-sm">Browse…</button>
+              </div>
+              <p id="new-repo-folder-hint" class="field-hint hidden"></p>
             </div>
+          </section>
+
+          <section class="form-card" aria-labelledby="new-repo-card-github">
+            <h3 class="form-card-title" id="new-repo-card-github"><span class="material-symbols-outlined" aria-hidden="true">cloud_upload</span>GitHub</h3>
+            <label class="form-switch-row" for="new-repo-create-remote">
+              <span class="form-switch-text">
+                <span class="form-switch-label">Create it on GitHub too</span>
+                <span id="new-repo-gh-status" class="field-hint">Looking for the GitHub CLI…</span>
+              </span>
+              <input type="checkbox" id="new-repo-create-remote" class="settings-switch" role="switch">
+            </label>
             <div class="form-group">
-              <label for="new-repo-license-holder">Copyright holder</label>
-              <input type="text" id="new-repo-license-holder" placeholder="e.g. Jane Doe" autocomplete="off">
+              <label for="new-repo-visibility">Visibility</label>
+              <div class="select-wrapper">
+                <select id="new-repo-visibility">
+                  <option value="private" selected>Private</option>
+                  <option value="public">Public</option>
+                </select>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div class="form-group">
-            <label for="new-repo-gitignore">.gitignore</label>
-            <div class="select-wrapper">
-              <select id="new-repo-gitignore">
-                <option value="none" selected>None</option>
-              </select>
+          <section class="form-card" aria-labelledby="new-repo-card-files">
+            <h3 class="form-card-title" id="new-repo-card-files"><span class="material-symbols-outlined" aria-hidden="true">note_stack</span>Starting files</h3>
+            <div class="form-group">
+              <label for="new-repo-license">License</label>
+              <div class="select-wrapper">
+                <select id="new-repo-license">
+                  <option value="none" selected>None</option>
+                </select>
+              </div>
+              <p id="new-repo-license-summary" class="field-hint hidden"></p>
             </div>
-            <p id="new-repo-gitignore-hint" class="field-hint hidden"></p>
-          </div>
 
-          <div class="form-actions">
+            <div id="new-repo-license-fields" class="form-row hidden">
+              <div class="form-group">
+                <label for="new-repo-license-year">Copyright year</label>
+                <input type="text" id="new-repo-license-year" placeholder="2026" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="new-repo-license-holder">Copyright holder</label>
+                <input type="text" id="new-repo-license-holder" placeholder="e.g. Jane Doe" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="new-repo-gitignore">.gitignore</label>
+              <div class="select-wrapper">
+                <select id="new-repo-gitignore">
+                  <option value="none" selected>None</option>
+                </select>
+              </div>
+              <p id="new-repo-gitignore-hint" class="field-hint hidden"></p>
+            </div>
+          </section>
+
+          <div class="form-actions form-dialog-actions">
             <button type="button" id="btn-cancel-new-repo" class="btn btn-secondary">Cancel</button>
             <button type="submit" id="btn-create-new-repo" class="btn btn-primary">
               <span class="material-symbols-outlined">add_box</span>
@@ -1642,8 +1733,22 @@
             <label for="signing-allowed-signers">Allowed signers file</label>
             <input type="text" id="signing-allowed-signers" placeholder="Needed to verify SSH signatures" autocomplete="off">
           </div>
-          <label class="checkbox-row"><input type="checkbox" id="signing-default-commits"> Sign commits by default</label>
-          <label class="checkbox-row"><input type="checkbox" id="signing-default-tags"> Sign tags by default</label>
+          <div class="form-card form-card-flush">
+            <label class="form-switch-row" for="signing-default-commits">
+              <span class="form-switch-text">
+                <span class="form-switch-label">Sign commits by default</span>
+                <span class="field-hint">Sets commit.gpgsign for this repository, so Git signs every commit made here.</span>
+              </span>
+              <input type="checkbox" id="signing-default-commits" class="settings-switch" role="switch">
+            </label>
+            <label class="form-switch-row" for="signing-default-tags">
+              <span class="form-switch-text">
+                <span class="form-switch-label">Sign tags by default</span>
+                <span class="field-hint">Sets tag.gpgsign, so annotated tags made here are signed.</span>
+              </span>
+              <input type="checkbox" id="signing-default-tags" class="settings-switch" role="switch">
+            </label>
+          </div>
           <div class="form-actions">
             <button type="button" id="btn-cancel-signing" class="btn btn-secondary">Cancel</button>
             <button type="submit" id="btn-save-signing" class="btn btn-primary">Save</button>
@@ -1714,7 +1819,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <h2 id="search-modal-title">Search and Compare</h2>
-        <button id="btn-close-search-modal" class="btn-close">
+        <button id="btn-close-search-modal" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
@@ -1725,15 +1830,36 @@
         </div>
 
         <div id="search-commits-pane">
-          <div class="search-filters">
-            <input type="text" id="search-query" placeholder="Message or object name" autocomplete="off" aria-label="Message or object name">
-            <input type="text" id="search-author" placeholder="Author" autocomplete="off" aria-label="Author">
-            <input type="text" id="search-paths" placeholder="Paths, comma separated" autocomplete="off" aria-label="Paths">
-            <input type="text" id="search-since" placeholder="Since (e.g. 2 weeks ago)" autocomplete="off" aria-label="Since">
-            <input type="text" id="search-until" placeholder="Until" autocomplete="off" aria-label="Until">
-            <button id="btn-run-search" class="btn btn-primary btn-sm">Search</button>
+          <div class="panel-card search-form">
+            <label class="search-field search-field-wide">
+              <span>Message or object name</span>
+              <input type="text" id="search-query" placeholder="fix login, or a commit hash" autocomplete="off">
+            </label>
+            <label class="search-field">
+              <span>Author</span>
+              <input type="text" id="search-author" placeholder="Name or email" autocomplete="off">
+            </label>
+            <label class="search-field">
+              <span>Paths</span>
+              <input type="text" id="search-paths" placeholder="Comma separated" autocomplete="off">
+            </label>
+            <label class="search-field">
+              <span>Since</span>
+              <input type="text" id="search-since" placeholder="e.g. 2 weeks ago" autocomplete="off">
+            </label>
+            <label class="search-field">
+              <span>Until</span>
+              <input type="text" id="search-until" placeholder="e.g. yesterday" autocomplete="off">
+            </label>
+            <div class="search-form-footer">
+              <p class="field-hint" id="search-summary">Every filter is optional, and they combine.</p>
+              <button id="btn-run-search" class="btn btn-primary btn-sm">
+                <span class="material-symbols-outlined">search</span>
+                <span>Search</span>
+              </button>
+            </div>
           </div>
-          <p class="modal-desc" id="search-summary">Every filter is optional, and they combine.</p>
+          <h4 class="panel-list-label">Results</h4>
           <ul id="search-results" class="recovery-list">
             <li class="empty-state">No search run yet</li>
           </ul>
@@ -1743,40 +1869,61 @@
         </div>
 
         <div id="search-compare-pane" class="hidden">
-          <div class="search-filters">
-            <input type="text" id="compare-base" placeholder="Base ref" autocomplete="off" aria-label="Base ref">
-            <input type="text" id="compare-head" placeholder="Head ref" autocomplete="off" aria-label="Head ref">
-            <button id="btn-run-compare" class="btn btn-primary btn-sm">Compare</button>
+          <div class="panel-card search-form">
+            <label class="search-field">
+              <span>Base</span>
+              <input type="text" id="compare-base" placeholder="e.g. main" autocomplete="off">
+            </label>
+            <label class="search-field">
+              <span>Head</span>
+              <input type="text" id="compare-head" placeholder="e.g. feature/login" autocomplete="off">
+            </label>
+            <div class="search-form-footer">
+              <p class="field-hint" id="compare-summary">Counted from the merge base, so ahead and behind mean what they say.</p>
+              <button id="btn-run-compare" class="btn btn-primary btn-sm">
+                <span class="material-symbols-outlined">compare_arrows</span>
+                <span>Compare</span>
+              </button>
+            </div>
           </div>
-          <p class="modal-desc" id="compare-summary">Counted from the merge base, so ahead and behind mean what they say.</p>
-          <h4>Only on head</h4>
+          <h4 class="panel-list-label">Only on head</h4>
           <ul id="compare-ahead" class="recovery-list"><li class="empty-state">Nothing yet</li></ul>
-          <h4 class="mt-4">Only on base</h4>
+          <h4 class="panel-list-label">Only on base</h4>
           <ul id="compare-behind" class="recovery-list"><li class="empty-state">Nothing yet</li></ul>
-          <h4 class="mt-4">Changed files</h4>
+          <h4 class="panel-list-label">Changed files</h4>
           <ul id="compare-files" class="recovery-list"><li class="empty-state">Nothing yet</li></ul>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- BRANCH MAINTENANCE -->
+  <!-- BRANCH MAINTENANCE
+       What to show, then what to do, on two separate rows: the filters are
+       toggles you flip while reading, the actions change the repository. -->
   <div id="branch-admin-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="branch-admin-modal-title">
     <div class="modal-card">
       <div class="modal-header">
         <h2 id="branch-admin-modal-title">Branch Maintenance</h2>
-        <button id="btn-close-branch-admin" class="btn-close">
+        <button id="btn-close-branch-admin" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
       <div class="modal-body">
         <p class="modal-desc" id="branch-admin-summary">Pinned branches sort first. A branch is stale when nothing has landed on it recently.</p>
-        <div class="search-filters">
-          <label class="checkbox-row"><input type="checkbox" id="branch-filter-merged"> Merged only</label>
-          <label class="checkbox-row"><input type="checkbox" id="branch-filter-stale"> Stale only</label>
-          <label class="checkbox-row"><input type="checkbox" id="branch-filter-gone"> Upstream gone</label>
-          <button id="btn-prune-remote" class="btn btn-secondary btn-sm">Prune remote</button>
-          <button id="btn-delete-selected-branches" class="btn btn-secondary btn-sm btn-text-danger">Delete selected</button>
+        <div class="panel-toolbar">
+          <div class="filter-chips" role="group" aria-label="Show only">
+            <span class="filter-chips-label">Show only</span>
+            <label class="filter-chip"><input type="checkbox" id="branch-filter-merged"><span>Merged</span></label>
+            <label class="filter-chip"><input type="checkbox" id="branch-filter-stale"><span>Stale</span></label>
+            <label class="filter-chip"><input type="checkbox" id="branch-filter-gone"><span>Upstream gone</span></label>
+          </div>
+          <div class="panel-toolbar-actions">
+            <button id="btn-prune-remote" class="btn btn-secondary btn-sm" title="Remove remote-tracking branches whose branch is gone from origin">
+              <span class="material-symbols-outlined">cleaning_services</span>
+              <span>Prune remote</span>
+            </button>
+            <button id="btn-delete-selected-branches" class="btn btn-secondary btn-sm btn-text-danger">Delete selected</button>
+          </div>
         </div>
         <ul id="branch-admin-list" class="recovery-list">
           <li class="empty-state">No branches</li>

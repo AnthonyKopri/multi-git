@@ -303,6 +303,8 @@ export const ELEMENT_MAP = {
   btnOverlaySsh: 'btn-overlay-ssh',
   overlaySshBtnLabel: 'overlay-ssh-btn-label',
   sshModal: 'ssh-modal',
+  sshNav: 'ssh-nav',
+  sshBody: 'ssh-body',
   btnCloseSshModal: 'btn-close-ssh-modal',
   sshProfileForm: 'ssh-profile-form',
   sshProfileId: 'ssh-profile-id',

@@ -43,6 +43,11 @@ or Security. Remove empty headings when preparing a release.
 
 ### Fixed
 
+- **The SSH profile table lines up.** Its Actions cell was laid out as a flex
+  box, which took it out of the table row, so its borders and background sat
+  a few pixels off the rest of each row.
+- **The coding agents filter box is no longer white.** Search fields had no
+  styling of their own and fell back to the browser default.
 - **An agent launched on macOS or Linux has a terminal to run in.** A detached
   spawn there gets no console, so an interactive tool had nowhere to print and
   nowhere to be answered. Launches now open the platform's own terminal by
@@ -60,6 +65,23 @@ or Security. Remove empty headings when preparing a release.
 
 ### Changed
 
+- **The SSH Profile Manager looks like Settings.** Profiles, Add a key,
+  Auto-select rules and the passphrase vault are listed down the left, each a
+  section of cards instead of one column where headings ran into each other.
+  Keeping ~/.ssh/config in sync is a switch with its explanation beside it, and
+  choosing Add Key From File or Generate Key scrolls to the form it opens.
+- **Clone and New Repository group their questions.** Clone asks what, where
+  and with which key in three cards; New Repository asks about the folder,
+  GitHub and the starting files. Their buttons stay pinned to the bottom, so
+  Clone and Create are visible however far the form scrolls. Clone no longer
+  shows two contradictory sentences about the GitHub CLI: the status sits in
+  the GitHub browser, as one line beside its buttons. Creating the repository
+  on GitHub, and signing commits and tags by default, are switches.
+- **Search, Compare and Branch Maintenance are easier to read.** The search
+  fields have labels rather than placeholders alone, each list has a heading,
+  and an empty list says so quietly instead of in bold. Branch Maintenance
+  shows its filters as chips on their own row, apart from Prune and Delete,
+  and its branch list uses the panel's full height.
 - **The coding agents window looks like Settings.** It opens centred rather than
   docked, with its four sections — your agents, known tools, add or edit, launch
   history — listed down the left instead of stacked in one scrolling column.

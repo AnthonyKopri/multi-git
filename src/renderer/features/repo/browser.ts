@@ -29,7 +29,7 @@ export function initRepositoryBrowser(): void {
         ? 'GitHub CLI is not installed. Paste a URL to clone now, or install it to enable browsing.'
         : !data.authenticated
           ? 'GitHub CLI is installed. Run gh auth login to enable browsing, then Check again. Pasting a URL still works.'
-          : 'GitHub CLI is ready. Expand Browse GitHub repositories to choose a repository.';
+          : 'GitHub CLI is ready. Load repositories, then pick one to fill in the URL.';
     } catch {
       if (current === checkGeneration) ghStatus.textContent = 'Could not check GitHub CLI. You can still clone by pasting a URL.';
     } finally {
