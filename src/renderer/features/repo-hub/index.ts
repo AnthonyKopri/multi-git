@@ -8,12 +8,13 @@
 // This module owns the shell only: which tab is showing, and telling the tab
 // that just became visible to load itself. What each tab contains belongs to
 // the feature that owns it, which registers here.
-import { setHidden } from '../../dom/create';
+import { el, setHidden } from '../../dom/create';
 import { attachHorizontalWheel } from '../../ui/wheel-scroll';
 import { getState } from '../../state/store';
 import type { Elements } from '../../dom/elements';
 import { focusFirst } from '../../ui/focus';
 import { warnNoRepo } from '../../ui/no-repo';
+import { sectionHeading } from '../../ui/setting-rows';
 
 export type HubTab =
   | 'remotes'
@@ -74,10 +75,13 @@ export function initRepoHub(elements: Elements): void {
     }
   });
 
-  // Left and right move between tabs, which is what a tablist is expected to
-  // do and the only way to reach a tab scrolled off the strip from a keyboard.
+  // Up and down move between tabs, as a vertical tablist is expected to.
+  // Left and right as well, because on a narrow window the list becomes a
+  // row of chips and those are the keys that row suggests.
   ui.repoHubTabs.addEventListener('keydown', (event) => {
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    const forward = event.key === 'ArrowDown' || event.key === 'ArrowRight';
+    const back = event.key === 'ArrowUp' || event.key === 'ArrowLeft';
+    const step = forward ? 1 : back ? -1 : 0;
     if (step === 0) {
       return;
     }
@@ -89,8 +93,8 @@ export function initRepoHub(elements: Elements): void {
     tabButton(next)?.focus();
   });
 
-  // The strip scrolls sideways on a narrow window, and an ordinary wheel
-  // should reach the tabs past its edge.
+  // On a narrow window the list becomes a strip that scrolls sideways, and an
+  // ordinary wheel should reach the tabs past its edge.
   attachHorizontalWheel(ui.repoHubTabs);
 
   // The sidebar summaries are shortcuts into a particular tab. One listener on
@@ -126,6 +130,59 @@ export function isRepoHubOpen(): boolean {
 }
 
 /**
+ * Scrolls the tab list so the active tab is on screen.
+ *
+ * Only matters on a narrow window, where the list is a sideways strip that
+ * cannot show all eight tabs: a tab opened from the menu or a sidebar shortcut
+ * would otherwise be selected but out of sight. Done on the strip alone rather
+ * than with scrollIntoView, which would also scroll the window around it.
+ */
+function revealTab(button: HTMLElement | null): void {
+  const strip = ui.repoHubTabs;
+  if (button === null || strip.clientWidth === 0) {
+    return;
+  }
+
+  const bounds = strip.getBoundingClientRect();
+  const tab = button.getBoundingClientRect();
+  // Enough of the neighbour showing to say there is more that way.
+  const margin = 32;
+
+  if (tab.left < bounds.left) {
+    strip.scrollLeft -= bounds.left - tab.left + margin;
+  } else if (tab.right > bounds.right) {
+    strip.scrollLeft += tab.right - bounds.right + margin;
+  }
+}
+
+/**
+ * The icon and name of the tab being shown, above its panel.
+ *
+ * Read from the tab's own button, so the heading cannot drift from the list.
+ * The tab's first paragraph, which every tab opens with, sits under it as its
+ * summary; see .hub-panel > .modal-desc:first-child in style.css.
+ */
+function renderPageHeader(tab: HubTab): void {
+  const button = tabButton(tab);
+  const glyph = button?.querySelector('.material-symbols-outlined')?.textContent ?? '';
+  const title = button?.querySelector('span:not(.material-symbols-outlined)')?.textContent ?? '';
+
+  ui.repoHubPageHeader.replaceChildren(...sectionHeading(glyph, title, '').childNodes);
+}
+
+/** Names the repository the window is acting on, under its title. */
+function renderSubtitle(): void {
+  const repo = getState().activeRepo;
+  const name = repo === null ? '' : repo.split(/[\\/]/).filter(Boolean).pop() ?? repo;
+
+  ui.repoHubSubtitle.replaceChildren(
+    repo === null
+      ? document.createTextNode('Tools that do not need a repository open.')
+      : el('span', { children: [document.createTextNode('Tools and settings for '), el('strong', { text: name, title: repo })] })
+  );
+}
+
+/**
  * Shows a tab and asks its owner to draw it.
  *
  * Rendering happens on show rather than on open, so opening the hub does not
@@ -149,6 +206,11 @@ export async function showTab(tab: HubTab): Promise<void> {
       setHidden(panel, !active);
     }
   }
+
+  revealTab(tabButton(tab));
+  renderPageHeader(tab);
+  // A new tab starts at its top, not wherever the last one was scrolled to.
+  ui.repoHubPageHeader.parentElement?.scrollTo({ top: 0 });
 
   const panel = panelFor(tab);
   const owner = owners.get(tab);
@@ -176,6 +238,7 @@ export function openRepoHub(tab: HubTab = current): void {
   }
 
   setHidden(ui.repoHubModal, false);
+  renderSubtitle();
   focusFirst(ui.repoHubModal);
   void showTab(tab);
 }
@@ -187,6 +250,7 @@ export function closeRepoHub(): void {
 /** Redraws the visible tab, for when the repository changed underneath it. */
 export async function refreshRepoHub(): Promise<void> {
   if (isRepoHubOpen()) {
+    renderSubtitle();
     await showTab(current);
   }
 }

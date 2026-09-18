@@ -279,7 +279,7 @@ a:hover {
 }
 
 /* Inputs & Form Controls */
-input[type="text"], input[type="password"], input[type="email"], select, textarea {
+input[type="text"], input[type="password"], input[type="email"], input[type="number"], select, textarea {
   width: 100%;
   padding: 10px 14px;
   background-color: var(--bg-input);
@@ -291,7 +291,7 @@ input[type="text"], input[type="password"], input[type="email"], select, textare
   transition: all 0.2s ease;
   outline: none;
 }
-input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, select:focus, textarea:focus {
+input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
   border-color: var(--color-primary);
   background-color: var(--bg-input-focus);
   box-shadow: 0 0 0 3px var(--color-primary-glow);
@@ -4185,75 +4185,180 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
    REPOSITORY HUB
    ========================================================================== */
 
-.repo-hub-card {
-  /* Taller than the default modal: these tabs hold lists, not a short form. */
-  height: min(760px, calc(100vh - 40px));
-}
-
-/* The strip never wraps — seven tabs on two lines reads as two groups rather
-   than one row. It scrolls instead, with the wheel redirected in the same way
-   as the commit template chips. */
-.hub-tabs {
-  display: flex;
-  gap: 4px;
-  flex: 0 0 auto;
-  align-items: flex-end;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  border-bottom: 1px solid var(--border-color);
+.repo-hub-card .hub-page-header {
   margin-bottom: 16px;
-  /* A visible scrollbar under the tabs would sit between them and the panel
-     they control, which reads as a divider that is not one. */
-  scrollbar-width: none;
 }
-.hub-tabs::-webkit-scrollbar {
-  display: none;
+.repo-hub-card .hub-page-header h3 {
+  font-size: 1.25rem;
 }
-
-.hub-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  padding: 8px 14px;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-.hub-tab .material-symbols-outlined {
-  font-size: 18px;
-}
-.hub-tab:hover {
-  color: var(--text-main);
-}
-.hub-tab.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+.repo-hub-card .hub-page-header .settings-section-icon {
+  width: 40px;
+  height: 40px;
 }
 
+/* Each tab's content is drawn by the feature that owns it, from a shared
+   vocabulary: an opening paragraph, .section-header headings, row lists,
+   label-and-field forms and button groups. Styled here, once, to read like
+   the Settings window -- headings with room above them, and every list and
+   form in a card -- rather than by editing eight renderers. */
 .hub-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Below this the icons alone identify the tabs, and seven of them fit without
-   scrolling — which beats seven labelled tabs that do not. */
-@container modalbody (max-width: 560px) {
-  .hub-tab span:not(.material-symbols-outlined) {
-    display: none;
-  }
-  .hub-tab {
-    padding: 8px 12px;
-  }
+/* The opening paragraph is the tab's summary, set under the page heading and
+   in line with its title. */
+.hub-panel > .modal-desc:first-child {
+  margin: -20px 0 8px 52px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.hub-panel .modal-desc {
+  margin-bottom: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.hub-panel section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hub-panel .section-header {
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.hub-panel > .section-header:first-child,
+.hub-panel > .modal-desc:first-child + .section-header,
+.hub-panel > section:first-child > .section-header:first-child {
+  margin-top: 0;
+}
+.hub-panel .section-header h4 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+.hub-panel .section-header + .modal-desc {
+  margin-top: -6px;
+}
+
+/* Lists: a card of rows, like a Settings group. */
+.repo-hub-card .worktree-list {
+  margin: 0;
+  max-height: 420px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.repo-hub-card .worktree-item {
+  gap: 14px;
+  padding: 12px 16px;
+}
+.repo-hub-card .worktree-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+.repo-hub-card .worktree-meta {
+  font-size: 0.75rem;
+}
+.repo-hub-card .worktree-actions {
+  gap: 6px;
+}
+.repo-hub-card .worktree-actions .btn-icon.btn-sm {
+  width: 32px;
+  height: 32px;
+}
+.repo-hub-card .worktree-list .empty-state {
+  padding: 18px 16px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-align: center;
+  list-style: none;
+}
+
+/* Forms: a card, with the labels in one column. */
+.repo-hub-card .worktree-form {
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.repo-hub-card .worktree-form .form-row {
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.repo-hub-card .worktree-form .form-row label {
+  flex-basis: 140px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+.repo-hub-card .worktree-form > :last-child {
+  margin-bottom: 0;
+}
+
+/* Bigger targets. The small buttons were sized for the old 480px dock. */
+.repo-hub-card .hub-panel .btn-sm:not(.btn-icon) {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+}
+.repo-hub-card .btn-group {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* :where keeps this below the Settings switch rules, which draw the stale
+   rules' checkboxes as switches. */
+.repo-hub-card :where(input[type='checkbox']) {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+.repo-hub-card .checkbox-row,
+.repo-hub-card .amend-row {
+  font-size: 0.875rem;
+}
+
+/* Nothing built yet: an empty preview box read as a stray rule. */
+.repo-hub-card .patch-preview:empty {
+  display: none;
+}
+
+.repo-hub-card input[type='file'] {
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.repo-hub-card input[type='file']::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 14px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.repo-hub-card input[type='file']::file-selector-button:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-color-hover);
+}
+
+/* The argument placeholders, as a reference card rather than fine print. */
+.repo-hub-card .placeholder-help {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
 }
 
 .lfs-summary {
@@ -4528,8 +4633,9 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 
 /* Wide enough for four digits and no wider: it is a day count, and a full-width
    field beside "Nothing has landed for" reads as a search box. */
-.stale-days {
-  width: 64px;
+input.stale-days {
+  width: 72px;
+  padding: 6px 10px;
   text-align: right;
 }
 
@@ -4599,44 +4705,352 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   padding-top: 10px;
 }
 
-/* ============ SETTINGS ============ */
-.settings-section {
-  margin-bottom: 20px;
+/* ============ SETTINGS ============
+   A section list on the left, and on the right one card per group of
+   settings. Inside a card every setting is a row: the words on the left, the
+   control on the right, a rule between rows. Nothing is a bare paragraph, so
+   the window reads as a set of things you can change rather than an essay. */
+.settings-card {
+  width: min(920px, 100%);
+  height: min(760px, calc(100vh - 40px));
+  padding: 0;
+  overflow: hidden;
 }
 
-.settings-row {
-  margin: 10px 0;
+.settings-header {
+  align-items: flex-start;
+  gap: 16px;
+  margin: 0;
+  padding: 20px 24px 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+.settings-header h2 {
+  font-size: 1.375rem;
+}
+.settings-subtitle {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.settings-header .btn-close {
+  padding: 6px;
+  border-radius: var(--radius-sm);
+}
+.settings-header .btn-close:hover {
+  background: var(--bg-card-hover);
 }
 
-/* Indented under its control, so the explanation reads as belonging to the
-   checkbox above it rather than to the section. */
-.settings-row .modal-desc {
-  margin: 2px 0 0 26px;
+.settings-layout {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-.settings-field-row {
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 210px;
+  padding: 16px 12px;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-app);
+  overflow-y: auto;
+}
+.settings-nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.settings-nav-item:hover {
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+.settings-nav-item.active {
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  color: var(--text-main);
+}
+.settings-nav-item.active .material-symbols-outlined {
+  color: var(--color-primary);
+}
+.settings-nav-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
-.settings-label {
-  font-size: 0.8125rem;
+/* The scroll container, and the sections' offset parent, which is what lets
+   the nav turn a section's offsetTop straight into a scroll position. */
+.settings-body {
+  position: relative;
   flex: 1 1 auto;
+  min-width: 0;
+  padding: 20px 24px 28px;
+}
+
+.settings-section {
+  margin-bottom: 32px;
+}
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.settings-section-header h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.settings-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary);
+}
+.settings-section-subtitle {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.settings-group {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.settings-group + .settings-group {
+  margin-top: 12px;
+}
+.settings-group-caption {
+  margin: 12px 2px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 16px;
+}
+.settings-group > * + * {
+  border-top: 1px solid var(--border-color);
+}
+/* A switch row is a <label>: the whole row toggles, not just the switch. */
+label.settings-item {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+label.settings-item:hover {
+  background: var(--bg-card-hover);
+}
+.settings-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.settings-item-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+.settings-item-desc {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.settings-item-control {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.settings-item-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
 
 .settings-field {
-  flex: 0 0 auto;
-  width: 240px;
+  width: 100%;
 }
-
-.settings-field[type='number'] {
-  width: 90px;
+.settings-input-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.settings-input-row .settings-field {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+.settings-input-suffix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.settings-input-suffix .settings-field {
+  width: 96px;
   text-align: right;
 }
 
-.settings-field-row + .modal-desc {
-  margin-left: 0;
+.settings-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--bg-app) 45%, transparent);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.settings-note .material-symbols-outlined {
+  margin-top: 1px;
+  color: var(--color-success);
+}
+
+/* A switch, drawn over a real checkbox so it keeps its keyboard handling and
+   its checked state. 44 by 24: big enough to aim at without reading the row. */
+.settings-switch,
+.settings-group .maintenance-rules input[type='checkbox'] {
+  appearance: none;
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 24px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--border-color-hover);
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+.settings-switch::before,
+.settings-group .maintenance-rules input[type='checkbox']::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.18s ease;
+}
+.settings-switch:checked,
+.settings-group .maintenance-rules input[type='checkbox']:checked {
+  background: var(--color-primary);
+}
+.settings-switch:checked::before,
+.settings-group .maintenance-rules input[type='checkbox']:checked::before {
+  transform: translateX(20px);
+  background: white;
+}
+.settings-switch:focus-visible,
+.settings-group .maintenance-rules input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* The shared stale-branch form (maintenance/rules-form.ts), drawn as one row
+   per rule with its switch at the right-hand edge like every other setting,
+   and the sentence it adds up to as the card's footer. */
+.settings-group .maintenance-rules-form {
+  padding: 0;
+}
+.settings-group .maintenance-rules {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0;
+  margin: 0;
+}
+.settings-group .maintenance-rules > .checkbox-row {
+  gap: 10px;
+  min-height: 56px;
+  padding: 12px 16px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  white-space: normal;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.settings-group .maintenance-rules > .checkbox-row:hover {
+  background: var(--bg-card-hover);
+}
+.settings-group .maintenance-rules > .checkbox-row + .checkbox-row {
+  border-top: 1px solid var(--border-color);
+}
+.settings-group .maintenance-rules input[type='checkbox'] {
+  order: 99;
+  margin-left: auto;
+}
+.settings-group .maintenance-rules-form > .modal-desc {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--text-main);
+  font-size: 0.8125rem;
+}
+.settings-item .stale-match {
+  width: auto;
+  min-width: 190px;
+  font-size: 0.875rem;
+}
+
+/* Narrow windows: the section list becomes a strip of chips above the
+   settings rather than eating a third of the width. */
+@media (max-width: 720px) {
+  .settings-layout {
+    flex-direction: column;
+  }
+  .settings-nav {
+    flex: 0 0 auto;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 12px;
+  }
+  .settings-nav-item {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .settings-body {
+    padding: 16px;
+  }
+  .settings-item {
+    flex-wrap: wrap;
+  }
 }
 
 /* ---------- Terminal panel ----------
@@ -5028,10 +5442,14 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 
 /* The same states, as a chip, for the Settings window. */
 .setup-badge {
-  padding: 1px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 .setup-badge-ok {
   background-color: color-mix(in srgb, var(--color-success) 18%, transparent);

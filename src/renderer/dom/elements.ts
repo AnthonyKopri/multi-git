@@ -32,12 +32,15 @@ export const ELEMENT_MAP = {
   btnSettings: 'btn-settings',
   settingsModal: 'settings-modal',
   settingsBody: 'settings-body',
+  settingsNav: 'settings-nav',
   btnCloseSettings: 'btn-close-settings',
 
   // Repository hub. The panels are found by id from the tab name, so they are
   // not listed individually.
   btnRepoHub: 'btn-repo-hub',
   repoHubModal: 'repo-hub-modal',
+  repoHubSubtitle: 'repo-hub-subtitle',
+  repoHubPageHeader: 'repo-hub-page-header',
   repoHubTabs: 'repo-hub-tabs',
   btnCloseRepoHub: 'btn-close-repo-hub',
   // The sidebar launchers into the Repository panel. A count and, where there

@@ -12,6 +12,24 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.1.0] - 2026-09-18
+
+### Changed
+
+- **Settings is laid out as a set of things you can change.** Sections are
+  listed down the left and each one opens as cards of rows, with what a setting
+  does on the left and its control on the right. Checkboxes are now on/off
+  switches that toggle from anywhere on the row, buttons are full size, tool
+  status badges carry an icon, and the Agent CLI address has a Copy button.
+  The two number fields are no longer white, and the worktree folder field no
+  longer overflows the window.
+- **The Repository window looks like Settings.** It opens centred rather than
+  docked, with all eight sections (Remotes, Submodules, LFS, Patches, Bisect,
+  Notes, Maintenance and Tools) listed down the left instead of a tab strip
+  that showed only half of them. Lists and forms sit in cards, headings have
+  room around them, and buttons and checkboxes are larger. The stale-branch
+  rules in Maintenance use the same switches as Settings.
+
 ## [5.0.3] - 2026-09-18
 
 ### Added
@@ -829,7 +847,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.3...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.0...HEAD
+[5.1.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.3...Release_v5.1.0
 [5.0.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.2...Release_v5.0.3
 [5.0.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.1...Release_v5.0.2
 [5.0.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.0...Release_v5.0.1

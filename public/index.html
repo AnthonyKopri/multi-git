@@ -1792,14 +1792,20 @@
        change them was to close the app and edit a file. The body is built by
        the feature module, so a setting added later needs no markup here. -->
   <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h2 id="settings-modal-title">Settings</h2>
+    <div class="modal-card settings-card">
+      <div class="modal-header settings-header">
+        <div>
+          <h2 id="settings-modal-title">Settings</h2>
+          <p class="settings-subtitle">For Multi-Git itself, whatever repository is open, and saved as you change them. Settings for one repository live in the Repository window.</p>
+        </div>
         <button id="btn-close-settings" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <div class="modal-body" id="settings-body"></div>
+      <div class="settings-layout">
+        <nav id="settings-nav" class="settings-nav" aria-label="Settings sections"></nav>
+        <div class="modal-body settings-body" id="settings-body"></div>
+      </div>
     </div>
   </div>
 
@@ -1835,60 +1841,68 @@
   <!-- REPOSITORY HUB
        The six Phase 4 toolsets behind one window, so the sidebar does not grow
        a section each. Every tab's content is owned by its own feature module;
-       this markup is only the shell and the strip that switches between them. -->
-  <div id="repo-hub-modal" class="modal-overlay as-panel hidden" role="dialog" aria-modal="true" aria-labelledby="repo-hub-modal-title">
-    <div class="modal-card modal-card-wide repo-hub-card">
-      <div class="modal-header">
-        <h2 id="repo-hub-modal-title">Repository</h2>
+       this markup is only the shell and the section list that switches between
+       them. Laid out like Settings: a centred window with the sections down the
+       left, rather than a docked strip too narrow to show all eight tabs. -->
+  <div id="repo-hub-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="repo-hub-modal-title">
+    <div class="modal-card settings-card repo-hub-card">
+      <div class="modal-header settings-header">
+        <div>
+          <h2 id="repo-hub-modal-title">Repository</h2>
+          <p id="repo-hub-subtitle" class="settings-subtitle">Tools and settings for the open repository.</p>
+        </div>
         <button id="btn-close-repo-hub" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
 
-      <div id="repo-hub-tabs" class="hub-tabs" role="tablist" aria-label="Repository tools">
-        <button type="button" class="hub-tab active" role="tab" id="hub-tab-remotes" data-hub-tab="remotes" aria-selected="true" aria-controls="hub-panel-remotes">
-          <span class="material-symbols-outlined" aria-hidden="true">cloud</span>
-          <span>Remotes</span>
-        </button>
-        <button type="button" class="hub-tab" role="tab" id="hub-tab-submodules" data-hub-tab="submodules" aria-selected="false" aria-controls="hub-panel-submodules">
-          <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
-          <span>Submodules</span>
-        </button>
-        <button type="button" class="hub-tab" role="tab" id="hub-tab-lfs" data-hub-tab="lfs" aria-selected="false" aria-controls="hub-panel-lfs">
-          <span class="material-symbols-outlined" aria-hidden="true">database</span>
-          <span>LFS</span>
-        </button>
-        <button type="button" class="hub-tab" role="tab" id="hub-tab-patches" data-hub-tab="patches" aria-selected="false" aria-controls="hub-panel-patches">
-          <span class="material-symbols-outlined" aria-hidden="true">difference</span>
-          <span>Patches</span>
-        </button>
-        <button type="button" class="hub-tab" role="tab" id="hub-tab-bisect" data-hub-tab="bisect" aria-selected="false" aria-controls="hub-panel-bisect">
-          <span class="material-symbols-outlined" aria-hidden="true">bug_report</span>
-          <span>Bisect</span>
-        </button>
-        <button type="button" class="hub-tab" role="tab" id="hub-tab-notes" data-hub-tab="notes" aria-selected="false" aria-controls="hub-panel-notes">
-          <span class="material-symbols-outlined" aria-hidden="true">sticky_note_2</span>
-          <span>Notes</span>
-        </button>
-        <button type="button" class="hub-tab" role="tab" id="hub-tab-maintenance" data-hub-tab="maintenance" aria-selected="false" aria-controls="hub-panel-maintenance">
-          <span class="material-symbols-outlined" aria-hidden="true">mop</span>
-          <span>Maintenance</span>
-        </button>
-        <button type="button" class="hub-tab" role="tab" id="hub-tab-tools" data-hub-tab="tools" aria-selected="false" aria-controls="hub-panel-tools">
-          <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
-          <span>Tools</span>
-        </button>
-      </div>
+      <div class="settings-layout">
+        <div id="repo-hub-tabs" class="settings-nav hub-nav" role="tablist" aria-orientation="vertical" aria-label="Repository tools">
+          <button type="button" class="settings-nav-item hub-tab active" role="tab" id="hub-tab-remotes" data-hub-tab="remotes" aria-selected="true" aria-controls="hub-panel-remotes">
+            <span class="material-symbols-outlined" aria-hidden="true">cloud</span>
+            <span>Remotes</span>
+          </button>
+          <button type="button" class="settings-nav-item hub-tab" role="tab" id="hub-tab-submodules" data-hub-tab="submodules" aria-selected="false" aria-controls="hub-panel-submodules">
+            <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+            <span>Submodules</span>
+          </button>
+          <button type="button" class="settings-nav-item hub-tab" role="tab" id="hub-tab-lfs" data-hub-tab="lfs" aria-selected="false" aria-controls="hub-panel-lfs">
+            <span class="material-symbols-outlined" aria-hidden="true">database</span>
+            <span>LFS</span>
+          </button>
+          <button type="button" class="settings-nav-item hub-tab" role="tab" id="hub-tab-patches" data-hub-tab="patches" aria-selected="false" aria-controls="hub-panel-patches">
+            <span class="material-symbols-outlined" aria-hidden="true">difference</span>
+            <span>Patches</span>
+          </button>
+          <button type="button" class="settings-nav-item hub-tab" role="tab" id="hub-tab-bisect" data-hub-tab="bisect" aria-selected="false" aria-controls="hub-panel-bisect">
+            <span class="material-symbols-outlined" aria-hidden="true">bug_report</span>
+            <span>Bisect</span>
+          </button>
+          <button type="button" class="settings-nav-item hub-tab" role="tab" id="hub-tab-notes" data-hub-tab="notes" aria-selected="false" aria-controls="hub-panel-notes">
+            <span class="material-symbols-outlined" aria-hidden="true">sticky_note_2</span>
+            <span>Notes</span>
+          </button>
+          <button type="button" class="settings-nav-item hub-tab" role="tab" id="hub-tab-maintenance" data-hub-tab="maintenance" aria-selected="false" aria-controls="hub-panel-maintenance">
+            <span class="material-symbols-outlined" aria-hidden="true">mop</span>
+            <span>Maintenance</span>
+          </button>
+          <button type="button" class="settings-nav-item hub-tab" role="tab" id="hub-tab-tools" data-hub-tab="tools" aria-selected="false" aria-controls="hub-panel-tools">
+            <span class="material-symbols-outlined" aria-hidden="true">handyman</span>
+            <span>Tools</span>
+          </button>
+        </div>
 
-      <div class="modal-body">
-        <div class="hub-panel" id="hub-panel-remotes" role="tabpanel" aria-labelledby="hub-tab-remotes"></div>
-        <div class="hub-panel hidden" id="hub-panel-submodules" role="tabpanel" aria-labelledby="hub-tab-submodules"></div>
-        <div class="hub-panel hidden" id="hub-panel-lfs" role="tabpanel" aria-labelledby="hub-tab-lfs"></div>
-        <div class="hub-panel hidden" id="hub-panel-patches" role="tabpanel" aria-labelledby="hub-tab-patches"></div>
-        <div class="hub-panel hidden" id="hub-panel-bisect" role="tabpanel" aria-labelledby="hub-tab-bisect"></div>
-        <div class="hub-panel hidden" id="hub-panel-notes" role="tabpanel" aria-labelledby="hub-tab-notes"></div>
-        <div class="hub-panel hidden" id="hub-panel-maintenance" role="tabpanel" aria-labelledby="hub-tab-maintenance"></div>
-        <div class="hub-panel hidden" id="hub-panel-tools" role="tabpanel" aria-labelledby="hub-tab-tools"></div>
+        <div class="modal-body settings-body">
+          <header id="repo-hub-page-header" class="settings-section-header hub-page-header"></header>
+          <div class="hub-panel" id="hub-panel-remotes" role="tabpanel" aria-labelledby="hub-tab-remotes"></div>
+          <div class="hub-panel hidden" id="hub-panel-submodules" role="tabpanel" aria-labelledby="hub-tab-submodules"></div>
+          <div class="hub-panel hidden" id="hub-panel-lfs" role="tabpanel" aria-labelledby="hub-tab-lfs"></div>
+          <div class="hub-panel hidden" id="hub-panel-patches" role="tabpanel" aria-labelledby="hub-tab-patches"></div>
+          <div class="hub-panel hidden" id="hub-panel-bisect" role="tabpanel" aria-labelledby="hub-tab-bisect"></div>
+          <div class="hub-panel hidden" id="hub-panel-notes" role="tabpanel" aria-labelledby="hub-tab-notes"></div>
+          <div class="hub-panel hidden" id="hub-panel-maintenance" role="tabpanel" aria-labelledby="hub-tab-maintenance"></div>
+          <div class="hub-panel hidden" id="hub-panel-tools" role="tabpanel" aria-labelledby="hub-tab-tools"></div>
+        </div>
       </div>
     </div>
   </div>
