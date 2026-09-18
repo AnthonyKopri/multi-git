@@ -1,6 +1,6 @@
 {
   "name": "multi-git",
-  "version": "5.0.3",
+  "version": "5.1.0",
   "description": "A local-first Git desktop client for Windows, macOS and Linux, with multiple repositories, accounts, and SSH identities",
   "homepage": "https://github.com/AnthonyKopri/multi-git",
   "desktopName": "multi-git.desktop",
