@@ -12,8 +12,6 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
-## [5.1.0] - 2026-09-18
-
 ### Changed
 
 - **Settings is laid out as a set of things you can change.** Sections are
@@ -847,8 +845,7 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.0...HEAD
-[5.1.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.3...Release_v5.1.0
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.3...HEAD
 [5.0.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.2...Release_v5.0.3
 [5.0.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.1...Release_v5.0.2
 [5.0.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.0...Release_v5.0.1
