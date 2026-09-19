@@ -58,7 +58,8 @@ vi.mock('../src/renderer/ui/toast', () => ({ showToast: vi.fn() }));
 vi.mock('../src/renderer/ui/log', () => ({ logToTerminal: vi.fn() }));
 vi.mock('../src/renderer/state/store', () => ({ getState: () => state }));
 vi.mock('../src/renderer/ui/busy', () => ({
-  withButtonBusy: async (_button: unknown, run: () => Promise<void>) => run()
+  withButtonBusy: async (_button: unknown, run: () => Promise<void>) => run(),
+  setButtonBusy: vi.fn()
 }));
 // Opening a repository or a window is another feature's job; stubbed so this
 // file is about the lists and nothing else.
@@ -480,5 +481,91 @@ describe('removing from the manager', () => {
       })
     );
     expect(endpoints.removeWorktree).not.toHaveBeenCalled();
+  });
+  it('falls through to the typed name when the server finds uncommitted work', async () => {
+    // No counts yet, so the row looks clean and only the server knows better.
+    endpoints.getWorktreeStatus.mockRejectedValue(new Error('slow'));
+    dialogs.confirmDialog.mockResolvedValue({ confirmed: true, checked: false });
+    dialogs.promptDialog.mockResolvedValue('login');
+
+    const feature = await mount();
+    const { ApiError } = await import('../src/renderer/api/client');
+    endpoints.removeWorktree
+      .mockRejectedValueOnce(
+        new ApiError('That worktree has uncommitted changes.', 409, { code: 'worktree-dirty' })
+      )
+      .mockResolvedValueOnce({ success: true, removedPath: LINKED, worktrees: [main] });
+    await feature.refreshWorktrees();
+
+    clickAction('worktree-manager-list', LINKED, 'remove', feature.handleWorktreeAction);
+    await vi.waitFor(() => expect(endpoints.removeWorktree).toHaveBeenCalledTimes(2));
+
+    expect(dialogs.promptDialog).toHaveBeenCalled();
+    expect(endpoints.removeWorktree).toHaveBeenLastCalledWith({
+      path: LINKED,
+      force: true,
+      confirmName: 'login'
+    });
+  });
+
+  it("shows git's reason and offers a forced removal when git refuses", async () => {
+    const reason = "Git could not remove the worktree: fatal: 'login' contains untracked files";
+    dialogs.confirmDialog.mockResolvedValue({ confirmed: true, checked: false });
+
+    const feature = await mount();
+    const { ApiError } = await import('../src/renderer/api/client');
+    endpoints.removeWorktree
+      .mockRejectedValueOnce(new ApiError(reason, 500, { code: 'worktree-git-refused' }))
+      .mockResolvedValueOnce({ success: true, removedPath: LINKED, worktrees: [main] });
+    await feature.refreshWorktrees();
+
+    clickAction('worktree-manager-list', LINKED, 'remove', feature.handleWorktreeAction);
+    await vi.waitFor(() => expect(endpoints.removeWorktree).toHaveBeenCalledTimes(2));
+
+    expect(dialogs.confirmDialog).toHaveBeenLastCalledWith(
+      expect.stringContaining(reason),
+      expect.objectContaining({ confirmLabel: 'Force remove', danger: true })
+    );
+    expect(endpoints.removeWorktree).toHaveBeenLastCalledWith({
+      path: LINKED,
+      force: true,
+      confirmName: 'login'
+    });
+  });
+
+  it('explains a failure it cannot force past, and removes nothing more', async () => {
+    const reason = 'That worktree is locked: in use. Unlock it before removing it.';
+    dialogs.confirmDialog.mockResolvedValue({ confirmed: true, checked: false });
+
+    const feature = await mount();
+    const { ApiError } = await import('../src/renderer/api/client');
+    endpoints.removeWorktree.mockRejectedValue(
+      new ApiError(reason, 409, { code: 'worktree-locked' })
+    );
+    await feature.refreshWorktrees();
+
+    clickAction('worktree-manager-list', LINKED, 'remove', feature.handleWorktreeAction);
+    await vi.waitFor(() => expect(dialogs.confirmDialog).toHaveBeenCalledTimes(2));
+
+    expect(dialogs.confirmDialog).toHaveBeenLastCalledWith(
+      reason,
+      expect.objectContaining({ hideCancel: true })
+    );
+    expect(endpoints.removeWorktree).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not offer to remove this window's own worktree", async () => {
+    state.activeRepo = LINKED;
+    try {
+      const feature = await mount();
+      await feature.refreshWorktrees();
+
+      const button = findRow('worktree-manager-list', LINKED).querySelector<HTMLButtonElement>(
+        '[data-action="remove"]'
+      );
+      expect(button?.disabled).toBe(true);
+    } finally {
+      state.activeRepo = main.path;
+    }
   });
 });

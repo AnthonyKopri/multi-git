@@ -15,7 +15,7 @@ import path from 'node:path';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
 import { withRepoLock } from '../git/lock';
-import { runGitCommand } from '../git/run';
+import { GitError, runGitCommand } from '../git/run';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { readConfig } from '../config/store';
 import { operations } from '../operations/registry';
@@ -283,7 +283,8 @@ worktreesRouter.delete(
     if (worktree.locked) {
       throw new HttpError(
         `That worktree is locked${worktree.lockReason ? `: ${worktree.lockReason}` : ''}. Unlock it before removing it.`,
-        409
+        409,
+        'worktree-locked'
       );
     }
 
@@ -294,7 +295,8 @@ worktreesRouter.delete(
     if (dirty && !forced) {
       throw new HttpError(
         'That worktree has uncommitted changes. Commit or stash them, or remove it with the forced option.',
-        409
+        409,
+        'worktree-dirty'
       );
     }
 
@@ -345,9 +347,20 @@ worktreesRouter.delete(
     try {
       await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
     } catch (error) {
+      // Git's reason is on stderr; `message` is only "git exited with code 128".
+      const reason =
+        error instanceof GitError
+          ? error.displayMessage
+          : error instanceof Error
+            ? error.message
+            : String(error);
+      // The code lets the client offer a forced retry for a refusal git would
+      // drop with --force (untracked files, submodules); a forced one failing
+      // is shown as-is.
       throw new HttpError(
-        `Git could not remove the worktree: ${error instanceof Error ? error.message : String(error)}`,
-        500
+        `Git could not remove the worktree: ${reason}`,
+        500,
+        forced ? undefined : 'worktree-git-refused'
       );
     }
 

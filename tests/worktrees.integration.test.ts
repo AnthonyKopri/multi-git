@@ -433,9 +433,26 @@ describe('removing a worktree', () => {
     const { body } = await api(repo).delete('/api/worktrees').send({ path: target }).expect(409);
 
     expect(body.error).toMatch(/uncommitted/i);
+    // The client switches to the typed-name confirmation on this code.
+    expect(body.code).toBe('worktree-dirty');
     expect(fs.readFileSync(path.join(target, 'unsaved.txt'), 'utf8')).toBe(
       'work nobody has committed'
     );
+  });
+
+  it("passes git's own reason through when git refuses", async () => {
+    const { repo, target } = await withWorktree();
+    // A worktree git can list but will not validate. Removed first because git
+    // marks `.git` hidden on Windows, and a hidden file cannot be overwritten.
+    fs.rmSync(path.join(target, '.git'), { force: true });
+    fs.writeFileSync(path.join(target, '.git'), 'not a gitdir pointer\n');
+
+    const { body } = await api(repo).delete('/api/worktrees').send({ path: target }).expect(500);
+
+    expect(body.error).toMatch(/^Git could not remove the worktree: /);
+    expect(body.error).not.toMatch(/exited with code/);
+    expect(body.error).toMatch(/\.git/);
+    expect(fs.existsSync(target)).toBe(true);
   });
 
   it('refuses a locked worktree and repeats the reason', async () => {

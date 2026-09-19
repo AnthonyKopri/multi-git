@@ -10,7 +10,7 @@
 // for afterwards and the rows fill in. A family of twenty should not make the
 // panel feel broken while it opens.
 import * as api from '../../api/endpoints';
-import { errorMessage, isStale } from '../../api/client';
+import { ApiError, errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
 import { asInput, asSelect } from '../../dom/elements';
 import { el, fragment, icon, setHidden } from '../../dom/create';
@@ -18,7 +18,7 @@ import { getState } from '../../state/store';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
-import { withButtonBusy } from '../../ui/busy';
+import { setButtonBusy, withButtonBusy } from '../../ui/busy';
 import { openRepoInNewWindow } from '../windows';
 import { launchAgentFor } from '../agents';
 import { openRepository } from '../repo';
@@ -172,6 +172,7 @@ function renderSidebar(): void {
 function renderManager(): void {
   const rows = worktrees.map((worktree) => {
     const row = buildRow(worktree);
+    const isActive = getState().activeRepo === worktree.path;
 
     row.querySelector('.worktree-actions')?.append(
       actionButton(
@@ -182,10 +183,14 @@ function renderManager(): void {
       actionButton('move', 'drive_file_move', 'Move this worktree', {
         disabled: worktree.isMain
       }),
-      actionButton('remove', 'delete', 'Remove this worktree', {
-        disabled: worktree.isMain,
-        danger: true
-      })
+      // This window's own folder cannot go out from under it: git would be
+      // deleting the directory the app is reading from.
+      actionButton(
+        'remove',
+        'delete',
+        isActive ? 'Open another worktree first to remove this one' : 'Remove this worktree',
+        { disabled: worktree.isMain || isActive, danger: true }
+      )
     );
 
     return row;
@@ -484,8 +489,7 @@ async function moveWorktree(worktree: WorktreeInfo): Promise<void> {
  * the answer to "which folder is this about" impossible to get wrong while
  * clicking quickly.
  */
-async function removeWorktree(worktree: WorktreeInfo): Promise<void> {
-  const name = folderName(worktree.path);
+async function removeWorktree(worktree: WorktreeInfo, button: HTMLElement | null): Promise<void> {
   const status = worktree.status;
   const dirty =
     status !== undefined &&
@@ -500,10 +504,55 @@ async function removeWorktree(worktree: WorktreeInfo): Promise<void> {
       return;
     }
 
-    await performRemoval({ path: worktree.path });
+    const outcome = await performRemoval({ path: worktree.path }, button);
+
+    // The counts may not have arrived yet, so the server can be the one that
+    // finds the folder dirty — and then the typed-name path applies.
+    if (outcome.kind === 'dirty') {
+      await removeDirtyWorktree(worktree, button);
+    } else if (outcome.kind === 'refused') {
+      await offerForcedRemoval(worktree, outcome.message, button);
+    }
     return;
   }
 
+  await removeDirtyWorktree(worktree, button);
+}
+
+/**
+ * Git said no to a plain removal. Says why, and offers --force for the
+ * refusals it overrides: untracked files, submodules, a half-valid folder.
+ */
+async function offerForcedRemoval(
+  worktree: WorktreeInfo,
+  reason: string,
+  button: HTMLElement | null
+): Promise<void> {
+  const { confirmed } = await confirmDialog(
+    `${reason}\n\nForce removal deletes the folder anyway. A recovery point is saved first, but untracked files in it cannot be recovered.`,
+    {
+      title: `Could not remove ${folderName(worktree.path)}`,
+      confirmLabel: 'Force remove',
+      danger: true
+    }
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  // The dialog named the folder and the button said "Force remove"; that
+  // click is the confirmation the server's typed-name check stands for.
+  await performRemoval(
+    { path: worktree.path, force: true, confirmName: folderName(worktree.path) },
+    button
+  );
+}
+
+async function removeDirtyWorktree(
+  worktree: WorktreeInfo,
+  button: HTMLElement | null
+): Promise<void> {
+  const name = folderName(worktree.path);
   const typed = await promptDialog({
     title: `Remove ${name}`,
     label: `This worktree has uncommitted changes. Safety Net snapshots tracked staged and unstaged work first, but untracked files cannot be recovered after the folder is removed. Type "${name}" to confirm.`,
@@ -518,14 +567,18 @@ async function removeWorktree(worktree: WorktreeInfo): Promise<void> {
     return;
   }
 
-  await performRemoval({ path: worktree.path, force: true, confirmName: typed.trim() });
+  await performRemoval({ path: worktree.path, force: true, confirmName: typed.trim() }, button);
 }
 
-async function performRemoval(input: {
-  path: string;
-  force?: boolean;
-  confirmName?: string;
-}): Promise<void> {
+async function performRemoval(
+  input: { path: string; force?: boolean; confirmName?: string },
+  button: HTMLElement | null
+): Promise<{ kind: 'removed' | 'dirty' | 'failed' } | { kind: 'refused'; message: string }> {
+  // `git worktree remove` on a large folder takes a while; without this the
+  // click looks like it did nothing.
+  setButtonBusy(button, true);
+  logToTerminal(`Removing worktree ${input.path}…`, 'info');
+
   try {
     const result = await api.removeWorktree(input);
     worktrees = result.worktrees;
@@ -541,12 +594,32 @@ async function performRemoval(input: {
     );
 
     await refreshAll();
+    return { kind: 'removed' };
   } catch (error) {
-    if (!isStale(error)) {
-      const message = errorMessage(error, 'Could not remove the worktree.');
-      logToTerminal(message, 'error');
-      showToast(message, 'error', 8000);
+    setButtonBusy(button, false);
+
+    const code = error instanceof ApiError ? error.details['code'] : undefined;
+    if (code === 'worktree-dirty') {
+      return { kind: 'dirty' };
     }
+
+    const message = isStale(error)
+      ? 'The repository changed while the worktree was being removed. Reopen Worktrees to check whether it is gone.'
+      : errorMessage(error, 'Could not remove the worktree.');
+    logToTerminal(message, 'error');
+
+    if (code === 'worktree-git-refused') {
+      return { kind: 'refused', message };
+    }
+
+    // A toast is easy to miss over the Worktrees window, and this is the
+    // answer to "why is it still there".
+    await confirmDialog(message, {
+      title: `Could not remove ${folderName(input.path)}`,
+      confirmLabel: 'OK',
+      hideCancel: true
+    });
+    return { kind: 'failed' };
   }
 }
 
@@ -611,6 +684,6 @@ export function handleWorktreeAction(target: HTMLElement): void {
       void moveWorktree(worktree);
       return;
     case 'remove':
-      void removeWorktree(worktree);
+      void removeWorktree(worktree, target.closest<HTMLElement>('[data-action]'));
   }
 }
