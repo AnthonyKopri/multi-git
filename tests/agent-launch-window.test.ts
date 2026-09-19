@@ -315,6 +315,118 @@ describe('the launch dialog', () => {
   });
 });
 
+describe('reaching another agent from the launch dialog', () => {
+  /** Detection that finds the given catalogue ids installed. */
+  function detected(installedIds: string[], configuredIds: string[] = []) {
+    return {
+      success: true,
+      detected: AGENT_CATALOGUE.map((entry) => ({
+        id: entry.id,
+        label: entry.label,
+        vendor: entry.vendor,
+        summary: entry.summary,
+        homepage: entry.homepage,
+        executable: entry.executable,
+        resolvedPath: installedIds.includes(entry.id) ? `/usr/bin/${entry.executable}` : '',
+        installed: installedIds.includes(entry.id),
+        configured: configuredIds.includes(entry.id),
+        hasModels: (entry.models ?? []).length > 0
+      }))
+    };
+  }
+
+  const addableCards = (): HTMLElement[] => [
+    ...$('agent-launch-picker').querySelectorAll<HTMLElement>('[data-catalogue-id]')
+  ];
+
+  it('offers installed tools that are not added yet, after the configured ones', async () => {
+    endpoints.getAgents.mockResolvedValue({
+      success: true,
+      agents: [agent()],
+      launches: [],
+      catalogue: AGENT_CATALOGUE
+    });
+    endpoints.detectAgents.mockResolvedValue(detected(['claude', 'gemini'], ['claude']));
+
+    const feature = await mount();
+    await feature.launchAgentFor('D:\\work\\app');
+    await vi.waitUntil(() => addableCards().length > 0);
+
+    // Claude Code is configured, so it is a normal card and not offered twice.
+    expect(addableCards().map((card) => card.dataset['catalogueId'])).toEqual(['gemini']);
+    expect(card('Claude Code').getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('adds a picked tool and selects it, without leaving the dialog', async () => {
+    endpoints.getAgents.mockResolvedValue({
+      success: true,
+      agents: [agent()],
+      launches: [],
+      catalogue: AGENT_CATALOGUE
+    });
+    endpoints.detectAgents.mockResolvedValue(detected(['claude', 'gemini'], ['claude']));
+    endpoints.saveAgent.mockImplementation(async (input: Partial<ExternalAgentDefinition>) => {
+      endpoints.getAgents.mockResolvedValue({
+        success: true,
+        agents: [agent(), gemini],
+        launches: [],
+        catalogue: AGENT_CATALOGUE
+      });
+      return { success: true, agent: { ...gemini, ...input, id: 'a2' } };
+    });
+
+    const feature = await mount();
+    await feature.launchAgentFor('D:\\work\\app');
+    await vi.waitUntil(() => addableCards().length > 0);
+
+    feature.handleLaunchPickerClick(addableCards()[0] as HTMLElement);
+    await vi.waitUntil(
+      () =>
+        $('agent-launch-picker')
+          .querySelector('[data-agent-id="a2"]')
+          ?.getAttribute('aria-checked') === 'true'
+    );
+
+    expect(endpoints.saveAgent.mock.calls[0]?.[0]).toMatchObject({
+      catalogueId: 'gemini',
+      promptMode: 'flag',
+      promptArgs: ['-i']
+    });
+    expect($('agent-launch-modal').classList.contains('hidden')).toBe(false);
+    expect($('agent-launch-command').textContent).toContain('gemini');
+  });
+
+  it('opens with nothing added when the machine has a tool to offer', async () => {
+    endpoints.getAgents.mockResolvedValue({
+      success: true,
+      agents: [],
+      launches: [],
+      catalogue: AGENT_CATALOGUE
+    });
+    endpoints.detectAgents.mockResolvedValue(detected(['codex']));
+
+    const feature = await mount();
+    await feature.launchAgentFor('D:\\work\\app');
+
+    expect($('agent-launch-modal').classList.contains('hidden')).toBe(false);
+    expect(addableCards().map((card) => card.dataset['catalogueId'])).toEqual(['codex']);
+    // Nothing is selected yet, so there is nothing to launch.
+    expect(($('btn-launch-agent') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('always has a way to the rest of the known tools', async () => {
+    const feature = await mount();
+    await feature.launchAgentFor('D:\\work\\app');
+
+    const more = $('agent-launch-picker').querySelector<HTMLElement>('[data-launch-action="manage"]');
+    expect(more).not.toBeNull();
+
+    feature.handleLaunchPickerClick(more as HTMLElement);
+    expect($('agent-launch-modal').classList.contains('hidden')).toBe(true);
+    expect($('agents-modal').classList.contains('hidden')).toBe(false);
+  });
+});
+
 describe('the agents window', () => {
   it('lists every definition with how it opens and whether it takes a prompt', async () => {
     const feature = await mount();

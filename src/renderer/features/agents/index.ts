@@ -18,7 +18,7 @@
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
-import { asInput, asSelect, asTextArea } from '../../dom/elements';
+import { asButton, asInput, asSelect, asTextArea } from '../../dom/elements';
 import { el, fragment, icon, setHidden } from '../../dom/create';
 import { getState, activeProfile } from '../../state/store';
 import { confirmDialog } from '../../ui/dialogs';
@@ -112,6 +112,12 @@ async function refreshInstalled(): Promise<void> {
     installed = (await api.detectAgents()).detected;
     renderCatalogue();
     nav.markActive();
+
+    // The launch dialog offers what is installed but not added yet, and it is
+    // drawn before this answers.
+    if (!ui.agentLaunchModal.classList.contains('hidden')) {
+      renderLaunchPicker();
+    }
   } catch (error) {
     if (!isStale(error)) {
       logToTerminal(`Could not look for installed agents: ${errorMessage(error)}`, 'info');
@@ -364,7 +370,13 @@ function renderHistory(): void {
   );
 }
 
-export function openAgentManager(): void {
+/**
+ * Opens the agents window, optionally scrolled to one of its sections.
+ *
+ * The launch dialog opens it on "Known tools", because the question it is
+ * answering there is "which other agent could I use", not "edit this one".
+ */
+export function openAgentManager(section?: string): void {
   setHidden(ui.agentsModal, false);
   nav.render(SECTIONS);
   ui.agentsBody.scrollTop = 0;
@@ -373,7 +385,13 @@ export function openAgentManager(): void {
 
   setHidden(ui.agentDesktopOnlyNote, canLaunch());
 
-  void refreshAgents().then(() => refreshInstalled());
+  void refreshAgents()
+    .then(() => {
+      if (section !== undefined) {
+        nav.jumpTo(section);
+      }
+    })
+    .then(() => refreshInstalled());
 }
 
 export function closeAgentManager(): void {
@@ -492,19 +510,26 @@ export async function detectInstalledAgents(): Promise<void> {
   });
 }
 
-/** Adds one catalogue entry, installed or not, and opens it for editing. */
+/** A definition for a catalogue entry, with the prompt convention it needs. */
+async function saveFromCatalogue(entry: AgentCatalogueEntry): Promise<ExternalAgentDefinition> {
+  const { agent } = await api.saveAgent({
+    label: entry.label,
+    executable: entry.executable,
+    args: [...(entry.args ?? [])],
+    terminal: isWindowsHost() ? 'windows-terminal' : 'system-terminal',
+    enabled: true,
+    promptMode: entry.promptMode,
+    ...(entry.promptArgs ? { promptArgs: [...entry.promptArgs] } : {}),
+    catalogueId: entry.id
+  });
+
+  return agent;
+}
+
+/** Adds one catalogue entry, installed or not. */
 async function addFromCatalogue(entry: AgentCatalogueEntry): Promise<void> {
   try {
-    const { agent } = await api.saveAgent({
-      label: entry.label,
-      executable: entry.executable,
-      args: [...(entry.args ?? [])],
-      terminal: isWindowsHost() ? 'windows-terminal' : 'system-terminal',
-      enabled: true,
-      promptMode: entry.promptMode,
-      ...(entry.promptArgs ? { promptArgs: [...entry.promptArgs] } : {}),
-      catalogueId: entry.id
-    });
+    const agent = await saveFromCatalogue(entry);
 
     await refreshAgents();
     await refreshInstalled();
@@ -631,6 +656,23 @@ function launchable(): ExternalAgentDefinition[] {
 }
 
 /**
+ * Known tools this machine has that have no definition yet.
+ *
+ * Offered in the launch dialog after the configured ones. Without them the
+ * dialog only ever showed what had already been added, so reaching for a
+ * second tool meant leaving the dialog and adding it in the agents window.
+ */
+function addable(): AgentCatalogueEntry[] {
+  const found = new Set(
+    installed.filter((entry) => entry.installed && !entry.configured).map((entry) => entry.id)
+  );
+
+  return catalogue.filter(
+    (entry) => found.has(entry.id) && !agents.some((agent) => agent.catalogueId === entry.id)
+  );
+}
+
+/**
  * The agent to start the dialog on.
  *
  * The last one that actually started, because the tool someone reached for an
@@ -675,9 +717,17 @@ export async function launchAgentFor(worktreePath: string): Promise<void> {
 
   const usable = launchable();
   if (usable.length === 0) {
-    showToast('No agents are configured yet. Add one in the agent settings first.', 'warn', 7000);
-    openAgentManager();
-    return;
+    // Nothing added yet, but the dialog can still offer what this machine has.
+    // Only when it has nothing either is the agents window the next step.
+    await refreshInstalled();
+    if (addable().length === 0) {
+      showToast('No agents are configured yet. Add one in the agent settings first.', 'warn', 7000);
+      openAgentManager('catalogue');
+      return;
+    }
+  } else {
+    // The slow half: fills in the installed-but-not-added cards when it answers.
+    void refreshInstalled();
   }
 
   launchTarget = worktreePath;
@@ -692,9 +742,9 @@ export async function launchAgentFor(worktreePath: string): Promise<void> {
   const profile = activeProfile();
   ui.agentLaunchAccount.textContent = profile ? profile.label : 'System SSH';
 
-  const selected = preselectedAgent(usable);
-  launchAgentId = selected.id;
-  launchModelId = preselectedModel(selected);
+  const selected = usable.length === 0 ? null : preselectedAgent(usable);
+  launchAgentId = selected?.id ?? '';
+  launchModelId = selected === null ? '' : preselectedModel(selected);
 
   asTextArea(ui.agentLaunchPrompt).value = '';
   renderLaunchPicker();
@@ -737,7 +787,49 @@ function renderLaunchPicker(): void {
           ]
         });
       })
-    )
+    ),
+    fragment(
+      addable().map((entry) =>
+        el('button', {
+          className: 'agent-card agent-card-addable',
+          data: { catalogueId: entry.id },
+          title: `Add ${entry.label} to your agents and select it`,
+          attrs: { type: 'button' },
+          children: [
+            el('span', {
+              className: 'agent-card-head',
+              children: [
+                el('span', { className: 'agent-card-label', text: entry.label }),
+                el('span', { className: 'agent-tag', text: entry.vendor })
+              ]
+            }),
+            el('span', {
+              className: 'agent-card-summary',
+              children: [
+                el('span', { className: 'agent-card-badge', text: 'Installed, not added' }),
+                el('span', { text: ' · pick it to add it' })
+              ]
+            })
+          ]
+        })
+      )
+    ),
+    el('button', {
+      className: 'agent-card agent-card-more',
+      data: { launchAction: 'manage' },
+      title: 'Open the coding agents window on the known tools',
+      attrs: { type: 'button' },
+      children: [
+        el('span', {
+          className: 'agent-card-head',
+          children: [icon('add', 16), el('span', { className: 'agent-card-label', text: 'More agents…' })]
+        }),
+        el('span', {
+          className: 'agent-card-summary',
+          text: 'Add another tool, turn one back on, or copy one for a second model'
+        })
+      ]
+    })
   );
 
   renderLaunchModels();
@@ -785,6 +877,7 @@ function renderLaunchModels(): void {
   setHidden(ui.agentLaunchPromptRow, agent?.promptMode === undefined || agent.promptMode === 'none');
 
   renderCommandPreview(agent, preset);
+  asButton(ui.btnLaunchAgent).disabled = agent === undefined;
 }
 
 /**
@@ -835,7 +928,19 @@ function renderCommandPreview(
 }
 
 export function handleLaunchPickerClick(target: HTMLElement): void {
-  const agentId = target.closest<HTMLElement>('[data-agent-id]')?.dataset['agentId'];
+  if (target.dataset['launchAction'] === 'manage') {
+    closeLaunchDialog();
+    openAgentManager('catalogue');
+    return;
+  }
+
+  const catalogueId = target.dataset['catalogueId'];
+  if (catalogueId !== undefined) {
+    void adoptForLaunch(catalogueId, target);
+    return;
+  }
+
+  const agentId = target.dataset['agentId'];
   if (agentId === undefined || agentId === launchAgentId) {
     return;
   }
@@ -843,6 +948,33 @@ export function handleLaunchPickerClick(target: HTMLElement): void {
   launchAgentId = agentId;
   launchModelId = '';
   renderLaunchPicker();
+}
+
+/** Adds an installed tool from the launch dialog and selects it there. */
+async function adoptForLaunch(catalogueId: string, card: HTMLElement): Promise<void> {
+  const entry = catalogue.find((candidate) => candidate.id === catalogueId);
+  if (!entry || card.getAttribute('aria-busy') === 'true') {
+    return;
+  }
+
+  card.setAttribute('aria-busy', 'true');
+  try {
+    const agent = await saveFromCatalogue(entry);
+    await refreshAgents();
+
+    launchAgentId = agent.id;
+    launchModelId = '';
+    renderLaunchPicker();
+    ui.agentLaunchPicker
+      .querySelector<HTMLElement>(`[data-agent-id="${CSS.escape(agent.id)}"]`)
+      ?.focus();
+    showToast(`${agent.label} added to your agents.`, 'success');
+
+    void refreshInstalled();
+  } catch (error) {
+    card.removeAttribute('aria-busy');
+    showToast(errorMessage(error, 'Could not add that agent.'), 'error', 6000);
+  }
 }
 
 export function onLaunchModelChanged(): void {

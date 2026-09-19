@@ -80,13 +80,13 @@ describe('the modal layer', () => {
   });
 });
 
-describe('which overlays dock and which cover', () => {
+describe('which overlays float and which cover', () => {
   // Five surfaces are things you want open beside the work rather than
   // stacked on top of it: you cannot watch a rebase and read the conflict's
   // diff at once if opening one dims and freezes everything else. The
   // Repository window used to be one, and the coding agents window was
   // another; both are laid out like Settings now, with their sections down
-  // the side, which a dock has no width for.
+  // the side, which a floating panel has no width for.
   const PANELS = [
     'rebase-modal',
     'search-modal',
@@ -101,7 +101,7 @@ describe('which overlays dock and which cover', () => {
     );
   }
 
-  it('docks exactly the five that belong beside the work', () => {
+  it('floats exactly the five that belong beside the work', () => {
     expect(panelIds().sort()).toEqual([...PANELS].sort());
   });
 
@@ -109,15 +109,15 @@ describe('which overlays dock and which cover', () => {
     // Confirm, prompt, the passphrase dialogs and the wizards are all "answer
     // this, then continue". A question you can ignore while clicking elsewhere
     // is a worse question.
-    const docked = new Set(panelIds());
+    const floating = new Set(panelIds());
 
     for (const id of ['confirm-modal', 'prompt-modal', 'vault-setup-modal', 'new-repo-modal', 'clone-modal', 'settings-modal', 'repo-hub-modal', 'agents-modal']) {
-      expect(docked.has(id), `${id} should stay modal`).toBe(false);
+      expect(floating.has(id), `${id} should stay modal`).toBe(false);
     }
   });
 
   it('closes a modal before a panel, whatever the list order', () => {
-    // A panel sits beside the work, so a modal opened while one is docked is
+    // A panel sits beside the work, so a modal opened while one is open is
     // unambiguously on top -- and Escape closing the panel underneath would be
     // answering a question nobody asked.
     const body = mainSource.slice(
@@ -128,12 +128,22 @@ describe('which overlays dock and which cover', () => {
     expect(body).toContain('isPanel(modal) === group');
   });
 
-  it('lets Tab leave a panel, which is the point of docking one', () => {
+  it('pops panels out over the window rather than docking them as a column', () => {
+    // A docked panel took its width from the main body, which squeezed the
+    // three panes into four. Nothing may give up width for a panel again.
+    const css = fs.readFileSync(fromAppRoot('public', 'style.css'), 'utf8');
+
+    expect(css).not.toMatch(/body\.dock-open/);
+    expect(css).not.toMatch(/--dock-width/);
+    expect(mainSource).toContain('initFloatingPanels()');
+  });
+
+  it('lets Tab leave a panel, which is the point of one', () => {
     const focus = fs.readFileSync(fromAppRoot('src', 'renderer', 'ui', 'focus.ts'), 'utf8');
 
     expect(
       focus.includes("!modal.classList.contains('as-panel')"),
-      'trapTab traps docked panels, so Tab cannot reach the work beside them'
+      'trapTab traps floating panels, so Tab cannot reach the work beside them'
     ).toBe(true);
   });
 });
