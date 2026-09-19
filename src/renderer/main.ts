@@ -537,10 +537,6 @@ function wireWorktrees(): void {
   ui.btnWorktreeManage.addEventListener('click', () => worktrees.openWorktreeManager());
   ui.btnCloseWorktreeModal.addEventListener('click', () => worktrees.closeWorktreeManager());
 
-  // One handler per list, both dispatching on the row's data-worktree-path.
-  delegate(ui.worktreeList, 'click', '[data-worktree-path]', worktrees.handleWorktreeAction);
-  delegate(ui.worktreeManagerList, 'click', '[data-worktree-path]', worktrees.handleWorktreeAction);
-
   ui.worktreeBranchMode.addEventListener('change', () => worktrees.onCreateFormChanged());
   ui.worktreeBranchInput.addEventListener('input', () => worktrees.onCreateFormChanged());
   ui.worktreePathInput.addEventListener('input', () => worktrees.markPathTouched());

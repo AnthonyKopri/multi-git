@@ -14,6 +14,10 @@ or Security. Remove empty headings when preparing a release.
 
 ### Fixed
 
+- **The buttons on worktree rows work.** Open, new window, terminal, agent,
+  copy path, lock, move and remove did nothing when clicked, in both the
+  sidebar and the Worktrees window, because the clicks were never passed to
+  the buttons.
 - **Removing a worktree says why when it fails, and offers to force it.** A
   refusal from git reached the window as "git exited with code 128", with
   git's own reason thrown away. It now opens a dialog with that reason and a

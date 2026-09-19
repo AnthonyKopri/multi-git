@@ -13,7 +13,7 @@ import * as api from '../../api/endpoints';
 import { ApiError, errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
 import { asInput, asSelect } from '../../dom/elements';
-import { el, fragment, icon, setHidden } from '../../dom/create';
+import { delegate, el, fragment, icon, setHidden } from '../../dom/create';
 import { getState } from '../../state/store';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
@@ -34,6 +34,12 @@ let suggestedParent = '';
 export function initWorktrees(elements: Elements, onChanged: () => Promise<void>): void {
   ui = elements;
   refreshAll = onChanged;
+
+  // Delegated on the button, not the row: `delegate` hands over the element
+  // the selector matched, and the handler reads the action from it. Matching
+  // the row made every row button a silent no-op.
+  delegate(ui.worktreeList, 'click', '[data-action]', handleWorktreeAction);
+  delegate(ui.worktreeManagerList, 'click', '[data-action]', handleWorktreeAction);
 }
 
 /** `refs/heads/feature/login` reads better as `feature/login`. */
