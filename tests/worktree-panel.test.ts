@@ -105,13 +105,14 @@ function findRow(listId: string, worktreePath: string): HTMLElement {
   return row;
 }
 
-/** Clicks the action button on the row for a worktree path. */
-function clickAction(
-  listId: string,
-  worktreePath: string,
-  action: string,
-  handler: (target: HTMLElement) => void
-): void {
+/**
+ * Clicks the action button on the row for a worktree path.
+ *
+ * A real click, through the listeners initWorktrees attaches, so the wiring is
+ * under test too. Calling the handler with the button directly once hid that
+ * every row button did nothing in the app.
+ */
+function clickAction(listId: string, worktreePath: string, action: string): void {
   const button = findRow(listId, worktreePath).querySelector<HTMLElement>(
     `[data-action="${action}"]`
   );
@@ -120,7 +121,7 @@ function clickAction(
     throw new Error(`No "${action}" action on ${worktreePath} in #${listId}`);
   }
 
-  handler(button);
+  button.click();
 }
 
 beforeEach(() => {
@@ -345,9 +346,7 @@ describe('removing from the manager', () => {
     clickAction(
       'worktree-manager-list',
       'D:\\work\\app.worktrees\\login',
-      'remove',
-      feature.handleWorktreeAction
-    );
+      'remove');
     await vi.waitFor(() => expect(endpoints.removeWorktree).toHaveBeenCalled());
 
     expect(endpoints.removeWorktree).toHaveBeenCalledWith({
@@ -365,9 +364,7 @@ describe('removing from the manager', () => {
     clickAction(
       'worktree-manager-list',
       'D:\\work\\app.worktrees\\login',
-      'remove',
-      feature.handleWorktreeAction
-    );
+      'remove');
     await vi.waitFor(() => expect(dialogs.confirmDialog).toHaveBeenCalled());
 
     expect(endpoints.removeWorktree).not.toHaveBeenCalled();
@@ -398,9 +395,7 @@ describe('removing from the manager', () => {
     clickAction(
       'worktree-manager-list',
       'D:\\work\\app.worktrees\\login',
-      'remove',
-      feature.handleWorktreeAction
-    );
+      'remove');
     await vi.waitFor(() => expect(endpoints.removeWorktree).toHaveBeenCalled());
 
     // No plain confirm at all for this case: the typed name is the gate.
@@ -437,9 +432,7 @@ describe('removing from the manager', () => {
     clickAction(
       'worktree-manager-list',
       'D:\\work\\app.worktrees\\login',
-      'remove',
-      feature.handleWorktreeAction
-    );
+      'remove');
     await vi.waitFor(() => expect(dialogs.promptDialog).toHaveBeenCalled());
 
     expect(endpoints.removeWorktree).not.toHaveBeenCalled();
@@ -470,9 +463,7 @@ describe('removing from the manager', () => {
     clickAction(
       'worktree-manager-list',
       'D:\\work\\app.worktrees\\login',
-      'remove',
-      feature.handleWorktreeAction
-    );
+      'remove');
     await vi.waitFor(() => expect(dialogs.promptDialog).toHaveBeenCalled());
 
     expect(dialogs.promptDialog).toHaveBeenCalledWith(
@@ -497,7 +488,7 @@ describe('removing from the manager', () => {
       .mockResolvedValueOnce({ success: true, removedPath: LINKED, worktrees: [main] });
     await feature.refreshWorktrees();
 
-    clickAction('worktree-manager-list', LINKED, 'remove', feature.handleWorktreeAction);
+    clickAction('worktree-manager-list', LINKED, 'remove');
     await vi.waitFor(() => expect(endpoints.removeWorktree).toHaveBeenCalledTimes(2));
 
     expect(dialogs.promptDialog).toHaveBeenCalled();
@@ -519,7 +510,7 @@ describe('removing from the manager', () => {
       .mockResolvedValueOnce({ success: true, removedPath: LINKED, worktrees: [main] });
     await feature.refreshWorktrees();
 
-    clickAction('worktree-manager-list', LINKED, 'remove', feature.handleWorktreeAction);
+    clickAction('worktree-manager-list', LINKED, 'remove');
     await vi.waitFor(() => expect(endpoints.removeWorktree).toHaveBeenCalledTimes(2));
 
     expect(dialogs.confirmDialog).toHaveBeenLastCalledWith(
@@ -544,7 +535,7 @@ describe('removing from the manager', () => {
     );
     await feature.refreshWorktrees();
 
-    clickAction('worktree-manager-list', LINKED, 'remove', feature.handleWorktreeAction);
+    clickAction('worktree-manager-list', LINKED, 'remove');
     await vi.waitFor(() => expect(dialogs.confirmDialog).toHaveBeenCalledTimes(2));
 
     expect(dialogs.confirmDialog).toHaveBeenLastCalledWith(
