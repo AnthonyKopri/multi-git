@@ -194,11 +194,16 @@ historyRouter.get(
   asyncRoute(async (req, res) => {
     const repoPath = req.repoPath as string;
 
+    // The hash is the tagged commit's. An annotated tag is an object of its
+    // own, and its hash is not one the commit views can show, so it is peeled
+    // (%(*objectname)) whenever there is anything to peel.
     const result = await tryGitCommand(repoPath, [
       'for-each-ref',
       'refs/tags',
       '--sort=-creatordate',
-      '--format=%(refname:short)\x1f%(objectname:short)\x1f%(creatordate:relative)'
+      '--format=%(refname:short)\x1f' +
+        '%(if)%(*objectname)%(then)%(*objectname:short)%(else)%(objectname:short)%(end)' +
+        '\x1f%(creatordate:relative)'
     ]);
 
     const tags = (result?.stdout ?? '')

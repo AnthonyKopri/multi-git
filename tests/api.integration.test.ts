@@ -458,6 +458,17 @@ describe('tags', () => {
     tags = await api(repo).get('/api/git/tags').expect(200);
     expect(tags.body.tags).toHaveLength(0);
   });
+
+  it("lists an annotated tag with its commit's hash, not the tag object's", async () => {
+    const repo = createRepoWithHistory();
+    await api(repo).post('/api/git/tag').send({ name: 'v2.0.0', message: 'Second' }).expect(200);
+
+    const head = git(repo, 'rev-parse', '--short', 'HEAD').trim();
+    const tags = await api(repo).get('/api/git/tags').expect(200);
+    const tag = tags.body.tags.find((t: { name: string }) => t.name === 'v2.0.0');
+
+    expect(tag.hash).toBe(head);
+  });
 });
 
 describe('safety net', () => {

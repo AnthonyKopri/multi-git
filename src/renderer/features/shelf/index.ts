@@ -4,7 +4,7 @@
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
-import { el, fragment, icon } from '../../dom/create';
+import { delegate, el, fragment, icon } from '../../dom/create';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
@@ -14,10 +14,24 @@ import { activeProfile } from '../accounts';
 
 let ui: Elements;
 let refreshAll: () => Promise<void> = async () => {};
+let showCommit: (hash: string) => void = () => {};
 
-export function initShelf(elements: Elements, onChanged: () => Promise<void>): void {
+export function initShelf(
+  elements: Elements,
+  onChanged: () => Promise<void>,
+  hooks: { showCommit: (hash: string) => void }
+): void {
   ui = elements;
   refreshAll = onChanged;
+  showCommit = hooks.showCommit;
+
+  // Wired here rather than in main.ts, so the tests that call initShelf click
+  // through the same listeners the app does. Every list delegates on the
+  // button, and the handler finds the row from it.
+  delegate(ui.stashList, 'click', '[data-action]', handleStashAction);
+  delegate(ui.tagList, 'click', '[data-action]', handleTagAction);
+  delegate(ui.checkpointList, 'click', '[data-action="undo"]', handleCheckpointAction);
+  delegate(ui.trashList, 'click', '[data-action="restore"]', handleTrashAction);
 }
 
 interface ShelfAction {
@@ -331,11 +345,17 @@ export async function refreshTagList(): Promise<void> {
     renderList(
       ui.tagList,
       tags.map((tag) =>
-        buildShelfRow('sell', tag.name, `${tag.hash} — ${tag.date}`, { tag: tag.name }, [
-          { action: 'show', glyph: 'visibility', title: 'Show the tagged commit' },
-          { action: 'push', glyph: 'cloud_upload', title: 'Push this tag to origin' },
-          { action: 'delete', glyph: 'delete', title: 'Delete this local tag', danger: true }
-        ])
+        buildShelfRow(
+          'sell',
+          tag.name,
+          `${tag.hash} — ${tag.date}`,
+          { tag: tag.name, hash: tag.hash },
+          [
+            { action: 'show', glyph: 'visibility', title: 'Show the tagged commit' },
+            { action: 'push', glyph: 'cloud_upload', title: 'Push this tag to origin' },
+            { action: 'delete', glyph: 'delete', title: 'Delete this local tag', danger: true }
+          ]
+        )
       ),
       'No tags'
     );
@@ -343,6 +363,29 @@ export async function refreshTagList(): Promise<void> {
     if (!isStale(error)) {
       logToTerminal(`Failed to load tags: ${errorMessage(error)}`, 'error');
     }
+  }
+}
+
+export function handleTagAction(target: HTMLElement): void {
+  const row = target.closest<HTMLElement>('[data-tag]');
+  const tag = row?.dataset['tag'];
+  if (!tag) {
+    return;
+  }
+
+  switch (target.dataset['action']) {
+    case 'show':
+      // The list's hash is the tagged commit's, peeled by the server, so the
+      // drawer opens on the commit rather than an annotated tag's own object.
+      if (row?.dataset['hash']) {
+        showCommit(row.dataset['hash']);
+      }
+      return;
+    case 'push':
+      void pushTag(tag);
+      return;
+    case 'delete':
+      void deleteTag(tag);
   }
 }
 
@@ -427,6 +470,20 @@ export async function refreshSafetyNet(): Promise<void> {
     if (!isStale(error)) {
       logToTerminal(`Failed to load Safety Net: ${errorMessage(error)}`, 'error');
     }
+  }
+}
+
+function handleCheckpointAction(target: HTMLElement): void {
+  const row = target.closest<HTMLElement>('[data-checkpoint-id]');
+  if (row?.dataset['checkpointId']) {
+    void undoOperation(row.dataset['checkpointId'], row.dataset['label'] ?? 'operation');
+  }
+}
+
+function handleTrashAction(target: HTMLElement): void {
+  const row = target.closest<HTMLElement>('[data-trash-id]');
+  if (row?.dataset['trashId']) {
+    void restoreTrashEntry(row.dataset['trashId'], row.dataset['path'] ?? '');
   }
 }
 
