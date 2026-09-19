@@ -12,6 +12,8 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.1.3] - 2026-09-19
+
 ### Fixed
 
 - **The buttons on worktree rows work.** Open, new window, terminal, agent,
@@ -966,7 +968,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.2...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.3...HEAD
+[5.1.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.2...Release_v5.1.3
 [5.1.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.1...Release_v5.1.2
 [5.1.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.0...Release_v5.1.1
 [5.1.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.3...Release_v5.1.0
