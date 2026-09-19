@@ -12,6 +12,17 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **Removing a worktree says why when it fails, and offers to force it.** A
+  refusal from git reached the window as "git exited with code 128", with
+  git's own reason thrown away. It now opens a dialog with that reason and a
+  Force remove button, and a recovery point is still saved first. A worktree
+  whose uncommitted changes had not been counted yet no longer stops at an
+  error. It goes on to ask for the folder name. The remove button spins while
+  git works, and the worktree this window has open can no longer be removed
+  from under it.
+
 ## [5.1.2] - 2026-09-19
 
 ### Changed

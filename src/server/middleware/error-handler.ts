@@ -21,11 +21,14 @@ import { RepoPathError } from './repo-path';
 /** An error carrying the HTTP status it should produce. */
 export class HttpError extends Error {
   readonly statusCode: number;
+  /** A machine-readable reason, passed through as the response's `code`. */
+  readonly code: string | undefined;
 
-  constructor(message: string, statusCode = 500) {
+  constructor(message: string, statusCode = 500, code?: string) {
     super(message);
     this.name = 'HttpError';
     this.statusCode = statusCode;
+    this.code = code;
   }
 }
 
@@ -71,6 +74,10 @@ function classify(error: unknown, fallbackMessage: string): ErrorShape {
       code: error.code,
       ...(error.documentation !== undefined ? { documentation: error.documentation } : {})
     };
+  }
+
+  if (error instanceof HttpError && error.code !== undefined) {
+    return { statusCode: error.statusCode, message: error.message, code: error.code };
   }
 
   if (

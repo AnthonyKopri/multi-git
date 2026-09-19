@@ -14,6 +14,10 @@ export interface ConfirmOptions {
   danger?: boolean;
   checkboxLabel?: string;
   checkboxChecked?: boolean;
+  /** Text for the dismiss button. Defaults to "Cancel". */
+  cancelLabel?: string;
+  /** Shows only the confirm button, for a message that offers no choice. */
+  hideCancel?: boolean;
 }
 
 export interface ConfirmResult {
@@ -97,6 +101,8 @@ export function confirmDialog(message: string, options: ConfirmOptions = {}): Pr
     ui.confirmMessage.textContent = message;
     ui.btnConfirmOk.textContent = options.confirmLabel ?? 'Confirm';
     ui.btnConfirmOk.className = options.danger ? 'btn btn-danger' : 'btn btn-primary';
+    ui.btnConfirmCancel.textContent = options.cancelLabel ?? 'Cancel';
+    setHidden(ui.btnConfirmCancel, options.hideCancel === true);
 
     if (options.checkboxLabel) {
       ui.confirmCheckboxLabel.textContent = options.checkboxLabel;
