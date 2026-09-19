@@ -491,31 +491,7 @@ function wireShelves(): void {
     stashFilterTimer = setTimeout(() => shelf.setStashQuery(value), 250);
   });
 
-  delegate(ui.stashList, 'click', '[data-action]', shelf.handleStashAction);
-
-  delegate(ui.tagList, 'click', '[data-action]', (target) => {
-    const row = target.closest<HTMLElement>('[data-tag]');
-    const tag = row?.dataset['tag'];
-    if (!tag) {
-      return;
-    }
-
-    const action = target.dataset['action'];
-    if (action === 'push') {
-      void shelf.pushTag(tag);
-    } else if (action === 'delete') {
-      void shelf.deleteTag(tag);
-    }
-    // "show" needs the tag's commit, which the list does not carry; the
-    // History panel is the place to inspect it.
-  });
-
-  delegate(ui.checkpointList, 'click', '[data-action="undo"]', (target) => {
-    const row = target.closest<HTMLElement>('[data-checkpoint-id]');
-    if (row?.dataset['checkpointId']) {
-      void shelf.undoOperation(row.dataset['checkpointId'], row.dataset['label'] ?? 'operation');
-    }
-  });
+  // The stash, tag, checkpoint and trash lists are wired in initShelf.
 
   ui.btnRecoveryOpen.addEventListener('click', () => recovery.openRecoveryBrowser());
   ui.btnCloseRecoveryModal.addEventListener('click', () => recovery.closeRecoveryBrowser());
@@ -524,13 +500,6 @@ function wireShelves(): void {
   wireAgents();
   delegate(ui.recoveryPointsList, 'click', '[data-action]', recovery.handleRecoveryAction);
   delegate(ui.recoveryReflogList, 'click', '[data-action]', recovery.handleRecoveryAction);
-
-  delegate(ui.trashList, 'click', '[data-action="restore"]', (target) => {
-    const row = target.closest<HTMLElement>('[data-trash-id]');
-    if (row?.dataset['trashId']) {
-      void shelf.restoreTrashEntry(row.dataset['trashId'], row.dataset['path'] ?? '');
-    }
-  });
 }
 
 function wireWorktrees(): void {
@@ -1036,7 +1005,9 @@ async function start(): Promise<void> {
   repo.initRepo(ui, { refreshAll, onOpened: () => void rebase.openIfRebasing() });
   newRepo.initNewRepo(ui);
   branches.initBranches(ui, refreshAll);
-  shelf.initShelf(ui, refreshAll);
+  shelf.initShelf(ui, refreshAll, {
+    showCommit: (hash) => void history.showCommitDetails(hash)
+  });
   recovery.initRecovery(ui, refreshAll);
   palette.initPalette(ui);
   search.initSearch(ui, { showCommit: (hash) => void history.showCommitDetails(hash) });

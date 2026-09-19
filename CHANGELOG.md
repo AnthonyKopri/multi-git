@@ -12,6 +12,13 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **The show button on a tag works.** It did nothing when clicked. It now
+  opens the tagged commit in the commit drawer. The tag list also shows the
+  commit's hash for an annotated tag, where it used to show the hash of the
+  tag object.
+
 ## [5.1.3] - 2026-09-19
 
 ### Fixed

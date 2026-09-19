@@ -36,6 +36,8 @@ vi.mock('../src/renderer/ui/toast', () => ({ showToast: vi.fn() }));
 vi.mock('../src/renderer/ui/log', () => ({ logToTerminal: vi.fn() }));
 vi.mock('../src/renderer/features/accounts', () => ({ activeProfile: () => null }));
 
+const showCommit = vi.fn();
+
 /** Mounts the real markup and renders two stashes into it. */
 async function mount(): Promise<typeof import('../src/renderer/features/shelf')> {
   const html = fs.readFileSync(fromAppRoot('public', 'index.html'), 'utf8');
@@ -44,13 +46,11 @@ async function mount(): Promise<typeof import('../src/renderer/features/shelf')>
 
   vi.resetModules();
   const { resolveElements } = await import('../src/renderer/dom/elements');
-  const { delegate } = await import('../src/renderer/dom/create');
   const shelf = await import('../src/renderer/features/shelf');
 
-  const ui = resolveElements();
-  shelf.initShelf(ui, async () => {});
-  // The same one line main.ts uses to wire the list.
-  delegate(ui.stashList, 'click', '[data-action]', shelf.handleStashAction);
+  // initShelf attaches the list listeners itself, so the clicks below go
+  // through the same wiring the app uses rather than a copy of it.
+  shelf.initShelf(resolveElements(), async () => {}, { showCommit });
   endpoints.getStashes.mockResolvedValue({
     stashes: [
       { ref: 'stash@{0}', message: 'On main: the row layout', date: '2 hours ago' },
@@ -134,5 +134,39 @@ describe('a stash row', () => {
 
     expect(endpoints.applyStash).toHaveBeenCalledWith('stash@{0}', true, false);
     expect(menu()).toBeNull();
+  });
+});
+
+describe('a tag row', () => {
+  async function mountTags(): Promise<void> {
+    const shelf = await mount();
+    endpoints.getTags.mockResolvedValue({
+      tags: [{ name: 'v1.0.0', hash: 'abc1234', date: '3 days ago' }]
+    });
+    await shelf.refreshTagList();
+  }
+
+  const tagButton = (action: string): HTMLElement | null =>
+    document.querySelector<HTMLElement>(`#tag-list [data-action="${action}"]`);
+
+  it('opens the tagged commit from "show"', async () => {
+    // This button once did nothing: the handler had no case for it.
+    await mountTags();
+
+    tagButton('show')?.click();
+
+    expect(showCommit).toHaveBeenCalledWith('abc1234');
+  });
+
+  it('pushes and deletes the tag the row is for', async () => {
+    await mountTags();
+    endpoints.pushTag.mockResolvedValue({});
+    endpoints.deleteTag.mockResolvedValue({});
+
+    tagButton('push')?.click();
+    tagButton('delete')?.click();
+
+    expect(endpoints.pushTag).toHaveBeenCalledWith('v1.0.0', undefined, undefined);
+    await vi.waitFor(() => expect(endpoints.deleteTag).toHaveBeenCalledWith('v1.0.0'));
   });
 });
