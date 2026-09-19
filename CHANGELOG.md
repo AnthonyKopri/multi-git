@@ -12,6 +12,43 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.2.0] - 2026-09-20
+
+### Added
+
+- **Multi-Git in the terminal.** `multi-git tui` is a keyboard-driven Git
+  assistant with the desktop app's workflows and safety checks: Vim-style
+  keys, a `Space` menu that shows every shortcut, a `:` palette that finds
+  workflows by name or by what you want, and a preview before anything
+  changes a repository. See docs/terminal.md.
+- **A terminal edition for every platform.** Windows, macOS and Linux, each
+  for x64 and ARM64, with its own runtime: Git is the only requirement.
+  `multi-git update` updates it when asked, after checking the download
+  against the release checksums.
+- **Enable the `multi-git` command from the desktop app.** Offered once on the
+  welcome screen, and in Settings → Terminal and agents, which also repairs,
+  removes and opens it. The **Multi-Git CLI** button beside **Terminal**
+  opens the terminal UI on the current repository.
+- **An MCP server for AI agents.** `multi-git mcp` is read-only unless started
+  with `--allow-write`, never force-pushes, and asks for the user's decision
+  where the desktop app would. Settings copies the configuration to paste into
+  an agent. See docs/mcp.md.
+- **Guided CLI commands.** `sync.fetch`, `pull`, `sync.push`, `ssh.select`,
+  `remote.toggle`, auto-pull, history and operations, with the desktop app's
+  checks and a JSON Schema for every command's input.
+
+### Changed
+
+- **One backend for the desktop app, the terminal and agents.** Repository
+  locks, SSH accounts, running operations and the unlocked vault are shared,
+  and the CLI needs no server address. It exits a minute after its last
+  client, or immediately after desktop exit when no other clients or operations need it.
+- **Auto-pull is decided once, in the backend.** Two windows, or a window and
+  a terminal, fetching at the same moment pull at most once.
+- **Download tables in the release notes.** One table per operating system,
+  with the edition, architecture and format of each file and a direct link.
+  File names are unchanged, so installed copies keep updating.
+
 ## [5.1.4] - 2026-09-19
 
 ### Fixed
@@ -977,7 +1014,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.4...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.0...HEAD
+[5.2.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.4...Release_v5.2.0
 [5.1.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.3...Release_v5.1.4
 [5.1.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.2...Release_v5.1.3
 [5.1.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.1...Release_v5.1.2
