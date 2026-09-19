@@ -12,6 +12,27 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.1.1] - 2026-09-19
+
+### Changed
+
+- **Worktrees, Rebase, Recovery, Branch Maintenance and Search pop out as
+  panels of their own.** They used to dock down the right-hand side and take
+  that width from the window, squeezing the three panes into a fourth column.
+  Each now floats over the window instead: drag it by its header, resize it
+  from its corner, and it reopens where and at the size it was left.
+  Double-clicking the header puts it back where a new one opens. Several can be
+  open at once; the one last clicked is on top, and Escape closes that one
+  first.
+- **The launch window can reach an agent that is not added yet.** It used to
+  offer only the agents already configured, so once one was set up there was
+  no way to pick a different tool without leaving it for the agents window.
+  Tools this machine has installed but that are not added yet now appear after
+  the configured ones — picking one adds it and selects it, with its own prompt
+  convention — and a *More agents…* card opens the agents window on the known
+  tools. With nothing configured but something installed, the window opens
+  rather than sending you away.
+
 ## [5.1.0] - 2026-09-19
 
 ### Added
@@ -918,7 +939,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.0...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.1...HEAD
+[5.1.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.0...Release_v5.1.1
 [5.1.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.3...Release_v5.1.0
 [5.0.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.2...Release_v5.0.3
 [5.0.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.1...Release_v5.0.2
