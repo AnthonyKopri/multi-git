@@ -12,6 +12,16 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.1.2] - 2026-09-19
+
+### Changed
+
+- **Worktrees, Rebase, Recovery, Branch Maintenance and Search open like
+  Settings.** 5.1.1 made them floating panels over the window, which still left
+  everything behind them clickable. Each now opens as a centred window over a
+  dimmed backdrop, the same size as Settings, and the rest of the application
+  waits until it is closed. Escape closes it, and Tab stays inside it.
+
 ## [5.1.1] - 2026-09-19
 
 ### Changed
@@ -939,7 +949,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.1...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.2...HEAD
+[5.1.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.1...Release_v5.1.2
 [5.1.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.0...Release_v5.1.1
 [5.1.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.3...Release_v5.1.0
 [5.0.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.0.2...Release_v5.0.3

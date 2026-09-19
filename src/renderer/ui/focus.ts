@@ -85,10 +85,7 @@ function openModals(): HTMLElement[] {
  * was. Returns true when the key was handled.
  */
 export function trapTab(event: KeyboardEvent): boolean {
-  // Docked panels are deliberately not trapped. A panel sits beside the work
-  // rather than over it, and the whole point of docking one is that the rest of
-  // the window stays usable -- so Tab has to be able to leave.
-  const open = openModals().filter((modal) => !modal.classList.contains('as-panel'));
+  const open = openModals();
   if (open.length === 0) {
     return false;
   }
