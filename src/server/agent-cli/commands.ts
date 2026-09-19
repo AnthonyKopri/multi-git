@@ -10,7 +10,9 @@ export type LocalEffect =
   | 'repo-config'
   | 'object-database'
   | 'ref-prune'
-  | 'worktree-create';
+  | 'worktree-create'
+  | 'ssh-agent'
+  | 'operation-control';
 
 /**
  * Conservative possible effects across supported inputs, not an execution forecast.
@@ -102,6 +104,70 @@ export const commands: Record<string, AgentCommand> = {
   },
   'agents.list': {
     method: 'GET', path: '/api/agents', repo: false, description: 'List configured agent launchers.', input: {},
+    effects: { mutates: false, local: [], remote: 'none' }
+  },
+  'repositories.local': {
+    method: 'GET', path: '/api/workflows/repositories', repo: false, description: 'List remembered local repositories.', input: {},
+    effects: { mutates: false, local: [], remote: 'none' }
+  },
+  'history': {
+    method: 'GET', path: '/api/git/log', repo: true, description: 'Read commit history, newest first.', input: { limit: 'optional integer 1-500, default 50', skip: 'optional non-negative integer' },
+    effects: { mutates: false, local: [], remote: 'none' }
+  },
+  'sync.fetch': {
+    method: 'POST', path: '/api/workflows/fetch', repo: true, description: 'Fetch origin; when auto-pull is on and the branch is purely behind with no local edits, fast-forward it. Reports autoPull as off, current, blocked with a reason, or pulled.', input: { profileId: 'optional SSH profile id' },
+    effects: { mutates: true, local: ['object-database', 'local-refs', 'ref-prune', 'head', 'index', 'working-tree'], remote: 'read' }
+  },
+  'pull': {
+    method: 'POST', path: '/api/workflows/pull', repo: true, description: 'Pull the upstream. A fast-forward proceeds; a merge or rebase answers DECISION_REQUIRED until confirmed.', input: { profileId: 'optional SSH profile id', confirmed: 'optional true after the user reviewed the incoming and outgoing commits' },
+    effects: { mutates: true, local: ['object-database', 'local-refs', 'head', 'index', 'working-tree', 'local-history'], remote: 'read' }
+  },
+  'sync.push': {
+    method: 'POST', path: '/api/workflows/push', repo: true, description: 'Push the current branch, or publish it when it has no upstream; never force. A key that signs in as an unexpected account answers DECISION_REQUIRED until confirmed.', input: { profileId: 'optional SSH profile id', confirmed: 'optional true after the user accepted the account' },
+    effects: { mutates: true, local: ['local-refs', 'repo-config', 'app-config'], remote: 'write' }
+  },
+  'auto-pull.get': {
+    method: 'GET', path: '/api/workflows/auto-pull', repo: false, description: 'Read the global auto-pull setting (off by default).', input: {},
+    effects: { mutates: false, local: [], remote: 'none' }
+  },
+  'auto-pull.set': {
+    method: 'POST', path: '/api/workflows/auto-pull', repo: false, description: 'Turn global auto-pull on or off. It only ever fast-forwards, after a sync.fetch.', input: { enabled: 'required boolean' },
+    effects: { mutates: true, local: ['app-config'], remote: 'none' }
+  },
+  'ssh.profiles': {
+    method: 'GET', path: '/api/workflows/ssh/profiles', repo: false, description: 'List SSH profiles; no secrets.', input: {},
+    effects: { mutates: false, local: [], remote: 'none' }
+  },
+  'ssh.inspect': {
+    method: 'GET', path: '/api/workflows/ssh', repo: true, description: 'Show the repository account and author setup, and whether switching to a profile would overwrite it.', input: { profileId: 'optional profile id; default is the current one' },
+    effects: { mutates: false, local: [], remote: 'none' }
+  },
+  'ssh.select': {
+    method: 'POST', path: '/api/workflows/ssh', repo: true, description: 'Switch the repository to an SSH profile and its author, keeping custom SSH commands. Overwriting an existing setup answers DECISION_REQUIRED until confirmed.', input: { profileId: 'required profile id, or empty string for System SSH', confirmed: 'optional true after ssh.inspect was reviewed', keepIdentity: 'optional boolean: keep the current commit author' },
+    effects: { mutates: true, local: ['app-config', 'repo-config', 'ssh-agent'], remote: 'none' }
+  },
+  'ssh.verify': {
+    method: 'POST', path: '/api/workflows/ssh/verify', repo: true, description: 'Ask the SSH host which account the profile signs in as, and remember it.', input: { profileId: 'optional profile id; default is the current one' },
+    effects: { mutates: true, local: ['app-config'], remote: 'read' }
+  },
+  'remote.inspect': {
+    method: 'GET', path: '/api/git/remote/origin', repo: true, description: 'Show origin, its protocol, and the SSH/HTTPS URL it would switch to.', input: {},
+    effects: { mutates: false, local: [], remote: 'none' }
+  },
+  'remote.toggle': {
+    method: 'POST', path: '/api/workflows/remote', repo: true, description: 'Switch origin between SSH and HTTPS. Answers DECISION_REQUIRED until confirmed.', input: { confirmed: 'required true after remote.inspect was reviewed' },
+    effects: { mutates: true, local: ['repo-config'], remote: 'none' }
+  },
+  'operations.list': {
+    method: 'GET', path: '/api/operations', repo: false, description: 'List running and recent backend operations.', input: {},
+    effects: { mutates: false, local: [], remote: 'none' }
+  },
+  'operations.cancel': {
+    method: 'POST', path: '/api/operations/cancel', repo: false, description: 'Ask an operation to stop. A remote may already have received part of it; inspect status before retrying.', input: { id: 'required operation id' },
+    effects: { mutates: true, local: ['operation-control'], remote: 'none' }
+  },
+  'doctor': {
+    method: 'GET', path: '/api/tools/prerequisites', repo: false, description: 'Check Git and optional tools.', input: {},
     effects: { mutates: false, local: [], remote: 'none' }
   }
 };

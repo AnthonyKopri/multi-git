@@ -25,7 +25,23 @@ const expectedEffects: Record<string, CommandEffects> = {
   'worktrees.list': { mutates: false, local: [], remote: 'none' },
   'worktrees.create': { mutates: true, local: ['worktree-create', 'local-refs', 'repo-config'], remote: 'none' },
   'recovery.list': { mutates: false, local: [], remote: 'none' },
-  'agents.list': { mutates: false, local: [], remote: 'none' }
+  'agents.list': { mutates: false, local: [], remote: 'none' },
+  'repositories.local': { mutates: false, local: [], remote: 'none' },
+  'history': { mutates: false, local: [], remote: 'none' },
+  'sync.fetch': { mutates: true, local: ['object-database', 'local-refs', 'ref-prune', 'head', 'index', 'working-tree'], remote: 'read' },
+  'pull': { mutates: true, local: ['object-database', 'local-refs', 'head', 'index', 'working-tree', 'local-history'], remote: 'read' },
+  'sync.push': { mutates: true, local: ['local-refs', 'repo-config', 'app-config'], remote: 'write' },
+  'auto-pull.get': { mutates: false, local: [], remote: 'none' },
+  'auto-pull.set': { mutates: true, local: ['app-config'], remote: 'none' },
+  'ssh.profiles': { mutates: false, local: [], remote: 'none' },
+  'ssh.inspect': { mutates: false, local: [], remote: 'none' },
+  'ssh.select': { mutates: true, local: ['app-config', 'repo-config', 'ssh-agent'], remote: 'none' },
+  'ssh.verify': { mutates: true, local: ['app-config'], remote: 'read' },
+  'remote.inspect': { mutates: false, local: [], remote: 'none' },
+  'remote.toggle': { mutates: true, local: ['repo-config'], remote: 'none' },
+  'operations.list': { mutates: false, local: [], remote: 'none' },
+  'operations.cancel': { mutates: true, local: ['operation-control'], remote: 'none' },
+  'doctor': { mutates: false, local: [], remote: 'none' }
 };
 
 describe('agent CLI effect metadata', () => {
@@ -99,12 +115,20 @@ describe('compiled agent CLI output', () => {
     expect(result.status).toBe(0);
     expect(result.stderr).toBe('');
     expect(result.stdout.trim().split('\n')).toHaveLength(1);
-    expect(JSON.parse(result.stdout)).toEqual({
+    const output = JSON.parse(result.stdout);
+    expect(output).toEqual({
       schemaVersion: 1, success: true,
       usage: 'multi-git <command> [--repo path] [--input file|-] [--server http://127.0.0.1:3000] [--dry-run] [--allow-write]',
       input: 'UTF-8 JSON object; - reads stdin. JSON output is always enabled. GET input becomes query parameters.',
-      commands
+      commands,
+      modes: expect.objectContaining({ tui: expect.any(String), mcp: expect.any(String), update: expect.any(String) }),
+      inputSchemas: expect.any(Object)
     });
+    // One JSON Schema per command, closed to fields the command does not take.
+    expect(Object.keys(output.inputSchemas).sort()).toEqual(Object.keys(commands).sort());
+    for (const schema of Object.values(output.inputSchemas) as { type: string; additionalProperties: boolean }[]) {
+      expect(schema).toMatchObject({ type: 'object', additionalProperties: false });
+    }
   });
 
   it('prints effects alongside the unchanged dry-run request and note', () => {

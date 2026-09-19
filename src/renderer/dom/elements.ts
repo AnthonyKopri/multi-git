@@ -480,6 +480,11 @@ export const ELEMENT_MAP = {
   setupSummary: 'setup-summary',
   setupList: 'setup-list',
   btnSetupRecheck: 'btn-setup-recheck',
+  // The terminal edition offer, beside it.
+  terminalSetupPanel: 'terminal-setup-panel',
+  terminalSetupChanges: 'terminal-setup-changes',
+  btnTerminalSetupEnable: 'btn-terminal-setup-enable',
+  btnTerminalSetupSkip: 'btn-terminal-setup-skip',
 
   terminalPanel: 'terminal-panel',
   terminalBody: 'terminal-body',
@@ -492,6 +497,7 @@ export const ELEMENT_MAP = {
   btnTerminalPopout: 'btn-terminal-popout',
   btnOpenGitBash: 'btn-open-git-bash',
   btnOpenShell: 'btn-open-shell',
+  btnOpenTui: 'btn-open-tui',
 
   toastContainer: 'toast-container',
 

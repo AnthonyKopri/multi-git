@@ -22,7 +22,8 @@ import {
   fileSinkFactory,
   httpsFetcher
 } from './net';
-import { readConfig, writeConfig } from '../../server/config/store';
+import type { BackendConnection } from '../../server/runtime/connection';
+import type { AppConfig } from '../../shared/config-types';
 import { appVersion } from '../../server/app-root';
 import { IPC_CHANNELS } from '../../shared/desktop-api';
 import type { UpdateState } from '../../shared/update-types';
@@ -42,8 +43,8 @@ function environment(): InstallEnvironment {
   };
 }
 
-function readUpdateSettings(): UpdateSettings {
-  const settings = readConfig().settings;
+async function readUpdateSettings(backend: BackendConnection): Promise<UpdateSettings> {
+  const settings = (await backend.call<AppConfig>('config.read')).settings;
   return {
     // Opt-out, not opt-in: the default is to check.
     checkForUpdates: settings?.checkForUpdates !== false,
@@ -53,13 +54,6 @@ function readUpdateSettings(): UpdateSettings {
   };
 }
 
-function writeSkippedVersion(version: string): void {
-  const config = readConfig();
-  writeConfig({
-    ...config,
-    settings: { ...(config.settings ?? { manageSshConfig: false }), skippedUpdateVersion: version }
-  });
-}
 
 /** Supplies the windows that can show update UI. Excludes the log window. */
 export type TargetWindows = () => BrowserWindow[];
@@ -90,7 +84,7 @@ function requestPopup(targets: TargetWindows): void {
   }
 }
 
-export function createUpdateWiring(targets: TargetWindows): UpdateService {
+export function createUpdateWiring(targets: TargetWindows, backend: BackendConnection): UpdateService {
   const installKind = detectInstallKind(environment());
 
   return createUpdateService({
@@ -137,8 +131,8 @@ export function createUpdateWiring(targets: TargetWindows): UpdateService {
     openExternal: (url) => shell.openExternal(url),
     broadcastState: (state) => broadcastState(targets, state),
     requestPopup: () => requestPopup(targets),
-    readSettings: readUpdateSettings,
-    writeSkippedVersion
+    readSettings: () => readUpdateSettings(backend),
+    writeSkippedVersion: async (version) => { await backend.call('config.desktop', { skippedUpdateVersion: version }); }
   });
 }
 

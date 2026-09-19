@@ -44,9 +44,12 @@ on:
       - docs/images/multi-git-logo.png
       - docs/images/multi-git_icon.svg
       - scripts/after-pack.js
+      - scripts/before-pack.cjs
+      - scripts/build-terminal.cjs
       - scripts/changelog.js
       - scripts/release-assets.js
       - scripts/release-notes.js
+      - scripts/terminal-package.cjs
       - scripts/upload-release-assets.js
       - scripts/verify-release.js
 
@@ -703,9 +706,118 @@ jobs:
 
           echo "Installed $(basename "$package") on $DISTRIBUTION."
 
+  terminal:
+    name: build (terminal edition)
+    needs: plan
+    # All six from one runner: each is JavaScript plus an official Node build
+    # checked against nodejs.org's checksums, and the ZIPs need no zip program.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Package
+        run: node scripts/build-terminal.cjs all
+
+      - name: Check every package is there, by the name the release expects
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const assets = require('./scripts/release-assets').resolveReleaseAssets({ version: process.argv[1], targetName: 'terminal' });
+            const missing = assets.filter((a) => !fs.existsSync(a.path)).map((a) => a.basename);
+            if (missing.length) { console.error('Missing: ' + missing.join(', ')); process.exit(1); }
+            for (const a of assets) console.log(a.basename, fs.statSync(a.path).size);
+          " "$VERSION"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-terminal
+          path: dist/Multi-Git-Terminal-*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  terminal-run:
+    name: run (terminal, ${{ matrix.name }})
+    needs: [plan, terminal]
+    # Each package on its own operating system and processor, with no Node of
+    # the runner's own on PATH: what a user downloads has to run on a machine
+    # with Git and nothing else.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Windows x64, runner: windows-latest, platform: win32, arch: x64 }
+          - { name: Windows ARM64, runner: windows-11-arm, platform: win32, arch: arm64 }
+          - { name: macOS x64, runner: macos-15-intel, platform: darwin, arch: x64 }
+          - { name: macOS ARM64, runner: macos-latest, platform: darwin, arch: arm64 }
+          - { name: Linux x64, runner: ubuntu-24.04, platform: linux, arch: x64 }
+          - { name: Linux ARM64, runner: ubuntu-24.04-arm, platform: linux, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      MULTI_GIT_RUNTIME_DIR: ${{ github.workspace }}/../terminal-runtime
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-terminal
+          path: packages
+
+      - name: Unpack and run (Windows)
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        run: |
+          $zip = "packages/Multi-Git-Terminal-$env:VERSION-Windows-${{ matrix.arch }}.zip"
+          Expand-Archive -LiteralPath $zip -DestinationPath terminal
+          $env:Path = "$env:SystemRoot\System32;$env:SystemRoot;$env:ProgramFiles\Git\cmd"
+          if (Get-Command node -ErrorAction SilentlyContinue) { throw 'node is still on PATH' }
+
+          $version = & terminal\multi-git.cmd --version
+          if ($version -ne $env:VERSION) { throw "Reports version '$version', expected $env:VERSION" }
+          $info = & terminal\multi-git.cmd app.info | ConvertFrom-Json
+          if (-not $info.success) { throw 'app.info failed' }
+          git init -q repo
+          $status = & terminal\multi-git.cmd status --repo repo | ConvertFrom-Json
+          if (-not $status.success) { throw 'status failed' }
+          $arch = (& "terminal\versions\$env:VERSION\runtime\node.exe" -p process.arch)
+          if ($arch -ne '${{ matrix.arch }}') { throw "The runtime is $arch" }
+          Write-Output "Multi-Git terminal $version runs on ${{ matrix.name }}"
+
+      - name: Unpack and run (macOS and Linux)
+        if: matrix.platform != 'win32'
+        run: |
+          os=$([ "${{ matrix.platform }}" = darwin ] && echo macOS || echo Linux)
+          mkdir terminal
+          tar -xzf "packages/Multi-Git-Terminal-$VERSION-$os-${{ matrix.arch }}.tar.gz" -C terminal
+          export PATH=/usr/bin:/bin
+          if command -v node >/dev/null; then echo "::error::node is still on PATH"; exit 1; fi
+
+          version=$(terminal/multi-git --version)
+          [ "$version" = "$VERSION" ] || { echo "::error::Reports version '$version', expected $VERSION"; exit 1; }
+          terminal/multi-git app.info | grep -q '"success":true'
+          git init -q repo
+          terminal/multi-git status --repo repo | grep -q '"success":true'
+          arch=$(terminal/versions/$VERSION/runtime/node -p process.arch)
+          [ "$arch" = "${{ matrix.arch }}" ] || { echo "::error::The runtime is $arch"; exit 1; }
+          echo "Multi-Git terminal $version runs on ${{ matrix.name }}"
+
   publish:
     name: publish
-    needs: [plan, ci, windows, macos, linux, linux-install]
+    needs: [plan, ci, windows, macos, linux, linux-install, terminal, terminal-run]
     # `ci` is skipped on a dry run, which would otherwise skip this too.
     if: >-
       !cancelled()
@@ -714,6 +826,8 @@ jobs:
       && needs.macos.result == 'success'
       && needs.linux.result == 'success'
       && needs.linux-install.result == 'success'
+      && needs.terminal.result == 'success'
+      && needs.terminal-run.result == 'success'
       && (needs.ci.result == 'success' || (needs.ci.result == 'skipped' && needs.plan.outputs.mode == 'dry-run'))
     runs-on: ubuntu-latest
     timeout-minutes: 30

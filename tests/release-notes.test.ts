@@ -19,7 +19,7 @@ interface NotesOptions {
 interface ReleaseNotesApi {
   parseArgs(argv: string[]): NotesOptions;
   changelogSections(source: string, version: string): { heading: string; body: string }[];
-  downloadsSection(version: string): string;
+  downloadsSection(version: string, repoUrl?: string | null): string;
   previousVersion(source: string, version: string): string | null;
   releaseNotes(input: {
     version: string;
@@ -34,6 +34,9 @@ interface ReleaseNotesApi {
 
 const require = createRequire(import.meta.url);
 const notes = require('../scripts/release-notes.js') as ReleaseNotesApi;
+const { resolveReleaseAssets } = require('../scripts/release-assets.js') as {
+  resolveReleaseAssets(options: { version: string; targetName: string }): { basename: string }[];
+};
 
 describe('parseArgs', () => {
   it('writes about package.json’s version, linking to main, when told nothing', () => {
@@ -152,18 +155,34 @@ describe('previousVersion', () => {
 
 describe('downloadsSection', () => {
   it('names the files the upload will actually put there', () => {
-    // Built from the same table `upload-release-assets.js` uploads from, so
+    // Built from the same catalogue `upload-release-assets.js` uploads from, so
     // the notes cannot promise a filename that never arrives.
-    expect(notes.downloadsSection('2.1.0')).toBe(
-      [
-        '- **Windows installer (recommended):** `Multi-Git-Client-Setup-2.1.0.exe`',
-        '- **Portable Windows executable:** `Multi-Git-Client-Portable-2.1.0.exe`',
-        '- **macOS disk image (Apple silicon and Intel):** `Multi-Git-Client-macOS-2.1.0.dmg`',
-        '- **Linux AppImage (x86_64, any distribution; needs FUSE 2):** `Multi-Git-Client-Linux-2.1.0-x86_64.AppImage`. It needs FUSE 2, which Ubuntu 22.04 and later do not install by default: run `sudo apt install libfuse2t64` first (`libfuse2` on 22.04), or use the .deb instead.',
-        '- **Linux .deb package (Debian, Ubuntu, Linux Mint; amd64):** `Multi-Git-Client-Linux-2.1.0-amd64.deb`',
-        '- **Linux .rpm package (Fedora, RHEL, openSUSE; x86_64):** `Multi-Git-Client-Linux-2.1.0-x86_64.rpm`',
-        '- **SHA-256 checksums:** `SHA256SUMS.txt`'
-      ].join('\n')
+    const section = notes.downloadsSection('2.1.0');
+    const uploaded = resolveReleaseAssets({ version: '2.1.0', targetName: 'release' });
+    for (const asset of uploaded) {
+      expect(section).toContain(`\`${asset.basename}\``);
+    }
+    expect(section.match(/\| `Multi-Git-/g)).toHaveLength(uploaded.length);
+    expect(section).toContain('**SHA-256 checksums:** `SHA256SUMS.txt`');
+  });
+
+  it('has one table per operating system, with edition, architecture, format and download', () => {
+    const section = notes.downloadsSection('2.1.0');
+    expect(section.match(/^### (.+)$/gm)).toEqual(['### Windows', '### macOS', '### Linux']);
+    expect(section.match(/^\| Edition \| Architecture \| Format \| Download \|$/gm)).toHaveLength(3);
+    expect(section).toContain('| Desktop app | x64 | Installer (.exe) | `Multi-Git-Client-Setup-2.1.0.exe` |');
+    expect(section).toContain('| Terminal (CLI, TUI, MCP) | ARM64 | tar.gz | `Multi-Git-Terminal-2.1.0-Linux-arm64.tar.gz` |');
+    // The FUSE warning stays with the Linux table, not somewhere after it.
+    expect(section.indexOf('FUSE 2')).toBeGreaterThan(section.indexOf('### Linux'));
+  });
+
+  it('links each file to its download on the tagged release', () => {
+    const section = notes.downloadsSection('2.1.0', 'https://github.com/owner/repo');
+    expect(section).toContain(
+      '[`Multi-Git-Terminal-2.1.0-Windows-arm64.zip`](https://github.com/owner/repo/releases/download/Release_v2.1.0/Multi-Git-Terminal-2.1.0-Windows-arm64.zip)'
+    );
+    expect(section).toContain(
+      '[`SHA256SUMS.txt`](https://github.com/owner/repo/releases/download/Release_v2.1.0/SHA256SUMS.txt)'
     );
   });
 });

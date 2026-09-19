@@ -91,7 +91,19 @@ export interface SyncResponse extends GitOutput {
   usedAskpass: boolean;
   profileLabel: string | null;
   originRemoteUrl: string;
+  /** Only on the fetch workflow: what auto-pull did after the fetch. */
+  autoPull?: AutoPullOutcome;
 }
+
+/**
+ * Off, nothing to take, blocked with the reason, or fast-forwarded to
+ * `target`.
+ */
+export type AutoPullOutcome =
+  | { state: 'off' }
+  | { state: 'current' }
+  | { state: 'blocked'; reason: string }
+  | { state: 'pulled'; target: string; stdout: string; stderr: string };
 
 export interface OriginResponse extends Ok {
   remoteUrl: string;

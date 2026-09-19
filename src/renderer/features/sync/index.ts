@@ -14,7 +14,7 @@ import { getAccountMismatch } from '../accounts/identity';
 import { unlockSelectedKey } from '../accounts/unlock';
 import { refreshOrigin } from '../repo';
 import { pushButtonState } from './push-button';
-import { autoPullBlockedReason, shouldAutoPull } from './auto-pull';
+import { autoPullBlockedReason } from './auto-pull';
 import type { SyncResponse } from '../../../shared/api-types';
 import { describePullStrategy } from '../../../shared/pull-strategy';
 
@@ -447,14 +447,19 @@ export async function performSync(
     // "3 files changed" are what the user actually wanted to know.
     showToast(syncSummary(action, data), 'success', 6000);
 
-    await refreshAll();
-
-    // A fetch is the moment the app learns the remote moved, so it is the only
-    // place this is asked. A pull cannot trigger it again, so there is no loop.
-    if (action === 'fetch' && getState().autoPull && shouldAutoPull(getState().status)) {
-      logToTerminal('Auto-pull: this branch is purely behind, fast-forwarding.', 'info');
-      await performSync('pull');
+    // The backend decides whether a fetch fast-forwards, under the repository
+    // lock, so two windows or a terminal session cannot both pull. This only
+    // reports what it did.
+    if (data.autoPull?.state === 'pulled') {
+      logToTerminal(`Auto-pull: fast-forwarded to ${data.autoPull.target}.`, 'info');
+      if (data.autoPull.stdout) {
+        logToTerminal(data.autoPull.stdout, 'success');
+      }
+    } else if (data.autoPull?.state === 'blocked' && getState().autoPull) {
+      logToTerminal(`Auto-pull skipped: ${data.autoPull.reason}`, 'info');
     }
+
+    await refreshAll();
   } catch (error) {
     if (isStale(error)) {
       return;

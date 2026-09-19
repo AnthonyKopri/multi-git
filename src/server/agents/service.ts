@@ -228,6 +228,35 @@ async function firstUsablePlan(
 }
 
 /**
+ * Runs one of this application's own programs in a new terminal window: the
+ * terminal UI, from the desktop's Settings. The same window plans an agent
+ * launch uses, so every platform's terminal quirks are handled in one place.
+ */
+export async function openCommandInTerminal(
+  cwd: string,
+  executable: string,
+  args: string[],
+  dependencies: LaunchDependencies = {}
+): Promise<string> {
+  const runner = dependencies.runner ?? executableRunner;
+  const plans = buildLaunchPlans({
+    definition: {
+      id: 'multi-git',
+      label: 'Multi-Git',
+      executable,
+      args,
+      terminal: 'system-terminal',
+      enabled: true,
+      promptMode: 'none'
+    },
+    worktreePath: cwd
+  });
+  const plan = await firstUsablePlan(plans, runner);
+  await runLaunchPlan(plan, dependencies.launcher ?? detachedLauncher);
+  return plan.preview;
+}
+
+/**
  * Opens a terminal in a folder.
  *
  * On Windows this prefers Windows Terminal and falls back to PowerShell, which

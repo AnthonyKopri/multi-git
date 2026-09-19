@@ -10,6 +10,8 @@
 // take no lock, they are the bulk of the traffic, and holding them behind a
 // mutex would make every refresh slower.
 
+import { canonicalRepoKey } from '../config/repo-identity';
+
 /** Tail of the queue per repository. Absent means idle. */
 const queues = new Map<string, Promise<unknown>>();
 
@@ -18,6 +20,7 @@ const queues = new Map<string, Promise<unknown>>();
  * repository has settled.
  */
 export function withRepoLock<T>(repoPath: string, operation: () => Promise<T>): Promise<T> {
+  repoPath = canonicalRepoKey(repoPath);
   const previous = queues.get(repoPath) ?? Promise.resolve();
 
   // Swallow the predecessor's rejection: one failed operation must not cancel

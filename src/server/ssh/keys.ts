@@ -4,6 +4,17 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { runExternalCommand } from '../external/run';
+import { createAskpassBridge } from './askpass';
+
+async function keygen(args: string[], passphrase: string, timeoutMs: number) {
+  if (!passphrase) return runExternalCommand('ssh-keygen', args, { timeoutMs });
+  const bridge = createAskpassBridge(passphrase);
+  try {
+    return await runExternalCommand('ssh-keygen', args, {
+      timeoutMs, envOverrides: { ...bridge.envOverrides, SSH_ASKPASS_REQUIRE: 'force' }
+    });
+  } finally { bridge.cleanup(); }
+}
 
 export type SshKeyType = 'ed25519' | 'rsa';
 
@@ -23,10 +34,9 @@ export async function validateSshKeyPair(
   privateKeyPath: string,
   passphrase = ''
 ): Promise<KeyValidation> {
-  const result = await runExternalCommand(
-    'ssh-keygen',
-    ['-y', '-f', privateKeyPath, '-P', passphrase],
-    { timeoutMs: 15_000 }
+  const result = await keygen(
+    ['-y', '-f', privateKeyPath, ...(!passphrase ? ['-P', ''] : [])],
+    passphrase, 15_000
   );
 
   if (result.error) {
@@ -60,7 +70,7 @@ export async function generateSshKeyPair(
 ): Promise<{ stdout: string; stderr: string }> {
   const { privateKeyPath, keyType = 'ed25519', passphrase = '', comment = '' } = options;
 
-  const args = ['-t', keyType, '-f', privateKeyPath, '-N', passphrase];
+  const args = ['-t', keyType, '-f', privateKeyPath, ...(!passphrase ? ['-N', ''] : [])];
   if (keyType === 'rsa') {
     // ed25519 has a fixed size; RSA below 4096 is not worth generating today.
     args.push('-b', '4096');
@@ -69,7 +79,7 @@ export async function generateSshKeyPair(
     args.push('-C', comment);
   }
 
-  const result = await runExternalCommand('ssh-keygen', args, { timeoutMs: 30_000 });
+  const result = await keygen(args, passphrase, 30_000);
 
   if (result.error) {
     throw new Error(

@@ -1,25 +1,43 @@
 # Agent CLI
 
-The CLI connects to a running Multi-Git app and uses the same backend as its GUI. Node 22.12+ is required. From a source checkout:
+`multi-git` is one command with four faces: JSON commands for scripts and agents (this page), a guided terminal UI ([terminal.md](terminal.md)), an MCP server for AI agents ([mcp.md](mcp.md)), and `multi-git update`.
 
-```bash
-npm ci
-npm run compile
-node scripts/multi-git.cjs help
-```
+## Getting it
 
-Optionally run `npm link` to install the `multi-git` command on PATH. No global installation is needed when invoking the script directly. This is a source-checkout CLI; the packaged desktop app does not install Node or add the command to PATH.
+- **From the desktop app:** Settings → Terminal and agents → **Enable**, or **Enable multi-git in your terminal** on the welcome screen. This installs the terminal edition for your user account and puts `multi-git` on PATH.
+- **Without the desktop app:** download `Multi-Git-Terminal-<version>-<os>-<arch>` for your system from the release page, unpack it, and run `multi-git` (Windows: `multi-git.cmd`) from that folder. It carries its own Node runtime; only Git is required.
+- **From a source checkout:** `npm ci`, `npm run compile`, then `node scripts/multi-git.cjs`. `npm link` puts that checkout on PATH.
 
-Start `npm start` or the desktop app. In **Settings → Git and GitHub**, copy **Agent CLI connection**. Pass it with `--server` (or set `MULTI_GIT_URL`). The default is `http://127.0.0.1:3000`; desktop mode chooses a new port on launch.
+## Connecting
+
+There is nothing to configure. The first `multi-git` command starts the shared per-user backend, or joins the one the desktop app or another terminal already started, so every client shares one set of repository locks, one operations list and one unlocked vault. The backend exits a minute after its last client. `--server <loopback origin>` or `MULTI_GIT_URL` still override this and talk to that server instead, which is what `npm start` users want. `help`, `--version` and `--dry-run` never start or contact a backend.
 
 The commands are the same in PowerShell, on macOS and on Linux; only the repository path is written the way the operating system writes it (`"D:\work\my repo"` on Windows, `"/Users/you/work/my repo"` on macOS, `"/home/you/work/my repo"` on Linux).
 
 ```bash
-node scripts/multi-git.cjs app.info --server http://127.0.0.1:3000
-node scripts/multi-git.cjs status --repo "/home/you/work/my repo" --server http://127.0.0.1:3000
+multi-git app.info
+multi-git status --repo "/home/you/work/my repo"
 ```
 
-`help` returns the machine-readable command catalogue, inputs, repository requirements and effect metadata. Available commands cover repository browsing/cloning, remembering local repos, status/diff, branches, staging, commits, fetch/push, worktrees, recovery listings and agent listings. `repo.remember` adds a recent entry; it does not switch an open GUI window. Existing browser/server startup commands remain unchanged.
+`help` returns the machine-readable command catalogue: inputs, repository requirements and effect metadata under `commands`, a JSON Schema for each command's input under `inputSchemas`, and the non-API modes under `modes`. Commands cover repository browsing and cloning, remembering local repositories, status and diffs, history, branches, staging, commits, fetch and push, the guided sync workflows, SSH accounts, remote protocol, worktrees, recovery listings, operations and agent listings. `repo.remember` adds a recent entry; it does not switch an open GUI window.
+
+### Guided workflows
+
+`fetch`, `push` and the other raw commands behave exactly as before. The guided commands add the desktop app's checks:
+
+| Command | What it adds |
+| --- | --- |
+| `sync.fetch` | After fetching, fast-forwards the branch when auto-pull is on and it is purely behind with no local edits. Reports `autoPull` as `off`, `current`, `blocked` with the reason, or `pulled`. The decision is made once, in the backend, under the repository lock. |
+| `pull` | A fast-forward goes ahead; a pull that `pull.ff=only` would refuse is refused; a merge or rebase answers `DECISION_REQUIRED` until repeated with `"confirmed": true`. |
+| `sync.push` | Pushes, or publishes a branch with no upstream. When the profile's key signs in as a different account than the remote expects, answers `DECISION_REQUIRED` until confirmed. Never forces. |
+| `ssh.inspect` / `ssh.select` | Shows what switching accounts would change, then switches SSH routing and the commit author together, keeping custom `core.sshCommand` settings. Overwriting an existing setup needs `"confirmed": true`; `"keepIdentity": true` keeps the author. |
+| `ssh.verify` | Asks the SSH host which account the key signs in as. |
+| `remote.inspect` / `remote.toggle` | Shows origin and the SSH or HTTPS URL it would switch to, then switches after confirmation. |
+| `auto-pull.get` / `auto-pull.set` | The global auto-pull switch. Off by default. |
+| `operations.list` / `operations.cancel` | Running and recent backend operations, and cancelling one. |
+| `doctor` | Git and optional tools. |
+
+A `DECISION_REQUIRED` answer is a 409 with the reason; nothing has changed. Show the user what the inspect command reports, and repeat with `"confirmed": true` only when they agree.
 
 Save request data as UTF-8 JSON instead of escaping it into a shell command:
 
@@ -32,7 +50,7 @@ node scripts/multi-git.cjs stage --repo "/home/you/work/my repo" --input stage.j
 node scripts/multi-git.cjs stage --repo "/home/you/work/my repo" --input stage.json --allow-write
 ```
 
-`--input -` reads JSON from stdin. GET command input becomes query parameters. Unknown command names, options and fields are rejected. `--dry-run` prints the request without contacting the server; it does not check filesystem state or run server validation. All POST commands, including fetch and remember, require `--allow-write`. Force push and arbitrary API dispatch are not exposed. The CLI uses backend SSH routing but does not run the renderer's account-verification prompt; verify origin and profile before pushing.
+`--input -` reads JSON from stdin. GET command input becomes query parameters. Unknown command names, options and fields are rejected, and input is checked against the command's schema before anything is contacted. `--dry-run` prints the request without contacting the server; it does not check filesystem state or run server validation. All POST commands, including fetch and remember, require `--allow-write`. Force push and arbitrary API dispatch are not exposed. The raw `push` uses backend SSH routing without the account check; `sync.push` runs it.
 
 ## Command effects
 
@@ -57,6 +75,8 @@ Every command in `help.commands` includes an `effects` object. A dry-run returns
 | `object-database` | Write fetched Git objects to the local repository. |
 | `ref-prune` | Remove stale local remote-tracking refs during fetch. |
 | `worktree-create` | Create a linked worktree, including its files, index, HEAD and registration metadata. |
+| `ssh-agent` | Load or unload keys in the machine's SSH agent. |
+| `operation-control` | Cancel a running backend operation. |
 
 Examples from the catalogue:
 
@@ -76,18 +96,18 @@ These fields are additive within `schemaVersion: 1`. Consumers should tolerate u
 
 ## Output and failures
 
-Output is always one JSON line (`--json` is accepted for compatibility). With npm use `npm run --silent agent -- ...` to suppress npm's own banner. The envelope has `schemaVersion: 1`, `success`, `command`, and `data` or `error: {code,message}`. Help instead has top-level `usage`, `input` and `commands`. API response data is the existing, unversioned application payload. Exit codes:
+Output is always one JSON line (`--json` is accepted for compatibility). With npm use `npm run --silent agent -- ...` to suppress npm's own banner. The envelope has `schemaVersion: 1`, `success`, `command`, and `data` or `error: {code,message}`. Help instead has top-level `usage`, `input`, `commands`, `modes` and `inputSchemas`. API response data is the existing, unversioned application payload. Exit codes:
 
 | Code | Meaning |
 | --- | --- |
 | 0 | Successful request or preview |
-| 1 | API, connection or response failure |
+| 1 | API, connection, backend or response failure |
 | 2 | Invalid arguments/input, missing build or write intent |
 
 Only loopback HTTP origins are allowed; redirects are rejected. Requests time out after 15 minutes. A timed-out write may still finish on the server: check the operation/status before retrying. Authentication and vault unlocking remain in the existing user workflows. Never supply secrets through command input.
 
 ## Agent skills
 
-The repository ships [multi-git-agent](../skills/multi-git-agent/SKILL.md) for the CLI and [multi-git-computer-use](../skills/multi-git-computer-use/SKILL.md) for native GUI operation. Copy the desired complete skill directory into your agent's skill directory (for Codex, `~/.codex/skills/`) or a project skill directory supported by your agent. The skills do not install the application or computer-use runtime. Install only in a scope you intend to use.
+The repository ships [multi-git-agent](../skills/multi-git-agent/SKILL.md) for the CLI, [multi-git-mcp](../skills/multi-git-mcp/SKILL.md) for the MCP server, and [multi-git-computer-use](../skills/multi-git-computer-use/SKILL.md) for native GUI operation. The terminal edition carries them too; Settings → Terminal and agents → Agent skills shows where. Copy the desired complete skill directory into your agent's skill directory (for Codex, `~/.codex/skills/`) or a project skill directory supported by your agent. The skills do not install the application or computer-use runtime. Install only in a scope you intend to use.
 
 GUI regression procedures and fixture setup are in [Computer Use smoke tests](testing/computer-use-smoke.md).

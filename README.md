@@ -847,7 +847,7 @@ See [BUILDING.md](BUILDING.md) for the full build, check, and release procedure,
 
 ## Local API Examples
 
-For agent workflows, use the [JSON CLI and agent skills](docs/agent-cli.md). It provides discoverable commands, explicit repository paths, request previews, and controlled writes through the running app. **Settings → Git and GitHub → Agent CLI connection** shows the current server address. Native GUI regression cases are documented in [Computer Use smoke tests](docs/testing/computer-use-smoke.md).
+For the terminal, the `multi-git` command gives you a keyboard-driven [terminal UI](docs/terminal.md), [JSON commands](docs/agent-cli.md) for scripts and agents, and an [MCP server](docs/mcp.md) for AI agents. Enable it from **Settings → Terminal and agents**, or download the terminal edition for your system from the release page; it needs only Git. It shares one backend with the desktop app, so nothing has to be connected by hand. Native GUI regression cases are documented in [Computer Use smoke tests](docs/testing/computer-use-smoke.md).
 
 Most users never need the API, but these examples are useful when debugging browser mode.
 

@@ -1,24 +1,16 @@
 // Electron lifecycle: start the local backend, then show the windows.
 import fs from 'node:fs';
-import type { Server } from 'node:http';
-import { BrowserWindow, app, dialog, ipcMain, screen } from 'electron';
+import { BrowserWindow, app, dialog, ipcMain, screen, shell } from 'electron';
 
-import { startServer } from '../server/index';
+import { connectBackend } from '../server/runtime/connection';
+import type { BackendConnection } from '../server/runtime/connection';
+import type { AppConfig } from '../shared/config-types';
 import { repairSshAgentElevated } from './ssh-agent-elevation';
 import { IPC_CHANNELS } from '../shared/desktop-api';
-import { readConfig, writeConfig } from '../server/config/store';
 import { resolveRepoPath } from '../server/middleware/repo-path';
-import {
-  availableShells,
-  installPrerequisite,
-  launchAgent,
-  openEditorAt,
-  openShellAt,
-  openTerminalAt
-} from '../server/agents/service';
-import { runBisect } from '../server/git/bisect';
-import { launchTool } from '../server/tools/launch';
 import * as shellIntegration from './shell-integration';
+import * as terminalInstall from '../server/terminal/install';
+import { openCommandInTerminal } from '../server/agents/service';
 import { createUpdateWiring, startUpdateChecks } from './update/wiring';
 import type { UpdateService } from './update/service';
 import { WindowRegistry, clampBoundsToDisplays, restorableWindows } from './window-registry';
@@ -33,7 +25,24 @@ import type { AgentLaunchInput } from '../shared/agent-types';
 import type { ExternalToolKind } from '../shared/config-types';
 
 let logWindow: BrowserWindow | null = null;
-let backendServer: Server | null = null;
+/**
+ * The shared backend. It serves the windows' pages and API, and does the work
+ * that must not be on its HTTP port (launching programs, the desktop's own
+ * settings) for this process over its private channel.
+ */
+let backend: BackendConnection | null = null;
+
+function backendCall<T = unknown>(method: string, input?: unknown): Promise<T> {
+  if (!backend) {
+    return Promise.reject(new Error('The Multi-Git backend is not connected.'));
+  }
+  return backend.call<T>(method, input);
+}
+
+function readBackendConfig(): Promise<AppConfig> {
+  return backendCall<AppConfig>('config.read');
+}
+
 let serverUrl = 'http://localhost:3000';
 let windows: WindowRegistry | null = null;
 let updates: UpdateService | null = null;
@@ -99,19 +108,17 @@ function scheduleWindowStateSave(): void {
 
   saveTimer = setTimeout(() => {
     saveTimer = null;
-    saveWindowState();
+    void saveWindowState();
   }, 500);
 }
 
-function saveWindowState(): void {
+async function saveWindowState(): Promise<void> {
   if (!windows) {
     return;
   }
 
   try {
-    const config = readConfig();
-    config.windowState = { windows: windows.snapshot() };
-    writeConfig(config);
+    await backendCall('config.desktop', { windowState: { windows: windows.snapshot() } });
   } catch (error) {
     // Losing the window layout is not worth failing anything over.
     console.warn('Could not record the open windows:', (error as Error).message);
@@ -153,8 +160,8 @@ function openLogWindow(): void {
  * window last closed on a monitor that is no longer attached would otherwise
  * come back somewhere nobody can see it.
  */
-function restoreWindows(): boolean {
-  const config = readConfig();
+async function restoreWindows(): Promise<boolean> {
+  const config = await readBackendConfig();
 
   if (config.settings?.restoreWindowsOnStartup === false) {
     return false;
@@ -188,8 +195,8 @@ function restoreWindows(): boolean {
 }
 
 /** Opens one window on the most recent repository, the way it always did. */
-function openInitialWindow(): void {
-  const [mostRecent] = readConfig().recentRepos;
+async function openInitialWindow(): Promise<void> {
+  const [mostRecent] = (await readBackendConfig()).recentRepos;
   windows?.openOrFocus(mostRecent ?? '');
 }
 
@@ -229,25 +236,25 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle(IPC_CHANNELS.openTerminalHere, (_event, repoPath: unknown) =>
-    openTerminalAt(validatedRepoPath(repoPath))
+    backendCall('terminal', { repoPath: validatedRepoPath(repoPath) })
   );
 
   // Launching a program is deliberately not on the loopback port: the same line
   // tools.routes.ts draws, for the same reason.
   ipcMain.handle(IPC_CHANNELS.openShell, (_event, repoPath: unknown, kind: unknown) =>
-    openShellAt(validatedRepoPath(repoPath), kind === 'git-bash' ? 'git-bash' : 'terminal')
+    backendCall('shell', { repoPath: validatedRepoPath(repoPath), kind })
   );
 
-  ipcMain.handle(IPC_CHANNELS.availableShells, () => availableShells());
+  ipcMain.handle(IPC_CHANNELS.availableShells, () => backendCall('shells'));
 
   // The id is checked against a fixed table in the service; nothing the
   // renderer sends reaches a command line unchecked.
   ipcMain.handle(IPC_CHANNELS.installPrerequisite, (_event, id: unknown) =>
-    installPrerequisite(String(id))
+    backendCall('prerequisite', { id: String(id) })
   );
 
   ipcMain.handle(IPC_CHANNELS.openEditor, (_event, repoPath: unknown) =>
-    openEditorAt(validatedRepoPath(repoPath))
+    backendCall('editor', { repoPath: validatedRepoPath(repoPath) })
   );
 
   ipcMain.handle(IPC_CHANNELS.launchAgent, (_event, input: AgentLaunchInput) => {
@@ -255,7 +262,7 @@ function registerIpcHandlers(): void {
     // configuration, so the page never names a program to run.
     const worktreePath = validatedRepoPath(input?.worktreePath);
 
-    return launchAgent({
+    return backendCall('agent', {
       repoPath: worktreePath,
       worktreePath,
       agentId: String(input?.agentId ?? ''),
@@ -275,15 +282,7 @@ function registerIpcHandlers(): void {
       const repoPath = validatedRepoPath(input?.repoPath);
       const commandId = String(input?.commandId ?? '');
 
-      const definition = (readConfig().bisectCommands ?? []).find(
-        (candidate) => candidate.id === commandId
-      );
-
-      if (!definition) {
-        throw new Error('That test command is not one of the saved ones.');
-      }
-
-      return runBisect(repoPath, definition);
+      return backendCall('bisect', { repoPath, commandId });
     }
   );
 
@@ -318,7 +317,7 @@ function registerIpcHandlers(): void {
       _event,
       input: { repoPath?: unknown; kind?: unknown; toolId?: unknown; placeholders?: unknown }
     ) =>
-      launchTool({
+      backendCall('tool', {
         repoPath: validatedRepoPath(input?.repoPath),
         kind: String(input?.kind ?? '') as ExternalToolKind,
         ...(typeof input?.toolId === 'string' ? { toolId: input.toolId } : {}),
@@ -334,14 +333,44 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.installShellIntegration, async () => {
     const status = await shellIntegration.install(app.getPath('exe'));
-    rememberShellIntegration(status.installed);
+    await rememberShellIntegration(status.installed);
     return status;
   });
 
   ipcMain.handle(IPC_CHANNELS.removeShellIntegration, async () => {
     const status = await shellIntegration.remove();
-    rememberShellIntegration(status.installed);
+    await rememberShellIntegration(status.installed);
     return status;
+  });
+
+  // The terminal edition. Nothing crosses from the page: the payload is the
+  // one inside this build, and where it goes is terminalHome().
+  ipcMain.handle(IPC_CHANNELS.terminalStatus, () => terminalInstall.terminalStatus());
+  ipcMain.handle(IPC_CHANNELS.enableTerminal, () => terminalInstall.installBundledTerminal());
+  ipcMain.handle(IPC_CHANNELS.removeTerminal, () => terminalInstall.removeTerminal());
+  ipcMain.handle(IPC_CHANNELS.skipTerminalSetup, () => {
+    terminalInstall.rememberSetupChoice('skipped');
+    return terminalInstall.terminalStatus();
+  });
+  ipcMain.handle(IPC_CHANNELS.openTerminalUi, async (_event, repoPath: unknown) => {
+    // A path is optional, and checked like every other: it must be a repository.
+    const folder = typeof repoPath === 'string' && repoPath !== '' ? validatedRepoPath(repoPath) : null;
+    const { runtime, script } = terminalInstall.launchableEntry();
+    await openCommandInTerminal(folder ?? app.getPath('home'), runtime, [
+      script,
+      'tui',
+      ...(folder ? ['--repo', folder] : [])
+    ]);
+  });
+  ipcMain.handle(IPC_CHANNELS.revealTerminalSkills, async () => {
+    const skills = terminalInstall.terminalStatus().skillsPath;
+    if (!skills) {
+      throw new Error('Enable the terminal edition first.');
+    }
+    const problem = await shell.openPath(skills);
+    if (problem) {
+      throw new Error(problem);
+    }
   });
 
   // Every update handler below ignores its arguments, like repairSshAgent and
@@ -379,31 +408,27 @@ function updateTargetWindows(): BrowserWindow[] {
 }
 
 /** Keeps the configuration's record in step with what the registry says. */
-function rememberShellIntegration(installed: boolean): void {
-  const config = readConfig();
-  writeConfig({ ...config, shellIntegration: { contextMenuInstalled: installed } });
+async function rememberShellIntegration(installed: boolean): Promise<void> {
+  await backendCall('config.desktop', { shellIntegration: installed });
 }
 
 async function startApp(): Promise<void> {
   registerIpcHandlers();
 
   try {
-    // Port 0 asks the OS for a free port, so a busy 3000, or a second
-    // instance of the app, does not prevent startup.
-    backendServer = await startServer({ openBrowser: false, port: 0 });
-
-    const address = backendServer.address();
-    const port = typeof address === 'object' && address !== null ? address.port : 3000;
-    serverUrl = `http://localhost:${port}`;
+    // Started on first use and shared with terminal sessions; it picks a free
+    // loopback port itself, so a busy 3000 does not prevent startup.
+    backend = await connectBackend({ exactVersion: true });
+    serverUrl = backend.origin;
 
     windows = createRegistry();
 
-    if (!restoreWindows()) {
-      openInitialWindow();
+    if (!(await restoreWindows())) {
+      await openInitialWindow();
     }
 
     // After the windows exist, so the first broadcast has somewhere to land.
-    updates = createUpdateWiring(updateTargetWindows);
+    updates = createUpdateWiring(updateTargetWindows, backend);
     stopUpdateChecks = startUpdateChecks(updates);
   } catch (error) {
     console.error('Failed to boot desktop app:', error);
@@ -431,25 +456,36 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (windows && windows.size === 0) {
-    openInitialWindow();
+    void openInitialWindow();
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  if (quitting) {
+    return;
+  }
+  event.preventDefault();
   // The last chance to record the layout: by `quit` the windows are gone and
   // their bounds with them.
   if (saveTimer !== null) {
     clearTimeout(saveTimer);
     saveTimer = null;
   }
-  saveWindowState();
   quitting = true;
+  // Quitting waits for the layout to reach the backend. Then the backend is
+  // told it may exit at once if no terminal session is using it, so an update
+  // installer is not left waiting on files a lingering backend holds open.
+  // Bounded, because an unresponsive backend must not stop the app quitting.
+  const settle = (work: Promise<unknown>): Promise<unknown> =>
+    Promise.race([work, new Promise((resolve) => setTimeout(resolve, 3000))]);
+  void settle(saveWindowState())
+    .then(() => settle(backend?.close({ exitIfIdle: true }) ?? Promise.resolve()))
+    .finally(() => app.quit());
 
   stopUpdateChecks?.();
   stopUpdateChecks = null;
 });
 
 app.on('quit', () => {
-  backendServer?.close();
-  backendServer = null;
+  backend = null;
 });

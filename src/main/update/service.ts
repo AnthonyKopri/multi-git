@@ -70,8 +70,8 @@ export interface UpdateServiceDeps {
   broadcastState: (state: UpdateState) => void;
   /** Asks the one chosen window to show the popup. */
   requestPopup: () => void;
-  readSettings: () => UpdateSettings;
-  writeSkippedVersion: (version: string) => void;
+  readSettings: () => UpdateSettings | Promise<UpdateSettings>;
+  writeSkippedVersion: (version: string) => unknown;
 }
 
 export interface UpdateService {
@@ -150,7 +150,7 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
     if (state.phase === 'checking' || state.phase === 'downloading' || state.phase === 'installing') {
       return state;
     }
-    if (!deps.readSettings().checkForUpdates) {
+    if (!(await deps.readSettings()).checkForUpdates) {
       return state;
     }
 
@@ -173,7 +173,7 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
       releases,
       currentVersion: deps.currentVersion,
       installKind: artifactFor(deps.installKind),
-      skippedVersion: deps.readSettings().skippedUpdateVersion
+      skippedVersion: (await deps.readSettings()).skippedUpdateVersion
     });
 
     if (!candidate) {
@@ -325,7 +325,7 @@ export function createUpdateService(deps: UpdateServiceDeps): UpdateService {
       return state;
     }
 
-    deps.writeSkippedVersion(resolved.version);
+    await deps.writeSkippedVersion(resolved.version);
     resolved = null;
     downloadedPath = null;
     return publish({ phase: 'up-to-date', latest: undefined, percent: undefined, message: undefined });

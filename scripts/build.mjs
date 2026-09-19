@@ -53,6 +53,8 @@ const NODE_TARGET = 'node22.12';
 const WEB_TARGET = 'es2022';
 
 const nodeEntries = [
+  { in: 'src/server/terminal/app.tsx', out: 'out/node/server/terminal.mjs', format: 'esm', external: [] },
+  { in: 'src/server/runtime/daemon.ts', out: 'out/node/server/daemon.js', external: ['express'] },
   { in: 'src/server/agent-cli/main.ts', out: 'out/node/server/agent-cli.js', external: [] },
   { in: 'src/main/main.ts', out: 'out/node/main/main.js', external: ['electron'] },
   { in: 'src/main/preload.ts', out: 'out/node/main/preload.js', external: ['electron'] },
@@ -82,6 +84,10 @@ async function buildEntry(build, entry, options) {
     logLevel: 'warning',
     ...options
   };
+  if (entry.format === 'esm') {
+    context.format = 'esm';
+    context.banner = { js: "import { createRequire as __createRequire } from 'node:module'; import { fileURLToPath as __fileURLToPath } from 'node:url'; import { dirname as __dirnameOf } from 'node:path'; const require = __createRequire(import.meta.url); const __dirname = __dirnameOf(__fileURLToPath(import.meta.url));" };
+  }
 
   if (entry.external) {
     context.external = [...(options.external ?? []), ...entry.external];

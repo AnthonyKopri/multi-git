@@ -15,6 +15,8 @@ appInfoRouter.get('/api/app-info', (_req, res) => {
     success: true,
     name: APP_DISPLAY_NAME,
     version: appVersion(),
-    title: appTitle()
+    title: appTitle(),
+    backendProtocol: 1,
+    capabilities: ['shared-backend', 'terminal', 'agent-cli', 'mcp']
   });
 });

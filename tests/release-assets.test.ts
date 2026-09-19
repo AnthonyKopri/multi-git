@@ -5,7 +5,16 @@ import os from 'node:os';
 import path from 'node:path';
 
 type ArtifactKey = 'installer' | 'portable' | 'macos' | 'appimage' | 'deb' | 'rpm';
-type TargetName = 'installer' | 'portable' | 'both' | 'release';
+type TargetName = 'installer' | 'portable' | 'both' | 'terminal' | 'release';
+
+const TERMINAL_KINDS = [
+  'terminal-win32-x64',
+  'terminal-win32-arm64',
+  'terminal-darwin-x64',
+  'terminal-darwin-arm64',
+  'terminal-linux-x64',
+  'terminal-linux-arm64'
+];
 
 interface ArtifactSpec {
   label: string;
@@ -123,8 +132,25 @@ describe('release artifact metadata', () => {
       'macos',
       'appimage',
       'deb',
-      'rpm'
+      'rpm',
+      ...TERMINAL_KINDS
     ]);
+  });
+
+  it('names the six terminal packages by operating system and architecture', () => {
+    expect(releaseAssets.selectedAssetKinds('terminal')).toEqual(TERMINAL_KINDS);
+    expect(
+      releaseAssets.resolveReleaseAssets({ version: '3.0.0', targetName: 'terminal' }).map((asset) => asset.basename)
+    ).toEqual([
+      'Multi-Git-Terminal-3.0.0-Windows-x64.zip',
+      'Multi-Git-Terminal-3.0.0-Windows-arm64.zip',
+      'Multi-Git-Terminal-3.0.0-macOS-x64.tar.gz',
+      'Multi-Git-Terminal-3.0.0-macOS-arm64.tar.gz',
+      'Multi-Git-Terminal-3.0.0-Linux-x64.tar.gz',
+      'Multi-Git-Terminal-3.0.0-Linux-arm64.tar.gz'
+    ]);
+    // The desktop updater's catalogue is untouched: it only knows desktop builds.
+    expect(Object.keys(releaseAssets.RELEASE_ASSETS)).toEqual(['installer', 'portable', 'macos', 'appimage', 'deb', 'rpm']);
   });
 
   it('returns a copy so callers cannot mutate the central target mapping', () => {
@@ -213,6 +239,9 @@ describe('SHA256SUMS.txt', () => {
     fs.writeFileSync(artifactPath('appimage'), '');
     fs.writeFileSync(artifactPath('deb'), 'abc');
     fs.writeFileSync(artifactPath('rpm'), '');
+    for (const asset of releaseAssets.resolveReleaseAssets({ version: '3.0.0', targetName: 'terminal', outputDir })) {
+      fs.writeFileSync(asset.path, '');
+    }
 
     const result = await releaseAssets.writeChecksumManifest({
       version: '3.0.0',
@@ -226,7 +255,13 @@ describe('SHA256SUMS.txt', () => {
         `${INSTALLER_SHA256}  Multi-Git-Client-macOS-3.0.0.dmg\n` +
         `${PORTABLE_SHA256}  Multi-Git-Client-Linux-3.0.0-x86_64.AppImage\n` +
         `${INSTALLER_SHA256}  Multi-Git-Client-Linux-3.0.0-amd64.deb\n` +
-        `${PORTABLE_SHA256}  Multi-Git-Client-Linux-3.0.0-x86_64.rpm\n`
+        `${PORTABLE_SHA256}  Multi-Git-Client-Linux-3.0.0-x86_64.rpm\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Terminal-3.0.0-Windows-x64.zip\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Terminal-3.0.0-Windows-arm64.zip\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Terminal-3.0.0-macOS-x64.tar.gz\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Terminal-3.0.0-macOS-arm64.tar.gz\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Terminal-3.0.0-Linux-x64.tar.gz\n` +
+        `${PORTABLE_SHA256}  Multi-Git-Terminal-3.0.0-Linux-arm64.tar.gz\n`
     );
   });
 
@@ -271,6 +306,12 @@ describe('GitHub release upload arguments', () => {
       `${artifactPath('appimage')}#Linux AppImage (x86_64, any distribution; needs FUSE 2)`,
       `${artifactPath('deb')}#Linux .deb package (Debian, Ubuntu, Linux Mint; amd64)`,
       `${artifactPath('rpm')}#Linux .rpm package (Fedora, RHEL, openSUSE; x86_64)`,
+      `${path.join(outputDir, 'Multi-Git-Terminal-3.0.0-Windows-x64.zip')}#Terminal edition for Windows (x64)`,
+      `${path.join(outputDir, 'Multi-Git-Terminal-3.0.0-Windows-arm64.zip')}#Terminal edition for Windows (ARM64)`,
+      `${path.join(outputDir, 'Multi-Git-Terminal-3.0.0-macOS-x64.tar.gz')}#Terminal edition for macOS (x64)`,
+      `${path.join(outputDir, 'Multi-Git-Terminal-3.0.0-macOS-arm64.tar.gz')}#Terminal edition for macOS (ARM64)`,
+      `${path.join(outputDir, 'Multi-Git-Terminal-3.0.0-Linux-x64.tar.gz')}#Terminal edition for Linux (x64)`,
+      `${path.join(outputDir, 'Multi-Git-Terminal-3.0.0-Linux-arm64.tar.gz')}#Terminal edition for Linux (ARM64)`,
       `${path.join(outputDir, 'SHA256SUMS.txt')}#SHA-256 checksums`,
       '--repo',
       'AnthonyKopri/multi-git'

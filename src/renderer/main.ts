@@ -63,6 +63,7 @@ import * as appMenu from './features/app-menu';
 import * as updates from './features/updates';
 import * as terminal from './features/terminal';
 import * as setup from './features/setup';
+import * as terminalEdition from './features/terminal-edition';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
 
@@ -1036,6 +1037,7 @@ async function start(): Promise<void> {
   // during startup by the time anyone opens it.
   terminal.initTerminal(ui);
   setup.initSetup(ui);
+  terminalEdition.initTerminalEdition(ui);
   patches.initPatches();
   bisect.initBisect({ refreshAll });
   notes.initNotes(ui);
@@ -1079,6 +1081,8 @@ async function start(): Promise<void> {
   // Asked once, before anything is attempted: a machine without git would
   // otherwise learn about it as a spawn error at the first click.
   void setup.refreshPrerequisites();
+  // Offered once, beside the check above and independent of it.
+  void terminalEdition.refreshTerminalStatus();
   void accounts.validateSshProfilesOnStartup();
   void applyAppTitle();
   void groups.refreshGroups();

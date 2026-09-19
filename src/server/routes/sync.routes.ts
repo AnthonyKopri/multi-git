@@ -14,8 +14,9 @@ import { readConfig } from '../config/store';
 import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/vault';
 import { requireRepoPath } from '../middleware/repo-path';
 import { ensureAgentForRepo } from '../ssh/agent-session';
-import { operations } from '../operations/registry';
+import { asOperation } from '../operations/as-operation';
 import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { fetchWithAutoPull } from '../workflows/sync';
 
 /** Routes that operate on an existing repository. */
 export const syncRouter: Router = Router();
@@ -24,6 +25,22 @@ export const syncRouter: Router = Router();
 export const cloneRouter: Router = Router();
 
 syncRouter.use(requireRepoPath);
+
+/**
+ * A fetch that may fast-forward afterwards, when auto-pull is on and nothing
+ * stands in the way. The plain fetch below is kept as it was, because agents
+ * and scripts rely on a fetch never moving a branch.
+ */
+syncRouter.post(
+  '/api/workflows/fetch',
+  asyncRoute(async (req, res) => {
+    const { profileId, sshKeyPath } = profileArgs(req.body);
+    res.json({
+      success: true,
+      ...(await fetchWithAutoPull(req.repoPath as string, profileId, sshKeyPath))
+    });
+  })
+);
 
 /**
  * Gets the repository's key into the native agent before a network call.
@@ -48,44 +65,6 @@ function profileArgs(body: unknown): { profileId?: string; sshKeyPath?: string }
     ...(typeof profileId === 'string' ? { profileId } : {}),
     ...(typeof sshKeyPath === 'string' ? { sshKeyPath } : {})
   };
-}
-
-/**
- * Runs a network operation as a tracked, cancellable one.
- *
- * The app still blocks while these run — that did not change — but the
- * operations bar can now show what is happening and end it. Before this, a
- * fetch against an unreachable host was a spinner with no way out but the
- * five-minute timeout.
- *
- * A cancelled operation says the remote may already have received part of it,
- * because cancelling a push is not the same as undoing one. The objects may be
- * on the server already, and reporting a clean stop would be a claim the user
- * would then act on.
- */
-async function asOperation<T>(
-  kind: string,
-  repoPath: string,
-  message: string,
-  run: (signal: AbortSignal) => Promise<T>
-): Promise<T> {
-  const operation = operations.begin({ kind, repoPath, message });
-  operation.start();
-
-  try {
-    const result = await run(operation.signal);
-    operation.succeed();
-    return result;
-  } catch (error) {
-    operation.fail(
-      operation.cancelled
-        ? 'Cancelled. The remote may already have received part of this.'
-        : error instanceof Error
-          ? error.message
-          : 'Failed'
-    );
-    throw error;
-  }
 }
 
 syncRouter.post(

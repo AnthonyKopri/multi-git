@@ -5259,6 +5259,9 @@ label.settings-item:hover {
   gap: 8px;
   width: 100%;
 }
+.settings-button-row {
+  flex-wrap: wrap;
+}
 .settings-input-row .settings-field {
   flex: 1 1 auto;
   min-width: 0;
@@ -6018,6 +6021,31 @@ label.settings-item:hover {
   margin: 2px 0 0;
   font-size: 0.75rem;
   color: var(--text-dim);
+}
+
+/* The terminal edition offer shares the card, but is an offer, not a warning. */
+.terminal-setup-panel {
+  margin-bottom: 12px;
+}
+.terminal-setup-panel .setup-header > .material-symbols-outlined {
+  color: var(--color-primary);
+}
+.terminal-setup-changes {
+  margin: 10px 0 0;
+  padding-left: 30px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  word-break: break-word;
+}
+.terminal-setup-changes li + li {
+  margin-top: 2px;
+}
+.terminal-setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-left: 30px;
 }
 
 .setup-list {
