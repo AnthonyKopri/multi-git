@@ -1240,6 +1240,7 @@ body.pane-resizing-y * {
 }
 .recovery-item-main {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
@@ -6126,11 +6127,12 @@ label.settings-item:hover {
    4.0 and floating panels in 5.1.1; both left the rest of the window live
    beside them, which is not what was wanted.
 
-   Sized like Settings, so the lists inside have room without a second
-   scrollbar, and so every one of these opens at the same place and size. */
+   As wide as Settings and never taller, but only as tall as what is in it:
+   Rebase and Search start with a line or two, and a Settings-height box around
+   that is mostly empty. The long lists grow to the cap and scroll inside. */
 .modal-card.tool-modal-card {
   width: min(920px, 100%);
-  height: min(760px, calc(100vh - 40px));
+  max-height: min(760px, calc(100vh - 40px));
 }
 .modal-card.tool-modal-card > .modal-body {
   flex: 1;

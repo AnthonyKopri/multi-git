@@ -19,8 +19,10 @@ or Security. Remove empty headings when preparing a release.
 - **Worktrees, Rebase, Recovery, Branch Maintenance and Search open like
   Settings.** 5.1.1 made them floating panels over the window, which still left
   everything behind them clickable. Each now opens as a centred window over a
-  dimmed backdrop, the same size as Settings, and the rest of the application
-  waits until it is closed. Escape closes it, and Tab stays inside it.
+  dimmed backdrop, as wide as Settings and only as tall as what is in it, and
+  the rest of the application waits until it is closed. Escape closes it, and
+  Tab stays inside it. Rows in Branch Maintenance, Recovery and Rebase keep
+  their text against the left edge rather than centring it in a wide window.
 
 ## [5.1.1] - 2026-09-19
 
