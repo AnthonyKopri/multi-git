@@ -590,7 +590,7 @@ select {
   --diff-files-width: 260px;
   --commit-panel-height: 148px;
   --terminal-panel-height: 220px;
-  /* Named because floating panels have to start below it. */
+  /* The height of the top bar. */
   --navbar-height: 64px;
 }
 
@@ -6119,70 +6119,22 @@ label.settings-item:hover {
   cursor: not-allowed;
 }
 
-/* ---------- Panels ----------
-   Five surfaces are not modal questions. Worktrees, rebase, recovery, branch
-   maintenance and search are things you want open *beside* the work, and as
-   full-screen dimming overlays they made it impossible to watch a rebase and
-   read the conflict's diff at the same time.
+/* ---------- Tool windows ----------
+   Worktrees, Rebase, Recovery, Branch Maintenance and Search open the way
+   Settings does: a centred window over a dimmed backdrop, and nothing behind it
+   can be clicked until it is closed. They were a dock down the right edge in
+   4.0 and floating panels in 5.1.1; both left the rest of the window live
+   beside them, which is not what was wanted.
 
-   They used to dock down the right edge and take that width from the main
-   body, which squeezed the window into a fourth column. Each now pops out as a
-   panel of its own, floating over the window: dragged by its header, resized
-   from its corner, and placed by ui/floating-panels.ts, which writes left, top,
-   width and height inline. The layout underneath is left alone, and the
-   backdrop goes, so the rest of the window stays live. */
-.modal-overlay.as-panel {
-  /* Overwritten inline as soon as the panel opens; these only cover the frame
-     before that happens. */
-  top: calc(var(--navbar-height, 64px) + 16px);
-  left: auto;
-  right: 24px;
-  width: 520px;
-  height: min(720px, calc(100vh - var(--navbar-height, 64px) - 40px));
-  min-width: 320px;
-  min-height: 240px;
-  display: block;
-  padding: 0;
-  background-color: transparent;
-  backdrop-filter: none;
-  /* The browser's own corner grip; needs a non-visible overflow to appear. */
-  resize: both;
-  overflow: hidden;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-color);
-  /* Behind the true modals, which still cover everything including this. The
-     order among panels is set inline, so the one last clicked is on top. */
-  z-index: 110;
+   Sized like Settings, so the lists inside have room without a second
+   scrollbar, and so every one of these opens at the same place and size. */
+.modal-card.tool-modal-card {
+  width: min(920px, 100%);
+  height: min(760px, calc(100vh - 40px));
 }
-
-.modal-overlay.as-panel > .modal-card,
-.modal-overlay.as-panel > .modal-card-wide {
-  width: 100%;
-  max-width: none;
-  height: 100%;
-  max-height: none;
-  margin: 0;
-  padding: 16px;
-  border: none;
-  border-radius: inherit;
-  box-shadow: none;
-}
-
-/* The header is the handle a panel is moved by. */
-.modal-overlay.as-panel .panel-drag-handle {
-  position: relative;
-  cursor: move;
-  user-select: none;
-}
-.modal-overlay.as-panel .panel-drag-handle :is(button, a, input, select, textarea, label) {
-  cursor: pointer;
-}
-
-/* While a panel is dragged nothing else should select text or show a hover. */
-body.panel-dragging,
-body.panel-dragging * {
-  cursor: move !important;
-  user-select: none !important;
+.modal-card.tool-modal-card > .modal-body {
+  flex: 1;
+  min-height: 0;
 }
 
 /* ---------- Sidebar launchers ----------

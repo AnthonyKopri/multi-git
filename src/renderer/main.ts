@@ -18,7 +18,6 @@ import { closeAllDropdowns, initDropdowns, registerDropdown } from './ui/dropdow
 import { initOverflowMenus } from './ui/overflow-menu';
 import { initPanes, toggleSide } from './ui/panes';
 import { trapTab } from './ui/focus';
-import { initFloatingPanels, isPanel, topmostPanel } from './ui/floating-panels';
 import { isTypingTarget, localizeShortcutHints, matchesShortcut } from './ui/shortcuts';
 import { isMacHost, isWindowsHost } from './ui/platform';
 import { initCollapsibleSections } from './ui/sections';
@@ -187,23 +186,10 @@ function closeTopmostLayer(): void {
     ui.sshModal
   ];
 
-  // True modals before floating panels, whatever their order in the list above.
-  // A panel is beside the work rather than over it, so a modal opened while one
-  // is open is unambiguously the thing on top -- and Escape closing the panel
-  // underneath it would be answering a question nobody asked.
-  for (const group of [false, true]) {
-    // Among panels, the one on top of the others: the last one clicked.
-    const top = group ? topmostPanel() : undefined;
-    if (top !== undefined) {
-      setHidden(top, true);
+  for (const modal of modals) {
+    if (!modal.classList.contains('hidden')) {
+      setHidden(modal, true);
       return;
-    }
-
-    for (const modal of modals) {
-      if (isPanel(modal) === group && !modal.classList.contains('hidden')) {
-        setHidden(modal, true);
-        return;
-      }
     }
   }
 
@@ -1038,7 +1024,6 @@ async function start(): Promise<void> {
   initToasts(ui.toastContainer);
   // Before anything can open a panel, so the first one to open already has its
   // width and its resizer.
-  initFloatingPanels();
   initDialogs(ui);
   initDropdowns();
   initOverflowMenus();

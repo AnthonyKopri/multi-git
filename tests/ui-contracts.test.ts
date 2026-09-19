@@ -80,14 +80,12 @@ describe('the modal layer', () => {
   });
 });
 
-describe('which overlays float and which cover', () => {
-  // Five surfaces are things you want open beside the work rather than
-  // stacked on top of it: you cannot watch a rebase and read the conflict's
-  // diff at once if opening one dims and freezes everything else. The
-  // Repository window used to be one, and the coding agents window was
-  // another; both are laid out like Settings now, with their sections down
-  // the side, which a floating panel has no width for.
-  const PANELS = [
+describe('tool windows are modal', () => {
+  // Worktrees, Rebase, Recovery, Branch Maintenance and Search were a dock in
+  // 4.0 and floating panels in 5.1.1. Both left the window behind them live;
+  // what was wanted is what Settings does -- one window at a time, with
+  // nothing else clickable until it closes.
+  const TOOLS = [
     'rebase-modal',
     'search-modal',
     'branch-admin-modal',
@@ -95,56 +93,23 @@ describe('which overlays float and which cover', () => {
     'worktree-modal'
   ];
 
-  function panelIds(): string[] {
-    return [...html.matchAll(/<div id="([a-z0-9-]+)" class="modal-overlay as-panel/g)].map(
-      (m) => m[1] as string
-    );
-  }
-
-  it('floats exactly the five that belong beside the work', () => {
-    expect(panelIds().sort()).toEqual([...PANELS].sort());
+  it('has no overlay that leaves the window behind it usable', () => {
+    expect(html).not.toContain('as-panel');
+    expect(fs.existsSync(fromAppRoot('src', 'renderer', 'ui', 'floating-panels.ts'))).toBe(false);
   });
 
-  it('leaves the genuine questions as modals', () => {
-    // Confirm, prompt, the passphrase dialogs and the wizards are all "answer
-    // this, then continue". A question you can ignore while clicking elsewhere
-    // is a worse question.
-    const floating = new Set(panelIds());
-
-    for (const id of ['confirm-modal', 'prompt-modal', 'vault-setup-modal', 'new-repo-modal', 'clone-modal', 'settings-modal', 'repo-hub-modal', 'agents-modal']) {
-      expect(floating.has(id), `${id} should stay modal`).toBe(false);
+  it('opens each tool as a centred modal sized like Settings', () => {
+    for (const id of TOOLS) {
+      const match = new RegExp(`<div id="${id}" class="modal-overlay hidden"[^\\n]*\\n\\s*<div class="([^"]+)"`).exec(
+        html.replace(/\r\n/g, '\n')
+      );
+      expect(match?.[1], `${id} should use the tool window card`).toContain('tool-modal-card');
     }
   });
 
-  it('closes a modal before a panel, whatever the list order', () => {
-    // A panel sits beside the work, so a modal opened while one is open is
-    // unambiguously on top -- and Escape closing the panel underneath would be
-    // answering a question nobody asked.
-    const body = mainSource.slice(
-      mainSource.indexOf('function closeTopmostLayer'),
-      mainSource.indexOf('function wireHeader')
-    );
-
-    expect(body).toContain('isPanel(modal) === group');
-  });
-
-  it('pops panels out over the window rather than docking them as a column', () => {
-    // A docked panel took its width from the main body, which squeezed the
-    // three panes into four. Nothing may give up width for a panel again.
-    const css = fs.readFileSync(fromAppRoot('public', 'style.css'), 'utf8');
-
-    expect(css).not.toMatch(/body\.dock-open/);
-    expect(css).not.toMatch(/--dock-width/);
-    expect(mainSource).toContain('initFloatingPanels()');
-  });
-
-  it('lets Tab leave a panel, which is the point of one', () => {
+  it('traps Tab in every open modal, tools included', () => {
     const focus = fs.readFileSync(fromAppRoot('src', 'renderer', 'ui', 'focus.ts'), 'utf8');
-
-    expect(
-      focus.includes("!modal.classList.contains('as-panel')"),
-      'trapTab traps floating panels, so Tab cannot reach the work beside them'
-    ).toBe(true);
+    expect(focus).not.toContain('as-panel');
   });
 });
 
