@@ -84,4 +84,3 @@ export function autoPullBlockedReason(status: StatusResponse | null): string | n
   }
   return null;
 }
-
