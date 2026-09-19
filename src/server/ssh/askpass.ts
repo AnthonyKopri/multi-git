@@ -69,6 +69,7 @@ function escapeForShell(passphrase: string): string {
 }
 
 export function createAskpassBridge(passphrase: string): AskpassBridge {
+  if (/[\r\n\0]/.test(passphrase)) throw new Error('SSH passphrases cannot contain newlines or NUL characters.');
   installExitHook();
 
   const isWindows = os.platform() === 'win32';

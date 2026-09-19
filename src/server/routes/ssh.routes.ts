@@ -12,8 +12,7 @@ import {
   syncSshAliases
 } from '../ssh/config-sync';
 import { readRepoAccountSetup, wouldOverwrite } from '../ssh/repo-setup';
-import { verifySshAccount } from '../ssh/verify';
-import { canonicalHost } from '../ssh/host-alias';
+import { verifyProfileAccount } from '../ssh/verify-profile';
 import { runGitCommand } from '../git/run';
 import { deriveOriginHost } from '../ssh/profiles';
 import {
@@ -503,35 +502,11 @@ sshRouter.post(
   '/api/config/ssh/verify',
   asyncRoute(async (req, res) => {
     const { profileId, repoPath } = (req.body ?? {}) as Record<string, unknown>;
-    const config = readConfig();
 
-    const profile = config.sshProfiles.find((entry) => entry.id === profileId);
-    if (profileId && !profile) {
-      throw new HttpError('SSH profile not found.', 404);
-    }
-
-    const folder = typeof repoPath === 'string' ? repoPath : undefined;
-    const setup = folder ? await readRepoAccountSetup(folder) : null;
-    const host = canonicalHost(await deriveOriginHost(folder), config.sshProfiles) ?? 'github.com';
-
-    const check = await verifySshAccount({
-      host,
-      ...(profile ? { privateKeyPath: profile.privateKeyPath } : {}),
-      // The remote's owner unless the user overrode it, which they need to for
-      // an organisation repository or a fork.
-      expectedAccount: setup?.intendedAccount ?? null
-    });
-
-    // Remembered so the dropdown can warn about a wrong account instantly and
-    // offline. A key's account does not change on its own.
-    if (check.account && profile && profile.verifiedAccount !== check.account) {
-      const stored = readConfig();
-      const entry = stored.sshProfiles.find((candidate) => candidate.id === profile.id);
-      if (entry) {
-        entry.verifiedAccount = check.account;
-        writeConfig(stored);
-      }
-    }
+    const { host, check } = await verifyProfileAccount(
+      typeof profileId === 'string' ? profileId : '',
+      typeof repoPath === 'string' && repoPath !== '' ? repoPath : undefined
+    );
 
     res.json({ success: true, host, check, config: sanitizeConfigForClient(readConfig()) });
   })

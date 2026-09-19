@@ -16,6 +16,7 @@ const path = require('path');
 
 const {
   RELEASE_ASSETS,
+  ASSET_CATALOGUE,
   CHECKSUM_BASENAME,
   releaseTag
 } = require('./release-assets');
@@ -250,17 +251,19 @@ async function verify(options) {
   // 4. Assets, by the exact names the updater looks for. Every build has an
   //    updater that looks for its own file, so each one missing hides the
   //    release from the copies that use it.
+  //    The terminal packages are checked too, though no desktop updater reads
+  //    them: `multi-git update` looks for its own platform's archive.
   const names = assetNames(release);
-  const expected = Object.fromEntries(
-    Object.entries(RELEASE_ASSETS).map(([kind, spec]) => [kind, spec.basename(version)])
-  );
 
-  for (const [kind, basename] of Object.entries(expected)) {
+  for (const spec of Object.values(ASSET_CATALOGUE)) {
+    const basename = spec.basename(version);
     if (names.has(basename)) {
       report.pass(`${basename} is attached.`);
     } else {
       report.fail(
-        `${basename} is missing, so copies installed from the ${RELEASE_ASSETS[kind].label} will not be offered this release.`,
+        spec.edition === 'terminal'
+          ? `${basename} is missing, so the ${spec.label} cannot be downloaded or updated to this release.`
+          : `${basename} is missing, so copies installed from the ${spec.label} will not be offered this release.`,
         'Upload with "npm run release:upload", or re-run the Release workflow; both attach every build together.'
       );
     }

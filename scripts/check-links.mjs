@@ -21,6 +21,9 @@ const SKIP_DIRECTORIES = new Set([
   'out',
   'dist',
   'dist-standalone',
+  // Terminal edition payloads: copies of docs/, built by scripts/terminal-package.cjs.
+  '.terminal-bundle',
+  '.terminal-cache',
   'coverage',
   'templates'
 ]);

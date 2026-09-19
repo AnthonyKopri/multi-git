@@ -21,6 +21,7 @@ import { el, icon, setHidden } from '../../dom/create';
 import { showToast } from '../../ui/toast';
 import { withButtonBusy } from '../../ui/busy';
 import * as updates from '../updates';
+import * as terminalEdition from '../terminal-edition';
 import { prerequisites, refreshPrerequisites } from '../setup';
 import { update } from '../../state/store';
 import { applyConfigSnapshot, onManageSshConfigChanged } from '../accounts';
@@ -58,6 +59,9 @@ export async function openSettings(): Promise<void> {
   ui.settingsBody.scrollTop = 0;
   ui.btnCloseSettings.focus();
   await refresh();
+  // Drawn again once the main process has answered; the section says it is
+  // checking until then rather than holding the whole window back.
+  void terminalEdition.refreshTerminalStatus().then(() => render());
 
   // The section list rather than the first field: the first field is a
   // read-only address, and a focus ring on it reads as "edit this".
@@ -166,7 +170,8 @@ interface SectionInfo {
 }
 
 const SECTIONS = {
-  integrations: { key: 'integrations', icon: 'hub', title: 'Git and GitHub', subtitle: 'The tools Multi-Git runs, and how agents reach it.' },
+  integrations: { key: 'integrations', icon: 'hub', title: 'Git and GitHub', subtitle: 'The tools Multi-Git runs.' },
+  terminal: { key: 'terminal', icon: 'terminal', title: 'Terminal and agents', subtitle: 'The multi-git command, its guided terminal UI, and the MCP server for AI agents.' },
   sync: { key: 'sync', icon: 'sync', title: 'Syncing', subtitle: 'What happens after a fetch, and which key your other tools use.' },
   stale: { key: 'stale', icon: 'auto_delete', title: 'Stale branches', subtitle: 'Used by the Maintenance tab to offer worktrees for purging, and by Branch Maintenance to mark a branch stale.' },
   safety: { key: 'safety', icon: 'shield', title: 'Safety Net', subtitle: 'Recovery points taken before anything that rewrites history.' },
@@ -209,8 +214,8 @@ function buildAgentAddress(): HTMLElement {
   });
 
   return settingItem({
-    label: 'Agent CLI connection',
-    description: 'Use this address with the Multi-Git CLI --server option. It changes when the desktop app restarts.',
+    label: 'Backend address',
+    description: 'The multi-git command finds the running backend by itself. This address is for --server, and changes when the backend restarts.',
     control: el('div', { className: 'settings-input-row', children: [input, copy] }),
     stacked: true
   });
@@ -258,7 +263,6 @@ function buildIntegrations(): HTMLElement {
   });
 
   return section(SECTIONS.integrations, [
-    settingGroup([buildAgentAddress()]),
     el('p', {
       className: 'settings-group-caption',
       text: 'Multi-Git runs Git for everything. The GitHub CLI is optional and unlocks repository browsing, pull requests and publishing a new repository to GitHub.'
@@ -271,6 +275,13 @@ function buildIntegrations(): HTMLElement {
         control: recheck
       })
     ])
+  ]);
+}
+
+function buildTerminal(): HTMLElement {
+  return section(SECTIONS.terminal, [
+    ...terminalEdition.buildTerminalSettings(render),
+    settingGroup([buildAgentAddress()])
   ]);
 }
 
@@ -435,6 +446,7 @@ function render(): void {
 
   ui.settingsBody.replaceChildren(
     buildIntegrations(),
+    buildTerminal(),
     buildSync(current),
     buildStale(current),
     buildSafetyNet(current),

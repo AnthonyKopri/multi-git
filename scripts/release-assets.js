@@ -11,18 +11,35 @@ const CHECKSUM_LABEL = 'SHA-256 checksums';
 // Keep this in step with the release driver's accepted version format.
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
+// The desktop builds. The desktop updater looks for exactly these names, so a
+// rename here is a rename every installed copy has to be taught about first.
+//
+// `os`, `arch` and `format` are what the release notes' download tables show;
+// `label` is what GitHub lists the file as.
 const RELEASE_ASSETS = Object.freeze({
   installer: Object.freeze({
+    edition: 'desktop',
+    os: 'Windows',
+    arch: 'x64',
+    format: 'Installer (.exe)',
     label: 'Windows installer (recommended)',
     basename: (version) => `Multi-Git-Client-Setup-${version}.exe`
   }),
   portable: Object.freeze({
+    edition: 'desktop',
+    os: 'Windows',
+    arch: 'x64',
+    format: 'Portable (.exe)',
     label: 'Portable Windows executable',
     basename: (version) => `Multi-Git-Client-Portable-${version}.exe`
   }),
   // Built on GitHub Actions, on a Mac. Must match build.dmg.artifactName in
   // package.json.
   macos: Object.freeze({
+    edition: 'desktop',
+    os: 'macOS',
+    arch: 'Apple silicon + Intel',
+    format: 'Disk image (.dmg)',
     label: 'macOS disk image (Apple silicon and Intel)',
     basename: (version) => `Multi-Git-Client-macOS-${version}.dmg`
   }),
@@ -31,24 +48,75 @@ const RELEASE_ASSETS = Object.freeze({
   // package.json. The architecture is in the name the way each format spells
   // it, so the file a user downloads says what it is for.
   appimage: Object.freeze({
+    edition: 'desktop',
+    os: 'Linux',
+    arch: 'x64',
+    format: 'AppImage (any distribution)',
     // The label is what the release page lists the file as, which is the one
     // place to warn before it is run: an AppImage without FUSE 2 fails before
     // any of the app's own code starts, silently when double-clicked.
     label: 'Linux AppImage (x86_64, any distribution; needs FUSE 2)',
     note:
-      'It needs FUSE 2, which Ubuntu 22.04 and later do not install by default: ' +
+      'The AppImage needs FUSE 2, which Ubuntu 22.04 and later do not install by default: ' +
       'run `sudo apt install libfuse2t64` first (`libfuse2` on 22.04), or use the .deb instead.',
     basename: (version) => `Multi-Git-Client-Linux-${version}-x86_64.AppImage`
   }),
   deb: Object.freeze({
+    edition: 'desktop',
+    os: 'Linux',
+    arch: 'x64',
+    format: '.deb (Debian, Ubuntu, Linux Mint)',
     label: 'Linux .deb package (Debian, Ubuntu, Linux Mint; amd64)',
     basename: (version) => `Multi-Git-Client-Linux-${version}-amd64.deb`
   }),
   rpm: Object.freeze({
+    edition: 'desktop',
+    os: 'Linux',
+    arch: 'x64',
+    format: '.rpm (Fedora, RHEL, openSUSE)',
     label: 'Linux .rpm package (Fedora, RHEL, openSUSE; x86_64)',
     basename: (version) => `Multi-Git-Client-Linux-${version}-x86_64.rpm`
   })
 });
+
+/** The spelling each operating system has in a terminal package's name. */
+const TERMINAL_OS = Object.freeze({ win32: 'Windows', darwin: 'macOS', linux: 'Linux' });
+const TERMINAL_ARCH_LABEL = Object.freeze({ x64: 'x64', arm64: 'ARM64' });
+
+/** The terminal package name for a platform, shared with its self-update. */
+function terminalBasename(version, platform, arch) {
+  const os = TERMINAL_OS[platform];
+  if (!os || !Object.hasOwn(TERMINAL_ARCH_LABEL, arch)) {
+    throw new Error(`No terminal package for ${platform}-${arch}.`);
+  }
+  return `Multi-Git-Terminal-${version}-${os}-${arch}.${platform === 'win32' ? 'zip' : 'tar.gz'}`;
+}
+
+// The terminal edition: the CLI, the terminal UI and the MCP server with their
+// own Node runtime, one archive per operating system and architecture. Not
+// something the desktop updater looks at; `multi-git update` finds its own.
+const TERMINAL_ASSETS = Object.freeze(
+  Object.fromEntries(
+    Object.keys(TERMINAL_OS).flatMap((platform) =>
+      Object.keys(TERMINAL_ARCH_LABEL).map((arch) => [
+        `terminal-${platform}-${arch}`,
+        Object.freeze({
+          edition: 'terminal',
+          os: TERMINAL_OS[platform],
+          arch: TERMINAL_ARCH_LABEL[arch],
+          platform,
+          nodeArch: arch,
+          format: platform === 'win32' ? 'ZIP' : 'tar.gz',
+          label: `Terminal edition for ${TERMINAL_OS[platform]} (${TERMINAL_ARCH_LABEL[arch]})`,
+          basename: (version) => terminalBasename(version, platform, arch)
+        })
+      ])
+    )
+  )
+);
+
+/** Every file a release carries, desktop first. */
+const ASSET_CATALOGUE = Object.freeze({ ...RELEASE_ASSETS, ...TERMINAL_ASSETS });
 
 // `installer`, `portable` and `both` are what release.js can build. `release`
 // is everything a release carries, and is what the upload attaches.
@@ -56,7 +124,8 @@ const TARGET_ASSET_KINDS = Object.freeze({
   installer: Object.freeze(['installer']),
   portable: Object.freeze(['portable']),
   both: Object.freeze(['installer', 'portable']),
-  release: Object.freeze(['installer', 'portable', 'macos', 'appimage', 'deb', 'rpm'])
+  terminal: Object.freeze(Object.keys(TERMINAL_ASSETS)),
+  release: Object.freeze([...Object.keys(RELEASE_ASSETS), ...Object.keys(TERMINAL_ASSETS)])
 });
 
 function assertVersion(version) {
@@ -71,7 +140,7 @@ function selectedAssetKinds(targetName) {
     : undefined;
   if (!keys) {
     throw new Error(
-      `Invalid release target "${targetName}"; expected installer, portable, both, or release.`
+      `Invalid release target "${targetName}"; expected installer, portable, both, terminal, or release.`
     );
   }
   return [...keys];
@@ -82,7 +151,7 @@ function resolveReleaseAssets({ version, targetName, outputDir = DEFAULT_OUTPUT_
   const resolvedOutputDir = path.resolve(outputDir);
 
   return selectedAssetKinds(targetName).map((key) => {
-    const spec = RELEASE_ASSETS[key];
+    const spec = ASSET_CATALOGUE[key];
     const basename = spec.basename(version);
     return Object.freeze({
       key,
@@ -204,6 +273,9 @@ function buildGhUploadArgs({
 
 module.exports = {
   RELEASE_ASSETS,
+  TERMINAL_ASSETS,
+  ASSET_CATALOGUE,
+  terminalBasename,
   CHECKSUM_BASENAME,
   CHECKSUM_LABEL,
   selectedAssetKinds,

@@ -115,6 +115,18 @@ const desktopApi: DesktopApi = {
       DesktopApi['removeShellIntegration']
     >,
 
+  // No arguments cross for any of these: the main process decides what is
+  // copied where, and which PATH entry or startup file is touched.
+  terminalStatus: () => ipcRenderer.invoke(IPC_CHANNELS.terminalStatus) as ReturnType<DesktopApi['terminalStatus']>,
+  enableTerminal: () => ipcRenderer.invoke(IPC_CHANNELS.enableTerminal) as ReturnType<DesktopApi['enableTerminal']>,
+  removeTerminal: () => ipcRenderer.invoke(IPC_CHANNELS.removeTerminal) as ReturnType<DesktopApi['removeTerminal']>,
+  skipTerminalSetup: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.skipTerminalSetup) as ReturnType<DesktopApi['skipTerminalSetup']>,
+  // A repository path at most, which the main process validates like every other.
+  openTerminalUi: (repoPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.openTerminalUi, typeof repoPath === 'string' ? repoPath : '') as Promise<void>,
+  revealTerminalSkills: () => ipcRenderer.invoke(IPC_CHANNELS.revealTerminalSkills) as Promise<void>,
+
   getUpdateState: () => ipcRenderer.invoke(IPC_CHANNELS.getUpdateState) as Promise<UpdateState>,
   checkForUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.checkForUpdate) as Promise<UpdateState>,
   // The three below forward no arguments, for the same reason repairSshAgent

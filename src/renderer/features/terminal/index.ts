@@ -175,6 +175,29 @@ async function wireShellButtons(): Promise<void> {
   } catch {
     // Not knowing means not offering, which is the honest default.
   }
+
+  // The terminal UI on this repository. Offered whenever this build carries the
+  // terminal edition, whether or not the multi-git command has been enabled.
+  ui.btnOpenTui.addEventListener('click', () => void openTerminalUi());
+  try {
+    setHidden(ui.btnOpenTui, (await desktop.terminalStatus()).state === 'unavailable');
+  } catch {
+    // As above.
+  }
+}
+
+async function openTerminalUi(): Promise<void> {
+  const repoPath = getState().activeRepo;
+  if (repoPath === null) {
+    showToast('Open a repository first.', 'warn');
+    return;
+  }
+
+  try {
+    await window.desktopApi?.openTerminalUi?.(repoPath);
+  } catch (error) {
+    showToast((error as Error).message || 'Could not open the Multi-Git terminal UI.', 'error', 8000);
+  }
 }
 
 async function openShell(kind: 'git-bash' | 'terminal'): Promise<void> {

@@ -9,11 +9,13 @@ Use the running Multi-Git backend so repository locks, SSH profiles, operation t
 
 ## Connect and discover
 
-Locate the Multi-Git source checkout. After `npm ci` and `npm run compile`, invoke `node <checkout>/scripts/multi-git.cjs`. An optional `npm link` makes `multi-git` available on PATH; installation is not required. Do not assume a globally installed executable is this checkout.
+Use the `multi-git` command when it is on PATH: the user enabled it from the desktop app, or unpacked the terminal edition. Otherwise, in a source checkout, run `npm ci` and `npm run compile`, then `node <checkout>/scripts/multi-git.cjs`. `multi-git --version` says which version you have.
 
-Read `help` first: its JSON command catalogue includes input fields, HTTP method, whether a repository is required, and effect metadata. All output is one JSON envelope with `schemaVersion: 1` and `success`; help has top-level `usage`, `input` and `commands`, while execution has `data` or `error`. Exit 0 means success, 1 means transport/API failure, 2 means invalid input or refused write. With npm, use `npm run --silent agent -- ...` to keep stdout parseable.
+There is nothing to connect: the first command starts the shared per-user backend or joins the one the desktop app already runs, so locks, SSH accounts and operations are shared with the user's GUI. Pass `--server` (or `MULTI_GIT_URL`) only to reach a specific loopback server such as `npm start`. Run `app.info` to check.
 
-Start the desktop app or `npm start`. Copy **Settings → Git and GitHub → Agent CLI connection** and pass it with `--server`. Desktop ports change at restart. Browser mode defaults to `http://127.0.0.1:3000`; `MULTI_GIT_URL` can override it. Run `app.info` to verify the connection. Only loopback HTTP origins are accepted, and redirects are refused.
+Read `help` first: its JSON command catalogue includes input fields, HTTP method, whether a repository is required, and effect metadata, with a JSON Schema per command under `inputSchemas`. All output is one JSON envelope with `schemaVersion: 1` and `success`; execution has `data` or `error`. Exit 0 means success, 1 means transport/API failure, 2 means invalid input or refused write. With npm, use `npm run --silent agent -- ...` to keep stdout parseable.
+
+Prefer the guided commands — `sync.fetch`, `pull`, `sync.push`, `ssh.inspect`/`ssh.select`, `remote.inspect`/`remote.toggle` — over raw `fetch` and `push`: they apply the desktop app's checks. When one answers `DECISION_REQUIRED`, nothing changed; show the user what the matching inspect command reports and repeat with `"confirmed": true` only when they agree. For an MCP client, see the `multi-git-mcp` skill.
 
 ## Work on an explicit repository
 
@@ -38,7 +40,7 @@ For a commit task:
 3. Execute the authorized stage request with `--allow-write`, then inspect its index diff and status.
 4. Commit with a file such as `{"message":"docs: update the guide"}` and `--allow-write`; read status again.
 
-`--allow-write` expresses intent to execute a mutation; it is not permission to expand the user's task. Fetch also changes refs and needs this flag. Push only when requested or already authorized. The CLI exposes no force-push field. A push through the CLI does not run the GUI's account-verification prompt: verify the intended origin and SSH profile first, using the GUI when account identity is uncertain.
+`--allow-write` expresses intent to execute a mutation; it is not permission to expand the user's task. Fetch also changes refs and needs this flag. Push only when requested or already authorized. The CLI exposes no force-push field. The raw `push` skips the account check; `sync.push` runs it and asks for a decision when the key signs in as an unexpected account.
 
 For cloning, use `repositories.list` with an optional GitHub user/organization owner. It returns at most 100 owned repositories, including private repositories the `gh` account can access. This is not a search of every repository shared with the account. Select `sshUrl` for an SSH profile or `url + ".git"` for HTTPS. Review `repo.clone` with the URL, existing `parentDir`, optional child `folderName` and optional `profileId`, then execute the authorized request. Listing uses GitHub CLI authentication, independent of the clone's SSH identity.
 
@@ -46,6 +48,6 @@ For parallel branch work, use `worktrees.list` and `worktrees.create` with an ex
 
 ## Failures and GUI handoff
 
-On a connection failure, confirm that the app is running and recopy its port. On a timeout or uncertain write result, inspect status/history before retrying; the server may have completed the operation. Never blindly repeat a clone, commit or push. Missing `gh`, expired authentication and locked vaults need setup or user intervention; do not put tokens, passwords or private key contents into CLI arguments, output or test evidence.
+On a backend failure, the error names the backend log; a `BACKEND_VERSION_MISMATCH` means another Multi-Git version is running and the user has to close it. On a timeout or uncertain write result, inspect status/history before retrying; the server may have completed the operation. Never blindly repeat a clone, commit or push. Missing `gh`, expired authentication and locked vaults need setup or user intervention; do not put tokens, passwords or private key contents into CLI arguments, output or test evidence.
 
 Use the companion `multi-git-computer-use` skill for native folder pickers, visual review, dialogs, or functionality outside the CLI catalogue. Report which operations succeeded and what remains blocked. The CLI does not open GUI repository tabs; `repo.remember` only adds a recent entry.

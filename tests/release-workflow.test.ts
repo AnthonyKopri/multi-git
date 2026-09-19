@@ -11,8 +11,8 @@ import { describe, expect, it } from 'vitest';
 import { fromAppRoot } from '../src/server/app-root';
 
 const require = createRequire(import.meta.url);
-const { RELEASE_ASSETS } = require('../scripts/release-assets.js') as {
-  RELEASE_ASSETS: Record<string, { basename(version: string): string }>;
+const { ASSET_CATALOGUE: RELEASE_ASSETS } = require('../scripts/release-assets.js') as {
+  ASSET_CATALOGUE: Record<string, { basename(version: string): string }>;
 };
 
 // Normalized: a Windows checkout has the workflow with CRLF endings.
@@ -111,7 +111,23 @@ describe('the Release workflow', () => {
     for (const database of RPM_DATABASES) {
       expect(workflow).toContain(`-d ${database} `);
     }
-    expect(workflow).toMatch(/needs: \[plan, ci, windows, macos, linux, linux-install\]/);
+    expect(workflow).toMatch(/needs: \[plan, ci, windows, macos, linux, linux-install, terminal, terminal-run\]/);
+  });
+
+  it('runs every terminal package on its own system before publishing', () => {
+    // Built on one runner for all six, so running each is the only check that
+    // the runtime inside is the right one and starts.
+    for (const [name, runner] of [
+      ['Windows x64', 'windows-latest'],
+      ['Windows ARM64', 'windows-11-arm'],
+      ['macOS x64', 'macos-15-intel'],
+      ['macOS ARM64', 'macos-latest'],
+      ['Linux x64', 'ubuntu-24.04'],
+      ['Linux ARM64', 'ubuntu-24.04-arm']
+    ]) {
+      expect(workflow).toContain(`name: ${name}, runner: ${runner}`);
+    }
+    expect(workflow).toContain("&& needs.terminal-run.result == 'success'");
   });
 
   it('uploads with a replace that the upload script confines to drafts', () => {

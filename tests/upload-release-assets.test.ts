@@ -41,6 +41,16 @@ interface UploadScriptApi {
 const require = createRequire(import.meta.url);
 const uploadScript = require('../scripts/upload-release-assets.js') as UploadScriptApi;
 
+/** Built by their own job, on no developer's machine. */
+const TERMINAL_PACKAGES = [
+  'Multi-Git-Terminal-3.0.0-Windows-x64.zip',
+  'Multi-Git-Terminal-3.0.0-Windows-arm64.zip',
+  'Multi-Git-Terminal-3.0.0-macOS-x64.tar.gz',
+  'Multi-Git-Terminal-3.0.0-macOS-arm64.tar.gz',
+  'Multi-Git-Terminal-3.0.0-Linux-x64.tar.gz',
+  'Multi-Git-Terminal-3.0.0-Linux-arm64.tar.gz'
+];
+
 describe('release upload command', () => {
   it('lets gh infer the current release tag and repository', () => {
     expect(uploadScript.parseArgs([])).toEqual({
@@ -108,7 +118,8 @@ describe('release upload command', () => {
         'Multi-Git-Client-macOS-3.0.0.dmg',
         'Multi-Git-Client-Linux-3.0.0-x86_64.AppImage',
         'Multi-Git-Client-Linux-3.0.0-amd64.deb',
-        'Multi-Git-Client-Linux-3.0.0-x86_64.rpm'
+        'Multi-Git-Client-Linux-3.0.0-x86_64.rpm',
+        ...TERMINAL_PACKAGES
       ]);
 
       // What `npm run release` leaves behind: the Windows builds only.
@@ -118,7 +129,8 @@ describe('release upload command', () => {
         'Multi-Git-Client-macOS-3.0.0.dmg',
         'Multi-Git-Client-Linux-3.0.0-x86_64.AppImage',
         'Multi-Git-Client-Linux-3.0.0-amd64.deb',
-        'Multi-Git-Client-Linux-3.0.0-x86_64.rpm'
+        'Multi-Git-Client-Linux-3.0.0-x86_64.rpm',
+        ...TERMINAL_PACKAGES
       ];
       expect(uploadScript.missingAssets('3.0.0', outputDir)).toEqual(builtElsewhere);
 

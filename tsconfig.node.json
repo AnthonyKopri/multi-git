@@ -2,8 +2,9 @@
   "// ": "Server and Electron main/preload. Runs on Node, so no DOM. esbuild emits the CommonJS these files are loaded as; the module settings inherited from the base config describe resolution only.",
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "jsx": "react-jsx",
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  "include": ["src/server/**/*.ts", "src/main/**/*.ts", "src/shared/**/*.ts"]
+  "include": ["src/server/**/*.ts", "src/server/**/*.tsx", "src/main/**/*.ts", "src/shared/**/*.ts"]
 }

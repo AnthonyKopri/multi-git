@@ -98,3 +98,7 @@ coverage/
 
 # Private, local-only product planning
 /docs/roadmap/
+
+# Terminal packaging runtime and staging
+.terminal-cache/
+.terminal-bundle/

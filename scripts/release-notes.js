@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { releaseTag, RELEASE_ASSETS, CHECKSUM_BASENAME, CHECKSUM_LABEL } = require('./release-assets');
+const { releaseTag, ASSET_CATALOGUE, CHECKSUM_BASENAME, CHECKSUM_LABEL } = require('./release-assets');
 const { versionAnchor, repoUrlFromLinks, tagForVersion } = require('./changelog');
 
 const ROOT = path.join(__dirname, '..');
@@ -74,14 +74,41 @@ function changelogSections(source, version) {
     .filter((section) => section.body !== '');
 }
 
-/** The downloads list, named from the same table the upload uses. */
-function downloadsSection(version) {
-  return [
-    ...Object.values(RELEASE_ASSETS).map(
-      (spec) => `- **${spec.label}:** \`${spec.basename(version)}\`${spec.note ? `. ${spec.note}` : ''}`
-    ),
-    `- **${CHECKSUM_LABEL}:** \`${CHECKSUM_BASENAME}\``
-  ].join('\n');
+/** The editions a download table distinguishes, in the words it uses. */
+const EDITION_NAMES = Object.freeze({
+  desktop: 'Desktop app',
+  terminal: 'Terminal (CLI, TUI, MCP)'
+});
+
+/**
+ * One table per operating system, built from the catalogue the upload uses,
+ * so the notes cannot link to a file that never arrives. Given the repository
+ * URL, every name links straight to its download.
+ */
+function downloadsSection(version, repoUrl = null, tag = releaseTag(version)) {
+  const download = (name) =>
+    repoUrl
+      ? `[\`${name}\`](${repoUrl}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(name)})`
+      : `\`${name}\``;
+
+  const specs = Object.values(ASSET_CATALOGUE);
+  const tables = ['Windows', 'macOS', 'Linux'].map((os) => {
+    const rows = specs.filter((spec) => spec.os === os);
+    const notes = rows.filter((spec) => spec.note).map((spec) => spec.note);
+    return [
+      `### ${os}`,
+      '',
+      '| Edition | Architecture | Format | Download |',
+      '| --- | --- | --- | --- |',
+      ...rows.map(
+        (spec) =>
+          `| ${EDITION_NAMES[spec.edition]} | ${spec.arch} | ${spec.format} | ${download(spec.basename(version))} |`
+      ),
+      ...(notes.length > 0 ? ['', ...notes] : [])
+    ].join('\n');
+  });
+
+  return [...tables, `**${CHECKSUM_LABEL}:** ${download(CHECKSUM_BASENAME)}`].join('\n\n');
 }
 
 /**
@@ -219,7 +246,7 @@ function releaseNotes({ version, branch, tag, source = '', intro = '', verificat
   }
 
   blocks.push(
-    `## Downloads\n\n${downloadsSection(version)}\n\nThe portable app shares configuration with an installed copy.`
+    `## Downloads\n\n${downloadsSection(version, repoUrl, tag || releaseTag(version))}\n\nThe portable app shares configuration with an installed copy.`
   );
 
   if (verification.trim() !== '') {

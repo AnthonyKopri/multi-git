@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { commands } from './commands';
+import { commandSchema } from './schemas';
 
 export class CliError extends Error {
   constructor(message: string, readonly code = 'INVALID_ARGUMENT', readonly exitCode = 2) { super(message); }
@@ -25,7 +26,13 @@ export function serverOrigin(value: string): string {
   return url.origin;
 }
 
-export function prepareRequest(args: string[], input: Record<string, unknown> = {}): CliRequest {
+/**
+ * Builds the request a command line describes. Input, when given, is checked
+ * against the command's schema; without it only the flags are checked, which is
+ * how the CLI validates its options before it has read any input.
+ */
+export function prepareRequest(args: string[], suppliedInput?: Record<string, unknown>): CliRequest {
+  const input = suppliedInput ?? {};
   const command = args[0] ?? '';
   if (!Object.hasOwn(commands, command)) throw new CliError(`Unknown command: ${command}. Run help for commands.`);
   const spec = commands[command]!;
@@ -43,6 +50,10 @@ export function prepareRequest(args: string[], input: Record<string, unknown> = 
   if (spec.repo && !flags.get('--repo')) throw new CliError('--repo is required for this command.');
   for (const key of Object.keys(input)) {
     if (!Object.hasOwn(spec.input, key)) throw new CliError(`Unknown input field: ${key}`);
+  }
+  if (suppliedInput !== undefined) {
+    const validation = commandSchema(command).safeParse(input);
+    if (!validation.success) throw new CliError(validation.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '));
   }
   const dryRun = flags.has('--dry-run');
   if (spec.method !== 'GET' && !dryRun && !flags.has('--allow-write')) {

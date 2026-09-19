@@ -17,6 +17,7 @@ import type { BisectRunOutcome } from './bisect-types';
 import type { ExternalToolKind } from './config-types';
 import type { UpdateState } from './update-types';
 import type { InstallOutcome, PrerequisiteId } from './prerequisite-types';
+import type { TerminalInstallationStatus } from './terminal-types';
 
 /** Removes a push-channel listener. Returned by every `on*` method below. */
 export type Unsubscribe = () => void;
@@ -106,6 +107,27 @@ export interface DesktopApi {
   installShellIntegration: () => Promise<ShellIntegrationStatus>;
   removeShellIntegration: () => Promise<ShellIntegrationStatus>;
 
+  /**
+   * The terminal edition: whether it is installed and what `multi-git`
+   * resolves to. None of these take arguments. What is copied and where, and
+   * which PATH or startup file is touched, is decided in the main process; a
+   * channel that accepted a path would be a way for a page to write files.
+   */
+  terminalStatus: () => Promise<TerminalInstallationStatus>;
+  /** Installs, repairs or upgrades from the copy inside this desktop build. */
+  enableTerminal: () => Promise<TerminalInstallationStatus>;
+  removeTerminal: () => Promise<TerminalInstallationStatus>;
+  /** Remembers "Skip for now" on the first-run screen, so it is asked once. */
+  skipTerminalSetup: () => Promise<TerminalInstallationStatus>;
+  /**
+   * Opens `multi-git tui` in a new terminal window, on a repository when one
+   * is given. Runs the enabled terminal edition, or the copy inside this build
+   * when it has not been enabled.
+   */
+  openTerminalUi: (repoPath?: string) => Promise<void>;
+  /** Shows the installed agent skills folder in the file manager. */
+  revealTerminalSkills: () => Promise<void>;
+
   /** Current update state, for a window that opened after the last broadcast. */
   getUpdateState: () => Promise<UpdateState>;
   /** Asks GitHub now, rather than waiting for the next scheduled check. */
@@ -170,6 +192,12 @@ export const IPC_CHANNELS = {
   shellIntegrationStatus: 'shell:context-menu-status',
   installShellIntegration: 'shell:install-context-menu',
   removeShellIntegration: 'shell:remove-context-menu',
+  terminalStatus: 'terminal:status',
+  enableTerminal: 'terminal:enable',
+  removeTerminal: 'terminal:remove',
+  skipTerminalSetup: 'terminal:skip-setup',
+  openTerminalUi: 'terminal:open-tui',
+  revealTerminalSkills: 'terminal:reveal-skills',
   getUpdateState: 'update:get-state',
   checkForUpdate: 'update:check',
   downloadUpdate: 'update:download',

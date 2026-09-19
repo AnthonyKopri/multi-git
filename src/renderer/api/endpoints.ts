@@ -399,7 +399,7 @@ export const pull = (input: SyncInput) =>
   api.post<Api.SyncResponse>('/api/git/pull', { body: input });
 
 export const fetchRemote = (input: SyncInput) =>
-  api.post<Api.SyncResponse>('/api/git/fetch', { body: input });
+  api.post<Api.SyncResponse>('/api/workflows/fetch', { body: input });
 
 export const getOrigin = () => api.get<Api.OriginResponse>('/api/git/remote/origin');
 
