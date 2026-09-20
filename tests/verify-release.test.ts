@@ -4,7 +4,7 @@
 // releases the app cannot see is worse than none: it converts a silent failure
 // into a confidently wrong "all clear". Most of this file is that agreement.
 import { createRequire } from 'node:module';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { CHECKSUM_ASSET, assetBasename, parseReleaseTag } from '../src/main/update/release-feed';
 import type { UpdateArtifact } from '../src/main/update/release-feed';
@@ -16,6 +16,7 @@ interface VerifyScriptApi {
   parseChecksumManifest(text: string): Map<string, string>;
   highestOffer(releases: unknown[], version: string): string | null;
   authHeaders(env: Record<string, string | undefined>): Record<string, string>;
+  verify(options: { version: string; tag: string; repo: string }): Promise<number>;
   RELEASE_TAG: RegExp;
 }
 
@@ -145,5 +146,61 @@ describe('asking as the Release workflow', () => {
     // excluded by its flag rather than by its absence.
     const draft = { ...release('3.2.0'), draft: true };
     expect(verify.highestOffer([draft], '3.2.0')).toBeNull();
+  });
+});
+
+describe('running every check against a release', () => {
+  // The checks above exercise the helpers. This runs verify() itself, which is
+  // how a release is actually checked after publishing — and where a reference
+  // to a variable that no longer exists throws instead of reporting, turning
+  // "every asset is present" into "could not verify the release".
+  const VERSION = '9.9.9';
+  const TAG = `Release_v${VERSION}`;
+  const MANIFEST_URL = `https://github.com/${CHECKSUM_ASSET}`;
+
+  const basenames = (
+    require('../scripts/release-assets.js') as {
+      resolveReleaseAssets(options: { version: string; targetName: string }): { basename: string }[];
+    }
+  )
+    .resolveReleaseAssets({ version: VERSION, targetName: 'release' })
+    .map((asset) => asset.basename);
+
+  function published(manifestNames: string[] = basenames) {
+    const names = [...basenames, CHECKSUM_ASSET];
+    const body = { ...release(VERSION, {}, names) };
+    const manifest = manifestNames.map((name) => `${DIGEST}  ${name}`).join('\n');
+
+    return async (url: string): Promise<Response> =>
+      ({
+        ok: true,
+        status: 200,
+        json: async () => [body],
+        text: async () => (url === MANIFEST_URL ? manifest : '')
+      }) as Response;
+  }
+
+  async function run(fetcher: (url: string) => Promise<Response>): Promise<number> {
+    const original = globalThis.fetch;
+    const quiet = vi.spyOn(console, 'log').mockImplementation(() => {});
+    globalThis.fetch = fetcher as typeof fetch;
+    try {
+      return await verify.verify({ version: VERSION, tag: TAG, repo: 'owner/repo' });
+    } finally {
+      globalThis.fetch = original;
+      quiet.mockRestore();
+    }
+  }
+
+  it('passes a release carrying every desktop and terminal package', async () => {
+    await expect(run(published())).resolves.toBe(0);
+  });
+
+  it('reports a terminal package the checksum manifest does not list', async () => {
+    // Every asset is attached, so only the manifest check can catch this: an
+    // unlisted download is refused by the updater rather than installed.
+    const missing = `Multi-Git-Terminal-${VERSION}-Linux-arm64.tar.gz`;
+    const failures = await run(published(basenames.filter((name) => name !== missing)));
+    expect(failures).toBeGreaterThan(0);
   });
 });
