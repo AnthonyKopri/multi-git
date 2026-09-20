@@ -284,7 +284,8 @@ async function verify(options) {
   if (checksumAsset) {
     const manifest = parseChecksumManifest(await getText(checksumAsset.browser_download_url));
 
-    for (const basename of Object.values(expected)) {
+    for (const spec of Object.values(ASSET_CATALOGUE)) {
+      const basename = spec.basename(version);
       if (manifest.has(basename)) {
         report.pass(`${CHECKSUM_BASENAME} lists ${basename}.`);
       } else {
@@ -426,4 +427,4 @@ if (require.main === module) {
   void main();
 }
 
-module.exports = { parseArgs, parseChecksumManifest, highestOffer, authHeaders, RELEASE_TAG };
+module.exports = { parseArgs, parseChecksumManifest, highestOffer, authHeaders, verify, RELEASE_TAG };
