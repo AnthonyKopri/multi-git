@@ -12,6 +12,19 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.2.1] - 2026-09-25
+
+### Changed
+
+- **History keeps commit messages readable.** Branch and tag labels use their
+  own line, and graph rows reserve only the space needed for visible lanes.
+
+### Fixed
+
+- **GitHub CLI setup is available from Settings and the welcome screen.** When
+  `gh` is missing, install it directly where supported or open its official
+  installation page, then check again.
+
 ## [5.2.0] - 2026-09-20
 
 ### Added
@@ -1014,7 +1027,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.0...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.1...HEAD
+[5.2.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.0...Release_v5.2.1
 [5.2.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.4...Release_v5.2.0
 [5.1.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.3...Release_v5.1.4
 [5.1.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.2...Release_v5.1.3
