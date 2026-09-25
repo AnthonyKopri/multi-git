@@ -7,7 +7,7 @@ Session branch: promo/video-2
 - [x] M0 orient — 2026-09-25T02:43Z — `promo: start notes`
 - [x] M1 environment — 2026-09-25T02:48Z — `promo: scaffold the Remotion project`
 - [x] M2 demo world and captures — 2026-09-25T03:18Z — `promo: capture the demo world and real UI/CLI output`
-- [ ] M3 timing and audio
+- [x] M3 timing and audio — 2026-09-25T03:33Z — `promo: synthesize the score and sound effects`
 - [ ] M4 scaffold and primitives
 - [ ] M5 rough cut
 - [ ] M6 review round 1 and hero polish
@@ -66,6 +66,25 @@ _(filled in as scenes land)_
   `public/index.html` (placeholder copy such as `jane@work.com`).
 - **TUI keys:** Space, Escape, j, k, v were sent. `s` would stage a file, so it
   appears only as a keycap in the film.
+- **Timing is data.** `timing.json` holds the grid, each composition's
+  arrangement, and for every section its named cues (`[bar, beat, offset]`),
+  its SFX rows and its counter events. The synth, the Remotion scenes, the SFX
+  placement and `npm run check` all read it, so re-timing a scene moves its
+  sounds and counter ticks with it.
+- **Audio mastering.** The synth masters in JS (BS.1770-4 integrated loudness,
+  4x-oversampled true-peak estimate, lookahead limiter), so `npm run audio`
+  works on a Windows PC with no ffmpeg. When ffmpeg is on the PATH it also runs
+  `loudnorm` pass 1 and applies pass 2 (linear) only if the file drifted more
+  than 0.3 LU; today pass 1 reads -14.6 LUFS, so pass 2 is skipped.
+- **Music is mastered to -14.5 LUFS / -2 dBTP, not -14 / -1**, so the finished
+  mix (music plus the SFX Remotion adds) lands on the delivery target:
+  `review/mix-preview.mp3` measures -14.1 LUFS integrated, -1.0 dBTP. The music
+  dips 10 dB under the lead SFX (collapse thunks, drop impact, oops boom,
+  stinger hit), which lead; other SFX sit 6-12 dB under. Energy above 8 kHz is
+  -30 dB relative to the full band.
+- **The mix preview is mixed in JS** from the same SFX event list Remotion uses
+  (identical frames and volumes), then encoded with ffmpeg, instead of a
+  100-input `adelay` + `amix` graph.
 - The session's own branch is `promo/video-2` itself (`git branch --show-current`
   at the start), so the morning fast-forward is a no-op.
 
