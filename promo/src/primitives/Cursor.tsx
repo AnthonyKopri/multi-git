@@ -6,6 +6,10 @@
 // a click and leaving no sooner than 6 frames after one. A press is 3 frames
 // at 0.88 with a small ring; the target gets a 1.5 px indigo hover ring as the
 // pointer arrives and a flash on the press (12 frames), fading over 7 frames.
+// A ring belongs to its target: `from` keeps it hidden until the target's
+// layer has finished opening (so the first frames fit), and `until` fades it
+// out over 4 frames as that layer starts to close (so no outline is left
+// floating where a button was).
 import React, { useMemo } from 'react';
 import { useCurrentFrame } from 'remotion';
 import { clamp01, prog } from '../lib/anim';
@@ -14,7 +18,8 @@ import { useColors } from '../theme';
 export interface Pt { x: number; y: number }
 export interface Box { x: number; y: number; w: number; h: number }
 /** `at` is the click frame for a click, otherwise the arrival frame. */
-export interface CursorStop { at: number; x: number; y: number; click?: boolean; ring?: Box }
+export interface CursorStop { at: number; x: number; y: number; click?: boolean; ring?: Box; from?: number; until?: number }
+export const RING_OUT = 4;
 export type CursorMap = (frame: number, p: Pt) => Pt;
 
 const identity: CursorMap = (_f, p) => p;
@@ -74,12 +79,18 @@ export const Cursor: React.FC<{ stops: CursorStop[]; enterAt: number; exitAt?: n
     const seg = plan.segs[i - 1];
     const arrive = seg ? seg.end : s.at;
     const leaveAt = plan.segs[i] ? Math.max(plan.segs[i].start, s.at + 10) : (exitAt ?? s.at + 30);
-    if (frame < arrive - 2 || frame >= leaveAt + 7) return null;
-    const on = clamp01((frame - arrive + 2) / 6) * clamp01((leaveAt + 7 - frame) / 7);
-    const flash = s.click && frame >= s.at ? 1 - prog(frame, s.at, 12) : 0;
+    const start = Math.max(arrive - 2, s.from ?? -Infinity);
+    const gone = Math.min(leaveAt + 7, s.until !== undefined ? s.until + RING_OUT : Infinity);
+    if (frame < start || frame >= gone) return null;
+    const closing = s.until !== undefined ? clamp01((s.until + RING_OUT - frame) / RING_OUT) : 1;
+    const on = clamp01((frame - start + 1) / 5) * clamp01((leaveAt + 7 - frame) / 7) * closing;
+    const flash = s.click && frame >= s.at ? (1 - prog(frame, s.at, 12)) * closing : 0;
     const tl = map(frame, { x: s.ring.x, y: s.ring.y }), br = map(frame, { x: s.ring.x + s.ring.w, y: s.ring.y + s.ring.h });
-    return (
-      <div key={i} style={{ position: 'absolute', left: tl.x - 4, top: tl.y - 4, width: br.x - tl.x + 8, height: br.y - tl.y + 8, borderRadius: 8, pointerEvents: 'none',
+    // border-box keeps the border inside the box, so the 4 px gap around the target is even on all
+    // four sides (content-box pushed the outline 3 px down and right). The radius follows the zoom,
+    // so the corners match the app's 6 px radius at any scale.
+    const zoom = (br.x - tl.x) / Math.max(1, s.ring.w);    return (
+      <div key={i} style={{ position: 'absolute', boxSizing: 'border-box', left: tl.x - 4, top: tl.y - 4, width: br.x - tl.x + 8, height: br.y - tl.y + 8, borderRadius: 6 * zoom + 4, pointerEvents: 'none',
         border: `${1.5 + flash}px solid ${c.indigo}`, opacity: on, boxShadow: flash > 0 ? `0 0 ${10 + 16 * flash}px ${c.indigo}` : 'none', background: flash > 0 ? `rgba(99,102,241,${(0.16 * flash).toFixed(3)})` : 'transparent' }} />
     );
   });

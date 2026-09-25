@@ -12,7 +12,7 @@ import { LaneTrails } from '../primitives/LaneTrails';
 import { SpellStack, TargetPulse } from '../primitives/SpellStack';
 import { Caret, TerminalWindow, tildify, type LogRecord } from '../primitives/Terminal';
 import { VhsOverlay, VhsStage } from '../primitives/Vhs';
-import { openWorktrees } from '../ui/edits';
+import { hideAgentRows, openWorktrees, scrollSshToRules } from '../ui/edits';
 import { FONT, TYPE, useColors, useFilm } from '../theme';
 import { SNAP } from '../ui/snapshots.generated';
 import { AppLayer, AppWindow, blockBottom, BottomScrim, byText, cues, FEATURE_ANCHOR, HeadlineBlock, HeadlineScrim, ModalLayer, q, qa, rect, rgba, setText, Sub, toScreen, type R } from './kit';
@@ -59,18 +59,16 @@ const camMap = (keys: CamKey[], duration: number): CursorMap => (f, p) => {
   const r = toScreen(keys, f, { x: p.x, y: p.y, w: 0, h: 0 }, FEATURE_ANCHOR, 0.015, duration);
   return { x: r.x, y: r.y };
 };
-/** A click at (fx, fy) inside a stage rect, with the hover ring on the rect (unless `ring` is false). */
-const clickOn = (at: number, r: R, fx = 0.5, fy = 0.5, ring = true): CursorStop => ({ at, x: r.x + r.w * fx, y: r.y + r.h * fy, click: true, ring: ring ? r : undefined });
-
-// The capture machine had no SSH agent; its warning rows would steal the shot.
-const hideAgentRows = (root: HTMLElement) => {
-  const dd = q(root, '#profile-dropdown');
-  if (!dd) return;
-  [...dd.children].forEach((el) => {
-    const t = el.textContent ?? '';
-    if ((el as HTMLElement).classList.contains('agent-row') || /SSH agent|Agent:|Vault:/.test(t)) (el as HTMLElement).style.display = 'none';
-  });
-};
+/**
+ * A click at (fx, fy) inside a stage rect, with the hover ring on the rect
+ * (unless `ring` is false). `win.from` is when the target's layer has finished
+ * opening, and `win.until` is when it starts to close. The ring is held
+ * inside that window.
+ */
+const clickOn = (at: number, r: R, fx = 0.5, fy = 0.5, ring = true, win: { from?: number; until?: number } = {}): CursorStop =>
+  ({ at, x: r.x + r.w * fx, y: r.y + r.h * fy, click: true, ring: ring ? r : undefined, ...win });
+/** Modal layers are fully open this many frames after `open` (ModalLayer's default). */
+const OPENED = 7;
 
 // Cutdowns that crop a window out of the scene render their own titles.
 const wrappedV = (variant?: string) => variant === 'vertical' || variant === 'gif' || variant === 'splitOnly';
@@ -85,9 +83,12 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
   const hasRules = cu.has('rule'), rule = cu.at('rule', 9999), second = cu.at('secondRepo', 9999);
   const keysAt = cu.at('keys'), mismatch = cu.at('mismatch'), cancel = cu.at('cancel'), stampAt = cu.at('stamp');
   const land = collapse + 8;
+  // Add Rule is clicked once the SSH window is fully open; the rule row pops in from the click.
+  const ruleClick = rule + OPENED + 9, rowIn = ruleClick + 2;
   const seg = rect('base', '#profile-segment-wrapper');
   const workItem = rect('dropdownWork', '[data-profile-id="work"]');
   const cancelBtn = rect('mismatch', '#btn-confirm-cancel');
+  const addRuleBtn = rect('sshWindow', '#btn-add-rule');
   const keys: CamKey[] = [
     { at: 0, x: 1000, y: 250, scale: 1.25 },
     { at: land + 6, x: 1030, y: 290, scale: 1.7, dur: 7 },
@@ -95,7 +96,8 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
     { at: keysAt, x: 820, y: 140, scale: 1.6, dur: 7 },
     { at: mismatch, x: 800, y: 118, scale: 2.15, dur: 6 },
   ];
-  const ddClose = hasRules ? rule : keysAt;
+  // The dropdown has finished fading (6 frames) by the time the SSH window starts to open, so they never overlap.
+  const ddClose = hasRules ? rule - 6 : keysAt;
   const dropdownOpen = frame >= land && frame < ddClose + 6;
   const ddT = enter(frame, land, 6) * leave(frame, ddClose, 6);
   const flipT = prog(frame, flip, 8);
@@ -113,7 +115,12 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
     const work = q(root, '[data-profile-id="work"]');
     if (work && from) work.style.background = f >= pick ? 'rgba(99,102,241,0.28)' : '';
     const dd = q(root, '#profile-dropdown');
-    if (dd) { dd.style.opacity = String(ddT); dd.style.transform = `translateY(${(1 - ddT) * -8}px)`; }
+    if (dd) {
+      dd.style.opacity = String(ddT); dd.style.transform = `translateY(${(1 - ddT) * -8}px)`;
+      // The app's menu is translucent over a backdrop blur the renderer doesn't
+      // draw, so the panel behind read through it. Give it its solid card colour.
+      dd.style.background = c.card; dd.style.backdropFilter = 'none';
+    }
     hideAgentRows(root);
   };
   return (
@@ -128,12 +135,15 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
         {personalVis && <AppLayer snap="ssh-dropdown-personal" at={seg} apply={(r, f) => flipRows(r, f, true)} />}
         {workVis && <AppLayer snap="ssh-dropdown-work" at={seg} apply={(r, f) => flipRows(r, f, false)} />}
         {hasRules && <ModalLayer snap="ssh-window" open={rule} close={second} apply={(root, f) => {
-          const h = byText(root, 'h3', 'Auto-select');
-          let p: HTMLElement | null = h?.parentElement ?? null;
-          while (p && p !== root && !(p.scrollHeight > p.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(p).overflowY))) p = p.parentElement;
-          if (p && h && p !== root) p.scrollTop = Math.max(0, h.offsetTop - 120);
-          const rows = qa(root, '[data-rule-id], .rule-item, .account-rule, li').filter((li) => /github\.com\/acme\//.test(li.textContent ?? ''));
-          rows.forEach((li) => { const s = pop(f, rule + 4); li.style.transform = `scale(${0.6 + 0.4 * s})`; li.style.opacity = String(clamp01(s)); li.style.boxShadow = f - rule < 20 ? `0 0 0 2px ${c.indigo}` : ''; });
+          scrollSshToRules(root); // the same scroll measure-ui measured in
+          const rows = qa(root, '#account-rules-list li').filter((li) => /github\.com\/acme\//.test(li.textContent ?? ''));
+          rows.forEach((li) => {
+            const s = pop(f, rowIn);
+            li.style.transform = `scale(${0.6 + 0.4 * s})`; li.style.opacity = String(clamp01(s));
+            // The new row's ring holds 20 frames, then fades out over 6, and is gone before the window closes.
+            const ringT = f < rowIn ? 0 : Math.min(1, clamp01((rowIn + 26 - f) / 6));
+            li.style.boxShadow = ringT > 0 ? `0 0 0 2px ${rgba(c.indigo, ringT)}` : '';
+          });
         }} />}
         <ModalLayer snap="account-mismatch" open={mismatch} close={cancel + 1} apply={(root, f) => {
           const card = q(root, '.modal-card');
@@ -143,18 +153,22 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
             msg.dataset.mg = '1';
             msg.innerHTML = msg.innerHTML.replace('"Work"', '"<mark class="mg-hl">Work</mark>"').replace('"Personal"', '"<mark class="mg-hl">Personal</mark>"');
           }
-          qa(root, 'mark.mg-hl').forEach((m) => { m.style.background = f >= mismatch + 5 ? `${c.amber}55` : 'transparent'; m.style.color = 'inherit'; m.style.borderRadius = '4px'; m.style.padding = '0 3px'; });
+          // Padding balanced by an equal negative margin: the highlight grows around the word without
+          // re-wrapping the message, so the buttons stay where measure-ui measured them.
+          qa(root, 'mark.mg-hl').forEach((m) => { m.style.background = f >= mismatch + 5 ? `${c.amber}55` : 'transparent'; m.style.color = 'inherit'; m.style.borderRadius = '4px'; m.style.padding = '0 3px'; m.style.margin = '0 -3px'; });
           const cb = q(root, '#btn-confirm-cancel');
           if (cb) cb.style.boxShadow = '';
         }} />
       </Stage>
-      {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneA.headline, at: cu.at('headline') }]} />}
-      <SpellStack lines={copy.spells.a} at={spellAt} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneA.headline)} target={toScreen(keys, land, seg)} />
+      {/* The headline leaves as the SSH window opens: the window's top half sits where it would be. */}
+      {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneA.headline, at: cu.at('headline'), exitAt: hasRules ? rule : undefined }]} />}
+      <SpellStack lines={copy.spells.a} at={spellAt} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneA.headline)}
+        target={(f) => toScreen(keys, f, seg, FEATURE_ANCHOR, 0.015, placed.duration)} />
       <Cursor map={camMap(keys, placed.duration)} stops={[
         { at: land, x: seg.x + seg.w * 0.6, y: seg.y + seg.h * 0.8 },
-        clickOn(pick, workItem, 0.4, 0.55),
-        ...(hasRules ? [{ at: rule + 12, x: 1150, y: 560 }] : []),
-        clickOn(cancel, cancelBtn, 0.5, 0.6),
+        clickOn(pick, workItem, 0.4, 0.55, true, { from: land + 6, until: ddClose }),
+        ...(hasRules ? [clickOn(ruleClick, addRuleBtn, 0.5, 0.5, true, { from: rule + OPENED, until: second })] : []),
+        clickOn(cancel, cancelBtn, 0.5, 0.6, true, { from: mismatch + OPENED, until: cancel + 1 }),
       ]} enterAt={land} exitAt={stampAt} />
       {frame >= keysAt && <KeyCombo keys={['Ctrl', 'Alt', 'U']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: wrappedV(variant) ? 720 : 96, top: 840, opacity: leave(frame, stampAt + 20, 7) }} />}
       <Stamp text={copy.sceneA.stamp} at={stampAt} x={FEATURE_ANCHOR.x} y={560} />
@@ -183,8 +197,9 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
     { at: 0, x: 900, y: 560, scale: 1.15 },
     { at: land + 6, x: 960, y: 430, scale: 1.8, dur: 7 },
     { at: sel[2] - 4, x: 960, y: 700, scale: 1.75, dur: 7 },
-    { at: stage - 3, x: 900, y: 360, scale: 1.8, dur: 6 },
-    { at: discardSel - 2, x: 960, y: 740, scale: 1.75, dur: 6 },
+    // Each move settles before the click it frames (the pointer arrives 5 frames early).
+    { at: stage - 12, x: 900, y: 360, scale: 1.8, dur: 6 },
+    { at: discardSel - 12, x: 960, y: 740, scale: 1.75, dur: 6 },
     { at: keysAt + 8, x: 1400, y: 330, scale: 1.55, dur: 7 },
     { at: wordDiff, x: WORD.x, y: WORD.y + WORD.h / 2, scale: 2.0, dur: 6 },
     { at: imageDiff, x: 930, y: 330, scale: 1.5, dur: 6 },
@@ -218,9 +233,16 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
       el.style.maxHeight = f >= discard + 5 ? `${61 * (1 - gone)}px` : '';
       el.style.overflow = 'hidden';
     });
+    // Once its lines are staged or discarded the bar fades out over 4 frames
+    // rather than vanishing, and the cursor's ring on its button fades with it.
     const barEl = q(root, '#diff-selection-bar');
-    if (barEl) barEl.style.visibility = count > 0 ? 'visible' : 'hidden';
-    setText(q(root, '#diff-selection-count'), `${count} line${count === 1 ? '' : 's'} selected`);
+    const clearAt = [stage + 3, discard + 3].filter((x) => f >= x).pop();
+    const fading = count === 0 && clearAt !== undefined && f < clearAt + 4;
+    if (barEl) {
+      barEl.style.visibility = count > 0 || fading ? 'visible' : 'hidden';
+      barEl.style.opacity = fading ? String(1 - (f - clearAt!) / 4) : '';
+    }
+    if (count > 0) setText(q(root, '#diff-selection-count'), `${count} line${count === 1 ? '' : 's'} selected`);
     const sb = q(root, '#btn-diff-stage-selection'), db = q(root, '#btn-diff-discard-selection');
     if (sb) sb.style.boxShadow = '';
     if (db) db.style.boxShadow = f >= discard && f < discard + 12 ? `0 0 0 2px ${c.red}` : '';
@@ -237,11 +259,15 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
         {showImage && <AppLayer snap="imagediff" at={diffAt} opaque />}
       </Stage>
       {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneB.headline, at: cu.at('headline') }]} />}
-      <SpellStack lines={copy.spells.b} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneB.headline)} target={toScreen(keys, land, lr('imp'))} />
+      <SpellStack lines={copy.spells.b} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneB.headline)}
+        target={(f) => toScreen(keys, f, lr('imp'), FEATURE_ANCHOR, 0.015, placed.duration)} />
       <Cursor map={camMap(keys, placed.duration)} stops={[
         { at: land, x: lr('imp').x + lr('imp').w * 0.3, y: lr('imp').y + lr('imp').h * 0.5 },
         clickOn(sel[0], lr('imp'), 0.3, 0.5, false), clickOn(sel[1], lr('ifl'), 0.3, 0.5, false), clickOn(sel[2], lr('ref'), 0.3, 0.5, false),
-        clickOn(stage, stageBtn), clickOn(discardSel, lr('log1'), 0.3, 0.5, false), clickOn(discard, discardBtn),
+        // The selection bar hides once its lines are staged or discarded (3 frames after each click): the ring goes with it.
+        clickOn(stage, stageBtn, 0.5, 0.5, true, { from: sel[0] + 1, until: stage + 3 }),
+        clickOn(discardSel, lr('log1'), 0.3, 0.5, false),
+        clickOn(discard, discardBtn, 0.5, 0.5, true, { from: discardSel + 1, until: discard + 3 }),
       ]} enterAt={land} exitAt={keysAt} />
       {!wrappedV(variant) && <Caption text={copy.sceneB.caption} at={discardSel} x={96} y={900} icon="shield" />}
       {frame >= keysAt && frame < wordDiff + 5 && <KeyCombo keys={['Ctrl', 'Enter']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: 96, top: 770, opacity: leave(frame, wordDiff, 6) }} />}
@@ -376,12 +402,14 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
         { text: copy.sceneC.headline, at: headAt },
         ...(short ? [] : [{ kind: 'sub' as const, text: copy.sceneC.sub, at: cu.at('sub', 9999), color: c.emerald, size: 56 }]),
       ]} />}
-      <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={screen(land + 4, recRow)} />
+      <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={(f) => screen(Math.max(f, land + 4), recRow)} />
       {full && <Caption text={copy.sceneC.back} at={back} exitAt={newPoint - 4} x={96} y={560} icon="history" color={c.emerald} />}
       {!short && <Caption text={copy.sceneC.card} at={card} x={96} y={880} icon="delete_history" />}
       {full && <Cursor map={camMap(keys, placed.duration)} stops={[
         { at: land, x: recBtn.x - 60, y: recBtn.y + 70 },
-        clickOn(pickPoint, recBtn), clickOn(restore, rect('restore', '#btn-confirm-ok'), 0.5, 0.55),
+        // Recovery opens at land - 2 and closes at pickPoint + 2; the Restore confirm opens at confirmAt and closes at restore + 1.
+        clickOn(pickPoint, recBtn, 0.5, 0.5, true, { from: land - 2 + OPENED, until: pickPoint + 2 }),
+        clickOn(restore, rect('restore', '#btn-confirm-ok'), 0.5, 0.55, true, { from: confirmAt + OPENED, until: restore + 1 }),
       ]} enterAt={land} exitAt={restore + 8} />}
       {full && <VhsOverlay from={restore} to={landing} width={W} height={H} />}
     </AbsoluteFill>
@@ -470,22 +498,27 @@ export const SceneD: React.FC<SceneProps> = ({ placed, variant }) => {
       {!splitOnly && !hook && <HeadlineBlock lines={[{ text: copy.sceneD.headline, at: cu.at('headline'), exitAt: full ? collapse : undefined }]} />}
       {hook && <Kinetic text={copy.vertical.hook} at={cu.at('headline') - 6} style={{ ...TYPE.hero, fontSize: 96, position: 'absolute', left: 90, top: 290, width: width - 180 }} />}
       {!splitOnly && <SpellStack lines={copy.spells.d} at={cu.at('spell')} collapseAt={hook ? undefined : collapse}
-        box={vertical ? { x: 60, y: 720, w: width - 120 } : spellBox(copy.sceneD.headline)} target={hook ? undefined : screen(land, rect('planner', '#rebase-plan-list'))} fontSize={vertical ? 30 : 28} />}
-      {splitOnly && <SpellStack lines={copy.spells.d} at={-40} collapseAt={0} box={vertical ? { x: 60, y: 720, w: width - 120 } : SPELL_BOX} target={screen(8, splitBtn)} fontSize={vertical ? 30 : 28} />}
-      {frame >= splitPulse && frame < confirm && <TargetPulse rect={screen(splitPulse + (full ? 4 : 0), splitBtn)} at={splitPulse + (full ? 4 : 0)} />}
-      {full && (
-        <Cursor map={camMap(keys, placed.duration)} stops={[
-          { at: land, x: 1000, y: 560 },
-          clickOn(move1, planRect(DOCS, MOVE_UP)),
-          clickOn(squash, planRect(TOKEN, SEL)),
-          clickOn(fixup, planRect(4, SEL)), // the fixup! row sits in the last slot after the reorder
-          clickOn(drop, planRect(3, SEL)), // and "docs" in the one above it
-          clickOn(auto, rect('planner', '#rebase-autosquash')),
-          clickOn(start, rect('planner', '#btn-rebase-start')),
-          clickOn(confirm, splitBtn),
-          clickOn(splitClick, okBtn),
-        ]} enterAt={land} exitAt={split} />
-      )}
+        box={vertical ? { x: 60, y: 720, w: width - 120 } : spellBox(copy.sceneD.headline)} target={hook ? undefined : (f) => screen(f, rect('planner', '#rebase-plan-list'))} fontSize={vertical ? 30 : 28} />}
+      {splitOnly && <SpellStack lines={copy.spells.d} at={-40} collapseAt={0} box={vertical ? { x: 60, y: 720, w: width - 120 } : SPELL_BOX} target={(f) => screen(f, splitBtn)} fontSize={vertical ? 30 : 28} />}
+      {/* The pulse waits for the edit-stop window to finish opening, and follows the camera. */}
+      {frame >= splitPulse && frame < confirm && <TargetPulse rect={(f) => screen(f, splitBtn)} at={splitPulse + (full ? OPENED : 0)} />}
+      {full && (() => {
+        // Each window's clicks keep their ring inside that window's open time.
+        const planner = { from: collapse + OPENED, until: start + 2 };
+        return (
+          <Cursor map={camMap(keys, placed.duration)} stops={[
+            { at: land, x: 1000, y: 560 },
+            clickOn(move1, planRect(DOCS, MOVE_UP), 0.5, 0.5, true, planner),
+            clickOn(squash, planRect(TOKEN, SEL), 0.5, 0.5, true, planner),
+            clickOn(fixup, planRect(4, SEL), 0.5, 0.5, true, planner), // the fixup! row sits in the last slot after the reorder
+            clickOn(drop, planRect(3, SEL), 0.5, 0.5, true, planner), // and "docs" in the one above it
+            clickOn(auto, rect('planner', '#rebase-autosquash'), 0.5, 0.5, true, planner),
+            clickOn(start, rect('planner', '#btn-rebase-start'), 0.5, 0.5, true, planner),
+            clickOn(confirm, splitBtn, 0.5, 0.5, true, { from: splitPulse + OPENED, until: confirm + 1 }),
+            clickOn(splitClick, okBtn, 0.5, 0.5, true, { from: confirm + 3 + OPENED, until: splitClick + 1 }),
+          ]} enterAt={land} exitAt={split} />
+        );
+      })()}
       {frame >= split && <SplitNodes at={split} x={vertical ? width / 2 : FEATURE_ANCHOR.x} y={vertical ? 900 : 560} />}
       {cu.has('small') && !vertical && <BottomScrim at={cu.at('small')} />}
       {cu.has('small') && <Sub text={copy.sceneD.small} at={cu.at('small')} y={vertical ? 1440 : 930} x={vertical ? 70 : 96} width={vertical ? width - 140 : 1400} size={34} />}
@@ -502,7 +535,8 @@ const SplitNodes: React.FC<{ at: number; x: number; y: number }> = ({ at, x, y }
   return (
     <div style={{ position: 'absolute', left: x - 300, top: y - 180, width: 600, height: 360 }}>
       <div style={{ position: 'absolute', inset: -120, background: `radial-gradient(ellipse at center, ${c.background}f2 0%, ${c.background}cc 45%, transparent 72%)` }} />
-      <svg width={600} height={360} style={{ overflow: 'visible' }}>
+      {/* Positioned too, so it paints after the backdrop: an in-flow svg would paint under it. */}
+      <svg width={600} height={360} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }}>
         <line x1={300} y1={-40} x2={300} y2={400} stroke={c.indigo} strokeWidth={8} strokeLinecap="round" opacity={0.7} />
         {nodes.map((k) => (
           <g key={k} transform={`translate(300 ${180 + k * 110 * t})`}>
@@ -576,7 +610,7 @@ export const SceneE: React.FC<SceneProps> = ({ placed, variant }) => {
       {cover > 0 && frame < terminals + 8 && <div style={{ position: 'absolute', inset: 0, background: c.background, opacity: cover }} />}
       {frame >= terminals && <AgentTerminals at={terminals} compact={wrappedV(variant)} />}
       {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneE.headline, at: cu.at('headline'), size: 96 }]} />}
-      <SpellStack lines={copy.spells.e} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneE.headline, 330, 96)} target={screen(land, section)} />
+      <SpellStack lines={copy.spells.e} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneE.headline, 330, 96)} target={(f) => screen(f, section)} />
       {!wrappedV(variant) && <Sub text={copy.sceneE.small} at={small} y={868} size={34} width={1700} color={c.text} />}
     </AbsoluteFill>
   );
@@ -699,7 +733,7 @@ export const SceneF: React.FC<SceneProps> = ({ placed }) => {
       <CounterCrack at={crack} pour={pour} landT={landT} every={every} target={toScreen(keys, pour + landT, termBody)} />
       <HeadlineBlock width={1150} lines={[{ kind: 'sub', text: copy.sceneF.line1, at: cu.at('line1'), size: 52, color: c.text }, { text: copy.sceneF.line2, at: cu.at('line2'), size: 96 }]} />
       <HeadlineBlock scrim={false} lines={[{ text: copy.sceneF.noBlackBox, at: cu.at('noBlackBox'), exitAt: cu.at('line1') - 8 }]} />
-      <Cursor map={camMap(keys, placed.duration)} stops={[{ at: hover - 10, x: 1300, y: 760 }, { at: hover, x: 1520, y: 822 + hoverLine * 22 }, clickOn(copyAt, { x: 1500, y: 811 + hoverLine * 22, w: 60, h: 22 })]}
+      <Cursor map={camMap(keys, placed.duration)} stops={[{ at: hover - 10, x: 1300, y: 760 }, { at: hover, x: 1520, y: 822 + hoverLine * 22 }, clickOn(copyAt, { x: 1500, y: 811 + hoverLine * 22, w: 60, h: 22 }, 0.5, 0.5, true, { until: glint })]}
         enterAt={hover - 10} exitAt={glint} />
       {rec && frame >= copyAt && frame < glint && <Caption text={`${tildify(rec.cwd)} · exit ${rec.exitCode ?? 0} · ${rec.durationMs ?? 0} ms`} at={copyAt} exitAt={glint - 7} x={96} y={470} icon="content_copy" />}
       <BottomScrim at={glint + 2} height={260} />

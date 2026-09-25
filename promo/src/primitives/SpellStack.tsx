@@ -9,6 +9,13 @@ import { clamp01, expoIn, pulse, prog } from '../lib/anim';
 import { FONT, useColors } from '../theme';
 
 export interface Rect { x: number; y: number; w: number; h: number }
+/**
+ * A screen rect, or a function giving it per frame. Pass a function when the
+ * camera can move while the collapse or its pulse is on screen, so both stay
+ * on the target instead of on where it was.
+ */
+export type RectAt = Rect | ((frame: number) => Rect);
+const rectAt = (r: RectAt, frame: number): Rect => (typeof r === 'function' ? r(frame) : r);
 
 export function spellSchedule(lines: string[], flood = 30) {
   const n = lines.length;
@@ -25,7 +32,7 @@ export function spellSchedule(lines: string[], flood = 30) {
 }
 
 export const SpellStack: React.FC<{
-  lines: string[]; at: number; collapseAt?: number; target?: Rect; box: { x: number; y: number; w: number };
+  lines: string[]; at: number; collapseAt?: number; target?: RectAt; box: { x: number; y: number; w: number };
   fontSize?: number; flood?: number; shaky?: boolean; hideAfterCollapse?: boolean;
 }> = ({ lines, at, collapseAt, target, box, fontSize = 28, flood = 30, shaky = false }) => {
   const frame = useCurrentFrame();
@@ -58,9 +65,10 @@ export const SpellStack: React.FC<{
     const lx = plate.x + 32, ly = plate.y + 24 + i * lh;
     let tx = 0, ty = 0, sx = 1, sy = 1, op = appear * ghost;
     if (target && p > 0) {
+      const tg = rectAt(target, frame);
       const cx = lx + widths[i] / 2, cy = ly + lh / 2;
-      tx = (target.x + target.w / 2 - cx) * p; ty = (target.y + target.h / 2 - cy) * p;
-      sx = 1 + (Math.min(1, target.w / Math.max(widths[i], 1)) - 1) * p; sy = 1 - 0.8 * p; op *= 1 - 0.7 * p;
+      tx = (tg.x + tg.w / 2 - cx) * p; ty = (tg.y + tg.h / 2 - cy) * p;
+      sx = 1 + (Math.min(1, tg.w / Math.max(widths[i], 1)) - 1) * p; sy = 1 - 0.8 * p; op *= 1 - 0.7 * p;
     }
     const jitter = shaky && !collapsing ? Math.sin((frame + i * 7) * 2.1) * 2.2 : 0;
     const isComment = /^\s*(#|\()/.test(lines[i]);
@@ -99,11 +107,12 @@ export const SpellStack: React.FC<{
 };
 
 /** Indigo glow and ring on the collapse target: scale 1 -> 1.08 -> 1 over 6 frames. */
-export const TargetPulse: React.FC<{ rect: Rect; at: number; color?: string }> = ({ rect, at, color }) => {
+export const TargetPulse: React.FC<{ rect: RectAt; at: number; color?: string }> = ({ rect: target, at, color }) => {
   const frame = useCurrentFrame();
   const c = useColors();
   const t = prog(frame, at, 14);
   if (frame < at || t >= 1) return null;
+  const rect = rectAt(target, frame);
   const s = pulse(frame, at);
   const col = color ?? c.indigo;
   return (

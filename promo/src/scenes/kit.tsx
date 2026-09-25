@@ -26,11 +26,18 @@ export const cues = (def: SectionDef) => ({
 export const APP = { w: 1600, h: 1000 };
 export const FEATURE_ANCHOR = { x: 1190, y: 650 };
 
+/**
+ * The app window's border width. The layers are laid out inside it, so app
+ * coordinate (0, 0) sits this far in from the window's outer corner, which is
+ * where the camera places it.
+ */
+export const APP_INSET = 1.5;
+
 /** Where a world rect (app coordinates) lands on screen under a camera. */
 export function toScreen(keys: CamKey[], frame: number, world: R, anchor = FEATURE_ANCHOR, drift = 0.015, driftFrames = 240): R {
   const c = cameraAt(keys, frame);
   const s = c.scale * (1 + drift * Math.min(1, frame / driftFrames));
-  return { x: anchor.x + (world.x - c.x) * s, y: anchor.y + (world.y - c.y) * s, w: world.w * s, h: world.h * s };
+  return { x: anchor.x + (world.x + APP_INSET - c.x) * s, y: anchor.y + (world.y + APP_INSET - c.y) * s, w: world.w * s, h: world.h * s };
 }
 
 /**
@@ -120,9 +127,12 @@ export const HeadlineBlock: React.FC<{ lines: BlockLine[]; x?: number; top?: num
   const key = JSON.stringify(lines.map((l) => [l.text, l.kind, l.size]));
   const layout = useMemo(() => blockLayout(lines, width, gap), [key, width, gap]);
   const frame = useCurrentFrame();
-  // When every line leaves, the scrim leaves with the last one.
+  // The scrim arrives with the first line and leaves with the last one, so it
+  // never darkens a scene before its headline is there (scene C's headline
+  // comes in bar 5, and its first bars have a terminal in that corner).
+  const firstAt = Math.min(...lines.map((l) => l.at));
   const lastExit = lines.every((l) => l.exitAt !== undefined) ? Math.max(...lines.map((l) => l.exitAt!)) : undefined;
-  const scrimOpacity = lastExit === undefined ? 1 : leave(frame, lastExit, 7);
+  const scrimOpacity = enter(frame, firstAt - 4, 8) * (lastExit === undefined ? 1 : leave(frame, lastExit, 7));
   return (
     <>
       {scrim && <HeadlineScrim width={Math.max(1250, x + width + 200)} height={Math.max(460, top + layout.height + 190)} opacity={scrimOpacity} />}

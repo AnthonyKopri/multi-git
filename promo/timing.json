@@ -87,7 +87,7 @@
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [1, 4, 10], "pick": [2, 2], "flipRows": [2, 2, 6], "rule": [3, 1], "secondRepo": [4, 1], "keys": [4, 3], "mismatch": [4, 3, 8], "cancel": [5, 4], "stamp": [5, 4, 3] },
       "counter": [["collapse", "a", 11]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["pop", "rule", 0, 0.35], ["swish", "secondRepo", 0, 0.3], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.5], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["click", "rule", 14, 0.45], ["pop", "rule", 18, 0.35], ["swish", "secondRepo", 0, 0.3], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.5], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
     },
     "sceneB": {
       "scene": "SceneB", "bars": 5,

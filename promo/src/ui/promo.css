@@ -1,5 +1,11 @@
 /* Film-only tweaks on top of the app's scoped CSS. */
 .mg-app.mg-snap, .mg-app { -webkit-font-smoothing: antialiased; }
+/* The film drives every motion itself, frame by frame. The app's own CSS
+   animations and transitions run in real time, so each screenshot caught them
+   at a random point. The SSH dropdown's dropdownIn, for example, left it
+   half-faded and up to 6 px high, and measure-ui recorded that offset. They
+   are all off, for the renders and for measure-ui alike. */
+.mg-app, .mg-app *, .mg-app *::before, .mg-app *::after { animation: none !important; transition: none !important; }
 .mg-force-visible .file-actions, .mg-force-visible .branch-actions, .mg-force-visible .stash-actions { opacity: 1 !important; visibility: visible !important; }
 .mg-force-visible li { list-style: none; }
 /* The rebase planner's action select picks up the app's full-width form rule,

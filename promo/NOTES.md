@@ -47,6 +47,72 @@ Earlier sessions: none. This session started from `67963aa` on `promo/video-2`.
 5. Render the cuts (`render:30`, `render:vertical`, `render:gif`). Their
    timing is unchanged, but they share the fixed scene code.
 
+## Revision 3: highlights that fit and leave cleanly
+
+Made locally, after the owner watched the 2:26 master. Same timing; no copy
+changes.
+
+**What the owner saw, and the causes:**
+
+- **Scene C's `git reset` terminal was covered by the headline's dark
+  scrim.** The scrim was drawn from the scene's first frame, but the
+  headline only arrives in bar 5. `HeadlineBlock` now fades its scrim in
+  with the first line and out with the last.
+- **Scene D's split nodes sat under their own shadow.** The dark backdrop is
+  an absolutely positioned `div`, and CSS paints positioned elements after
+  in-flow ones, so it covered the in-flow `svg` of nodes. The `svg` is now
+  positioned too, so it paints last.
+- **Hover rings and pulses didn't fit, drifted, or left an outline behind.**
+  Five separate causes:
+  1. **The app's CSS animations and transitions ran in real time.** The SSH
+     dropdown's `dropdownIn` (a 6 px slide plus a fade) left it half-faded in
+     some frames. Worse, `measure-ui` measured it mid-slide, so every
+     dropdown position was 6 px high. `promo.css` now turns all app
+     animations and transitions off inside `.mg-app`, since the film drives
+     every motion itself.
+  2. **The app window's 1.5 px border** wasn't counted in `toScreen`, so
+     every ring, pulse and collapse target sat 1.5 app px up and left (about
+     3 screen px at 2x zoom). The new `APP_INSET` fixes it in one place.
+  3. **Rings used `content-box`,** so the border sat outside the box and the
+     gap was 3 px bigger at the bottom-right. They now use `border-box`, and
+     their corner radius follows the zoom.
+  4. **`measure-ui` rounded positions to whole pixels,** worth up to 2 screen
+     px at 2x. It keeps one decimal now.
+  5. **The film's edits reached the DOM but not `measure-ui`.** The SSH window
+     scrolled to its rules, the agent rows were hidden, and the
+     Account-mismatch marks re-wrapped the message, which moved Cancel.
+     - The scroll and the hidden rows are now shared edits in
+       `src/ui/edits.ts`, applied by both the film and `measure-ui`.
+     - The marks' padding is balanced by an equal negative margin, so the
+       message wraps as captured.
+- **Ring lifecycle.** A ring can't appear before its window has finished
+  opening (`from`), and it fades out over 4 frames as the window starts to
+  close (`until`). No outline is left floating where a button was. Scene B's
+  selection bar fades out over 4 frames instead of vanishing, so the ring on
+  its button fades with it.
+- **Pulses follow the camera.** `SpellStack` and `TargetPulse` accept a
+  per-frame rect, and every collapse target now passes one. Before, a pulse
+  was placed once and slid off its target when the camera moved (scene A's
+  SSH Key button).
+
+**Other fixes along the way:**
+
+- **Scene A:**
+  - The dropdown is solid and finishes fading before the SSH window opens.
+  - The headline leaves as the SSH window opens, instead of sitting over its
+    top half.
+  - The rules step is a real click on **Add Rule** (new click and pop SFX),
+    and the acme row pops in from it.
+- **Scene B:** camera moves now settle before the Stage selection and
+  Discard selection clicks.
+- **`measure-ui` runs on Windows:** `file://` imports, and `MG_CHROME` can
+  point at Remotion's headless shell.
+
+The checks were done at full resolution by cropping around each ring and
+zooming to 2x: the Work row, Add Rule, Cancel, Stage selection, Restore,
+Move earlier, Split this commit and Split. Each one was checked on its click
+frame, and on the frames where it appears and where it fades out.
+
 ## Revision 2
 
 Made locally, after Revision 1's report. It clears the lines that Revision

@@ -7,13 +7,15 @@
 // `prep` names a DOM edit from src/ui/edits.ts to apply before measuring.
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import puppeteer from 'puppeteer';
 
 const PROMO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const snaps = await import(path.join(PROMO, 'src', 'ui', 'snapshots.generated.ts').replace(/\.ts$/, '.ts')).catch(() => null);
+// import() takes URLs: a bare `D:\...` path is refused on Windows.
+const importFile = (...parts) => import(pathToFileURL(path.join(PROMO, ...parts)).href);
+const snaps = await importFile('src', 'ui', 'snapshots.generated.ts').catch(() => null);
 const SNAP = snaps?.SNAP ?? JSON.parse(/export const SNAP: Record<string, string> = (\{[\s\S]*\});/.exec(fs.readFileSync(path.join(PROMO, 'src', 'ui', 'snapshots.generated.ts'), 'utf8'))[1]);
-const EDITS = await import(path.join(PROMO, 'src', 'ui', 'edits.ts'));
+const EDITS = await importFile('src', 'ui', 'edits.ts');
 const css = ['app.scoped.css', 'promo.css'].map((f) => fs.readFileSync(path.join(PROMO, 'src', 'ui', f), 'utf8')).join('\n');
 const f = (p) => `url(data:font/woff2;base64,${fs.readFileSync(path.join(PROMO, p)).toString('base64')})`;
 const FONTS = `
@@ -30,8 +32,8 @@ export const LAYERS = {
     '.sidebar-section[data-section="worktrees"]', '.sidebar-section[data-section="safety-net"]', '#staging-view', '#history-panel', '#commit-history-list',
     '#commit-history-list li.commit-graph-row::docs: add API usage', '#commit-history-list li.commit-graph-row::fixup! feat(search)', '#commit-history-list li.commit-graph-row::highlight matched terms',
     '#commit-history-list li.commit-graph-row::extract the token helpers', '#unstaged-files-list', '#staged-files-list', '#btn-commit', '#btn-undo-commit', '#terminal-panel', '.tab-bar', '#tab-staging', '#tab-diff'] },
-  dropdownWork: { snap: 'ssh-dropdown-work', place: ['base', '#profile-segment-wrapper'], measure: ['#profile-dropdown', '[data-profile-id="work"]', '[data-profile-id="personal"]', '#repo-account-block', '#identity-row', '#profile-segment'] },
-  dropdownPersonal: { snap: 'ssh-dropdown-personal', place: ['base', '#profile-segment-wrapper'], measure: ['#profile-dropdown', '[data-profile-id="work"]', '[data-profile-id="personal"]', '#repo-account-block', '#repo-account-note', '#identity-row'] },
+  dropdownWork: { snap: 'ssh-dropdown-work', place: ['base', '#profile-segment-wrapper'], prep: 'hideAgentRows', measure: ['#profile-dropdown', '[data-profile-id="work"]', '[data-profile-id="personal"]', '#repo-account-block', '#identity-row', '#profile-segment'] },
+  dropdownPersonal: { snap: 'ssh-dropdown-personal', place: ['base', '#profile-segment-wrapper'], prep: 'hideAgentRows', measure: ['#profile-dropdown', '[data-profile-id="work"]', '[data-profile-id="personal"]', '#repo-account-block', '#repo-account-note', '#identity-row'] },
   mismatch: { snap: 'account-mismatch', place: 'full', measure: ['.modal-card', '#btn-confirm-cancel', '#btn-confirm-ok', '#confirm-message'] },
   merge: { snap: 'merge-preview', place: 'full', measure: ['.modal-card', '#btn-confirm-ok', '#confirm-message'] },
   restore: { snap: 'restore-confirm', place: 'full', measure: ['.modal-card', '#btn-confirm-ok'] },
@@ -50,7 +52,7 @@ export const LAYERS = {
   agent: { snap: 'agent-launch', place: 'full', measure: ['.modal-card', '[data-agent-id="claude"]', '[data-agent-id="codex"]', '[data-agent-id="gemini"]'] },
   palette: { snap: 'palette', place: 'full', measure: ['#palette-modal .modal-card, #palette-modal > div', '#palette-input', '#palette-list'] },
   terminal: { snap: 'terminal-panel', place: 'bottom', measure: ['#terminal-panel', '#terminal-body', '.terminal-line-cmd', '#terminal-show-reads'] },
-  sshWindow: { snap: 'ssh-window', place: 'full', measure: ['.modal-card', 'h2::Auto-select', 'h3::Auto-select', 'h4::Auto-select'] },
+  sshWindow: { snap: 'ssh-window', place: 'full', prep: 'scrollSshToRules', measure: ['.modal-card', 'h2::Auto-select', 'h3::Auto-select', 'h4::Auto-select', '#btn-add-rule', '#account-rules-list li::github.com/acme/'] },
 };
 
 const browser = await puppeteer.launch({ headless: true, executablePath: process.env.MG_CHROME || undefined, args: ['--no-sandbox'], defaultViewport: { width: 1600, height: 1000, deviceScaleFactor: 1 } });
@@ -97,7 +99,9 @@ for (const [name, L] of Object.entries(LAYERS)) {
       const el = inner && host ? find(host, inner) : host;
       if (!el) { res[m] = null; continue; }
       const r = el.getBoundingClientRect();
-      res[m] = { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
+      // One decimal: scenes zoom up to about 2x, so rounding to whole pixels put rings up to 2 px off.
+      const d1 = (v) => Math.round(v * 10) / 10;
+      res[m] = { x: d1(r.x), y: d1(r.y), w: d1(r.width), h: d1(r.height) };
     }
     return res;
   }, { html: SNAP[L.snap], sel: L.sel, place, placeMode: Array.isArray(L.place) ? 'at' : L.place, measure: L.measure, prep: L.prep ? EDITS[L.prep].toString() : null });
