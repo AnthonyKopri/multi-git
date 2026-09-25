@@ -15,18 +15,210 @@ Session branch: promo/video-2
 - [x] M8 review round 3 (optional) — 2026-09-25T04:35Z — `promo: review round 3` (sheets: `review/round-3/`)
 - [x] M9 cutdowns — 2026-09-25T04:41Z — `promo: cutdowns` (sheets: `review/cutdowns/`)
 - [x] M10 docs, checks and the final push — 2026-09-25T04:43Z — `promo: docs and final checks`
+- [x] R1.1 slower master timeline — 2026-09-25 — `promo: slower master timeline`
+- [x] R1.2 scene C recovery emphasis and headline layout — `promo: scene C recovery emphasis and headline layout`
+- [x] R1.3 natural cursor and real click targets — `promo: natural cursor and real click targets`
+- [x] R1.4 opaque overlays and scene E layout — `promo: opaque overlays and scene E layout`
+- [x] R1.4b end card — `promo: end card emphasis and longer hold`
+- [x] R1.5 score for the new timeline — `promo: re-render the score for the new timeline`
+- [x] R1.6 review, 2 rounds — `promo: revision 1 review` (sheets: `review/revision-1/`)
+- [x] R1.7 docs and the final push — 2026-09-25T06:15Z — `promo: revision 1 docs`
 
 Earlier sessions: none. This session started from `67963aa` on `promo/video-2`.
 
 ## Morning checklist
 
-1. Nothing to fast-forward: this session pushed straight to `promo/video-2`. Pull it, then `cd promo && npm ci && npm run render`.
-2. Watch `out/promo-1080p.mp4` start to finish first; the film was only ever seen here as stills and contact sheets (`review/round-3/`).
-3. Judge the music and the mix by ear (`review/mix-preview.mp3` is a quick listen); the synth is tuned by numbers only. Knobs: `PARAMS` in `audio/synth.mjs`.
-4. Judge the pacing: the montage runs a card per beat (0.5 s), and the feature scenes change state every beat. Retime in `timing.json` if needed.
-5. Then render the cuts (`render:30`, `render:vertical`, `render:gif`) and check the vertical on a phone.
+1. Pull `promo/video-2`, then run `cd promo && npm ci && npm run render`.
+   You get `out/promo-1080p.mp4`, the 2:10 master (3,900 frames). This
+   session saw it only as contact sheets (`review/revision-1/`) and one
+   3-second smoke clip.
+2. Watch it start to finish. Look hardest at:
+   - **scene C (0:46-0:58):** the VHS rewind, then bar 4 on the restored
+     commits;
+   - **scene D (0:58-1:10):** the cursor on real controls, and the reorder;
+   - **scene E (1:10-1:22):** the Worktrees section, the windows and the
+     Launch modal;
+   - **the end card (2:00-2:10).**
+3. Judge the pacing, especially A and B (see Revision 1's deviations). Retime
+   in `timing.json`, then run `npm run audio`.
+4. Listen for the new tape whir under the rewind and the end chord decaying
+   into the fade (`review/mix-preview.mp3` is a quick listen). The knobs are
+   `PARAMS` in `audio/synth.mjs` and the SFX volumes in `timing.json`.
+5. Render the cuts (`render:30`, `render:vertical`, `render:gif`). Their
+   timing is unchanged, but they share the fixed scene code.
 
-## The storyboard as built
+## Revision 1
+
+The owner rendered and watched the first master and asked for eight things
+(`REVISION_1.md`): slower and readable, a bigger recovery moment, the 00:43
+headline overlap, scene D's cursor and highlights, scene E's layer
+compositing, accidental glitches, a bigger and longer end card, and a darker
+spell plate. This revision answers all eight. The music's character and the
+undo sequence are kept. The cutdowns keep their timing.
+
+**Bar and frame numbers:** the master's bar and frame numbers in
+`PromoSpecifications.md` are superseded by the table below. The spec's copy
+and order still apply.
+
+### The new storyboard (master `Promo`, 65 bars, 3,900 frames, 2:10)
+
+| Section | Bars | Frames | What changed |
+| --- | --- | --- | --- |
+| coldOpen | 1-5 | 0-299 | Errors hold 1-2.5 s. The silence runs from `…wait.` until the rebase (`dropoutUntil`). Shatter on bar 5, and the two lines hold to the cut |
+| lanes | 6-10 | 300-599 | One pain pair per bar. The last pair clears before the questions, which land 2 beats apart over bars 9-10 under one riser |
+| reveal | 11-14 | 600-839 | Both tagline lines hold for more than 1.5 s before the app assembles (bar 13, beat 4) |
+| sceneA | 15-19 | 840-1139 | The Account mismatch dialog holds 2.5 s before Cancel, and the stamp holds 1.5 s. The dialogs open as modals |
+| sceneB | 20-23 | 1140-1379 | Six real clicks at the natural cursor's pace. The caption holds 2.2 s. The quick flex (word diff, image diff) is cut; see the deviations |
+| sceneC | 24-29 | 1380-1739 | The Restore confirm opens from a click, the cursor clicks Restore, and a VHS rewind plays. Bar 4 belongs to the restored rows, with the caption "3 commits. Back." The headline arrives on bar 5 and "Even the undo." sits below it |
+| sceneD | 30-35 | 1740-2099 | Measured targets and one reorder. Squash, fixup, drop, Autosquash and Start rebase are each a real click, and so are Split this commit and the Split confirm. Then the hold |
+| sceneE | 36-41 | 2100-2459 | The base shows the Worktrees section itself. The windows are opaque and framed, the Launch window is a modal, and the terminals rise over a covered stage |
+| sceneF | 42-45 | 2460-2699 | A HeadlineBlock for "No black box.", then the lead and headline. The closing line gets a bottom scrim |
+| montage | 46-51 | 2700-3059 | A conveyor: cards 1-10 centre on beats 2-11 and 11-20 on beats 14-23, each with a tick and a counter step. The lane switch and swell fall on beat 12 |
+| twoLanes | 52-54 | 3060-3239 | The merge preview stays up all 6 s. The TUI keys start on bar 2 |
+| stinger | 55-56 | 3240-3359 | Unchanged length. The number lands on beat 2 |
+| checklist | 57-60 | 3360-3599 | One answer every 2 beats, then the hold |
+| endCard | 61-65 | 3600-3899 | Hero fusion, then the settle with the wordmark and tagline, the CTA with a breathing glow, a click that ticks the counter to 46, and a still hold with a 2% push. Picture and sound fade over the last 20 frames |
+
+The counter still adds up to 45 (+6 +3 +2 +9 +5 +20) and ticks to 46 on the
+end card. The grid stays at 120 BPM and 60 frames per bar, and the synth's
+`PARAMS` and instruments are unchanged.
+
+### What changed, by the owner's notes
+
+1. **Pacing.** Every master cue is re-placed by the reading rules. Holds grow;
+   typing, the 8-frame collapses, pops, whips and the tape-stop keep their
+   speed. The synth follows the new section lengths. The cold-open silence
+   now ends at the rebase (a new `dropoutUntil` music parameter). The
+   switcher jab spans two bars, with a snare per question and one riser. The
+   checklist lift splits Db and Eb across its bars. The end section strikes
+   the F chord again on bar 4 and lets it decay into the fade.
+2. **The recovery.** Scene C follows the brief's cue plan. The rewind runs
+   from the Restore click to the landing (`primitives/Vhs.tsx`). It shows a
+   ◀◀ REW display, three tracking bands (`@remotion/noise`) and scanlines,
+   with 2-4 px jitter, red and cyan fringe copies of the stage, and 45%
+   desaturation. There are no flashes and no blur, and all of it is gone by
+   the landing. A new `whir` SFX plays at 0.5 (about −6 dB). In bar 4 the
+   camera pushes to 1.95x on the three restored History rows. Their emerald
+   edge and glow hold for 2.9 s with one swell each, three soft `emerald`
+   chimes play 4 frames apart, and "3 commits. Back." (`copy.sceneC.back`)
+   sits beside the rows. The camera eases out as the headline arrives.
+3. **00:43.** `HeadlineBlock` (in `scenes/kit.tsx`) stacks the headline and
+   sub in normal flow with a 28 px gap. A headline shrinks 4 px at a time
+   until it fits two lines (`@remotion/layout-utils`), and the scrim is
+   sized to cover the block. Every scene uses it: C's headline and sub, and
+   F's lead and headline. Every spell plate now sits 40 px below its scene's
+   headline block. A 2-line headline used to overlap the plate.
+4. **Scene D.** `measure-ui.mjs` measures each row's Move earlier and Move
+   later buttons and its action select, plus Autosquash, Start rebase, Split
+   this commit and the Split confirm. It gained `outer >> inner` selectors
+   for this. The `Cursor` primitive was rewritten for every scene:
+   - Stops live in app coordinates and are mapped through the camera every
+     frame.
+   - Moves follow a 10% arc with ease-in-out, over
+     clamp(10 + d/60, 10, 24) frames.
+   - The pointer arrives 5 frames early and dwells 6 after a click. The
+     press is 3 frames at 0.88 with a ring.
+   - Targets get a hover ring and a 12-frame flash, and results stay.
+
+   The reorder slides the two rows by the measured 55 px pitch, with the
+   moving row on top and both opaque. Then the DOM order becomes real.
+5. **Scene E and compositing.** New rule: never draw one snapshot's content
+   over another's. E's base expands the Worktrees section and scrolls the
+   sidebar to it (`src/ui/edits.ts`, measured as `worktreesOpen`). Every
+   dialog uses `ModalLayer`: the backdrop dims and blurs in and the card
+   scales from 0.96, over 7 frames each way. That covers the SSH window,
+   Account mismatch, recovery, Restore confirm, planner, edit stop, Split
+   confirm, Launch window and palette. A's SSH Key dropdown fades and hides
+   the base's segment under it. B's diffs and F's terminal panel are opaque
+   and clipped, and B hides the staging view under the diff.
+6. **Glitches.**
+   - Glows shorter than 10 frames are gone: the counter's tick accent and
+     the key-cap press glow now last 12 frames.
+   - The montage no longer shakes on every bar.
+   - The lanes' last pain card no longer slides over the first question.
+   - The E terminals no longer cut in over the stage.
+7. **End card.** See the table. The CTA row is laid out exactly
+   (`measureText`), so the cursor clicks the real button. The URL and
+   tagline are readable for 5.3 s and 5.8 s before the fade starts. `Film`
+   fades picture, counter and grain to black over `fadeOutFrames` (20), and
+   the synth fades the score over the same frames.
+8. **The spell plate** is `rgba(8,9,13,0.98)`, about 15% darker than before
+   and effectively opaque. A soft 35% scrim sits on the stage around it.
+   The border, glow, text and collapse are unchanged.
+
+Audio (`npm run audio`, then `node audio/check-audio.mjs`):
+- The score is −14.5 LUFS and −2.3 dBTP.
+- The preview mix with every SFX is **−14.2 LUFS and −1.2 dBTP**. To get
+  there, F's Ctrl+K thock came down from 0.7 to 0.6 and A's alarm from 0.55
+  to 0.5.
+- The waveform with 65 bar lines shows the drop on bar 11, the tape-stop
+  in bar 26 landing on 27, the stinger silence in bar 55 with the hit on
+  56, and the end chord decaying into the fade.
+
+Review: two rounds in `review/revision-1/` (`r1-*`, `r2-*`), 10 image views
+in all. The smoke clip covers scene C from the rewind to the headline, at
+0.25 and 3.1 s long. It has H.264 video and AAC 48 kHz stereo, and it isn't
+committed.
+
+### Deviations
+
+- **The brief's own positions vs the reading rule.** A few lines sit where
+  the brief placed them, and there they get less time than
+  max(1.5 s, 0.3 s × words + 0.6 s):
+
+  | Line | Readable | The rule |
+  | --- | --- | --- |
+  | Cold open: "It's also a spellbook." ([5,2]) | ~1 s | 1.8 s |
+  | Lanes: each pain line (one pair per bar) | ~1.6 s | 2.1-2.4 s |
+  | Lanes: the fourth question ([5,3]) | ~0.8 s | 2.1 s |
+  | C: the 24-hour card ([6,2]) | 1.1 s | 2.4 s |
+  | D: the lease note ([6,2]) | 1.1 s | 2.7 s |
+  | E: the agents line ([5,3]) | 2.9 s | 6.6 s |
+
+  The Restore confirm gets the 1 s the cue table gives it, not the 2.5 s
+  dialog rule. The reveal caption gets 1.9 s (2.4 s). The two-lanes indigo
+  caption gets 3.2 s (3.6 s). The stinger's "You just watched 45 commands."
+  gets about 1.2 s.
+- **Scene A** has nine beats in 5 bars, plus the 2.5 s dialog and 1.5 s
+  stamp. The collapse moves to [1,4,10], the Auto-select window gets 1 s
+  and the second repo about 0.6 s.
+- **Scene B:** the natural cursor needs at least 21 frames between clicks
+  (5 early, 6 dwell, 10 to move). Six real clicks plus the caption's
+  reading time leave no room in 4 bars for the quick flex (word diff, then
+  image diff), so the master drops those two cues. The scene still
+  supports them. The three line clicks come about 0.7 s apart.
+- **Clicks added so nothing pops:**
+  - C: the recovery row's restore icon, at [2,4,12], opens the confirm.
+  - D: Start rebase, at [4,4,5], opens the edit stop.
+  - D: Split this commit is the click that opens the Split confirm.
+
+  D's headline leaves at the collapse, so the camera can frame the planner
+  at 1.6x without the headline over its title.
+- **The planner's action select.** In the app, `select.rebase-action` picks
+  up the app's full-width form rule. That pushes each row's subject and Move
+  buttons out of the card: see `assets/captures/rebase-planner.webp`, where
+  the rows only show `pick`. The film sizes it `width: auto` in
+  `src/ui/promo.css`, which is what `.rebase-action` intends. See the TODOs.
+- **Montage:** two or three cards show at once, as the brief asks. With one
+  card per beat, that puts each card on screen for about 2.2 s, but fully in
+  frame for about 1.4 s. The centre card is 0.78x and its neighbours are
+  0.6x at 60%.
+- **The fix sheet** samples every 10th frame, because 12 frames at every 4th
+  wouldn't cover the spans. It's tiled 6×6 so the frames stay legible.
+
+### TODOs
+
+- **App:** give `select.rebase-action` in the rebase planner `width: auto`
+  (or `flex: 0 0 auto`), so each row shows its subject and Move buttons.
+  Then the promo.css override can go.
+- **Owner:** judge A and B by eye. They're the densest scenes. If runtime
+  allows, one more bar each would let the Auto-select window and the word
+  and image diff flex breathe.
+- **Owner:** listen to the tape whir (optional, `whir` at 0.5 in scene C's
+  SFX) and the new end chord.
+
+
+## The storyboard as first built (superseded by Revision 1 for the master)
 
 Master `Promo`, 30 fps, 2700 frames. Bars and frames match the spec exactly;
 every cue is in `timing.json` (section-local `[bar, beat, offset]`).

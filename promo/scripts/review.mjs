@@ -80,7 +80,7 @@ async function sheet(id, spec, scale, out, tileSpec, geometry) {
   tile(dir, out, tileSpec, geometry);
 }
 
-// The frames each round looks at closely (master).
+// The frames rounds 1-3 looked at closely (the first, 45-bar master; `revision` mode follows the current one).
 const KEY = [15, 110, 205, 470, 500, 565, 750, 870, 995, 1215, 1455, 1625, 1765, 1840, 2100, 2250, 2430, 2640];
 const STRIPS = [[716, 727], [480, 491], [1180, 1191]]; // collapse A, logo fusion, the rewind
 

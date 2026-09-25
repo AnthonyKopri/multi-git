@@ -25,13 +25,13 @@ and whether the counter shows.
 
 | Command | Output | Notes |
 | --- | --- | --- |
-| `npm run render` | `out/promo-1080p.mp4` | The 90 s master. Runs `npm run audio` first, then H.264 CRF 18, `yuv420p`, BT.709, AAC 320 kbps |
+| `npm run render` | `out/promo-1080p.mp4` | The 2:10 master (65 bars, 3,900 frames). Runs `npm run audio` first, then H.264 CRF 18, `yuv420p`, BT.709, AAC 320 kbps |
 | `npm run render:prores` | `out/promo-master-prores.mov` | ProRes 422 HQ with PCM audio (the mezzanine) |
 | `npm run render:30` | `out/promo-30s.mp4` | `Promo30`, 30 s, 1920x1080 |
 | `npm run render:vertical` | `out/promo-vertical.mp4` | `Vertical`, 20 s, 1080x1920 |
 | `npm run render:gif` | `out/multi-git-promo.gif` | `ReadmeGif`: renders a 720-wide MP4, then a two-pass ffmpeg palette (`palettegen`/`paletteuse`) at 15 fps, aiming for 10 MB or less |
 | `npm run render:thumbnail` | `out/thumbnail-1280x720.jpg` | The stinger frame, "You typed zero." |
-| `npm run render:review` | `review/latest/` | Rebuilds the contact sheets (needs ImageMagick) |
+| `npm run render:review` | `review/revision-1/rlatest-*.jpg` | Rebuilds the Revision 1 contact sheets (needs ImageMagick) |
 | `npm run audio` | `public/audio/` | Re-synthesizes the music (one WAV per composition) and the SFX |
 
 The render commands take extra Remotion flags after `--`, for example:
@@ -75,7 +75,12 @@ scan.
   [`scripts/build-snapshots.mjs`](scripts/build-snapshots.mjs) turns the
   captured DOM into `src/ui/snapshots.generated.ts`, and
   [`scripts/measure-ui.mjs`](scripts/measure-ui.mjs) records where each
-  control sits. Scenes animate the real nodes frame by frame.
+  control sits (`outer >> inner` selectors reach a control inside a row, and a
+  layer's `prep` applies a shared DOM edit from
+  [`src/ui/edits.ts`](src/ui/edits.ts) first). Scenes animate the real nodes
+  frame by frame, open dialogs with the app's backdrop and card motion, and
+  never draw one captured layer's content over another's. The cursor keeps
+  its targets in app coordinates and follows the camera.
 - **Timing:** one grid (120 BPM, 30 fps, 15 frames per beat) in
   [`timing.json`](timing.json), read by the scenes, the SFX placement, the
   counter and the synth.
@@ -85,7 +90,8 @@ scan.
   and ImageMagick) measures every file with `ebur128` and rebuilds
   [`review/mix-preview.mp3`](review/mix-preview.mp3).
 - **Review:** [`scripts/review.mjs`](scripts/review.mjs) renders JPEG stills
-  and tiles them into contact sheets (`review/round-N/`, `review/cutdowns/`).
+  and tiles them into contact sheets (`review/round-N/`, `review/cutdowns/`,
+  and Revision 1's `review/revision-1/` via `node scripts/review.mjs revision <n>`).
 
 ## Re-capturing the app (Linux)
 
