@@ -1,0 +1,29 @@
+<!-- #confirm-modal -->
+<div id="confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2 id="confirm-title">Merge feature/login?</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" class="confirm-message">3 commits from feature/login, touching 5 files.
+
+  • test(auth): cover the login form
+  • feat(auth): validate the login fields
+  • feat(auth): add login form
+
+Your 2 commits and theirs both stay, joined by a merge commit.
+
+A recovery point is recorded first, so this can be undone from Safety Net.
+
+Note: 3 uncommitted changes in tracked files. Git will refuse if any of them are in the way.</p>
+        <label id="confirm-checkbox-row" class="amend-row hidden">
+          <input type="checkbox" id="confirm-checkbox">
+          <span id="confirm-checkbox-label"></span>
+        </label>
+        <div class="form-actions">
+          <button type="button" id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="button" id="btn-confirm-ok" class="btn btn-danger">Merge</button>
+        </div>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,25 @@
+<!-- #confirm-modal -->
+<div id="confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2 id="confirm-title">Change this repository’s account?</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" class="confirm-message">This repository is currently set up as:
+
+• Account: Work
+• Author: Jane Doe &lt;jane@acme.example&gt; (set on this repository)
+• Remote belongs to: acme
+
+Change it to "Personal"?</p>
+        <label id="confirm-checkbox-row" class="amend-row">
+          <input type="checkbox" id="confirm-checkbox">
+          <span id="confirm-checkbox-label">Keep the current commit identity (jane@acme.example)</span>
+        </label>
+        <div class="form-actions">
+          <button type="button" id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="button" id="btn-confirm-ok" class="btn btn-primary">Change Account</button>
+        </div>
+      </div>
+    </div>
+  </div>

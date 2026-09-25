@@ -1,0 +1,39 @@
+<!-- #rebase-modal -->
+<div id="rebase-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rebase-modal-title">
+    <div class="modal-card tool-modal-card">
+      <div class="modal-header">
+        <h2 id="rebase-modal-title">Interactive Rebase</h2>
+        <button id="btn-close-rebase-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="rebase-published-warning" class="inline-warning hidden"></div>
+        <div id="rebase-validation" class="inline-warning hidden"></div>
+
+        <div id="rebase-planner" class="hidden">
+          <div class="search-filters">
+            <input type="text" id="rebase-onto" placeholder="Base commit or ref" autocomplete="off" aria-label="Base commit">
+            <label class="checkbox-row"><input type="checkbox" id="rebase-autosquash"> Autosquash</label>
+            <button id="btn-rebase-reload" class="btn btn-secondary btn-sm">Load plan</button>
+          </div>
+          <p class="modal-desc">Commits run oldest first, the way git reads the todo. Reword applies your message automatically.</p>
+          <ul id="rebase-plan-list" class="recovery-list"><li class="recovery-item" data-index="0"><select class="rebase-action" data-index="0" aria-label="Action for fixup! feat(search): highlight matched terms"><option title="Keep this commit as it is" value="pick">pick</option><option title="Keep the changes, change the message" value="reword">reword</option><option title="Stop here so the commit can be amended or split" value="edit">edit</option><option title="Fold into the commit above, keeping both messages" value="squash">squash</option><option title="Fold into the commit above, discarding this message" value="fixup">fixup</option><option title="Remove this commit entirely" value="drop">drop</option></select><div class="recovery-item-main"><span class="recovery-label">fixup! feat(search): highlight matched terms</span><span class="recovery-meta">7637b351 · Priya Nair</span></div><span class="recovery-actions"><button class="btn btn-icon btn-sm" title="Move earlier" data-action="move-up" data-index="0" disabled=""><span class="material-symbols-outlined" style="font-size: 14px;">arrow_upward</span></button><button class="btn btn-icon btn-sm" title="Move later" data-action="move-down" data-index="0"><span class="material-symbols-outlined" style="font-size: 14px;">arrow_downward</span></button><button class="btn btn-icon btn-sm" title="Set the message this commit should get" data-action="message" data-index="0"><span class="material-symbols-outlined" style="font-size: 14px;">edit_note</span></button></span></li><li class="recovery-item" data-index="1"><select class="rebase-action" data-index="1" aria-label="Action for docs: add API usage"><option title="Keep this commit as it is" value="pick">pick</option><option title="Keep the changes, change the message" value="reword">reword</option><option title="Stop here so the commit can be amended or split" value="edit">edit</option><option title="Fold into the commit above, keeping both messages" value="squash">squash</option><option title="Fold into the commit above, discarding this message" value="fixup">fixup</option><option title="Remove this commit entirely" value="drop">drop</option></select><div class="recovery-item-main"><span class="recovery-label">docs: add API usage</span><span class="recovery-meta">86bf7785 · Priya Nair</span></div><span class="recovery-actions"><button class="btn btn-icon btn-sm" title="Move earlier" data-action="move-up" data-index="1"><span class="material-symbols-outlined" style="font-size: 14px;">arrow_upward</span></button><button class="btn btn-icon btn-sm" title="Move later" data-action="move-down" data-index="1"><span class="material-symbols-outlined" style="font-size: 14px;">arrow_downward</span></button><button class="btn btn-icon btn-sm" title="Set the message this commit should get" data-action="message" data-index="1"><span class="material-symbols-outlined" style="font-size: 14px;">edit_note</span></button></span></li><li class="recovery-item" data-index="2"><select class="rebase-action" data-index="2" aria-label="Action for fix(auth): refresh the token before expiry"><option title="Keep this commit as it is" value="pick">pick</option><option title="Keep the changes, change the message" value="reword">reword</option><option title="Stop here so the commit can be amended or split" value="edit">edit</option><option title="Fold into the commit above, keeping both messages" value="squash">squash</option><option title="Fold into the commit above, discarding this message" value="fixup">fixup</option><option title="Remove this commit entirely" value="drop">drop</option></select><div class="recovery-item-main"><span class="recovery-label">fix(auth): refresh the token before expiry</span><span class="recovery-meta">e5e83a4b · Jane Doe</span></div><span class="recovery-actions"><button class="btn btn-icon btn-sm" title="Move earlier" data-action="move-up" data-index="2"><span class="material-symbols-outlined" style="font-size: 14px;">arrow_upward</span></button><button class="btn btn-icon btn-sm" title="Move later" data-action="move-down" data-index="2" disabled=""><span class="material-symbols-outlined" style="font-size: 14px;">arrow_downward</span></button><button class="btn btn-icon btn-sm" title="Set the message this commit should get" data-action="message" data-index="2"><span class="material-symbols-outlined" style="font-size: 14px;">edit_note</span></button></span></li></ul>
+          <div class="form-actions">
+            <button id="btn-rebase-start" class="btn btn-primary">Start rebase</button>
+          </div>
+        </div>
+
+        <div id="rebase-progress" class="">
+          <p class="modal-desc" id="rebase-progress-summary">Step 1 of 3. Stopped at "fixup! feat(search): highlight matched terms". Stopped for editing. Amend the commit, split it, or continue.</p>
+          <ul id="rebase-conflict-list" class="recovery-list"><li class="empty-state">Nothing conflicted</li></ul>
+          <div class="form-actions">
+            <button id="btn-rebase-split" class="btn btn-secondary btn-sm">Split this commit</button>
+            <button id="btn-rebase-continue" class="btn btn-primary btn-sm">Continue</button>
+            <button id="btn-rebase-skip" class="btn btn-secondary btn-sm">Skip</button>
+            <button id="btn-rebase-abort" class="btn btn-secondary btn-sm btn-text-danger">Abort</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

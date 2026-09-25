@@ -1,0 +1,50 @@
+{
+  "success": true,
+  "plan": {
+    "onto": "18d8d1193193a411c8195a3c5fdb55912f7bdd4e",
+    "items": [
+      {
+        "oid": "e7d06a2e78ebfe51c2294804afb48940713470a8",
+        "action": "pick",
+        "subject": "feat(api): add rate limiting",
+        "author": "Sam Rivera",
+        "date": "2026-09-17T01:00:00+00:00"
+      },
+      {
+        "oid": "835e040e8a614af6daaf96fe42fb0291c7cfe7b3",
+        "action": "pick",
+        "subject": "refactor(auth): extract the token helpers",
+        "author": "Jane Doe",
+        "date": "2026-09-19T04:00:00+00:00"
+      },
+      {
+        "oid": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
+        "action": "pick",
+        "subject": "feat(search): highlight matched terms",
+        "author": "Priya Nair",
+        "date": "2026-09-21T03:00:00+00:00"
+      },
+      {
+        "oid": "7637b351049ce24c51831e053c167f2323037b0b",
+        "action": "fixup",
+        "subject": "fixup! feat(search): highlight matched terms",
+        "author": "Priya Nair",
+        "date": "2026-09-23T06:00:00+00:00",
+        "autosquashedInto": "feat(search): highlight matched terms"
+      },
+      {
+        "oid": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+        "action": "pick",
+        "subject": "docs: add API usage",
+        "author": "Priya Nair",
+        "date": "2026-09-24T02:00:00+00:00"
+      }
+    ],
+    "autosquash": true
+  },
+  "warning": {
+    "branch": "main",
+    "upstream": "origin/main",
+    "publishedCommits": 3
+  }
+}

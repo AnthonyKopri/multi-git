@@ -1,0 +1,239 @@
+{
+  "success": true,
+  "file": {
+    "oldPath": "src/auth.ts",
+    "newPath": "src/auth.ts",
+    "status": "modified",
+    "additions": 5,
+    "deletions": 0,
+    "binary": false,
+    "modeChanged": false,
+    "hunks": [
+      {
+        "id": "b3220dc1d822",
+        "header": "@@ -1,5 +1,6 @@",
+        "oldStart": 1,
+        "oldCount": 5,
+        "newStart": 1,
+        "newCount": 6,
+        "lines": [
+          {
+            "id": "b3220dc1d822:0",
+            "kind": "context",
+            "content": "import type { Session, Token } from './types';",
+            "oldLine": 1,
+            "newLine": 1,
+            "noNewline": false
+          },
+          {
+            "id": "b3220dc1d822:1",
+            "kind": "context",
+            "content": "import { fetchToken, revokeToken } from './token';",
+            "oldLine": 2,
+            "newLine": 2,
+            "noNewline": false
+          },
+          {
+            "id": "b3220dc1d822:2",
+            "kind": "addition",
+            "content": "import { expiresSoon } from './token';",
+            "oldLine": null,
+            "newLine": 3,
+            "noNewline": false
+          },
+          {
+            "id": "b3220dc1d822:3",
+            "kind": "context",
+            "content": "import { SESSION_TTL_MS } from './config';",
+            "oldLine": 3,
+            "newLine": 4,
+            "noNewline": false
+          },
+          {
+            "id": "b3220dc1d822:4",
+            "kind": "context",
+            "content": "",
+            "oldLine": 4,
+            "newLine": 5,
+            "noNewline": false
+          },
+          {
+            "id": "b3220dc1d822:5",
+            "kind": "context",
+            "content": "const sessions = new Map<string, Session>();",
+            "oldLine": 5,
+            "newLine": 6,
+            "noNewline": false
+          }
+        ]
+      },
+      {
+        "id": "2f618cd86d63",
+        "header": "@@ -13,6 +14,8 @@ export function createSession(userId: string, token: Token): Session {",
+        "oldStart": 13,
+        "oldCount": 6,
+        "newStart": 14,
+        "newCount": 8,
+        "lines": [
+          {
+            "id": "2f618cd86d63:0",
+            "kind": "context",
+            "content": "export async function getSession(id: string): Promise<Session | undefined> {",
+            "oldLine": 13,
+            "newLine": 14,
+            "noNewline": false
+          },
+          {
+            "id": "2f618cd86d63:1",
+            "kind": "context",
+            "content": "  const session = sessions.get(id);",
+            "oldLine": 14,
+            "newLine": 15,
+            "noNewline": false
+          },
+          {
+            "id": "2f618cd86d63:2",
+            "kind": "context",
+            "content": "  if (!session) return undefined;",
+            "oldLine": 15,
+            "newLine": 16,
+            "noNewline": false
+          },
+          {
+            "id": "2f618cd86d63:3",
+            "kind": "addition",
+            "content": "  console.log('session', session.id, session.token.expiresAt);",
+            "oldLine": null,
+            "newLine": 17,
+            "noNewline": false
+          },
+          {
+            "id": "2f618cd86d63:4",
+            "kind": "addition",
+            "content": "  if (expiresSoon(session.token)) await refreshToken(session);",
+            "oldLine": null,
+            "newLine": 18,
+            "noNewline": false
+          },
+          {
+            "id": "2f618cd86d63:5",
+            "kind": "context",
+            "content": "  if (Date.now() - session.createdAt > SESSION_TTL_MS) {",
+            "oldLine": 16,
+            "newLine": 19,
+            "noNewline": false
+          },
+          {
+            "id": "2f618cd86d63:6",
+            "kind": "context",
+            "content": "    sessions.delete(id);",
+            "oldLine": 17,
+            "newLine": 20,
+            "noNewline": false
+          },
+          {
+            "id": "2f618cd86d63:7",
+            "kind": "context",
+            "content": "    return undefined;",
+            "oldLine": 18,
+            "newLine": 21,
+            "noNewline": false
+          }
+        ]
+      },
+      {
+        "id": "81026522d6f1",
+        "header": "@@ -22,7 +25,9 @@ export async function getSession(id: string): Promise<Session | undefined> {",
+        "oldStart": 22,
+        "oldCount": 7,
+        "newStart": 25,
+        "newCount": 9,
+        "lines": [
+          {
+            "id": "81026522d6f1:0",
+            "kind": "context",
+            "content": "",
+            "oldLine": 22,
+            "newLine": 25,
+            "noNewline": false
+          },
+          {
+            "id": "81026522d6f1:1",
+            "kind": "context",
+            "content": "export async function refreshToken(session: Session): Promise<Token> {",
+            "oldLine": 23,
+            "newLine": 26,
+            "noNewline": false
+          },
+          {
+            "id": "81026522d6f1:2",
+            "kind": "context",
+            "content": "  const next = await fetchToken(session.token.refreshToken);",
+            "oldLine": 24,
+            "newLine": 27,
+            "noNewline": false
+          },
+          {
+            "id": "81026522d6f1:3",
+            "kind": "addition",
+            "content": "  console.log('refreshed', next.expiresAt);",
+            "oldLine": null,
+            "newLine": 28,
+            "noNewline": false
+          },
+          {
+            "id": "81026522d6f1:4",
+            "kind": "context",
+            "content": "  session.token = next;",
+            "oldLine": 25,
+            "newLine": 29,
+            "noNewline": false
+          },
+          {
+            "id": "81026522d6f1:5",
+            "kind": "addition",
+            "content": "  session.refreshedAt = Date.now();",
+            "oldLine": null,
+            "newLine": 30,
+            "noNewline": false
+          },
+          {
+            "id": "81026522d6f1:6",
+            "kind": "context",
+            "content": "  return next;",
+            "oldLine": 26,
+            "newLine": 31,
+            "noNewline": false
+          },
+          {
+            "id": "81026522d6f1:7",
+            "kind": "context",
+            "content": "}",
+            "oldLine": 27,
+            "newLine": 32,
+            "noNewline": false
+          },
+          {
+            "id": "81026522d6f1:8",
+            "kind": "context",
+            "content": "",
+            "oldLine": 28,
+            "newLine": 33,
+            "noNewline": false
+          }
+        ]
+      }
+    ],
+    "headerLines": [
+      "diff --git a/src/auth.ts b/src/auth.ts",
+      "index b7d633b..74b58f5 100644",
+      "--- a/src/auth.ts",
+      "+++ b/src/auth.ts"
+    ]
+  },
+  "source": "working-tree",
+  "untracked": false,
+  "tooLarge": false,
+  "sizeBytes": 1186,
+  "limitBytes": 2097152
+}

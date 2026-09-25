@@ -1,0 +1,580 @@
+{
+  "files": [
+    {
+      "file": "account-mismatch.webp",
+      "shows": "The real Account mismatch dialog (Cancel / Push Anyway)",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:17:05.215Z"
+    },
+    {
+      "file": "agent-launch.webp",
+      "shows": "The Launch a coding agent window (Claude Code, Codex, Gemini CLI)",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:47.882Z"
+    },
+    {
+      "file": "data/auth-diff-pristine.json",
+      "shows": "Structured diff of src/auth.ts before any action",
+      "how": "GET /api/git/diff/structured",
+      "capturedAt": "2026-09-25T03:16:05.119Z"
+    },
+    {
+      "file": "data/auth-diff-structured.json",
+      "shows": "Structured diff of src/auth.ts (working tree) before staging",
+      "how": "GET /api/git/diff/structured",
+      "capturedAt": "2026-09-25T03:17:05.887Z"
+    },
+    {
+      "file": "data/branches.json",
+      "shows": "Local and remote branches",
+      "how": "GET /api/git/branches",
+      "capturedAt": "2026-09-25T03:16:05.031Z"
+    },
+    {
+      "file": "data/checkpoints.json",
+      "shows": "Undoable operations",
+      "how": "GET /api/git/checkpoints",
+      "capturedAt": "2026-09-25T03:16:05.102Z"
+    },
+    {
+      "file": "data/cli-history.json",
+      "shows": "JSON CLI: multi-git history --repo ~/code/acme-api --input -",
+      "how": "node scripts/multi-git.cjs with MULTI_GIT_URL",
+      "capturedAt": "2026-09-25T03:17:30.476Z"
+    },
+    {
+      "file": "data/cli-ssh-inspect.json",
+      "shows": "JSON CLI: multi-git ssh.inspect --repo ~/code/acme-api",
+      "how": "node scripts/multi-git.cjs with MULTI_GIT_URL",
+      "capturedAt": "2026-09-25T03:17:30.721Z"
+    },
+    {
+      "file": "data/cli-ssh-select-dry-run.json",
+      "shows": "JSON CLI: multi-git ssh.select --repo ~/code/acme-api --dry-run --input -",
+      "how": "node scripts/multi-git.cjs with MULTI_GIT_URL",
+      "capturedAt": "2026-09-25T03:17:30.903Z"
+    },
+    {
+      "file": "data/cli-status.json",
+      "shows": "JSON CLI: multi-git status --repo ~/code/acme-api",
+      "how": "node scripts/multi-git.cjs with MULTI_GIT_URL",
+      "capturedAt": "2026-09-25T03:17:30.225Z"
+    },
+    {
+      "file": "data/history.json",
+      "shows": "History of acme-api, newest first",
+      "how": "GET /api/git/log?limit=40",
+      "capturedAt": "2026-09-25T03:16:05.024Z"
+    },
+    {
+      "file": "data/mcp-transcript.json",
+      "shows": "MCP over stdio: initialize, notifications/initialized, tools/list, tools/call status",
+      "how": "node scripts/multi-git.cjs mcp (read-only), JSON-RPC lines",
+      "capturedAt": "2026-09-25T03:17:39.273Z"
+    },
+    {
+      "file": "data/rebase-plan.json",
+      "shows": "Rebase plan for HEAD~5 with autosquash",
+      "how": "GET /api/git/rebase/plan",
+      "capturedAt": "2026-09-25T03:16:05.083Z"
+    },
+    {
+      "file": "data/recovery-after-reset.json",
+      "shows": "Recovery points and reflog right after the hard reset",
+      "how": "GET /api/git/recovery",
+      "capturedAt": "2026-09-25T03:17:05.968Z"
+    },
+    {
+      "file": "data/recovery.json",
+      "shows": "Recovery points and reflog (seeded)",
+      "how": "GET /api/git/recovery",
+      "capturedAt": "2026-09-25T03:16:05.096Z"
+    },
+    {
+      "file": "data/status.json",
+      "shows": "Working tree status of acme-api (scene B state)",
+      "how": "GET /api/git/status",
+      "capturedAt": "2026-09-25T03:16:05.013Z"
+    },
+    {
+      "file": "data/terminal-backlog.json",
+      "shows": "The Terminal panel backlog (all LogEntry records) after the scene-like actions",
+      "how": "GET /api/logs/stream, first \"backlog\" event",
+      "capturedAt": "2026-09-25T03:17:13.010Z"
+    },
+    {
+      "file": "data/terminal-writes.json",
+      "shows": "Only kind \"write\" commands: what the panel shows with Reads off (scene F)",
+      "how": "filtered from terminal-backlog",
+      "capturedAt": "2026-09-25T03:17:13.011Z"
+    },
+    {
+      "file": "data/trash.json",
+      "shows": "Recently Discarded (seeded)",
+      "how": "GET /api/git/trash",
+      "capturedAt": "2026-09-25T03:16:05.099Z"
+    },
+    {
+      "file": "data/tui.json",
+      "shows": "multi-git tui at 120x34: NORMAL, Space menu, j, k, v (ANSI converted to spans)",
+      "how": "tmux -L mgpromo capture-pane -p -e, then capture/ansi-to-spans.mjs",
+      "capturedAt": "2026-09-25T03:17:38.999Z"
+    },
+    {
+      "file": "data/worktrees.json",
+      "shows": "Worktrees of acme-api",
+      "how": "GET /api/worktrees",
+      "capturedAt": "2026-09-25T03:16:05.052Z"
+    },
+    {
+      "file": "dom/account-mismatch.html",
+      "shows": "Account mismatch dialog",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:17:05.231Z"
+    },
+    {
+      "file": "dom/agent-launch.html",
+      "shows": "Launch a coding agent window",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:47.887Z"
+    },
+    {
+      "file": "dom/filediff-selected.html",
+      "shows": "File Diff with 3 lines selected and the selection bar",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:11.879Z"
+    },
+    {
+      "file": "dom/filediff-unselected.html",
+      "shows": "File Diff for src/auth.ts in split view, nothing selected",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:10.743Z"
+    },
+    {
+      "file": "dom/hub-bisect.html",
+      "shows": "Repository hub, bisect tab",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:35.526Z"
+    },
+    {
+      "file": "dom/hub-lfs.html",
+      "shows": "Repository hub, lfs tab",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:33.530Z"
+    },
+    {
+      "file": "dom/hub-notes.html",
+      "shows": "Repository hub, notes tab",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:39.343Z"
+    },
+    {
+      "file": "dom/hub-remotes.html",
+      "shows": "Repository hub, remotes tab",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:31.131Z"
+    },
+    {
+      "file": "dom/hub-submodules.html",
+      "shows": "Repository hub, submodules tab",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:37.452Z"
+    },
+    {
+      "file": "dom/imagediff.html",
+      "shows": "Image diff markup",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:16.139Z"
+    },
+    {
+      "file": "dom/merge-preview.html",
+      "shows": "Merge preview dialog",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:28.029Z"
+    },
+    {
+      "file": "dom/palette.html",
+      "shows": "Command palette",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:25.465Z"
+    },
+    {
+      "file": "dom/profile-switch-confirm.html",
+      "shows": "The confirm shown when switching the repo to Personal",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:17:01.072Z"
+    },
+    {
+      "file": "dom/rebase-edit-stop.html",
+      "shows": "Rebase modal at the edit stop",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:17:24.173Z"
+    },
+    {
+      "file": "dom/rebase-planner.html",
+      "shows": "Rebase planner with rows",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:53.347Z"
+    },
+    {
+      "file": "dom/recovery-after-reset.html",
+      "shows": "Recovery points window after the reset",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:17:10.088Z"
+    },
+    {
+      "file": "dom/recovery-window.html",
+      "shows": "Recovery points window",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:58.675Z"
+    },
+    {
+      "file": "dom/restore-confirm.html",
+      "shows": "Restore confirm dialog",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:17:12.614Z"
+    },
+    {
+      "file": "dom/safety-net.html",
+      "shows": "Safety Net section",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:55.715Z"
+    },
+    {
+      "file": "dom/split-confirm.html",
+      "shows": "Split commit confirm",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:17:26.234Z"
+    },
+    {
+      "file": "dom/ssh-dropdown-personal.html",
+      "shows": "SSH Key dropdown, Personal selected, account note",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:17:03.370Z"
+    },
+    {
+      "file": "dom/ssh-dropdown-work.html",
+      "shows": "SSH Key segment and dropdown, Work selected",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:17.994Z"
+    },
+    {
+      "file": "dom/ssh-window.html",
+      "shows": "Manage SSH profiles window",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:22.197Z"
+    },
+    {
+      "file": "dom/terminal-panel.html",
+      "shows": "Terminal panel with Reads off",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:17:15.621Z"
+    },
+    {
+      "file": "dom/workspace-body.html",
+      "shows": "The whole rendered body (all regions and hidden dialogs) in the workspace state",
+      "how": "body innerHTML without scripts",
+      "capturedAt": "2026-09-25T03:16:06.974Z"
+    },
+    {
+      "file": "dom/worktrees-section.html",
+      "shows": "Worktrees section",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:41.729Z"
+    },
+    {
+      "file": "dom/worktrees-window.html",
+      "shows": "Manage worktrees window",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T03:16:43.623Z"
+    },
+    {
+      "file": "filediff-selected.webp",
+      "shows": "File Diff, split view, 3 added lines selected, with the selection bar",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:11.875Z"
+    },
+    {
+      "file": "hub-bisect.webp",
+      "shows": "Repository hub: bisect tab",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:35.522Z"
+    },
+    {
+      "file": "hub-lfs.webp",
+      "shows": "Repository hub: lfs tab",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:33.526Z"
+    },
+    {
+      "file": "hub-notes.webp",
+      "shows": "Repository hub: notes tab",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:39.338Z"
+    },
+    {
+      "file": "hub-remotes.webp",
+      "shows": "Repository hub: remotes tab",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:31.127Z"
+    },
+    {
+      "file": "hub-submodules.webp",
+      "shows": "Repository hub: submodules tab",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:37.449Z"
+    },
+    {
+      "file": "imagediff.webp",
+      "shows": "The before/after image diff of public/logo.png",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:16.135Z"
+    },
+    {
+      "file": "merge-preview.webp",
+      "shows": "The merge preview: Merge feature/login? with commits, files and the recovery-point note",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x, clipped to #confirm-modal .modal-content, #confirm-modal > *",
+      "region": {
+        "x": 564,
+        "y": 4,
+        "width": 472,
+        "height": 473
+      },
+      "capturedAt": "2026-09-25T03:16:28.027Z"
+    },
+    {
+      "file": "palette.webp",
+      "shows": "The command palette (Ctrl+K) with its full list",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:25.460Z"
+    },
+    {
+      "file": "rebase-edit-stop.webp",
+      "shows": "The rebase stopped at an edit row, with Split this commit",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:17:24.170Z"
+    },
+    {
+      "file": "rebase-planner.webp",
+      "shows": "The rebase planner: rows with action selects, Move earlier/later, Autosquash",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:53.342Z"
+    },
+    {
+      "file": "recovery-after-reset.webp",
+      "shows": "Recovery points after git reset --hard HEAD~3",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:17:10.081Z"
+    },
+    {
+      "file": "recovery-window.webp",
+      "shows": "Recovery points and reflog window",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:58.670Z"
+    },
+    {
+      "file": "restore-confirm.webp",
+      "shows": "The real Restore confirm for the reset",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:17:12.610Z"
+    },
+    {
+      "file": "safety-net.webp",
+      "shows": "Sidebar Safety Net: Undoable Operations, Recently Discarded, Recovery Points",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x, clipped to #section-safety-net",
+      "region": {
+        "x": 0,
+        "y": 343,
+        "width": 320,
+        "height": 308
+      },
+      "capturedAt": "2026-09-25T03:16:55.713Z"
+    },
+    {
+      "file": "split-confirm.webp",
+      "shows": "The real Split commit confirm",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:17:26.230Z"
+    },
+    {
+      "file": "ssh-dropdown-personal.webp",
+      "shows": "SSH Key dropdown with Personal selected on acme-api, showing the repo account note",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x, clipped to #profile-dropdown",
+      "region": {
+        "x": 832.46875,
+        "y": 48.75,
+        "width": 371.28125,
+        "height": 579.59375
+      },
+      "capturedAt": "2026-09-25T03:17:03.369Z"
+    },
+    {
+      "file": "ssh-dropdown-work.webp",
+      "shows": "SSH Key dropdown on acme-api with Work selected: Should use / Using jane-acme, identity",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x, clipped to #profile-dropdown",
+      "region": {
+        "x": 831.296875,
+        "y": 48.75,
+        "width": 372.453125,
+        "height": 530.0625
+      },
+      "capturedAt": "2026-09-25T03:16:17.991Z"
+    },
+    {
+      "file": "ssh-window-rules.webp",
+      "shows": "The SSH window scrolled to Auto-select rules (github.com/acme/ -> Work)",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:22.188Z"
+    },
+    {
+      "file": "terminal-panel.webp",
+      "shows": "The Terminal panel with Reads off, after the scene-like actions",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:17:15.616Z"
+    },
+    {
+      "file": "workspace.webp",
+      "shows": "The workspace mid-work: header, sidebar, Staging Area and History lanes (Work account)",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:06.951Z"
+    },
+    {
+      "file": "worktrees-section.webp",
+      "shows": "Sidebar Worktrees section: main, feature/login, feature/search",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x, clipped to #section-worktrees",
+      "region": {
+        "x": 0,
+        "y": 473,
+        "width": 320,
+        "height": 362
+      },
+      "capturedAt": "2026-09-25T03:16:41.727Z"
+    },
+    {
+      "file": "worktrees-window.webp",
+      "shows": "The Manage worktrees window",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T03:16:43.619Z"
+    }
+  ]
+}

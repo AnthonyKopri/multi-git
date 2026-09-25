@@ -1,0 +1,30 @@
+{
+  "command": "multi-git ssh.inspect --repo ~/code/acme-api",
+  "input": null,
+  "output": {
+    "schemaVersion": 1,
+    "success": true,
+    "command": "ssh.inspect",
+    "data": {
+      "success": true,
+      "profileId": "work",
+      "setup": {
+        "pinOrigin": "multi-git",
+        "pinValue": "ssh -F /dev/null -i \"/home/jane/.ssh/id_ed25519_work\" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new",
+        "pinKeyPath": "/home/jane/.ssh/id_ed25519_work",
+        "pinProfileId": "work",
+        "pinProfileLabel": "Work",
+        "localName": "Jane Doe",
+        "localEmail": "jane@acme.example",
+        "effectiveName": "Jane Doe",
+        "effectiveEmail": "jane@acme.example",
+        "originRemoteUrl": "https://github.com/acme/api.git",
+        "originOwner": "acme",
+        "intendedAccount": "jane-acme",
+        "intendedIsOverride": true
+      },
+      "keepIdentity": false,
+      "wouldOverwrite": false
+    }
+  }
+}

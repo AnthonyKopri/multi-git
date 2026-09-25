@@ -1,0 +1,108 @@
+{
+  "command": "multi-git history --repo ~/code/acme-api --input -",
+  "input": {
+    "limit": 8
+  },
+  "output": {
+    "schemaVersion": 1,
+    "success": true,
+    "command": "history",
+    "data": {
+      "success": true,
+      "commits": [
+        {
+          "hash": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+          "parents": [
+            "7637b351049ce24c51831e053c167f2323037b0b"
+          ],
+          "author": "Priya Nair",
+          "date": "25 hours ago",
+          "message": "docs: add API usage",
+          "refs": [
+            "HEAD -> main"
+          ]
+        },
+        {
+          "hash": "7637b351049ce24c51831e053c167f2323037b0b",
+          "parents": [
+            "021fd393d5f3c98da4e589df9b685b2e66b9be96"
+          ],
+          "author": "Priya Nair",
+          "date": "2 days ago",
+          "message": "fixup! feat(search): highlight matched terms",
+          "refs": []
+        },
+        {
+          "hash": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
+          "parents": [
+            "835e040e8a614af6daaf96fe42fb0291c7cfe7b3"
+          ],
+          "author": "Priya Nair",
+          "date": "4 days ago",
+          "message": "feat(search): highlight matched terms",
+          "refs": [
+            "origin/main",
+            "origin/HEAD"
+          ]
+        },
+        {
+          "hash": "835e040e8a614af6daaf96fe42fb0291c7cfe7b3",
+          "parents": [
+            "e7d06a2e78ebfe51c2294804afb48940713470a8"
+          ],
+          "author": "Jane Doe",
+          "date": "6 days ago",
+          "message": "refactor(auth): extract the token helpers",
+          "refs": []
+        },
+        {
+          "hash": "e7d06a2e78ebfe51c2294804afb48940713470a8",
+          "parents": [
+            "18d8d1193193a411c8195a3c5fdb55912f7bdd4e"
+          ],
+          "author": "Sam Rivera",
+          "date": "8 days ago",
+          "message": "feat(api): add rate limiting",
+          "refs": []
+        },
+        {
+          "hash": "18d8d1193193a411c8195a3c5fdb55912f7bdd4e",
+          "parents": [
+            "6d73fe04749662cd63bbb10366b19d52e4929053",
+            "4705de3593e4fcca0316e36e4f7d178d67d29d89"
+          ],
+          "author": "Jane Doe",
+          "date": "10 days ago",
+          "message": "Merge branch 'fix/token-refresh'",
+          "refs": [
+            "tag: v1.1.0"
+          ]
+        },
+        {
+          "hash": "4705de3593e4fcca0316e36e4f7d178d67d29d89",
+          "parents": [
+            "34086b6aeac46d89676d31149c0eefb2aa3ab4b4"
+          ],
+          "author": "Sam Rivera",
+          "date": "10 days ago",
+          "message": "test(auth): cover the token retry",
+          "refs": [
+            "origin/fix/token-refresh",
+            "fix/token-refresh"
+          ]
+        },
+        {
+          "hash": "6d73fe04749662cd63bbb10366b19d52e4929053",
+          "parents": [
+            "880e4a206c63e54cd3a1f9600c5c34711b9680bd"
+          ],
+          "author": "Priya Nair",
+          "date": "10 days ago",
+          "message": "feat(api): add request logging",
+          "refs": []
+        }
+      ],
+      "hasMore": true
+    }
+  }
+}

@@ -1,0 +1,21 @@
+<!-- #confirm-modal -->
+<div id="confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h2 id="confirm-title">Split commit</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" class="confirm-message">Undo this commit, keeping its changes in the working tree?
+
+Stage and commit each part in turn, then continue the rebase.</p>
+        <label id="confirm-checkbox-row" class="amend-row hidden">
+          <input type="checkbox" id="confirm-checkbox">
+          <span id="confirm-checkbox-label"></span>
+        </label>
+        <div class="form-actions">
+          <button type="button" id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="button" id="btn-confirm-ok" class="btn btn-primary">Split</button>
+        </div>
+      </div>
+    </div>
+  </div>

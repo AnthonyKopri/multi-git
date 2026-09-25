@@ -1,0 +1,65 @@
+<!-- #agent-launch-modal -->
+<div id="agent-launch-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="agent-launch-modal-title">
+    <div class="modal-card agent-launch-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="agent-launch-modal-title">Launch a coding agent</h2>
+          <p class="settings-subtitle">The tool starts in this folder, with the account it uses already loaded.</p>
+        </div>
+        <button id="btn-close-agent-launch" class="btn-close" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="agent-launch-form" class="agent-launch-form">
+          <section class="launch-section">
+            <div class="settings-group">
+              <div class="settings-item">
+                <div class="settings-item-text">
+                  <span class="settings-item-label" id="agent-launch-branch">On main</span>
+                  <span class="settings-item-desc agent-launch-target" id="agent-launch-target">/home/jane/code/acme-api</span>
+                </div>
+                <div class="settings-item-control">
+                  <span class="agent-chip" id="agent-launch-account">Work</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="launch-section">
+            <h4 class="launch-heading">Which agent</h4>
+            <div class="agent-picker" id="agent-launch-picker" role="radiogroup" aria-label="Agent"><button class="agent-card agent-card-selected" data-agent-id="claude" type="button" role="radio" aria-checked="true"><span class="agent-card-head"><span class="agent-card-label">Claude Code</span><span class="agent-tag">Anthropic</span></span><span class="agent-card-summary">Anthropic’s terminal agent. Takes the prompt as its first argument.</span></button><button class="agent-card" data-agent-id="codex" type="button" role="radio" aria-checked="false"><span class="agent-card-head"><span class="agent-card-label">Codex</span><span class="agent-tag">OpenAI</span></span><span class="agent-card-summary">OpenAI’s terminal agent. Takes the prompt as its first argument.</span></button><button class="agent-card" data-agent-id="gemini" type="button" role="radio" aria-checked="false"><span class="agent-card-head"><span class="agent-card-label">Gemini CLI</span><span class="agent-tag">Google</span></span><span class="agent-card-summary">Google’s terminal agent. Opens interactively on a prompt with -i.</span></button><button class="agent-card agent-card-more" title="Open the coding agents window on the known tools" data-launch-action="manage" type="button"><span class="agent-card-head"><span class="material-symbols-outlined" style="font-size: 16px;">add</span><span class="agent-card-label">More agents…</span></span><span class="agent-card-summary">Add another tool, turn one back on, or copy one for a second model</span></button></div>
+          </section>
+
+          <section class="launch-section" id="agent-launch-model-row">
+            <h4 class="launch-heading">Which model</h4>
+            <select id="agent-launch-model" class="settings-field" aria-label="Model"><option value="default">Whatever you are signed in to — Anthropic</option><option value="opus">Claude Opus — Anthropic</option><option value="sonnet">Claude Sonnet — Anthropic</option><option value="haiku">Claude Haiku — Anthropic</option><option value="kimi-k2">Kimi K2 — Moonshot AI</option><option value="deepseek">DeepSeek — DeepSeek</option><option value="glm">GLM — Z.ai</option></select>
+            <p class="launch-note hidden" id="agent-launch-model-note"></p>
+          </section>
+
+          <section class="launch-section" id="agent-launch-prompt-row">
+            <h4 class="launch-heading">Starting prompt <span class="launch-heading-hint">optional</span></h4>
+            <textarea id="agent-launch-prompt" class="settings-field agent-launch-prompt" rows="3" placeholder="What should it start on? Passed as one argument, and never recorded." aria-label="Starting prompt"></textarea>
+          </section>
+
+          <details class="launch-details">
+            <summary class="launch-summary">
+              <span class="launch-summary-label">What will run</span>
+              <code class="launch-summary-command" id="agent-launch-command">claude</code>
+            </summary>
+            <p class="agent-command-preview" id="agent-launch-preview">claude
+in your terminal</p>
+          </details>
+
+          <div class="form-actions">
+            <span class="launch-hint">Ctrl+Enter launches</span>
+            <button type="button" id="btn-cancel-agent-launch" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-launch-agent" class="btn btn-primary">
+              <span class="material-symbols-outlined">rocket_launch</span>
+              <span>Launch</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>

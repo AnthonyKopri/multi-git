@@ -1,0 +1,71 @@
+<!-- #diff-view -->
+<div id="diff-view" class="view-pane">
+          <div class="diff-workspace">
+            <aside class="diff-files-pane">
+              <div class="card-header">
+                <h3>Modified Files</h3>
+                <button id="btn-diff-refresh" class="btn btn-icon btn-sm" title="Refresh modified files">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                </button>
+              </div>
+              <ul id="diff-files-list" class="file-list diff-file-list"><li class="file-item diff-file-item" title="Unstaged: public/logo.png" data-path="public/logo.png" data-staged="false" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="public/logo.png">public/logo.png</span></div><span class="diff-file-scope">Unstaged</span></li><li class="file-item diff-file-item" title="Unstaged: src/auth.ts" data-path="src/auth.ts" data-staged="false" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="src/auth.ts">src/auth.ts</span></div><span class="diff-file-scope">Unstaged</span></li><li class="file-item diff-file-item" title="Untracked: docs/token-refresh.md" data-path="docs/token-refresh.md" data-staged="false" data-status="?"><div class="file-info"><span class="status-indicator status-q" title="Untracked">?</span><span class="file-name" title="docs/token-refresh.md">docs/token-refresh.md</span></div><span class="diff-file-scope">Untracked</span></li><li class="file-item diff-file-item" title="Staged: src/types.ts" data-path="src/types.ts" data-staged="true" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="src/types.ts">src/types.ts</span></div><span class="diff-file-scope">Staged</span></li></ul>
+            </aside>
+
+            <div class="pane-resizer pane-resizer-col" data-pane="diffFiles" role="separator" aria-orientation="vertical" aria-label="Resize the modified files list" title="Drag to resize · double-click to reset" tabindex="0" aria-valuemin="170" aria-valuemax="640"></div>
+
+            <div class="diff-viewer-card">
+              <div class="card-header diff-view-header">
+                <div class="diff-title-group">
+                  <button id="btn-diff-back" class="btn btn-text btn-sm" title="Back to Staging Area">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">arrow_back</span>
+                    <span>Staging</span>
+                  </button>
+                  <h3 id="diff-file-title">public/logo.png</h3>
+                  <span id="diff-file-type" class="badge status-m">Unstaged</span>
+                </div>
+                <div class="diff-view-options">
+                  <button id="btn-diff-layout" class="btn btn-secondary btn-sm" title="Switch between unified and side-by-side">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">splitscreen</span>
+                    <span id="btn-diff-layout-label">Split</span>
+                  </button>
+                  <select id="diff-whitespace" class="btn btn-secondary btn-sm" aria-label="Whitespace handling" title="Whitespace handling">
+                    <option value="show">Show whitespace</option>
+                    <option value="ignore-change">Ignore whitespace changes</option>
+                    <option value="ignore-all">Ignore all whitespace</option>
+                  </select>
+                </div>
+                <div id="diff-actions" class="card-header-actions">
+                  <button id="btn-diff-toggle-stage" class="btn btn-secondary btn-sm">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                    <span id="btn-diff-toggle-stage-label">Stage</span>
+                  </button>
+                  <button id="btn-diff-discard" class="btn btn-secondary btn-sm btn-text-danger" title="Discard this file's changes">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    <span>Discard</span>
+                  </button>
+                </div>
+              </div>
+              <div id="diff-selection-bar" class="diff-selection-bar hidden" role="toolbar" aria-label="Selected line actions">
+                <span id="diff-selection-count" class="diff-selection-count">0 lines selected</span>
+                <div class="diff-selection-actions">
+                  <button id="btn-diff-stage-selection" class="btn btn-secondary btn-sm" title="Stage only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                    <span>Stage selection</span>
+                  </button>
+                  <button id="btn-diff-unstage-selection" class="btn btn-secondary btn-sm" title="Unstage only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">remove</span>
+                    <span>Unstage selection</span>
+                  </button>
+                  <button id="btn-diff-discard-selection" class="btn btn-secondary btn-sm btn-text-danger" title="Discard only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    <span>Discard selection</span>
+                  </button>
+                  <button id="btn-diff-clear-selection" class="btn btn-text btn-sm" title="Clear the selection">
+                    <span>Clear</span>
+                  </button>
+                </div>
+              </div>
+              <div id="diff-content" class="diff-body"><div class="image-diff"><figure class="image-diff-side"><img class="image-diff-img" src="data:image/png;base64,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" alt="Before version of public/logo.png"><figcaption>Before - 2.2 KB</figcaption></figure><figure class="image-diff-side"><img class="image-diff-img" src="data:image/png;base64,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" alt="After version of public/logo.png"><figcaption>After - 2.2 KB</figcaption></figure></div></div>
+            </div>
+          </div>
+        </div>

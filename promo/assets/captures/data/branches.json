@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "local": [
+    "feature/login",
+    "feature/search",
+    "fix/token-refresh",
+    "main"
+  ],
+  "remote": [
+    "origin/feature/export",
+    "origin/feature/login",
+    "origin/feature/search",
+    "origin/fix/token-refresh",
+    "origin/main"
+  ]
+}

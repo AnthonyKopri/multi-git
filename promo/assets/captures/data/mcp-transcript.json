@@ -1,0 +1,543 @@
+[
+  {
+    "from": "client",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "initialize",
+      "params": {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {},
+        "clientInfo": {
+          "name": "promo-capture",
+          "version": "1.0.0"
+        }
+      }
+    }
+  },
+  {
+    "from": "server",
+    "message": {
+      "result": {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {
+          "tools": {
+            "listChanged": true
+          }
+        },
+        "serverInfo": {
+          "name": "multi-git",
+          "version": "5.2.1"
+        }
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "from": "client",
+    "message": {
+      "jsonrpc": "2.0",
+      "method": "notifications/initialized"
+    }
+  },
+  {
+    "from": "client",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "method": "tools/list"
+    }
+  },
+  {
+    "from": "server",
+    "message": {
+      "result": {
+        "tools": [
+          {
+            "name": "app_info",
+            "title": "Identify the running app.",
+            "description": "Identify the running app. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "repositories_list",
+            "title": "List up to 100 owned GitHub repositories using gh authentication.",
+            "description": "List up to 100 owned GitHub repositories using gh authentication. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"read\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "owner": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": true
+            }
+          },
+          {
+            "name": "status",
+            "title": "Read branch and working tree status.",
+            "description": "Read branch and working tree status. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "repo": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repo"
+              ],
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "branches_list",
+            "title": "List local and remote branches.",
+            "description": "List local and remote branches. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "repo": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repo"
+              ],
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "diff",
+            "title": "Read a structured diff before staging.",
+            "description": "Read a structured diff before staging. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "working-tree",
+                    "index"
+                  ]
+                },
+                "repo": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "path",
+                "source",
+                "repo"
+              ],
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "worktrees_list",
+            "title": "List worktrees.",
+            "description": "List worktrees. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "repo": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repo"
+              ],
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "recovery_list",
+            "title": "Read durable recovery points and reflog.",
+            "description": "Read durable recovery points and reflog. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "repo": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repo"
+              ],
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "agents_list",
+            "title": "List configured agent launchers.",
+            "description": "List configured agent launchers. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "repositories_local",
+            "title": "List remembered local repositories.",
+            "description": "List remembered local repositories. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "history",
+            "title": "Read commit history, newest first.",
+            "description": "Read commit history, newest first. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 500
+                },
+                "skip": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "repo": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repo"
+              ],
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "auto-pull_get",
+            "title": "Read the global auto-pull setting (off by default).",
+            "description": "Read the global auto-pull setting (off by default). Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "ssh_profiles",
+            "title": "List SSH profiles; no secrets.",
+            "description": "List SSH profiles; no secrets. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "ssh_inspect",
+            "title": "Show the repository account and author setup, and whether switching to a profile would overwrite it.",
+            "description": "Show the repository account and author setup, and whether switching to a profile would overwrite it. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "profileId": {
+                  "type": "string"
+                },
+                "repo": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repo"
+              ],
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "remote_inspect",
+            "title": "Show origin, its protocol, and the SSH/HTTPS URL it would switch to.",
+            "description": "Show origin, its protocol, and the SSH/HTTPS URL it would switch to. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "repo": {
+                  "type": "string"
+                },
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repo"
+              ],
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "operations_list",
+            "title": "List running and recent backend operations.",
+            "description": "List running and recent backend operations. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "doctor",
+            "title": "Check Git and optional tools.",
+            "description": "Check Git and optional tools. Effects: {\"mutates\":false,\"local\":[],\"remote\":\"none\"}",
+            "inputSchema": {
+              "type": "object",
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 2
+    }
+  },
+  {
+    "from": "client",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "method": "tools/call",
+      "params": {
+        "name": "status",
+        "arguments": {
+          "repo": "/home/jane/code/acme-api"
+        }
+      }
+    }
+  },
+  {
+    "from": "server",
+    "message": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"schemaVersion\":1,\"success\":true,\"command\":\"status\",\"data\":{\"success\":true,\"branch\":\"main\",\"tracking\":\"origin/main\",\"ahead\":2,\"behind\":0,\"detached\":false,\"noCommits\":false,\"staged\":[{\"path\":\"src/types.ts\",\"status\":\"M\",\"origPath\":null}],\"unstaged\":[{\"path\":\"public/logo.png\",\"status\":\"M\"},{\"path\":\"src/auth.ts\",\"status\":\"M\"},{\"path\":\"docs/token-refresh.md\",\"status\":\"?\"}],\"conflicts\":[],\"isMerging\":false,\"isRebasing\":false}}"
+          }
+        ],
+        "structuredContent": {
+          "schemaVersion": 1,
+          "success": true,
+          "command": "status",
+          "data": {
+            "success": true,
+            "branch": "main",
+            "tracking": "origin/main",
+            "ahead": 2,
+            "behind": 0,
+            "detached": false,
+            "noCommits": false,
+            "staged": [
+              {
+                "path": "src/types.ts",
+                "status": "M",
+                "origPath": null
+              }
+            ],
+            "unstaged": [
+              {
+                "path": "public/logo.png",
+                "status": "M"
+              },
+              {
+                "path": "src/auth.ts",
+                "status": "M"
+              },
+              {
+                "path": "docs/token-refresh.md",
+                "status": "?"
+              }
+            ],
+            "conflicts": [],
+            "isMerging": false,
+            "isRebasing": false
+          }
+        }
+      },
+      "jsonrpc": "2.0",
+      "id": 3
+    }
+  }
+]

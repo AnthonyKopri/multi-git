@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "branch": "main",
+  "tracking": "origin/main",
+  "ahead": 2,
+  "behind": 0,
+  "detached": false,
+  "noCommits": false,
+  "staged": [
+    {
+      "path": "src/types.ts",
+      "status": "M",
+      "origPath": null
+    }
+  ],
+  "unstaged": [
+    {
+      "path": "public/logo.png",
+      "status": "M"
+    },
+    {
+      "path": "src/auth.ts",
+      "status": "M"
+    },
+    {
+      "path": "docs/token-refresh.md",
+      "status": "?"
+    }
+  ],
+  "conflicts": [],
+  "isMerging": false,
+  "isRebasing": false
+}

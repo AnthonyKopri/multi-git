@@ -1,0 +1,71 @@
+<!-- #diff-view -->
+<div id="diff-view" class="view-pane">
+          <div class="diff-workspace">
+            <aside class="diff-files-pane">
+              <div class="card-header">
+                <h3>Modified Files</h3>
+                <button id="btn-diff-refresh" class="btn btn-icon btn-sm" title="Refresh modified files">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                </button>
+              </div>
+              <ul id="diff-files-list" class="file-list diff-file-list"><li class="file-item diff-file-item" title="Unstaged: public/logo.png" data-path="public/logo.png" data-staged="false" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="public/logo.png">public/logo.png</span></div><span class="diff-file-scope">Unstaged</span></li><li class="file-item diff-file-item" title="Unstaged: src/auth.ts" data-path="src/auth.ts" data-staged="false" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="src/auth.ts">src/auth.ts</span></div><span class="diff-file-scope">Unstaged</span></li><li class="file-item diff-file-item" title="Untracked: docs/token-refresh.md" data-path="docs/token-refresh.md" data-staged="false" data-status="?"><div class="file-info"><span class="status-indicator status-q" title="Untracked">?</span><span class="file-name" title="docs/token-refresh.md">docs/token-refresh.md</span></div><span class="diff-file-scope">Untracked</span></li><li class="file-item diff-file-item" title="Staged: src/types.ts" data-path="src/types.ts" data-staged="true" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="src/types.ts">src/types.ts</span></div><span class="diff-file-scope">Staged</span></li></ul>
+            </aside>
+
+            <div class="pane-resizer pane-resizer-col" data-pane="diffFiles" role="separator" aria-orientation="vertical" aria-label="Resize the modified files list" title="Drag to resize · double-click to reset" tabindex="0" aria-valuemin="170" aria-valuemax="640"></div>
+
+            <div class="diff-viewer-card">
+              <div class="card-header diff-view-header">
+                <div class="diff-title-group">
+                  <button id="btn-diff-back" class="btn btn-text btn-sm" title="Back to Staging Area">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">arrow_back</span>
+                    <span>Staging</span>
+                  </button>
+                  <h3 id="diff-file-title">src/auth.ts</h3>
+                  <span id="diff-file-type" class="badge status-m">Unstaged</span>
+                </div>
+                <div class="diff-view-options">
+                  <button id="btn-diff-layout" class="btn btn-secondary btn-sm" title="Switch between unified and side-by-side">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">splitscreen</span>
+                    <span id="btn-diff-layout-label">Unified</span>
+                  </button>
+                  <select id="diff-whitespace" class="btn btn-secondary btn-sm" aria-label="Whitespace handling" title="Whitespace handling">
+                    <option value="show">Show whitespace</option>
+                    <option value="ignore-change">Ignore whitespace changes</option>
+                    <option value="ignore-all">Ignore all whitespace</option>
+                  </select>
+                </div>
+                <div id="diff-actions" class="card-header-actions">
+                  <button id="btn-diff-toggle-stage" class="btn btn-secondary btn-sm">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                    <span id="btn-diff-toggle-stage-label">Stage</span>
+                  </button>
+                  <button id="btn-diff-discard" class="btn btn-secondary btn-sm btn-text-danger" title="Discard this file's changes">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    <span>Discard</span>
+                  </button>
+                </div>
+              </div>
+              <div id="diff-selection-bar" class="diff-selection-bar hidden" role="toolbar" aria-label="Selected line actions">
+                <span id="diff-selection-count" class="diff-selection-count">0 lines selected</span>
+                <div class="diff-selection-actions">
+                  <button id="btn-diff-stage-selection" class="btn btn-secondary btn-sm" title="Stage only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                    <span>Stage selection</span>
+                  </button>
+                  <button id="btn-diff-unstage-selection" class="btn btn-secondary btn-sm" title="Unstage only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">remove</span>
+                    <span>Unstage selection</span>
+                  </button>
+                  <button id="btn-diff-discard-selection" class="btn btn-secondary btn-sm btn-text-danger" title="Discard only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    <span>Discard selection</span>
+                  </button>
+                  <button id="btn-diff-clear-selection" class="btn btn-text btn-sm" title="Clear the selection">
+                    <span>Clear</span>
+                  </button>
+                </div>
+              </div>
+              <div id="diff-content" class="diff-body diff-split"><div class="diff-line diff-line-hunk" data-hunk-id="b3220dc1d822"><div class="diff-line-nums"><span></span><span></span></div><div class="diff-line-content">@@ -1,5 +1,6 @@</div><div class="diff-hunk-actions"><button class="btn btn-secondary btn-sm diff-hunk-action" title="Stage this hunk" data-hunk-action="stage" data-hunk-id="b3220dc1d822" aria-label="Stage this hunk"><span class="material-symbols-outlined">add</span></button><button class="btn btn-secondary btn-sm diff-hunk-action" title="Discard this hunk" data-hunk-action="discard" data-hunk-id="b3220dc1d822" aria-label="Discard this hunk"><span class="material-symbols-outlined">delete</span></button></div></div><div class="diff-line diff-side-both" data-hunk-id="b3220dc1d822"><div class="diff-line-nums"><span>1</span><span>1</span></div><div class="diff-line-content">import type { Session, Token } from './types';</div></div><div class="diff-line diff-side-both" data-hunk-id="b3220dc1d822"><div class="diff-line-nums"><span>2</span><span>2</span></div><div class="diff-line-content">import { fetchToken, revokeToken } from './token';</div></div><div class="diff-line diff-line-addition diff-line-selectable diff-side-new" data-line-id="b3220dc1d822:2" data-hunk-id="b3220dc1d822" role="checkbox" aria-checked="false" tabindex="0"><div class="diff-line-nums"><span></span><span>3</span></div><div class="diff-line-content">import { expiresSoon } from './token';</div></div><div class="diff-line diff-side-both" data-hunk-id="b3220dc1d822"><div class="diff-line-nums"><span>3</span><span>4</span></div><div class="diff-line-content">import { SESSION_TTL_MS } from './config';</div></div><div class="diff-line diff-side-both" data-hunk-id="b3220dc1d822"><div class="diff-line-nums"><span>4</span><span>5</span></div><div class="diff-line-content"></div></div><div class="diff-line diff-side-both" data-hunk-id="b3220dc1d822"><div class="diff-line-nums"><span>5</span><span>6</span></div><div class="diff-line-content">const sessions = new Map&lt;string, Session&gt;();</div></div><div class="diff-line diff-line-hunk" data-hunk-id="2f618cd86d63"><div class="diff-line-nums"><span></span><span></span></div><div class="diff-line-content">@@ -13,6 +14,8 @@ export function createSession(userId: string, token: Token): Session {</div><div class="diff-hunk-actions"><button class="btn btn-secondary btn-sm diff-hunk-action" title="Stage this hunk" data-hunk-action="stage" data-hunk-id="2f618cd86d63" aria-label="Stage this hunk"><span class="material-symbols-outlined">add</span></button><button class="btn btn-secondary btn-sm diff-hunk-action" title="Discard this hunk" data-hunk-action="discard" data-hunk-id="2f618cd86d63" aria-label="Discard this hunk"><span class="material-symbols-outlined">delete</span></button></div></div><div class="diff-line diff-side-both" data-hunk-id="2f618cd86d63"><div class="diff-line-nums"><span>13</span><span>14</span></div><div class="diff-line-content">export async function getSession(id: string): Promise&lt;Session | undefined&gt; {</div></div><div class="diff-line diff-side-both" data-hunk-id="2f618cd86d63"><div class="diff-line-nums"><span>14</span><span>15</span></div><div class="diff-line-content">  const session = sessions.get(id);</div></div><div class="diff-line diff-side-both" data-hunk-id="2f618cd86d63"><div class="diff-line-nums"><span>15</span><span>16</span></div><div class="diff-line-content">  if (!session) return undefined;</div></div><div class="diff-line diff-line-addition diff-line-selectable diff-side-new" data-line-id="2f618cd86d63:3" data-hunk-id="2f618cd86d63" role="checkbox" aria-checked="false" tabindex="0"><div class="diff-line-nums"><span></span><span>17</span></div><div class="diff-line-content">  console.log('session', session.id, session.token.expiresAt);</div></div><div class="diff-line diff-line-addition diff-line-selectable diff-side-new" data-line-id="2f618cd86d63:4" data-hunk-id="2f618cd86d63" role="checkbox" aria-checked="false" tabindex="0"><div class="diff-line-nums"><span></span><span>18</span></div><div class="diff-line-content">  if (expiresSoon(session.token)) await refreshToken(session);</div></div><div class="diff-line diff-side-both" data-hunk-id="2f618cd86d63"><div class="diff-line-nums"><span>16</span><span>19</span></div><div class="diff-line-content">  if (Date.now() - session.createdAt &gt; SESSION_TTL_MS) {</div></div><div class="diff-line diff-side-both" data-hunk-id="2f618cd86d63"><div class="diff-line-nums"><span>17</span><span>20</span></div><div class="diff-line-content">    sessions.delete(id);</div></div><div class="diff-line diff-side-both" data-hunk-id="2f618cd86d63"><div class="diff-line-nums"><span>18</span><span>21</span></div><div class="diff-line-content">    return undefined;</div></div><div class="diff-line diff-line-hunk" data-hunk-id="81026522d6f1"><div class="diff-line-nums"><span></span><span></span></div><div class="diff-line-content">@@ -22,7 +25,9 @@ export async function getSession(id: string): Promise&lt;Session | undefined&gt; {</div><div class="diff-hunk-actions"><button class="btn btn-secondary btn-sm diff-hunk-action" title="Stage this hunk" data-hunk-action="stage" data-hunk-id="81026522d6f1" aria-label="Stage this hunk"><span class="material-symbols-outlined">add</span></button><button class="btn btn-secondary btn-sm diff-hunk-action" title="Discard this hunk" data-hunk-action="discard" data-hunk-id="81026522d6f1" aria-label="Discard this hunk"><span class="material-symbols-outlined">delete</span></button></div></div><div class="diff-line diff-side-both" data-hunk-id="81026522d6f1"><div class="diff-line-nums"><span>22</span><span>25</span></div><div class="diff-line-content"></div></div><div class="diff-line diff-side-both" data-hunk-id="81026522d6f1"><div class="diff-line-nums"><span>23</span><span>26</span></div><div class="diff-line-content">export async function refreshToken(session: Session): Promise&lt;Token&gt; {</div></div><div class="diff-line diff-side-both" data-hunk-id="81026522d6f1"><div class="diff-line-nums"><span>24</span><span>27</span></div><div class="diff-line-content">  const next = await fetchToken(session.token.refreshToken);</div></div><div class="diff-line diff-line-addition diff-line-selectable diff-side-new" data-line-id="81026522d6f1:3" data-hunk-id="81026522d6f1" role="checkbox" aria-checked="false" tabindex="0"><div class="diff-line-nums"><span></span><span>28</span></div><div class="diff-line-content">  console.log('refreshed', next.expiresAt);</div></div><div class="diff-line diff-side-both" data-hunk-id="81026522d6f1"><div class="diff-line-nums"><span>25</span><span>29</span></div><div class="diff-line-content">  session.token = next;</div></div><div class="diff-line diff-line-addition diff-line-selectable diff-side-new" data-line-id="81026522d6f1:5" data-hunk-id="81026522d6f1" role="checkbox" aria-checked="false" tabindex="0"><div class="diff-line-nums"><span></span><span>30</span></div><div class="diff-line-content">  session.refreshedAt = Date.now();</div></div><div class="diff-line diff-side-both" data-hunk-id="81026522d6f1"><div class="diff-line-nums"><span>26</span><span>31</span></div><div class="diff-line-content">  return next;</div></div><div class="diff-line diff-side-both" data-hunk-id="81026522d6f1"><div class="diff-line-nums"><span>27</span><span>32</span></div><div class="diff-line-content">}</div></div><div class="diff-line diff-side-both" data-hunk-id="81026522d6f1"><div class="diff-line-nums"><span>28</span><span>33</span></div><div class="diff-line-content"></div></div></div>
+            </div>
+          </div>
+        </div>

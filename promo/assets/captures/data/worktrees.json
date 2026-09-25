@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "familyKey": "/home/jane/code/acme-api/.git",
+  "mainPath": "/home/jane/code/acme-api",
+  "worktrees": [
+    {
+      "path": "/home/jane/code/acme-api",
+      "head": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+      "bare": false,
+      "detached": false,
+      "locked": false,
+      "prunable": false,
+      "isMain": true,
+      "present": true,
+      "branch": "refs/heads/main"
+    },
+    {
+      "path": "/home/jane/code/acme-api.worktrees/login",
+      "head": "76ec391b6001220c4eae759eaa8eeeeb6b6cb876",
+      "bare": false,
+      "detached": false,
+      "locked": false,
+      "prunable": false,
+      "isMain": false,
+      "present": true,
+      "branch": "refs/heads/feature/login"
+    },
+    {
+      "path": "/home/jane/code/acme-api.worktrees/search",
+      "head": "172a150660a0afe53ba159ba51b95d6217c9a369",
+      "bare": false,
+      "detached": false,
+      "locked": false,
+      "prunable": false,
+      "isMain": false,
+      "present": true,
+      "branch": "refs/heads/feature/search"
+    }
+  ],
+  "suggestedParent": "/home/jane/code/acme-api.worktrees"
+}

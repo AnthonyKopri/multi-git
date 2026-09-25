@@ -1,0 +1,248 @@
+{
+  "success": true,
+  "commits": [
+    {
+      "hash": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+      "parents": [
+        "7637b351049ce24c51831e053c167f2323037b0b"
+      ],
+      "author": "Priya Nair",
+      "date": "25 hours ago",
+      "message": "docs: add API usage",
+      "refs": [
+        "HEAD -> main"
+      ]
+    },
+    {
+      "hash": "7637b351049ce24c51831e053c167f2323037b0b",
+      "parents": [
+        "021fd393d5f3c98da4e589df9b685b2e66b9be96"
+      ],
+      "author": "Priya Nair",
+      "date": "2 days ago",
+      "message": "fixup! feat(search): highlight matched terms",
+      "refs": []
+    },
+    {
+      "hash": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
+      "parents": [
+        "835e040e8a614af6daaf96fe42fb0291c7cfe7b3"
+      ],
+      "author": "Priya Nair",
+      "date": "4 days ago",
+      "message": "feat(search): highlight matched terms",
+      "refs": [
+        "origin/main",
+        "origin/HEAD"
+      ]
+    },
+    {
+      "hash": "835e040e8a614af6daaf96fe42fb0291c7cfe7b3",
+      "parents": [
+        "e7d06a2e78ebfe51c2294804afb48940713470a8"
+      ],
+      "author": "Jane Doe",
+      "date": "6 days ago",
+      "message": "refactor(auth): extract the token helpers",
+      "refs": []
+    },
+    {
+      "hash": "e7d06a2e78ebfe51c2294804afb48940713470a8",
+      "parents": [
+        "18d8d1193193a411c8195a3c5fdb55912f7bdd4e"
+      ],
+      "author": "Sam Rivera",
+      "date": "8 days ago",
+      "message": "feat(api): add rate limiting",
+      "refs": []
+    },
+    {
+      "hash": "18d8d1193193a411c8195a3c5fdb55912f7bdd4e",
+      "parents": [
+        "6d73fe04749662cd63bbb10366b19d52e4929053",
+        "4705de3593e4fcca0316e36e4f7d178d67d29d89"
+      ],
+      "author": "Jane Doe",
+      "date": "10 days ago",
+      "message": "Merge branch 'fix/token-refresh'",
+      "refs": [
+        "tag: v1.1.0"
+      ]
+    },
+    {
+      "hash": "4705de3593e4fcca0316e36e4f7d178d67d29d89",
+      "parents": [
+        "34086b6aeac46d89676d31149c0eefb2aa3ab4b4"
+      ],
+      "author": "Sam Rivera",
+      "date": "10 days ago",
+      "message": "test(auth): cover the token retry",
+      "refs": [
+        "origin/fix/token-refresh",
+        "fix/token-refresh"
+      ]
+    },
+    {
+      "hash": "6d73fe04749662cd63bbb10366b19d52e4929053",
+      "parents": [
+        "880e4a206c63e54cd3a1f9600c5c34711b9680bd"
+      ],
+      "author": "Priya Nair",
+      "date": "10 days ago",
+      "message": "feat(api): add request logging",
+      "refs": []
+    },
+    {
+      "hash": "34086b6aeac46d89676d31149c0eefb2aa3ab4b4",
+      "parents": [
+        "83c33c1336570314af1deb3702598dd2ebda162d"
+      ],
+      "author": "Jane Doe",
+      "date": "11 days ago",
+      "message": "fix(auth): retry the token fetch once",
+      "refs": []
+    },
+    {
+      "hash": "880e4a206c63e54cd3a1f9600c5c34711b9680bd",
+      "parents": [
+        "83c33c1336570314af1deb3702598dd2ebda162d"
+      ],
+      "author": "Sam Rivera",
+      "date": "11 days ago",
+      "message": "chore(deps): bump jest",
+      "refs": []
+    },
+    {
+      "hash": "83c33c1336570314af1deb3702598dd2ebda162d",
+      "parents": [
+        "c1b8458d99c90acd0c924b9a6aaf8ed64e55cae4",
+        "898213e08d88069b043d461be6df573343cba6ca"
+      ],
+      "author": "Jane Doe",
+      "date": "12 days ago",
+      "message": "Merge branch 'feature/search'",
+      "refs": []
+    },
+    {
+      "hash": "898213e08d88069b043d461be6df573343cba6ca",
+      "parents": [
+        "cd3df4465f3949df321993431184ce728b2a3c4c"
+      ],
+      "author": "Priya Nair",
+      "date": "13 days ago",
+      "message": "feat(search): add a query parser",
+      "refs": []
+    },
+    {
+      "hash": "c1b8458d99c90acd0c924b9a6aaf8ed64e55cae4",
+      "parents": [
+        "fbba641e3bf4ace6e0cc2cd23ecec91c1d5a09b1"
+      ],
+      "author": "Sam Rivera",
+      "date": "13 days ago",
+      "message": "ci: run tests on pull requests",
+      "refs": []
+    },
+    {
+      "hash": "fbba641e3bf4ace6e0cc2cd23ecec91c1d5a09b1",
+      "parents": [
+        "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8"
+      ],
+      "author": "Sam Rivera",
+      "date": "2 weeks ago",
+      "message": "fix(api): return 404 for unknown routes",
+      "refs": []
+    },
+    {
+      "hash": "cd3df4465f3949df321993431184ce728b2a3c4c",
+      "parents": [
+        "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8"
+      ],
+      "author": "Priya Nair",
+      "date": "2 weeks ago",
+      "message": "feat(search): index titles",
+      "refs": []
+    },
+    {
+      "hash": "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8",
+      "parents": [
+        "8da6306a8f82189df5b53f7b96e7743d227c5870"
+      ],
+      "author": "Priya Nair",
+      "date": "2 weeks ago",
+      "message": "docs: describe local setup",
+      "refs": [
+        "tag: v1.0.0"
+      ]
+    },
+    {
+      "hash": "8da6306a8f82189df5b53f7b96e7743d227c5870",
+      "parents": [
+        "931a002dc489b5af5fb69c7204adc0abd5548e24"
+      ],
+      "author": "Sam Rivera",
+      "date": "2 weeks ago",
+      "message": "test(api): cover health endpoint",
+      "refs": []
+    },
+    {
+      "hash": "931a002dc489b5af5fb69c7204adc0abd5548e24",
+      "parents": [
+        "f8d492580c6e02a9507b063f77a78c30408e1b3f"
+      ],
+      "author": "Priya Nair",
+      "date": "2 weeks ago",
+      "message": "refactor(api): split handlers",
+      "refs": []
+    },
+    {
+      "hash": "f8d492580c6e02a9507b063f77a78c30408e1b3f",
+      "parents": [
+        "fa6a28bed6e353b7950aa1f22751fe8e8faa3587"
+      ],
+      "author": "Priya Nair",
+      "date": "2 weeks ago",
+      "message": "chore: add prettier config",
+      "refs": []
+    },
+    {
+      "hash": "fa6a28bed6e353b7950aa1f22751fe8e8faa3587",
+      "parents": [
+        "9c9883c4af5e077be0520447cfb175d1963eadac"
+      ],
+      "author": "Jane Doe",
+      "date": "3 weeks ago",
+      "message": "feat(auth): add session store",
+      "refs": []
+    },
+    {
+      "hash": "9c9883c4af5e077be0520447cfb175d1963eadac",
+      "parents": [
+        "9752d972b1994394f6da79866bbde85f454f70aa"
+      ],
+      "author": "Sam Rivera",
+      "date": "3 weeks ago",
+      "message": "chore(deps): bump express",
+      "refs": []
+    },
+    {
+      "hash": "9752d972b1994394f6da79866bbde85f454f70aa",
+      "parents": [
+        "9de908c2a54bb8c45e2b219841a5a3ecaa541e2a"
+      ],
+      "author": "Sam Rivera",
+      "date": "3 weeks ago",
+      "message": "feat(api): add health endpoint",
+      "refs": []
+    },
+    {
+      "hash": "9de908c2a54bb8c45e2b219841a5a3ecaa541e2a",
+      "parents": [],
+      "author": "Jane Doe",
+      "date": "3 weeks ago",
+      "message": "chore: initial commit",
+      "refs": []
+    }
+  ],
+  "hasMore": false
+}

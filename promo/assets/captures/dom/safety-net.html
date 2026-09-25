@@ -1,0 +1,25 @@
+<!-- .sidebar-section[data-section="safety-net"] -->
+<div class="sidebar-section border-t mt-4 pt-4" data-section="safety-net" data-default="collapsed">
+          <div class="section-header">
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-safety-net">
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <h3>Safety Net</h3>
+            </button>
+            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-dim);" title="Risky operations save a checkpoint here so they can be undone. Discarded files can be restored for 24 hours.">health_and_safety</span>
+          </div>
+          <div class="section-body" id="section-safety-net">
+            <div class="branch-lists">
+              <h4>Undoable Operations</h4>
+              <ul id="checkpoint-list" class="stash-list-ul"><li class="stash-item" title="Undo &quot;Delete branch spike/old-cache&quot; — resets the branch back to 86bf7785" data-checkpoint-id="1790306164409-d73697" data-label="Delete branch spike/old-cache"><span class="material-symbols-outlined">history</span><span class="stash-msg">Delete branch spike/old-cache</span><span class="stash-actions"><button class="btn btn-icon btn-sm" title="Undo this operation (hard reset to the checkpoint)" data-action="undo"><span class="material-symbols-outlined" style="font-size: 14px;">undo</span></button></span></li></ul>
+              <h4 class="mt-4">Recently Discarded</h4>
+              <ul id="trash-list" class="stash-list-ul"><li class="stash-item" title="Restore docs/usage.md as it was when discarded" data-trash-id="1790306164432-e60350" data-path="docs/usage.md"><span class="material-symbols-outlined">restore_from_trash</span><span class="stash-msg">docs/usage.md</span><span class="stash-actions"><button class="btn btn-icon btn-sm" title="Restore this file" data-action="restore"><span class="material-symbols-outlined" style="font-size: 14px;">settings_backup_restore</span></button></span></li></ul>
+              <div class="section-header mt-4">
+                <h4>Recovery Points</h4>
+                <button id="btn-recovery-open" class="btn btn-text btn-sm" title="Browse recovery points and the reflog">
+                  <span>Browse</span>
+                </button>
+              </div>
+              <ul id="recovery-list" class="stash-list-ul"><li class="stash-item" title="Delete branch spike/old-cache — 50 seconds ago"><span class="material-symbols-outlined">restore</span><span class="stash-msg">Delete branch spike/old-cache</span></li></ul>
+            </div>
+          </div>
+        </div>

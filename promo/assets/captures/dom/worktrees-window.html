@@ -1,0 +1,63 @@
+<!-- #worktree-modal -->
+<div id="worktree-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="worktree-modal-title">
+    <div class="modal-card tool-modal-card">
+      <div class="modal-header">
+        <h2 id="worktree-modal-title">Worktrees</h2>
+        <button id="btn-close-worktree-modal" class="btn-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          A worktree is a second working folder for the same repository, so two branches can be
+          checked out at once. Remotes, history and configuration are shared; only the files and
+          the index are separate.
+        </p>
+
+        <h4>Create a worktree</h4>
+        <form id="worktree-create-form" class="worktree-form">
+          <div class="form-row">
+            <label for="worktree-branch-mode">Check out</label>
+            <select id="worktree-branch-mode">
+              <option value="new">A new branch</option>
+              <option value="existing">An existing branch</option>
+              <option value="detached">A commit, with no branch</option>
+            </select>
+          </div>
+          <div class="form-row" id="worktree-branch-row">
+            <label for="worktree-branch-input">Branch</label>
+            <input type="text" id="worktree-branch-input" placeholder="feature/login" autocomplete="off">
+          </div>
+          <div class="form-row" id="worktree-start-point-row">
+            <label for="worktree-start-point">Start from</label>
+            <input type="text" id="worktree-start-point" placeholder="HEAD, a branch, or a commit (optional)" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <label for="worktree-path-input">Folder</label>
+            <input type="text" id="worktree-path-input" placeholder="Where the folder goes" autocomplete="off">
+            <button type="button" id="btn-worktree-browse" class="btn btn-secondary btn-sm">Browse</button>
+          </div>
+          <p class="modal-desc worktree-path-preview">Will be created at: <span id="worktree-path-preview">/home/jane/code/acme-api.worktrees</span></p>
+          <label class="amend-row">
+            <input type="checkbox" id="worktree-lock-new">
+            <span>Lock it, so Git refuses to prune or remove it</span>
+          </label>
+          <div class="form-actions">
+            <button type="submit" id="btn-create-worktree" class="btn btn-primary">Create worktree</button>
+          </div>
+        </form>
+
+        <h4 class="mt-4">This repository's worktrees</h4>
+        <ul id="worktree-manager-list" class="worktree-list"><li class="worktree-item worktree-active" data-worktree-path="/home/jane/code/acme-api"><div class="worktree-main"><span class="worktree-name" title="/home/jane/code/acme-api">acme-api</span><span class="worktree-meta">main · 1 staged, 2 modified, 1 untracked · 2↑ 0↓</span></div><span class="worktree-actions"><button class="btn btn-icon btn-sm" title="Open in this window" data-action="open" disabled=""><span class="material-symbols-outlined" style="font-size: 14px;">folder_open</span></button><button class="btn btn-icon btn-sm" title="Open in a new window" data-action="new-window"><span class="material-symbols-outlined" style="font-size: 14px;">open_in_new</span></button><button class="btn btn-icon btn-sm" title="Open a terminal here" data-action="terminal"><span class="material-symbols-outlined" style="font-size: 14px;">terminal</span></button><button class="btn btn-icon btn-sm" title="Launch a coding agent here" data-action="agent"><span class="material-symbols-outlined" style="font-size: 14px;">smart_toy</span></button><button class="btn btn-icon btn-sm" title="Copy this path" data-action="copy-path"><span class="material-symbols-outlined" style="font-size: 14px;">content_copy</span></button><button class="btn btn-icon btn-sm" title="Lock this worktree" data-action="lock"><span class="material-symbols-outlined" style="font-size: 14px;">lock</span></button><button class="btn btn-icon btn-sm" title="Move this worktree" data-action="move" disabled=""><span class="material-symbols-outlined" style="font-size: 14px;">drive_file_move</span></button><button class="btn btn-icon btn-sm btn-text-danger" title="Open another worktree first to remove this one" data-action="remove" disabled=""><span class="material-symbols-outlined" style="font-size: 14px;">delete</span></button></span></li><li class="worktree-item" data-worktree-path="/home/jane/code/acme-api.worktrees/login"><div class="worktree-main"><span class="worktree-name" title="/home/jane/code/acme-api.worktrees/login">login</span><span class="worktree-meta">feature/login · clean · 1↑ 0↓</span></div><span class="worktree-actions"><button class="btn btn-icon btn-sm" title="Open in this window" data-action="open"><span class="material-symbols-outlined" style="font-size: 14px;">folder_open</span></button><button class="btn btn-icon btn-sm" title="Open in a new window" data-action="new-window"><span class="material-symbols-outlined" style="font-size: 14px;">open_in_new</span></button><button class="btn btn-icon btn-sm" title="Open a terminal here" data-action="terminal"><span class="material-symbols-outlined" style="font-size: 14px;">terminal</span></button><button class="btn btn-icon btn-sm" title="Launch a coding agent here" data-action="agent"><span class="material-symbols-outlined" style="font-size: 14px;">smart_toy</span></button><button class="btn btn-icon btn-sm" title="Copy this path" data-action="copy-path"><span class="material-symbols-outlined" style="font-size: 14px;">content_copy</span></button><button class="btn btn-icon btn-sm" title="Lock this worktree" data-action="lock"><span class="material-symbols-outlined" style="font-size: 14px;">lock</span></button><button class="btn btn-icon btn-sm" title="Move this worktree" data-action="move"><span class="material-symbols-outlined" style="font-size: 14px;">drive_file_move</span></button><button class="btn btn-icon btn-sm btn-text-danger" title="Remove this worktree" data-action="remove"><span class="material-symbols-outlined" style="font-size: 14px;">delete</span></button></span></li><li class="worktree-item" data-worktree-path="/home/jane/code/acme-api.worktrees/search"><div class="worktree-main"><span class="worktree-name" title="/home/jane/code/acme-api.worktrees/search">search</span><span class="worktree-meta">feature/search · clean</span></div><span class="worktree-actions"><button class="btn btn-icon btn-sm" title="Open in this window" data-action="open"><span class="material-symbols-outlined" style="font-size: 14px;">folder_open</span></button><button class="btn btn-icon btn-sm" title="Open in a new window" data-action="new-window"><span class="material-symbols-outlined" style="font-size: 14px;">open_in_new</span></button><button class="btn btn-icon btn-sm" title="Open a terminal here" data-action="terminal"><span class="material-symbols-outlined" style="font-size: 14px;">terminal</span></button><button class="btn btn-icon btn-sm" title="Launch a coding agent here" data-action="agent"><span class="material-symbols-outlined" style="font-size: 14px;">smart_toy</span></button><button class="btn btn-icon btn-sm" title="Copy this path" data-action="copy-path"><span class="material-symbols-outlined" style="font-size: 14px;">content_copy</span></button><button class="btn btn-icon btn-sm" title="Lock this worktree" data-action="lock"><span class="material-symbols-outlined" style="font-size: 14px;">lock</span></button><button class="btn btn-icon btn-sm" title="Move this worktree" data-action="move"><span class="material-symbols-outlined" style="font-size: 14px;">drive_file_move</span></button><button class="btn btn-icon btn-sm btn-text-danger" title="Remove this worktree" data-action="remove"><span class="material-symbols-outlined" style="font-size: 14px;">delete</span></button></span></li></ul>
+
+        <div class="section-header mt-4">
+          <h4>Prune preview</h4>
+          <button id="btn-worktree-repair" class="btn btn-text btn-sm" title="Fix the administrative links after folders were moved outside Multi-Git">
+            <span>Repair links</span>
+          </button>
+        </div>
+        <p class="modal-desc">Worktrees Git would forget, because their folders are gone. Nothing is removed by looking.</p>
+        <ul id="worktree-prune-list" class="worktree-list"><li class="empty-state">Nothing to prune</li></ul>
+      </div>
+    </div>
+  </div>

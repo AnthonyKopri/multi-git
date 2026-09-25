@@ -1,0 +1,71 @@
+<!-- #profile-segment-wrapper -->
+<div class="segment-wrapper" id="profile-segment-wrapper">
+          <button id="profile-segment" class="header-segment segment-profile open" title="Switch SSH key profile for this repository · Personal">
+            <span class="segment-icon-stack">
+              <span class="material-symbols-outlined segment-icon">key</span>
+              <span id="profile-color-dot" class="profile-dot" style="background-color: rgb(124, 60, 221);"></span>
+            </span>
+            <span class="segment-text">
+              <span class="segment-label">SSH Key</span>
+              <span class="segment-value-row">
+                <span id="profile-segment-name" class="segment-value">Personal</span>
+                <span id="profile-vault-icon" class="material-symbols-outlined profile-vault-glyph hidden" title=""></span>
+              </span>
+            </span>
+            <span class="material-symbols-outlined segment-caret">expand_more</span>
+          </button>
+          <div id="profile-dropdown" class="header-dropdown header-dropdown-right">
+            <div class="dropdown-title">SSH key for this repository</div>
+            <ul id="profile-dropdown-list" class="dropdown-list"><li class="dropdown-item" data-profile-id=""><span class="profile-dot profile-dot-system"></span><span class="dropdown-item-text"><span class="dropdown-item-main">System SSH</span><span class="dropdown-item-sub" title="Default ssh configuration / agent">Default ssh configuration / agent</span></span></li><li class="dropdown-item active" data-profile-id="personal"><span class="profile-dot" style="background-color: rgb(124, 60, 221);"></span><span class="dropdown-item-text"><span class="dropdown-item-main">Personal</span><span class="dropdown-item-sub" title="Jane Doe &lt;jane@example.com&gt; — /home/jane/.ssh/id_ed25519_personal">Jane Doe &lt;jane@example.com&gt;</span></span><span class="material-symbols-outlined item-check">check</span></li><li class="dropdown-item" data-profile-id="work"><span class="profile-dot" style="background-color: rgb(221, 63, 60);"></span><span class="dropdown-item-text"><span class="dropdown-item-main">Work</span><span class="dropdown-item-sub" title="Jane Doe &lt;jane@acme.example&gt; — /home/jane/.ssh/id_ed25519_work">Jane Doe &lt;jane@acme.example&gt;</span></span></li></ul>
+            <div class="dropdown-divider"></div>
+            <!-- Which account this repository should be using, and which one it
+                 actually authenticates as. The second is what the host reports,
+                 not what the profile is called: a correct-looking selection can
+                 still authenticate as another account. -->
+            <div class="repo-account" id="repo-account-block">
+              <div class="repo-account-row">
+                <span class="repo-account-label">Should use</span>
+                <span id="repo-intended-account" class="repo-account-value" title="You set this. Clear it to go back to using the remote’s owner.">jane-acme</span>
+                <button id="btn-change-intended" class="btn btn-text btn-sm" type="button" title="Set which account this repository belongs to, for an organisation repository or a fork">Change</button>
+              </div>
+              <div class="repo-account-row">
+                <span class="repo-account-label">Using</span>
+                <span id="repo-using-account" class="repo-account-value repo-account-bad">Personal → jane-personal</span>
+                <button id="btn-check-account" class="btn btn-text btn-sm" type="button" title="Ask the host which account this key authenticates as">Check</button>
+              </div>
+              <div id="repo-account-note" class="repo-account-note">This key authenticates as jane-personal, but this repository belongs to jane-acme. Pushing would come from the wrong account.</div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-identity" id="identity-row" title="Commit author identity used in this repository">
+              <span class="material-symbols-outlined" style="font-size: 16px;">badge</span>
+              <span id="identity-text" class="identity-text" title="Jane Doe &lt;jane@example.com&gt; · repo">Jane Doe &lt;jane@example.com&gt; · repo</span>
+              <button id="btn-edit-identity" class="btn btn-text btn-sm" title="Edit commit name/email for this repo">Edit</button>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-divider"></div>
+            <div class="agent-row">
+              <span id="agent-status-chip" class="agent-chip agent-off" title="Native SSH agent status">Agent: unreachable</span>
+              <button id="btn-repair-agent" class="btn btn-secondary btn-sm hidden" title="Enable and start the OpenSSH Authentication Agent service">
+                Repair and start
+              </button>
+              <button id="btn-unlock-key" class="btn btn-secondary btn-sm hidden" title="Load this key into the SSH agent, asking for its passphrase if it needs one">
+                Unlock key
+              </button>
+              <button id="btn-unload-key" class="btn btn-text btn-sm hidden" title="Remove this key from the SSH agent">
+                Unload key
+              </button>
+              <button id="btn-load-all-keys" class="btn btn-text btn-sm hidden" title="Load every SSH profile's key into this machine's agent, so terminals and external tools can use them too">
+                Load all keys
+              </button>
+            </div>
+            <div id="agent-diagnostic" class="agent-diagnostic">No SSH agent is reachable. Start one (for example `eval $(ssh-agent)`) and make sure SSH_AUTH_SOCK is set for this session.</div>
+            <div class="dropdown-footer">
+              <span id="dropdown-vault-status" class="vault-chip">Vault: Not set up</span>
+              <button id="btn-dropdown-vault" class="btn btn-secondary btn-sm">Unlock</button>
+              <button id="btn-manage-ssh" class="btn btn-secondary btn-sm" title="Manage SSH profiles">
+                <span class="material-symbols-outlined" style="font-size: 16px;">settings</span>
+                <span>Manage</span>
+              </button>
+            </div>
+          </div>
+        </div>

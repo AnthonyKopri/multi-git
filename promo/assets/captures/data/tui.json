@@ -1,0 +1,4699 @@
+{
+  "size": {
+    "cols": 120,
+    "rows": 34
+  },
+  "command": "multi-git tui --repo ~/code/acme-api",
+  "states": [
+    {
+      "name": "normal",
+      "keys": [],
+      "lines": [
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "MULTI-GIT v5.2.1",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "NORMAL",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " acme-api  /  main  ↑2 ↓0  · origin/main",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " /home/jane/code/acme-api",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Auto-pull: Off  ·  Account: Work",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ┌────────────────────┐",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "┌─────────────────────────────────────────────────────────────────────────────────────────────┐",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "WORKFLOWS",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Changes · s stage / u unstage · Enter inspect",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                               ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "› Workspace",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "›   M  public/logo.png",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                      ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Changes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     M  src/auth.ts                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Branches         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     ?  docs/token-refresh.md                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Sync             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "   + M  src/types.ts                                                                         ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   History          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Integrate        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Stash            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Worktrees        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Recovery         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Accounts         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Remotes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tags             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Pull requests    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Patches          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Signing          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Submodules       │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   LFS              │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Bisect           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Notes            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tools            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   System           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " └────────────────────┘",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "└─────────────────────────────────────────────────────────────────────────────────────────────┘",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Tab: Changes / results · Shift+Tab goes back",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Space opens actions · : finds any workflow · ? explains keys",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Space actions · : commands · / search · j/k move · Enter open · ? help · Ctrl+c exit",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "space-menu",
+      "keys": [
+        "Space"
+      ],
+      "lines": [
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "MULTI-GIT v5.2.1",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "NORMAL",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " acme-api  /  main  ↑2 ↓0  · origin/main",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " /home/jane/code/acme-api",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Auto-pull: Off  ·  Account: Work",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Actions · press a shown key · Esc cancels",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " r   Switch repository                                                                                              ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " b   Switch branch                                                                                                  ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " a   Switch SSH / account                                                                                           ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " f   Fetch                                                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " p   Pull latest changes                                                                                            ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " P   Push / Publish branch                                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " A   Auto-pull                                                                                                      ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " c   Commit staged changes                                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " w   Worktrees                                                                                                      ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " s   Settings                                                                                                       ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " u   Safety Net and recovery                                                                                        ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " o   Operations and progress                                                                                        ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                                                    ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Tab: Changes / results · Shift+Tab goes back",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Space opens actions · : finds any workflow · ? explains keys",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Space actions · : commands · / search · j/k move · Enter open · ? help · Ctrl+c exit",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "menu-closed",
+      "keys": [
+        "Escape"
+      ],
+      "lines": [
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "MULTI-GIT v5.2.1",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "NORMAL",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " acme-api  /  main  ↑2 ↓0  · origin/main",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " /home/jane/code/acme-api",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Auto-pull: Off  ·  Account: Work",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ┌────────────────────┐",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "┌─────────────────────────────────────────────────────────────────────────────────────────────┐",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "WORKFLOWS",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Changes · s stage / u unstage · Enter inspect",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                               ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "› Workspace",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "›   M  public/logo.png",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                      ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Changes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     M  src/auth.ts                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Branches         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     ?  docs/token-refresh.md                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Sync             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "   + M  src/types.ts                                                                         ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   History          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Integrate        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Stash            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Worktrees        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Recovery         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Accounts         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Remotes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tags             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Pull requests    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Patches          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Signing          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Submodules       │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   LFS              │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Bisect           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Notes            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tools            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   System           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " └────────────────────┘",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "└─────────────────────────────────────────────────────────────────────────────────────────────┘",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Tab: Changes / results · Shift+Tab goes back",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Space opens actions · : finds any workflow · ? explains keys",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Space actions · : commands · / search · j/k move · Enter open · ? help · Ctrl+c exit",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "after-j",
+      "keys": [
+        "j"
+      ],
+      "lines": [
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "MULTI-GIT v5.2.1",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "NORMAL",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " acme-api  /  main  ↑2 ↓0  · origin/main",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " /home/jane/code/acme-api",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Auto-pull: Off  ·  Account: Work",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ┌────────────────────┐",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "┌─────────────────────────────────────────────────────────────────────────────────────────────┐",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "WORKFLOWS",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Changes · s stage / u unstage · Enter inspect",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                               ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "› Workspace",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     M  public/logo.png                                                                      ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Changes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "›   M  src/auth.ts",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Branches         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     ?  docs/token-refresh.md                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Sync             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "   + M  src/types.ts                                                                         ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   History          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Integrate        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Stash            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Worktrees        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Recovery         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Accounts         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Remotes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tags             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Pull requests    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Patches          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Signing          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Submodules       │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   LFS              │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Bisect           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Notes            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tools            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   System           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " └────────────────────┘",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "└─────────────────────────────────────────────────────────────────────────────────────────────┘",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Tab: Changes / results · Shift+Tab goes back",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Space opens actions · : finds any workflow · ? explains keys",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Space actions · : commands · / search · j/k move · Enter open · ? help · Ctrl+c exit",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "after-k",
+      "keys": [
+        "k"
+      ],
+      "lines": [
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "MULTI-GIT v5.2.1",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "NORMAL",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " acme-api  /  main  ↑2 ↓0  · origin/main",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " /home/jane/code/acme-api",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Auto-pull: Off  ·  Account: Work",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ┌────────────────────┐",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "┌─────────────────────────────────────────────────────────────────────────────────────────────┐",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "WORKFLOWS",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Changes · s stage / u unstage · Enter inspect",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                               ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "› Workspace",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "›   M  public/logo.png",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                      ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Changes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     M  src/auth.ts                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Branches         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     ?  docs/token-refresh.md                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Sync             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "   + M  src/types.ts                                                                         ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   History          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Integrate        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Stash            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Worktrees        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Recovery         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Accounts         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Remotes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tags             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Pull requests    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Patches          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Signing          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Submodules       │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   LFS              │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Bisect           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Notes            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tools            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   System           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " └────────────────────┘",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "└─────────────────────────────────────────────────────────────────────────────────────────────┘",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Tab: Changes / results · Shift+Tab goes back",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Space opens actions · : finds any workflow · ? explains keys",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Space actions · : commands · / search · j/k move · Enter open · ? help · Ctrl+c exit",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "after-v",
+      "keys": [
+        "v"
+      ],
+      "lines": [
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "MULTI-GIT v5.2.1",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "SELECT",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " acme-api  /  main  ↑2 ↓0  · origin/main",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " /home/jane/code/acme-api",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Auto-pull: Off  ·  Account: Work",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ┌────────────────────┐",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "┌─────────────────────────────────────────────────────────────────────────────────────────────┐",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "WORKFLOWS",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Changes · s stage / u unstage · Enter inspect",
+            "fg": null,
+            "bg": null,
+            "bold": true
+          },
+          {
+            "text": "                                               ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │ ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "› Workspace",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "*   M  public/logo.png",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                      ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Changes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     M  src/auth.ts                                                                          ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Branches         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "     ?  docs/token-refresh.md                                                                ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Sync             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "   + M  src/types.ts                                                                         ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   History          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Integrate        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Stash            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Worktrees        │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Recovery         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Accounts         │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Remotes          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tags             │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Pull requests    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Patches          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Signing          │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Submodules       │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   LFS              │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Bisect           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Notes            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   Tools            │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │   System           │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " │                    │",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "                                                                                             ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "│",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " └────────────────────┘",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "└─────────────────────────────────────────────────────────────────────────────────────────────┘",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Tab: Changes / results · Shift+Tab goes back",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " ",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          },
+          {
+            "text": "Space opens actions · : finds any workflow · ? explains keys",
+            "fg": "#11a8cd",
+            "bg": null,
+            "bold": false
+          }
+        ],
+        [
+          {
+            "text": " Space actions · : commands · / search · j/k move · Enter open · ? help · Ctrl+c exit · 1 selected",
+            "fg": null,
+            "bg": null,
+            "bold": false
+          }
+        ]
+      ]
+    }
+  ]
+}

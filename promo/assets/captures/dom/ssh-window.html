@@ -1,0 +1,293 @@
+<!-- #ssh-modal -->
+<div id="ssh-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ssh-modal-title">
+    <div class="modal-card settings-card ssh-card">
+      <div class="modal-header settings-header">
+        <div>
+          <h2 id="ssh-modal-title">SSH Profile Manager</h2>
+          <p class="settings-subtitle">
+            A profile is an SSH key a repository fetches, pulls and pushes with. Commit identity is optional and separate from SSH authentication.
+          </p>
+        </div>
+        <button id="btn-close-ssh-modal" class="btn-close" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="settings-layout">
+        <nav id="ssh-nav" class="settings-nav" aria-label="SSH sections"><button class="settings-nav-item" data-section="profiles" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">key</span><span>Profiles</span></button><button class="settings-nav-item" data-section="add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span><span>Add a key</span></button><button class="settings-nav-item" data-section="rules" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">rule</span><span>Auto-select rules</span></button><button class="settings-nav-item active" data-section="vault" type="button" aria-current="true"><span class="material-symbols-outlined" style="font-size: 18px;">lock</span><span>Passphrase vault</span></button></nav>
+        <div class="modal-body settings-body" id="ssh-body">
+
+          <section class="settings-section" data-section="profiles" aria-labelledby="ssh-section-profiles">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">key</span></span>
+              <div>
+                <h3 id="ssh-section-profiles">Profiles</h3>
+                <p class="settings-section-subtitle">Pick one for a repository from the SSH Key menu in the header.</p>
+              </div>
+            </header>
+            <div class="settings-group ssh-profiles-group">
+              <div class="table-wrapper">
+                <table class="ssh-profiles-table">
+                  <colgroup>
+                    <col style="width: 21%;">
+                    <col style="width: 39%;">
+                    <col style="width: 12%;">
+                    <col style="width: 28%;">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Profile Name</th>
+                      <th>Key Path</th>
+                      <th>Password</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ssh-profiles-table-body"><tr data-profile-id="personal"><td class="col-profile-name"><button class="profile-star" title="Make default" data-action="make-default" data-profile-id="personal" type="button" aria-pressed="false" aria-label="Make default"><span class="material-symbols-outlined" style="font-size: 16px;">star</span></button><span class="profile-dot" style="display: inline-block; margin-right: 6px; vertical-align: middle; background-color: rgb(124, 60, 221);"></span>Personal<div title="Jane Doe &lt;jane@example.com&gt;" style="font-size: 0.6875rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis;">Jane Doe &lt;jane@example.com&gt;</div></td><td class="col-key-path" title="/home/jane/.ssh/id_ed25519_personal">/home/jane/.ssh/id_ed25519_personal</td><td class="col-password" title="No passphrase stored">Not saved</td><td class="action-buttons"><button class="btn btn-secondary btn-sm" title="Edit profile" data-action="edit" data-profile-id="personal" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">edit</span></button><button class="btn btn-secondary btn-sm" title="Ask the host which account this key authenticates as" data-action="verify" data-profile-id="personal" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">verified_user</span></button><button class="btn btn-secondary btn-sm" title="Copy public key" data-action="copy-key" data-profile-id="personal" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span></button><button class="btn btn-danger btn-sm" title="Delete SSH profile" data-action="delete" data-profile-id="personal" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span></button><button class="btn btn-secondary btn-sm" title="More actions" data-action="more" data-profile-id="personal" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">more_vert</span></button><div class="profile-row-menu hidden" data-row-menu="personal"><button class="btn btn-menu-row" data-action="test" data-profile-id="personal" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">fact_check</span><span>Test key file</span></button><button class="btn btn-menu-row" data-action="copy-path" data-profile-id="personal" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">link</span><span>Copy public key path</span></button><button class="btn btn-menu-row" data-action="open-folder" data-profile-id="personal" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">folder_open</span><span>Open key folder</span></button></div></td></tr><tr data-profile-id="work"><td class="col-profile-name"><button class="profile-star" title="Make default" data-action="make-default" data-profile-id="work" type="button" aria-pressed="false" aria-label="Make default"><span class="material-symbols-outlined" style="font-size: 16px;">star</span></button><span class="profile-dot" style="display: inline-block; margin-right: 6px; vertical-align: middle; background-color: rgb(221, 63, 60);"></span>Work<div title="Jane Doe &lt;jane@acme.example&gt;" style="font-size: 0.6875rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis;">Jane Doe &lt;jane@acme.example&gt;</div></td><td class="col-key-path" title="/home/jane/.ssh/id_ed25519_work">/home/jane/.ssh/id_ed25519_work</td><td class="col-password" title="No passphrase stored">Not saved</td><td class="action-buttons"><button class="btn btn-secondary btn-sm" title="Edit profile" data-action="edit" data-profile-id="work" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">edit</span></button><button class="btn btn-secondary btn-sm" title="Ask the host which account this key authenticates as" data-action="verify" data-profile-id="work" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">verified_user</span></button><button class="btn btn-secondary btn-sm" title="Copy public key" data-action="copy-key" data-profile-id="work" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span></button><button class="btn btn-danger btn-sm" title="Delete SSH profile" data-action="delete" data-profile-id="work" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span></button><button class="btn btn-secondary btn-sm" title="More actions" data-action="more" data-profile-id="work" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">more_vert</span></button><div class="profile-row-menu hidden" data-row-menu="work"><button class="btn btn-menu-row" data-action="test" data-profile-id="work" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">fact_check</span><span>Test key file</span></button><button class="btn btn-menu-row" data-action="copy-path" data-profile-id="work" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">link</span><span>Copy public key path</span></button><button class="btn btn-menu-row" data-action="open-folder" data-profile-id="work" type="button"><span class="material-symbols-outlined" style="font-size: 16px;">folder_open</span><span>Open key folder</span></button></div></td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="settings-group">
+              <label class="settings-item" id="ssh-config-setting-row">
+                <span class="settings-item-text">
+                  <span class="settings-item-label">Keep ~/.ssh/config in sync</span>
+                  <span class="settings-item-desc">Multi-Git maintains a managed block there, so terminals and IDEs use the same key as the active profile. Turn off if you manage your SSH config yourself.</span>
+                </span>
+                <span class="settings-item-control">
+                  <input type="checkbox" id="ssh-manage-config-checkbox" class="settings-switch" role="switch">
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-section="add" aria-labelledby="ssh-section-add">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">add_circle</span></span>
+              <div>
+                <h3 id="ssh-section-add">Add a key</h3>
+                <p class="settings-section-subtitle">Both options create a profile you can select for a repository.</p>
+              </div>
+            </header>
+            <div class="settings-group">
+              <div class="settings-item">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Use a key you already have</span>
+                  <span class="settings-item-desc">Point Multi-Git at a private key file, then test and save it.</span>
+                </div>
+                <div class="settings-item-control">
+                  <button type="button" id="btn-show-add-key" class="btn btn-secondary" aria-expanded="false" aria-controls="ssh-existing-key-section">
+                    <span class="material-symbols-outlined">folder_open</span>
+                    <span>Add Key From File</span>
+                  </button>
+                </div>
+              </div>
+              <div class="settings-item">
+                <div class="settings-item-text">
+                  <span class="settings-item-label">Create a new key</span>
+                  <span class="settings-item-desc">Generates a key pair and its profile. Copy the public key to your Git host afterwards.</span>
+                </div>
+                <div class="settings-item-control">
+                  <button type="button" id="btn-show-generate-key" class="btn btn-primary" aria-expanded="false" aria-controls="ssh-generate-section">
+                    <span class="material-symbols-outlined">vpn_key</span>
+                    <span>Generate Key</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <section id="ssh-existing-key-section" class="ssh-key-form-section hidden">
+              <div class="ssh-key-form-header">
+                <div>
+                  <h3 id="ssh-existing-key-heading">Add an Existing Key</h3>
+                  <p class="modal-desc">Point Multi-Git to a private key file you already use, then test and save its profile.</p>
+                </div>
+                <button type="button" id="btn-hide-add-key" class="btn-close" aria-label="Close existing key form">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <form id="ssh-profile-form" class="modal-form">
+                <input type="hidden" id="ssh-profile-id" value="">
+
+                <div class="form-group">
+                  <label for="ssh-label">Profile Name / Label</label>
+                  <input type="text" id="ssh-label" placeholder="e.g. Work GitLab, Personal GitHub" required="">
+                </div>
+
+                <div class="form-group">
+                  <label for="ssh-key-path">Path to Private Key</label>
+                  <input type="text" id="ssh-key-path" placeholder="e.g. /home/you/.ssh/id_ed25519" required="">
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="ssh-user-name">Commit Name (optional)</label>
+                    <input type="text" id="ssh-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+                  </div>
+                  <div class="form-group">
+                    <label for="ssh-user-email">Commit Email (optional)</label>
+                    <input type="email" id="ssh-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="ssh-passphrase">SSH Passphrase (optional)</label>
+                  <div class="password-field">
+                    <input type="password" id="ssh-passphrase" placeholder="Enter passphrase to test or store">
+                    <button type="button" id="btn-ssh-passphrase-reveal" class="password-reveal" aria-controls="ssh-passphrase" aria-pressed="false" title="Show" aria-label="Show">
+                      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="keep-password-row">
+                  <input type="checkbox" id="ssh-keep-password">
+                  <label for="ssh-keep-password">Save passphrase in the encrypted vault</label>
+                </div>
+
+                <div class="form-actions">
+                  <button type="button" id="btn-test-ssh-form" class="btn btn-secondary">Test Key</button>
+                  <button type="button" id="btn-cancel-ssh" class="btn btn-secondary">Close Form</button>
+                  <button type="submit" id="btn-save-ssh" class="btn btn-primary">Save Profile</button>
+                </div>
+              </form>
+            </section>
+
+            <section id="ssh-generate-section" class="ssh-key-form-section generator-section hidden">
+              <div class="ssh-key-form-header">
+                <div>
+                  <h3>Generate a New SSH Key</h3>
+                  <p class="modal-desc">Create a new key pair, register its profile, then copy the public key to your Git host.</p>
+                </div>
+                <button type="button" id="btn-hide-generate-key" class="btn-close" aria-label="Close key generator">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div id="ssh-generate-feedback" class="inline-feedback hidden"></div>
+
+              <form id="ssh-generate-form" class="modal-form">
+                <div class="form-group">
+                  <label for="ssh-generate-label">Profile Name / Label</label>
+                  <input type="text" id="ssh-generate-label" placeholder="e.g. New GitHub Key" required="">
+                </div>
+
+                <div class="form-group">
+                  <label for="ssh-generate-key-name">Key File Name (optional)</label>
+                  <input type="text" id="ssh-generate-key-name" placeholder="e.g. id_ed25519_work">
+                </div>
+
+                <div class="form-group">
+                  <label for="ssh-generate-key-type">Key Type</label>
+                  <select id="ssh-generate-key-type">
+                    <option value="ed25519" selected="">ed25519 (recommended)</option>
+                    <option value="rsa">RSA 4096</option>
+                  </select>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="ssh-generate-user-name">Commit Name (optional)</label>
+                    <input type="text" id="ssh-generate-user-name" placeholder="e.g. Jane Doe" autocomplete="off">
+                  </div>
+                  <div class="form-group">
+                    <label for="ssh-generate-user-email">Commit Email (optional)</label>
+                    <input type="email" id="ssh-generate-user-email" placeholder="e.g. jane@work.com" autocomplete="off">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="ssh-generate-passphrase">Passphrase (optional)</label>
+                  <div class="password-field">
+                    <input type="password" id="ssh-generate-passphrase" placeholder="Leave empty for no passphrase">
+                    <button type="button" id="btn-ssh-generate-passphrase-reveal" class="password-reveal" aria-controls="ssh-generate-passphrase" aria-pressed="false" title="Show" aria-label="Show">
+                      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="keep-password-row">
+                  <input type="checkbox" id="ssh-generate-keep-password">
+                  <label for="ssh-generate-keep-password">Save passphrase in the encrypted vault</label>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" id="btn-generate-ssh" class="btn btn-primary">
+                    <span class="material-symbols-outlined">vpn_key</span>
+                    <span>Create Key + Profile</span>
+                  </button>
+                </div>
+              </form>
+
+              <div id="ssh-generated-result" class="generated-result hidden">
+                <h4>Last Generated Key</h4>
+                <div class="generated-result-grid">
+                  <div class="form-group">
+                    <label for="ssh-generated-private">Private Key</label>
+                    <input type="text" id="ssh-generated-private" readonly="">
+                  </div>
+                  <div class="form-group">
+                    <label for="ssh-generated-public">Public Key</label>
+                    <input type="text" id="ssh-generated-public" readonly="">
+                  </div>
+                </div>
+                <div class="form-actions generated-actions">
+                  <button type="button" id="btn-open-generated-location" class="btn btn-secondary">Open Key Folder</button>
+                  <button type="button" id="btn-copy-generated-private-path" class="btn btn-secondary">Copy Private Key Path</button>
+                  <button type="button" id="btn-copy-generated-public-path" class="btn btn-secondary">Copy Public Key Path</button>
+                  <button type="button" id="btn-copy-generated-public-key" class="btn btn-secondary">Copy Public Key</button>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="settings-section" data-section="rules" aria-labelledby="ssh-section-rules">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">rule</span></span>
+              <div>
+                <h3 id="ssh-section-rules">Auto-select rules</h3>
+                <p class="settings-section-subtitle">
+                  Pick the right profile when a repository opens, from its origin remote URL.
+                  For example <code>github.com/your-org</code> → Work account.
+                </p>
+              </div>
+            </header>
+            <div class="settings-group">
+              <div class="settings-item rule-add-row">
+                <input type="text" id="rule-match-input" placeholder="Remote URL contains… e.g. github.com/your-org" autocomplete="off" aria-label="Remote URL contains">
+                <div class="select-wrapper rule-profile-wrapper">
+                  <select id="rule-profile-select" aria-label="Profile to use"><option value="personal">Personal</option><option value="work">Work</option></select>
+                </div>
+                <button type="button" id="btn-add-rule" class="btn btn-secondary">
+                  <span class="material-symbols-outlined">add</span>
+                  <span>Add Rule</span>
+                </button>
+              </div>
+              <ul id="account-rules-list" class="account-rules-list"><li class="rule-item"><span class="rule-match" title="github.com/acme/">github.com/acme/</span><span class="material-symbols-outlined" style="font-size: 15px;">arrow_forward</span><span class="rule-account"><span class="profile-dot" style="background-color: rgb(221, 63, 60);"></span>Work</span><button class="btn btn-icon btn-sm rule-delete-btn" title="Delete rule" data-action="delete-rule" data-rule-id="r1"><span class="material-symbols-outlined" style="font-size: 14px;">delete</span></button></li><li class="rule-item"><span class="rule-match" title="github.com/jane/">github.com/jane/</span><span class="material-symbols-outlined" style="font-size: 15px;">arrow_forward</span><span class="rule-account"><span class="profile-dot" style="background-color: rgb(124, 60, 221);"></span>Personal</span><button class="btn btn-icon btn-sm rule-delete-btn" title="Delete rule" data-action="delete-rule" data-rule-id="r2"><span class="material-symbols-outlined" style="font-size: 14px;">delete</span></button></li></ul>
+            </div>
+          </section>
+
+          <section class="settings-section" data-section="vault" aria-labelledby="ssh-section-vault">
+            <header class="settings-section-header">
+              <span class="settings-section-icon"><span class="material-symbols-outlined">lock</span></span>
+              <div>
+                <h3 id="ssh-section-vault">Passphrase vault</h3>
+                <p class="settings-section-subtitle">Optional. Keeps SSH passphrases encrypted on this computer, behind one master key.</p>
+              </div>
+            </header>
+            <section id="vault-status-card" class="vault-status-card" data-vault-state="uninitialized">
+              <div class="vault-status-icon" aria-hidden="true">
+                <span id="vault-status-icon" class="material-symbols-outlined">lock</span>
+              </div>
+              <div class="vault-status-content">
+                <p id="vault-status-text" class="vault-status">Passphrase vault is not set up</p>
+                <p id="vault-status-detail" class="vault-status-detail">A vault is optional. Set one up only if you want Multi-Git to save SSH passphrases on this computer.</p>
+              </div>
+              <div class="vault-controls">
+                <button type="button" id="btn-setup-vault" class="btn btn-primary btn-sm">Set Up Vault</button>
+                <button type="button" id="btn-unlock-vault" class="btn btn-secondary btn-sm hidden">Unlock Vault</button>
+                <button type="button" id="btn-lock-vault" class="btn btn-secondary btn-sm hidden">Lock Vault</button>
+              </div>
+            </section>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>

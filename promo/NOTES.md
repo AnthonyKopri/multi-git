@@ -6,7 +6,7 @@ Session branch: promo/video-2
 
 - [x] M0 orient — 2026-09-25T02:43Z — `promo: start notes`
 - [x] M1 environment — 2026-09-25T02:48Z — `promo: scaffold the Remotion project`
-- [ ] M2 demo world and captures
+- [x] M2 demo world and captures — 2026-09-25T03:18Z — `promo: capture the demo world and real UI/CLI output`
 - [ ] M3 timing and audio
 - [ ] M4 scaffold and primitives
 - [ ] M5 rough cut
@@ -46,16 +46,65 @@ _(filled in as scenes land)_
   `.puppeteerrc.cjs` skips its browser download on Windows (re-capture is a
   Linux job) unless `MG_CAPTURE=1`.
 - **Remotion skills** installed with `npx remotion skills add` (kept out of git).
+- **Demo world.** Dates are anchored to the start of the current UTC day, so
+  same-day re-runs reproduce the same hashes. The Acme logo PNG is drawn by a
+  tiny built-in PNG encoder (blue, recoloured orange in the working tree).
+  `feature/login` forks at `main~2` (3 ahead, 2 behind, 5 files); the rebase
+  range `main~5..main` is linear with a `fixup!` whose target is in range.
+  Fake `refs/remotes/origin/*` refs give ahead/behind counts with no network,
+  plus a remote-only `origin/feature/export` for the montage.
+- **`ssh-keygen`** wasn't installed; `openssh-client` came from the Ubuntu
+  archive. The keys live only in the fake home.
+- **Safety Net's Recently Discarded** is stored under `os.tmpdir()`, so the
+  isolated env sets `TMPDIR` inside the fake home (no `/tmp` paths, and
+  rebuilds start empty).
+- **Captures** are WebP plates plus the live DOM of each region
+  (`assets/captures/dom/*.html`) and JSON from the API/CLI/MCP
+  (`assets/captures/data/`). The rebuild renders the real DOM under the real
+  (scoped) stylesheet and animates it, rather than hand-drawing the app.
+- **Privacy scan** allow-lists addresses that ship in the app's own
+  `public/index.html` (placeholder copy such as `jane@work.com`).
+- **TUI keys:** Space, Escape, j, k, v were sent. `s` would stage a file, so it
+  appears only as a keycap in the film.
 - The session's own branch is `promo/video-2` itself (`git branch --show-current`
   at the start), so the morning fast-forward is a no-op.
 
 ## Spec issues and deviations
 
-_(none yet)_
+1. **Brief §3.4, `POST /api/config/ssh/repo-setup`** does not select an
+   account: it is a read-only preflight (`wouldOverwrite`). The header dropdown
+   really calls `POST /api/config/ssh/apply-ssh-config` then
+   `POST /api/git/identity`; the backend's own record (what the TUI reads) is
+   `POST /api/workflows/ssh`. `selectAccount()` in `make-demo-world.mjs` does
+   all three.
+2. **Fact sheet, SSH Key dropdown:** "the rows Should use and Using (each with a
+   Check button)". The app's markup has **Change** on *Should use* and
+   **Check** on *Using*. The film follows the app (rule 2: real labels).
+3. **Codex label.** The agent catalogue calls it "Codex CLI"; the spec names
+   the card "Codex". The seeded `externalAgents` entry is labelled `Codex` (a
+   user-editable label), so the real window says "Codex".
+4. **Restore confirm title** is "Restore ref" in the app; the spec gives only
+   the body. Real values: *Reset main back to e5e83a4b? … anything committed
+   since "Reset (hard) to 021fd393" goes with it.*
+5. **Merge preview** in a dirty tree adds "Note: 3 uncommitted changes in
+   tracked files…". The film omits that line (a clean tree doesn't show it).
+6. **The rebase planner** rejects `HEAD~5` as a base ("a character Git does
+   not allow in a ref"), so captures pass the resolved hash. The spell text
+   still shows `git rebase -i HEAD~5`, which is what a user would type.
+7. **Browser mode can't open *Launch a coding agent*** (it needs
+   `desktopApi.launchAgent`). The capture stubs only that function for the one
+   step, so the real dialog renders; nothing is launched.
 
 ## Captured vs. rebuilt
 
-_(filled in at M2 and M5)_
+Captured (real app, `npm run capture`): 25 WebP plates, 29 DOM snapshots and
+19 data files; see `assets/captures/manifest.json`. Terminal records for scene
+F come from `GET /api/logs/stream` after the scene-like actions (account switch,
+stage selection, discard selection, commit, hard reset, restore, worktree add).
+The TUI is real `multi-git tui` output in tmux, and the MCP exchange is a real
+stdio transcript.
+
+_(Which film shots use plates vs. the live rebuild: filled in at M5.)_
 
 ## Known issues and TODOs
 

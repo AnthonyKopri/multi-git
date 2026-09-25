@@ -1,0 +1,35 @@
+{
+  "command": "multi-git ssh.select --repo ~/code/acme-api --dry-run --input -",
+  "input": {
+    "profileId": "personal"
+  },
+  "output": {
+    "schemaVersion": 1,
+    "success": true,
+    "command": "ssh.select",
+    "data": {
+      "request": {
+        "command": "ssh.select",
+        "url": "http://127.0.0.1:4173/api/workflows/ssh",
+        "method": "POST",
+        "headers": {
+          "x-repo-path": "L2hvbWUvamFuZS9jb2RlL2FjbWUtYXBp",
+          "x-repo-path-encoding": "base64",
+          "Content-Type": "application/json"
+        },
+        "dryRun": true,
+        "body": "{\"profileId\":\"personal\"}"
+      },
+      "effects": {
+        "mutates": true,
+        "local": [
+          "app-config",
+          "repo-config",
+          "ssh-agent"
+        ],
+        "remote": "none"
+      },
+      "note": "Preview only; server validation and execution have not run."
+    }
+  }
+}

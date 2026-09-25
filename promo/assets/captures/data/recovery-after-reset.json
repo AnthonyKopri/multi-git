@@ -1,0 +1,385 @@
+{
+  "success": true,
+  "points": [
+    {
+      "id": "muge3oyr-3q02mr",
+      "operation": "reset",
+      "label": "Reset (hard) to 021fd393",
+      "refs": {
+        "HEAD": "e5e83a4b2f4d3d805056ec112d476240e8537567",
+        "refs/heads/main": "e5e83a4b2f4d3d805056ec112d476240e8537567"
+      },
+      "headRef": "refs/heads/main",
+      "createdAt": "2026-09-25T03:17:05.955Z",
+      "expiresAt": "2026-10-09T03:17:05.955Z"
+    },
+    {
+      "id": "muge2dhg-gkrhwp",
+      "operation": "branch-delete",
+      "label": "Delete branch spike/old-cache",
+      "refs": {
+        "HEAD": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+        "refs/heads/main": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+        "refs/heads/spike/old-cache": "835e040e8a614af6daaf96fe42fb0291c7cfe7b3"
+      },
+      "headRef": "refs/heads/main",
+      "createdAt": "2026-09-25T03:16:04.420Z",
+      "expiresAt": "2026-10-09T03:16:04.420Z"
+    }
+  ],
+  "reflog": [
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{0}",
+      "oid": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
+      "previousOid": "e5e83a4b2f4d3d805056ec112d476240e8537567",
+      "action": "reset",
+      "subject": "moving to 021fd393d5f3c98da4e589df9b685b2e66b9be96",
+      "timestamp": "2026-09-21T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{1}",
+      "oid": "e5e83a4b2f4d3d805056ec112d476240e8537567",
+      "previousOid": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+      "action": "commit",
+      "subject": "fix(auth): refresh the token before expiry",
+      "timestamp": "2026-09-25T03:17:05+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{2}",
+      "oid": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+      "previousOid": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+      "action": "reset",
+      "subject": "moving to HEAD",
+      "timestamp": "2026-09-24T02:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{3}",
+      "oid": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+      "previousOid": "76ec391b6001220c4eae759eaa8eeeeb6b6cb876",
+      "action": "checkout",
+      "subject": "moving from feature/login to main",
+      "timestamp": "2026-09-24T02:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{4}",
+      "oid": "76ec391b6001220c4eae759eaa8eeeeb6b6cb876",
+      "previousOid": "7a70c9ba303211ae1f2bff368d40c7645a5a210d",
+      "action": "commit",
+      "subject": "test(auth): cover the login form",
+      "timestamp": "2026-09-24T05:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{5}",
+      "oid": "7a70c9ba303211ae1f2bff368d40c7645a5a210d",
+      "previousOid": "2d31f7c2fa0ffe9888b0348419e146011584cc42",
+      "action": "commit",
+      "subject": "feat(auth): validate the login fields",
+      "timestamp": "2026-09-23T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{6}",
+      "oid": "2d31f7c2fa0ffe9888b0348419e146011584cc42",
+      "previousOid": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
+      "action": "commit",
+      "subject": "feat(auth): add login form",
+      "timestamp": "2026-09-22T05:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{7}",
+      "oid": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
+      "previousOid": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+      "action": "checkout",
+      "subject": "moving from main to feature/login",
+      "timestamp": "2026-09-21T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{8}",
+      "oid": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
+      "previousOid": "7637b351049ce24c51831e053c167f2323037b0b",
+      "action": "commit",
+      "subject": "docs: add API usage",
+      "timestamp": "2026-09-24T02:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{9}",
+      "oid": "7637b351049ce24c51831e053c167f2323037b0b",
+      "previousOid": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
+      "action": "commit",
+      "subject": "fixup! feat(search): highlight matched terms",
+      "timestamp": "2026-09-23T06:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{10}",
+      "oid": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
+      "previousOid": "835e040e8a614af6daaf96fe42fb0291c7cfe7b3",
+      "action": "commit",
+      "subject": "feat(search): highlight matched terms",
+      "timestamp": "2026-09-21T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{11}",
+      "oid": "835e040e8a614af6daaf96fe42fb0291c7cfe7b3",
+      "previousOid": "e7d06a2e78ebfe51c2294804afb48940713470a8",
+      "action": "commit",
+      "subject": "refactor(auth): extract the token helpers",
+      "timestamp": "2026-09-19T04:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{12}",
+      "oid": "e7d06a2e78ebfe51c2294804afb48940713470a8",
+      "previousOid": "18d8d1193193a411c8195a3c5fdb55912f7bdd4e",
+      "action": "commit",
+      "subject": "feat(api): add rate limiting",
+      "timestamp": "2026-09-17T01:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{13}",
+      "oid": "18d8d1193193a411c8195a3c5fdb55912f7bdd4e",
+      "previousOid": "172a150660a0afe53ba159ba51b95d6217c9a369",
+      "action": "checkout",
+      "subject": "moving from feature/search to main",
+      "timestamp": "2026-09-15T05:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{14}",
+      "oid": "172a150660a0afe53ba159ba51b95d6217c9a369",
+      "previousOid": "1b723dcd2136821ec524499f5c003f41f76fa3a9",
+      "action": "commit",
+      "subject": "perf(search): cache results",
+      "timestamp": "2026-09-17T07:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{15}",
+      "oid": "1b723dcd2136821ec524499f5c003f41f76fa3a9",
+      "previousOid": "898213e08d88069b043d461be6df573343cba6ca",
+      "action": "commit",
+      "subject": "feat(search): rank by recency",
+      "timestamp": "2026-09-16T02:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{16}",
+      "oid": "898213e08d88069b043d461be6df573343cba6ca",
+      "previousOid": "18d8d1193193a411c8195a3c5fdb55912f7bdd4e",
+      "action": "checkout",
+      "subject": "moving from main to feature/search",
+      "timestamp": "2026-09-12T04:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{17}",
+      "oid": "18d8d1193193a411c8195a3c5fdb55912f7bdd4e",
+      "previousOid": "6d73fe04749662cd63bbb10366b19d52e4929053",
+      "action": "merge fix/token-refresh",
+      "subject": "Merge made by the 'ort' strategy.",
+      "timestamp": "2026-09-15T05:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{18}",
+      "oid": "6d73fe04749662cd63bbb10366b19d52e4929053",
+      "previousOid": "880e4a206c63e54cd3a1f9600c5c34711b9680bd",
+      "action": "commit",
+      "subject": "feat(api): add request logging",
+      "timestamp": "2026-09-15T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{19}",
+      "oid": "880e4a206c63e54cd3a1f9600c5c34711b9680bd",
+      "previousOid": "83c33c1336570314af1deb3702598dd2ebda162d",
+      "action": "commit",
+      "subject": "chore(deps): bump jest",
+      "timestamp": "2026-09-14T02:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{20}",
+      "oid": "83c33c1336570314af1deb3702598dd2ebda162d",
+      "previousOid": "4705de3593e4fcca0316e36e4f7d178d67d29d89",
+      "action": "checkout",
+      "subject": "moving from fix/token-refresh to main",
+      "timestamp": "2026-09-13T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{21}",
+      "oid": "4705de3593e4fcca0316e36e4f7d178d67d29d89",
+      "previousOid": "34086b6aeac46d89676d31149c0eefb2aa3ab4b4",
+      "action": "commit",
+      "subject": "test(auth): cover the token retry",
+      "timestamp": "2026-09-15T08:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{22}",
+      "oid": "34086b6aeac46d89676d31149c0eefb2aa3ab4b4",
+      "previousOid": "83c33c1336570314af1deb3702598dd2ebda162d",
+      "action": "commit",
+      "subject": "fix(auth): retry the token fetch once",
+      "timestamp": "2026-09-14T06:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{23}",
+      "oid": "83c33c1336570314af1deb3702598dd2ebda162d",
+      "previousOid": "83c33c1336570314af1deb3702598dd2ebda162d",
+      "action": "checkout",
+      "subject": "moving from main to fix/token-refresh",
+      "timestamp": "2026-09-13T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{24}",
+      "oid": "83c33c1336570314af1deb3702598dd2ebda162d",
+      "previousOid": "c1b8458d99c90acd0c924b9a6aaf8ed64e55cae4",
+      "action": "merge feature/search",
+      "subject": "Merge made by the 'ort' strategy.",
+      "timestamp": "2026-09-13T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{25}",
+      "oid": "c1b8458d99c90acd0c924b9a6aaf8ed64e55cae4",
+      "previousOid": "fbba641e3bf4ace6e0cc2cd23ecec91c1d5a09b1",
+      "action": "commit",
+      "subject": "ci: run tests on pull requests",
+      "timestamp": "2026-09-12T01:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{26}",
+      "oid": "fbba641e3bf4ace6e0cc2cd23ecec91c1d5a09b1",
+      "previousOid": "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8",
+      "action": "commit",
+      "subject": "fix(api): return 404 for unknown routes",
+      "timestamp": "2026-09-11T05:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{27}",
+      "oid": "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8",
+      "previousOid": "898213e08d88069b043d461be6df573343cba6ca",
+      "action": "checkout",
+      "subject": "moving from feature/search to main",
+      "timestamp": "2026-09-10T09:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{28}",
+      "oid": "898213e08d88069b043d461be6df573343cba6ca",
+      "previousOid": "cd3df4465f3949df321993431184ce728b2a3c4c",
+      "action": "commit",
+      "subject": "feat(search): add a query parser",
+      "timestamp": "2026-09-12T04:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{29}",
+      "oid": "cd3df4465f3949df321993431184ce728b2a3c4c",
+      "previousOid": "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8",
+      "action": "commit",
+      "subject": "feat(search): index titles",
+      "timestamp": "2026-09-11T02:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{30}",
+      "oid": "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8",
+      "previousOid": "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8",
+      "action": "checkout",
+      "subject": "moving from main to feature/search",
+      "timestamp": "2026-09-10T09:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{31}",
+      "oid": "9b61c9d01bb23eb93a79ce1cda308196b66f8fe8",
+      "previousOid": "8da6306a8f82189df5b53f7b96e7743d227c5870",
+      "action": "commit",
+      "subject": "docs: describe local setup",
+      "timestamp": "2026-09-10T09:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{32}",
+      "oid": "8da6306a8f82189df5b53f7b96e7743d227c5870",
+      "previousOid": "931a002dc489b5af5fb69c7204adc0abd5548e24",
+      "action": "commit",
+      "subject": "test(api): cover health endpoint",
+      "timestamp": "2026-09-10T07:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{33}",
+      "oid": "931a002dc489b5af5fb69c7204adc0abd5548e24",
+      "previousOid": "f8d492580c6e02a9507b063f77a78c30408e1b3f",
+      "action": "commit",
+      "subject": "refactor(api): split handlers",
+      "timestamp": "2026-09-09T04:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{34}",
+      "oid": "f8d492580c6e02a9507b063f77a78c30408e1b3f",
+      "previousOid": "fa6a28bed6e353b7950aa1f22751fe8e8faa3587",
+      "action": "commit",
+      "subject": "chore: add prettier config",
+      "timestamp": "2026-09-08T01:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{35}",
+      "oid": "fa6a28bed6e353b7950aa1f22751fe8e8faa3587",
+      "previousOid": "9c9883c4af5e077be0520447cfb175d1963eadac",
+      "action": "commit",
+      "subject": "feat(auth): add session store",
+      "timestamp": "2026-09-07T06:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{36}",
+      "oid": "9c9883c4af5e077be0520447cfb175d1963eadac",
+      "previousOid": "9752d972b1994394f6da79866bbde85f454f70aa",
+      "action": "commit",
+      "subject": "chore(deps): bump express",
+      "timestamp": "2026-09-06T03:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{37}",
+      "oid": "9752d972b1994394f6da79866bbde85f454f70aa",
+      "previousOid": "9de908c2a54bb8c45e2b219841a5a3ecaa541e2a",
+      "action": "commit",
+      "subject": "feat(api): add health endpoint",
+      "timestamp": "2026-09-05T05:00:00+00:00"
+    },
+    {
+      "ref": "HEAD",
+      "selector": "HEAD@{38}",
+      "oid": "9de908c2a54bb8c45e2b219841a5a3ecaa541e2a",
+      "previousOid": null,
+      "action": "commit (initial)",
+      "subject": "chore: initial commit",
+      "timestamp": "2026-09-04T02:00:00+00:00"
+    }
+  ],
+  "retentionDays": 14,
+  "operationInProgress": false
+}

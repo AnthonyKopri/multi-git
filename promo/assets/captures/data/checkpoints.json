@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "checkpoints": [
+    {
+      "id": "1790306164409-d73697",
+      "label": "Delete branch spike/old-cache",
+      "head": "86bf7785",
+      "createdAt": 1790306164409
+    }
+  ]
+}
