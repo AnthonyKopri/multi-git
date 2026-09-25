@@ -10,24 +10,24 @@
     "Promo": {
       "width": 1920, "height": 1080, "audio": true, "counterLabel": true, "fadeOutFrames": 20,
       "arrangement": [
-        { "section": "coldOpen", "fromBar": 1, "toBar": 6 },
-        { "section": "lanes", "fromBar": 7, "toBar": 13 },
-        { "section": "reveal", "fromBar": 14, "toBar": 17 },
-        { "section": "sceneA", "fromBar": 18, "toBar": 23 },
-        { "section": "sceneB", "fromBar": 24, "toBar": 28 },
-        { "section": "sceneC", "fromBar": 29, "toBar": 35 },
-        { "section": "sceneD", "fromBar": 36, "toBar": 42 },
-        { "section": "sceneE", "fromBar": 43, "toBar": 49 },
-        { "section": "sceneF", "fromBar": 50, "toBar": 53 },
-        { "section": "montage", "fromBar": 54, "toBar": 59 },
-        { "section": "twoLanes", "fromBar": 60, "toBar": 62 },
-        { "section": "stinger", "fromBar": 63, "toBar": 64 },
-        { "section": "checklist", "fromBar": 65, "toBar": 68 },
-        { "section": "endCard", "fromBar": 69, "toBar": 73 }
+        { "section": "coldOpen", "fromBar": 1, "toBar": 5 },
+        { "section": "lanes", "fromBar": 6, "toBar": 11 },
+        { "section": "reveal", "fromBar": 12, "toBar": 15 },
+        { "section": "sceneA", "fromBar": 16, "toBar": 21 },
+        { "section": "sceneB", "fromBar": 22, "toBar": 26 },
+        { "section": "sceneC", "fromBar": 27, "toBar": 32 },
+        { "section": "sceneD", "fromBar": 33, "toBar": 38 },
+        { "section": "sceneE", "fromBar": 39, "toBar": 44 },
+        { "section": "sceneF", "fromBar": 45, "toBar": 48 },
+        { "section": "montage", "fromBar": 49, "toBar": 54 },
+        { "section": "twoLanes", "fromBar": 55, "toBar": 57 },
+        { "section": "stinger", "fromBar": 58, "toBar": 59 },
+        { "section": "checklist", "fromBar": 60, "toBar": 63 },
+        { "section": "endCard", "fromBar": 64, "toBar": 68 }
       ]
     },
     "Promo30": {
-      "width": 1920, "height": 1080, "audio": true,
+      "width": 1920, "height": 1080, "audio": true, "fadeOutFrames": 15,
       "arrangement": [
         { "section": "coldOpen30", "fromBar": 1, "toBar": 2 },
         { "section": "jab30", "fromBar": 3, "toBar": 3 },
@@ -40,13 +40,12 @@
       ]
     },
     "Vertical": {
-      "width": 1080, "height": 1920, "audio": true,
+      "width": 1080, "height": 1920, "audio": true, "fadeOutFrames": 15,
       "arrangement": [
         { "section": "hookV", "fromBar": 1, "toBar": 1 },
         { "section": "splitV", "fromBar": 2, "toBar": 2 },
         { "section": "revealV", "fromBar": 3, "toBar": 3 },
-        { "section": "taglineV", "fromBar": 4, "toBar": 4 },
-        { "section": "sceneAV", "fromBar": 5, "toBar": 6 },
+        { "section": "sceneAV", "fromBar": 4, "toBar": 6 },
         { "section": "stingerV", "fromBar": 7, "toBar": 7 },
         { "section": "endCardV", "fromBar": 8, "toBar": 10 }
       ]
@@ -65,15 +64,15 @@
   },
   "sections": {
     "coldOpen": {
-      "scene": "ColdOpen", "bars": 6,
-      "music": { "type": "coldOpen", "dropout": [2, 4], "dropoutUntil": [3, 4], "shatterBar": 5 },
-      "cues": { "push": [1, 1], "pushError": [1, 3], "reset": [2, 1], "resetOut": [2, 2], "dropout": [2, 4], "wait": [3, 1], "rebase": [3, 4], "vimFlood": [3, 4, 12], "conflict": [4, 2], "shatter": [5, 1], "line1": [5, 1], "line2": [5, 3] },
+      "scene": "ColdOpen", "bars": 5,
+      "music": { "type": "coldOpen", "dropout": [2, 4], "dropoutUntil": [3, 3], "shatterAt": [4, 3] },
+      "cues": { "push": [1, 1], "pushError": [1, 3], "reset": [2, 1], "resetOut": [2, 2], "dropout": [2, 4], "wait": [3, 1], "rebase": [3, 3], "vimFlood": [3, 3, 12], "conflict": [4, 1], "shatter": [4, 3], "line1": [4, 3], "line2": [5, 1] },
       "sfx": [["clatter", "push", 0, 0.45], ["glitch", "pushError", 0, 0.6], ["clatter", "reset", 0, 0.45], ["glitch", "resetOut", 0, 0.3], ["clatter", "rebase", 0, 0.45], ["glitch", "rebase", 0, 0.4], ["glitch", "conflict", 0, 0.6], ["shatter", "shatter", 0, 0.7]]
     },
     "lanes": {
-      "scene": "Lanes", "bars": 7,
-      "music": { "type": "lanes", "jabBar": 5, "jabHits": [[5, 3], [6, 1], [6, 3], [7, 1]] },
-      "cues": { "labels": [1, 1], "cyan1": [1, 1], "indigo1": [1, 2], "cyan2": [2, 3], "indigo2": [2, 4], "cyan3": [3, 4], "indigo3": [4, 1], "jab": [5, 3], "q1": [5, 3], "q2": [6, 1], "q3": [6, 3], "q4": [7, 1] },
+      "scene": "Lanes", "bars": 6,
+      "music": { "type": "lanes", "jabBar": 4, "jabHits": [[4, 4], [5, 2], [5, 4], [6, 2]] },
+      "cues": { "labels": [1, 1], "cyan1": [1, 1], "indigo1": [1, 2], "cyan2": [2, 2], "indigo2": [2, 3], "cyan3": [3, 3], "indigo3": [3, 4], "jab": [4, 4], "q1": [4, 4], "q2": [5, 2], "q3": [5, 4], "q4": [6, 2] },
       "sfx": [["swish", "cyan1", 0, 0.22], ["swish", "indigo1", 0, 0.22], ["swish", "cyan2", 0, 0.22], ["swish", "indigo2", 0, 0.22], ["swish", "cyan3", 0, 0.22], ["swish", "indigo3", 0, 0.22]]
     },
     "reveal": {
@@ -97,23 +96,23 @@
       "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 3, 2], ["click", "sel1", 0, 0.45], ["click", "sel2", 0, 0.45], ["click", "sel3", 0, 0.45], ["click", "stage", -2, 0.5], ["click", "discardSel", 0, 0.4], ["click", "discard", -2, 0.42], ["thock", "keys", 0, 0.42], ["pop", "commit", 0, 0.4], ["swish", "wordDiff", 0, 0.25], ["swish", "imageDiff", 0, 0.25]]
     },
     "sceneC": {
-      "scene": "SceneC", "bars": 7,
+      "scene": "SceneC", "bars": 6,
       "music": { "type": "groove", "fill": true, "tapeStop": [3, 3] },
-      "cues": { "oops": [1, 1], "fall": [1, 2], "spell": [2, 1], "collapse": [2, 3], "pickPoint": [2, 4, 12], "confirm": [3, 1], "restore": [3, 3], "rewind": [3, 3, 6], "land": [4, 1], "back": [4, 2], "headline": [5, 1], "newPoint": [5, 3], "sub": [5, 3], "card": [6, 2] },
+      "cues": { "oops": [1, 1], "fall": [1, 2], "spell": [2, 1], "collapse": [2, 3], "pickPoint": [2, 4, 12], "confirm": [3, 1], "restore": [3, 3], "rewind": [3, 3, 6], "land": [4, 1], "back": [4, 2], "headline": [5, 1], "newPoint": [5, 3], "sub": [5, 3], "card": [6, 1] },
       "counter": [["collapse", "c", 11]],
       "sfx": [["clatter", "oops", 0, 0.35], ["boom", "oops", 0, 0.7], ["glitch", "fall", 0, 0.25], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 2, 2], ["click", "pickPoint", -2, 0.4], ["click", "restore", -2, 0.45], ["whir", "restore", 0, 0.5], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.4, 3, 4], ["pop", "newPoint", 0, 0.35], ["swish", "card", 0, 0.25]]
     },
     "sceneD": {
-      "scene": "SceneD", "bars": 7,
+      "scene": "SceneD", "bars": 6,
       "music": { "type": "groove", "fill": true },
-      "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "move1": [2, 3], "squash": [3, 1], "fixup": [3, 3], "drop": [4, 1], "autosquash": [4, 3], "start": [4, 4, 5], "splitPulse": [5, 1], "confirm": [5, 2], "splitClick": [5, 4], "split": [6, 1], "small": [6, 2] },
+      "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "move1": [2, 3], "squash": [3, 1], "fixup": [3, 3], "drop": [4, 1], "autosquash": [4, 3], "start": [4, 4, 5], "splitPulse": [5, 1], "confirm": [5, 2], "splitClick": [5, 4], "split": [6, 1], "small": [6, 1] },
       "counter": [["splitPulse", "d", 3]],
       "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["click", "move1", -2, 0.4], ["click", "squash", -2, 0.4], ["click", "fixup", -2, 0.4], ["click", "drop", -2, 0.4], ["click", "autosquash", -2, 0.35], ["click", "start", -2, 0.4], ["flip", "splitPulse", 3, 0.35, 9, 2], ["click", "confirm", -2, 0.45], ["click", "splitClick", -2, 0.5], ["thunk", "split", 0, 0.45]]
     },
     "sceneE": {
-      "scene": "SceneE", "bars": 7,
+      "scene": "SceneE", "bars": 6,
       "music": { "type": "groove", "fill": true },
-      "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "row1": [2, 2], "row2": [2, 3], "row3": [2, 4], "windows": [3, 1], "launcher": [4, 1], "card1": [4, 2], "card2": [4, 3], "card3": [4, 4], "fly": [5, 1], "terminals": [5, 2], "small": [5, 3] },
+      "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "row1": [2, 2], "row2": [2, 3], "row3": [2, 4], "windows": [3, 1], "launcher": [4, 1], "card1": [4, 2], "card2": [4, 3], "card3": [4, 4], "fly": [5, 1], "terminals": [5, 2], "small": [5, 2, 8] },
       "counter": [["collapse", "e", 11]],
       "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 5, 2], ["swish", "row2", 0, 0.25], ["swish", "row3", 0, 0.25], ["pop", "windows", 0, 0.35], ["click", "card1", 0, 0.45], ["click", "card2", 0, 0.45], ["click", "card3", 0, 0.45], ["whoosh", "fly", 0, 0.35], ["clatter", "terminals", 0, 0.25]]
     },
@@ -139,9 +138,9 @@
     },
     "stinger": {
       "scene": "Stinger", "bars": 2,
-      "music": { "type": "stinger", "silenceBeats": 4 },
-      "cues": { "cut": [1, 1], "shuffle": [1, 1], "land": [1, 2], "line1": [1, 2], "hit": [2, 1], "line2": [2, 1] },
-      "sfx": [["flip", "shuffle", 2, 0.18, 6, 2], ["flip", "land", 0, 0.3], ["hit", "hit", 0, 0.9]]
+      "music": { "type": "stinger", "silenceBeats": 3 },
+      "cues": { "cut": [1, 1], "shuffle": [1, 1], "land": [1, 1, 12], "line1": [1, 1, 12], "hit": [1, 4], "line2": [1, 4] },
+      "sfx": [["flip", "shuffle", 2, 0.18, 5, 2], ["flip", "land", 0, 0.3], ["hit", "hit", 0, 0.9]]
     },
     "checklist": {
       "scene": "Checklist", "bars": 4,
@@ -167,7 +166,7 @@
       "scene": "Lanes", "bars": 1, "variant": "jab",
       "music": { "type": "jab" },
       "cues": { "jab": [1, 1], "q1": [1, 1], "q2": [1, 2], "q3": [1, 3], "q4": [1, 4] },
-      "sfx": [["shatter", "jab", 0, 0.35]]
+      "sfx": [["whoosh", "jab", 0, 0.35]]
     },
     "reveal30": {
       "scene": "Reveal", "bars": 2, "variant": "short",
@@ -180,7 +179,7 @@
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "pick": [2, 2], "flipRows": [2, 3], "keys": [3, 1], "mismatch": [3, 2], "cancel": [3, 3], "stamp": [3, 4] },
       "counter": [["collapse", "a", 11]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.42], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
     },
     "sceneD30": {
       "scene": "SceneD", "bars": 2, "variant": "short",
@@ -228,18 +227,12 @@
       "cues": { "drop": [1, 1], "arrows": [1, 2], "disc": [1, 3] },
       "sfx": [["impact", "drop", 0, 0.8]]
     },
-    "taglineV": {
-      "scene": "Reveal", "bars": 1, "variant": "tagline",
-      "music": { "type": "groove" },
-      "cues": { "tag1": [1, 1], "tag2": [1, 3] },
-      "sfx": [["thunk", "tag1", 0, 0.35], ["thunk", "tag2", 0, 0.35]]
-    },
     "sceneAV": {
-      "scene": "SceneA", "bars": 2, "variant": "vertical",
+      "scene": "SceneA", "bars": 3, "variant": "vertical",
       "music": { "type": "groove", "fill": true },
-      "cues": { "headline": [1, 1], "spell": [1, 1, 4], "collapse": [1, 3], "pick": [1, 4], "keys": [2, 1], "mismatch": [2, 2], "cancel": [2, 3], "stamp": [2, 4] },
+      "cues": { "headline": [1, 1], "spell": [1, 1, 4], "collapse": [1, 4], "pick": [2, 2], "keys": [2, 3], "mismatch": [2, 3, 8], "cancel": [3, 1, 8], "stamp": [3, 1, 11] },
       "counter": [["collapse", "a", 11]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.42], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
     },
     "stingerV": {
       "scene": "Stinger", "bars": 1, "variant": "vertical",
@@ -250,8 +243,8 @@
     "endCardV": {
       "scene": "EndCard", "bars": 3, "variant": "vertical",
       "music": { "type": "end" },
-      "cues": { "sweep": [1, 1], "fuse": [1, 1, 10], "arrows": [1, 2], "wordmark": [1, 3], "cta": [1, 4] },
-      "sfx": [["swish", "sweep", 0, 0.35], ["impact", "fuse", 0, 0.4]]
+      "cues": { "sweep": [1, 1], "fuse": [1, 1, 10], "arrows": [1, 2], "wordmark": [1, 3], "cta": [1, 4], "click": [2, 3] },
+      "sfx": [["swish", "sweep", 0, 0.35], ["impact", "fuse", 0, 0.4], ["click", "click", -2, 0.5]]
     },
 
     "logoGif": {

@@ -89,7 +89,14 @@ export const ColdOpen: React.FC<SceneProps> = ({ placed }) => {
   const card = (
     <TerminalCard lines={lines} vim={vim} frame={frame} w={W} h={H} errFlash={errFlash} />
   );
+  // The two lanes burst out of the shattered card, sweep off the right edge
+  // (the tail follows the head out) and fade; the headline keeps a slow push.
   const laneStart = shatter + 3;
+  const sweep = (delay: number) => {
+    const t = prog(frame, laneStart + delay, 44);
+    return { head: 1.6 * (1 - (1 - t) ** 2.2), opacity: 1 - prog(frame, laneStart + delay + 28, 16), exit: true };
+  };
+  const push = 1 + 0.035 * prog(frame, shatter, placed.duration - shatter);
   return (
     <AbsoluteFill style={{ background: c.background }}>
       <Camera keys={[{ at: 0, x: width / 2, y: height / 2, scale: 1 }]} width={width} height={height} drift={0.03} driftFrames={placed.duration} shakes={errHits.concat(hasRebase ? [rebase] : [])}>
@@ -114,11 +121,13 @@ export const ColdOpen: React.FC<SceneProps> = ({ placed }) => {
       {shattered && (
         <>
           <LaneTrails width={width} height={height} lanes={[
-            { d: `M ${width / 2 - 100} ${height / 2} C ${width * 0.62} ${height * 0.2}, ${width * 0.85} ${height * 0.3}, ${width + 200} ${height * 0.33}`, color: c.cyan, head: prog(frame, laneStart, 20) * 1.05, tail: 0.6, width: 7 },
-            { d: `M ${width / 2 - 100} ${height / 2} C ${width * 0.62} ${height * 0.8}, ${width * 0.85} ${height * 0.7}, ${width + 200} ${height * 0.69}`, color: c.indigo, head: prog(frame, laneStart + 3, 20) * 1.05, tail: 0.6, width: 7 },
+            { d: `M ${width / 2 - 100} ${height / 2} C ${width * 0.62} ${height * 0.2}, ${width * 0.85} ${height * 0.3}, ${width + 200} ${height * 0.33}`, color: c.cyan, tail: 0.6, width: 7, ...sweep(0) },
+            { d: `M ${width / 2 - 100} ${height / 2} C ${width * 0.62} ${height * 0.8}, ${width * 0.85} ${height * 0.7}, ${width + 200} ${height * 0.69}`, color: c.indigo, tail: 0.6, width: 7, ...sweep(3) },
           ]} />
-          <Headline text={co.line1} at={cu.at('line1')} size={120} style={{ position: 'absolute', left: 96, top: height / 2 - 150, width: 1200 }} />
-          <Headline text={co.line2} at={cu.at('line2')} size={120} style={{ position: 'absolute', left: 96, top: height / 2 - 20, width: 1400 }} />
+          <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: `96px ${height / 2}px` }}>
+            <Headline text={co.line1} at={cu.at('line1')} size={120} style={{ position: 'absolute', left: 96, top: height / 2 - 150, width: 1200 }} />
+            <Headline text={co.line2} at={cu.at('line2')} size={120} style={{ position: 'absolute', left: 96, top: height / 2 - 20, width: 1400 }} />
+          </AbsoluteFill>
         </>
       )}
     </AbsoluteFill>
@@ -213,7 +222,7 @@ export const Lanes: React.FC<SceneProps> = ({ placed, variant }) => {
 };
 
 // ------------------------------------------------------------------ reveal --
-export const Reveal: React.FC<SceneProps> = ({ placed, variant }) => {
+export const Reveal: React.FC<SceneProps> = ({ placed }) => {
   const frame = useCurrentFrame();
   const c = useColors();
   const { copy, width, height } = useFilm();
@@ -221,7 +230,6 @@ export const Reveal: React.FC<SceneProps> = ({ placed, variant }) => {
   const cu = cues(placed.def);
   const vertical = height > width;
   const drop = cu.at('drop', 0);
-  const taglineOnly = variant === 'tagline';
   const wm = cu.has('wordmark') ? cu.at('wordmark') : 9999;
   const assemble = cu.has('header') ? cu.at('header') : 9999;
   // Logo placement: centred for the fusion, then it slides left for the wordmark.
@@ -229,36 +237,29 @@ export const Reveal: React.FC<SceneProps> = ({ placed, variant }) => {
   const baseSize = vertical ? 520 : 470;
   const size = lerp(baseSize, vertical ? 520 : 380, slide);
   const cx = vertical ? width / 2 : lerp(width / 2, 590, slide);
-  const cy = vertical ? (taglineOnly ? 620 : 820) : 480;
+  const cy = vertical ? 820 : 480;
   const lift = expoIn(prog(frame, assemble, 9));
   const base = logoPoint(TRUNK_BASE.x, TRUNK_BASE.y + 60, cx, cy, size);
   const dive = prog(frame, drop - 4, 7);
   const bloom = frame >= drop ? 0.4 * (1 - prog(frame, drop, 22)) : 0;
   return (
     <AbsoluteFill style={{ background: c.background }}>
-      <Camera keys={[{ at: 0, x: width / 2, y: height / 2, scale: 1 }]} width={width} height={height} drift={0.02} driftFrames={placed.duration} shakes={taglineOnly ? [] : [drop]}>
+      <Camera keys={[{ at: 0, x: width / 2, y: height / 2, scale: 1 }]} width={width} height={height} drift={0.02} driftFrames={placed.duration} shakes={[drop]}>
         <div style={{ position: 'absolute', inset: 0, opacity: 1 - lift, transform: `translateY(${-260 * lift}px)` }}>
-          {!taglineOnly && frame < drop + 16 && (
+          {frame < drop + 16 && (
             <LaneTrails width={width} height={height} lanes={[
               { d: `M -150 ${height * 0.12} C ${width * 0.25} ${height * 0.1}, ${base.x - 260} ${base.y + 120}, ${base.x} ${base.y}`, color: c.cyan, head: 0.72 + 0.28 * dive, tail: 0.5, width: 8, opacity: 1 - prog(frame, drop + 4, 10) },
               { d: `M ${width + 150} ${height * 0.9} C ${width * 0.75} ${height * 0.95}, ${base.x + 260} ${base.y + 160}, ${base.x} ${base.y}`, color: c.indigo, head: 0.72 + 0.28 * dive, tail: 0.5, width: 8, opacity: 1 - prog(frame, drop + 4, 10) },
             ]} />
           )}
           {bloom > 0 && <div style={{ position: 'absolute', left: cx - 700, top: cy - 700, width: 1400, height: 1400, borderRadius: '50%', background: `radial-gradient(circle, ${c.indigo} 0%, transparent 60%)`, opacity: bloom }} />}
-          <LogoMerge id={`reveal-${placed.section}`} at={taglineOnly ? -60 : drop} cx={cx} cy={cy} size={size} still={taglineOnly} />
+          <LogoMerge id={`reveal-${placed.section}`} at={drop} cx={cx} cy={cy} size={size} />
           {!vertical && frame >= wm && (
             <div style={{ position: 'absolute', left: 820, top: 250 }}>
               <div style={{ fontFamily: FONT.sans, fontWeight: 700, fontSize: 160, letterSpacing: '-0.03em', lineHeight: 1, color: c.text,
                 transform: `scale(${1 + 0.35 * (1 - expoOut(prog(frame, wm, 7)))})`, transformOrigin: '0 50%', opacity: enter(frame, wm, 4) }}>{R.wordmark}</div>
               <Kinetic text={R.tag1} at={cu.at('tag1')} style={{ fontFamily: FONT.sans, fontWeight: 700, fontSize: 64, letterSpacing: '-0.02em', marginTop: 34 }} />
               <Kinetic text={R.tag2} at={cu.at('tag2')} color={c.muted} style={{ fontFamily: FONT.sans, fontWeight: 700, fontSize: 64, letterSpacing: '-0.02em', marginTop: 8 }} />
-            </div>
-          )}
-          {vertical && taglineOnly && (
-            <div style={{ position: 'absolute', left: 60, width: width - 120, top: 900, textAlign: 'center' }}>
-              <div style={{ fontFamily: FONT.sans, fontWeight: 700, fontSize: 140, letterSpacing: '-0.03em', color: c.text }}>{R.wordmark}</div>
-              <Kinetic text={R.tag1} at={cu.at('tag1')} style={{ fontFamily: FONT.sans, fontWeight: 700, fontSize: 92, letterSpacing: '-0.02em', marginTop: 40 }} />
-              <Kinetic text={R.tag2} at={cu.at('tag2')} color={c.muted} style={{ fontFamily: FONT.sans, fontWeight: 700, fontSize: 92, letterSpacing: '-0.02em', marginTop: 10 }} />
             </div>
           )}
         </div>

@@ -652,6 +652,15 @@ const MiniWindows: React.FC<{ at: number; close: number; from: R[] }> = ({ at, c
   );
 };
 
+// What each agent is busy with while the scene holds: generic progress
+// lines (not any tool's real output), one every 14 frames, so the three
+// sessions visibly work in parallel on their own branches.
+const AGENT_WORK = [
+  ['branch feature/login', 'reading src/auth.ts', 'editing src/auth.ts', 'running the tests', '14 passed'],
+  ['branch feature/search', 'reading src/search.ts', 'editing src/search.ts', 'running the tests', '9 passed'],
+  ['branch main', 'reading docs/api.md', 'editing docs/api.md', 'writing docs/usage.md', 'done'],
+];
+
 const AgentTerminals: React.FC<{ at: number; compact?: boolean }> = ({ at, compact }) => {
   const frame = useCurrentFrame();
   const c = useColors();
@@ -664,11 +673,34 @@ const AgentTerminals: React.FC<{ at: number; compact?: boolean }> = ({ at, compa
     <>
       {items.map((it, i) => {
         const t = pop(frame, at + i * 2);
+        const work = AGENT_WORK[i];
+        const shown = compact ? [] : work.filter((_, k) => frame >= at + 10 + i * 4 + k * 14);
+        const done = shown.length === work.length;
         return (
           <div key={i} style={{ position: 'absolute', left: compact ? 716 + i * 318 : 96 + i * 586, top: compact ? 470 : 330, transform: `translateY(${(1 - t) * 60}px)`, opacity: clamp01(t) }}>
             <TerminalWindow title={compact ? it.title.replace('~/code/', '') : it.title} width={compact ? 300 : 556} height={compact ? 260 : 400} accent={it.col}>
               <div style={{ fontFamily: FONT.mono, fontSize: 40, color: c.text }}><span style={{ color: c.emerald }}>$ </span>{it.cmd}</div>
-              <div style={{ marginTop: 14 }}><Caret size={36} /></div>
+              {shown.length === 0 && <div style={{ marginTop: 14 }}><Caret size={36} /></div>}
+              {shown.length > 0 && (
+                <div style={{ marginTop: 12, fontFamily: FONT.mono, fontSize: 26, lineHeight: 1.5, whiteSpace: 'nowrap' }}>
+                  {shown.map((line, k) => {
+                    const last = k === shown.length - 1;
+                    const ok = done && last;
+                    const busy = last && !done && k > 0;
+                    return (
+                      <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 12, color: ok ? c.emerald : k === 0 ? it.col : last ? c.text : c.muted,
+                        opacity: enter(frame, at + 10 + i * 4 + k * 14, 5) }}>
+                        <span style={{ width: 26, flexShrink: 0, display: 'inline-flex', justifyContent: 'center' }}>
+                          {ok ? <span className="material-symbols-outlined" style={{ fontSize: 30 }}>check</span>
+                            : <span style={{ width: 14, height: 14, borderRadius: 7, boxSizing: 'border-box', background: busy ? it.col : 'transparent', border: busy ? 'none' : `2px solid ${k === 0 ? it.col : c.border}`,
+                              opacity: busy ? 0.45 + 0.55 * Math.abs(Math.sin((frame - at) / 4)) : 1 }} />}
+                        </span>
+                        {line}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </TerminalWindow>
           </div>
         );
@@ -738,7 +770,7 @@ export const SceneF: React.FC<SceneProps> = ({ placed }) => {
       {rec && frame >= copyAt && frame < glint && <Caption text={`${tildify(rec.cwd)} · exit ${rec.exitCode ?? 0} · ${rec.durationMs ?? 0} ms`} at={copyAt} exitAt={glint - 7} x={96} y={470} icon="content_copy" />}
       <BottomScrim at={glint + 2} height={260} />
       {frame >= glint && (
-        <LaneTrails width={W} height={H} lanes={[{ d: `M -100 ${H - 70} C 500 ${H - 100}, 1300 ${H - 40}, ${W + 100} ${H - 80}`, color: c.cyan, head: 0.1 + 1.2 * prog(frame, glint, 16), tail: 0.5, width: 7 }]} />
+        <LaneTrails width={W} height={H} lanes={[{ d: `M -100 ${H - 70} C 500 ${H - 100}, 1300 ${H - 40}, ${W + 100} ${H - 80}`, color: c.cyan, head: 0.1 + 1.5 * prog(frame, glint, 20), tail: 0.5, width: 7, exit: true }]} />
       )}
       <Sub text={copy.sceneF.learn} at={glint + 2} y={900} size={52} color={c.cyan} />
       {frame >= keysAt - 2 && <KeyCombo keys={['Ctrl', 'K']} enterAt={keysAt - 2} pressAt={keysAt} style={{ position: 'absolute', left: 96, top: 760, opacity: leave(frame, keysAt + 12, 5) }} />}

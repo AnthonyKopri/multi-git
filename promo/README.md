@@ -1,6 +1,6 @@
 # Multi-Git promo film
 
-The second Multi-Git promo: a 90-second master plus three cutdowns, built with
+The second Multi-Git promo: a 2:16 master plus three cutdowns, built with
 [Remotion](https://www.remotion.dev/) from the spec in
 [PromoSpecifications.md](../PromoSpecifications.md). Everything on screen is
 generated here: the UI is the real app's captured DOM rendered under the app's
@@ -25,7 +25,7 @@ and whether the counter shows.
 
 | Command | Output | Notes |
 | --- | --- | --- |
-| `npm run render` | `out/promo-1080p.mp4` | The 2:26 master (73 bars, 4,380 frames). Runs `npm run audio` first, then H.264 CRF 18, `yuv420p`, BT.709, AAC 320 kbps |
+| `npm run render` | `out/promo-1080p.mp4` | The 2:16 master (68 bars, 4,080 frames). Runs `npm run audio` first, then H.264 CRF 18, `yuv420p`, BT.709, AAC 320 kbps |
 | `npm run render:prores` | `out/promo-master-prores.mov` | ProRes 422 HQ with PCM audio (the mezzanine) |
 | `npm run render:30` | `out/promo-30s.mp4` | `Promo30`, 30 s, 1920x1080 |
 | `npm run render:vertical` | `out/promo-vertical.mp4` | `Vertical`, 20 s, 1080x1920 |

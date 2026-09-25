@@ -29,23 +29,71 @@ Earlier sessions: none. This session started from `67963aa` on `promo/video-2`.
 ## Morning checklist
 
 1. Pull `promo/video-2`, then run `cd promo && npm ci && npm run render`.
-   You get `out/promo-1080p.mp4`, the 2:26 master (73 bars, 4,380 frames;
-   see Revision 2).
+   You get `out/promo-1080p.mp4`, the 2:16 master (68 bars, 4,080 frames;
+   see Revision 4).
 2. Watch it start to finish. Look hardest at:
-   - **scene A (0:34-0:46)** and **scene B (0:46-0:56)**, which gained a bar
-     each;
-   - **scene C (0:56-1:10):** the VHS rewind, then bar 4 on the restored
-     commits;
-   - **scene D (1:10-1:24):** the cursor on real controls, and the reorder;
-   - **scene E (1:24-1:38):** the Worktrees section, the windows and the
-     Launch modal;
-   - **the end card (2:16-2:26).**
+   - **the cold open (0:00-0:10)** and **the lanes (0:10-0:22),** each a bar
+     shorter;
+   - **the ends of scenes C (0:52-1:04), D (1:04-1:16) and E (1:16-1:28),**
+     each a bar shorter;
+   - **the stinger (1:54-1:58):** the zero lands a beat after the count.
 3. Judge the pacing. Retime in `timing.json`, then run `npm run audio`.
-4. Listen for the new tape whir under the rewind and the end chord decaying
-   into the fade (`review/mix-preview.mp3` is a quick listen). The knobs are
-   `PARAMS` in `audio/synth.mjs` and the SFX volumes in `timing.json`.
-5. Render the cuts (`render:30`, `render:vertical`, `render:gif`). Their
-   timing is unchanged, but they share the fixed scene code.
+4. Listen to the 30-second cut's stinger into its end card, and to the
+   reverse swell into the master's "You typed zero." The knobs are `PARAMS`
+   in `audio/synth.mjs` and the SFX volumes in `timing.json`.
+5. Render the cuts (`render:30`, `render:vertical`, `render:gif`).
+
+## Revision 4: less dead air
+
+Made locally, after the owner watched the 2:26 master. The master is now
+**68 bars, 4,080 frames, 2:16**.
+
+**What the owner saw, and the fixes:**
+
+- **Too many silent, frozen frames between scenes.** `freezedetect` and
+  `silencedetect` on the 2:26 master found the long ones: the cold open's
+  last 3 s, and 3.5-5 s of static hold at the ends of scenes C, D and E.
+  There was also a 1.5 s silent gap between "45 commands" and "You typed
+  zero."
+  - **Scenes C, D and E** lose a bar each. Scene C's card lands on bar 6,
+    beat 1, and scene D's small line lands with the split. Scene E's agent
+    terminals now show each agent working (generic progress lines, one every
+    14 frames, then a check), so the hold under the long agents line moves.
+  - **The stinger:** the flap lands 12 frames in, and the zero hits on beat
+    4 instead of the next bar. A reverse cymbal swells through the pause
+    into the hit. After the hit, the zero's glow beats with the building
+    kick pulse and the frame pushes in 4%.
+- **The cold open overstayed, and its trails froze.** It is 5 bars:
+  - "…wait." holds for a bar;
+  - the rebase starts on bar 3, beat 3;
+  - the conflict lands on bar 4;
+  - the card shatters on bar 4, beat 3.
+
+  The synth's `shatterAt` takes a `[bar, beat]` now. The two lanes sweep
+  off the right edge and fade (`LaneTrails` `exit`: the head runs off the
+  path and the tail follows) instead of stopping there, and the headline
+  pushes in slowly. Scene F's glint trail also leaves instead of freezing.
+- **The trails had bright dots along them.** Each trail was 18 overlapping
+  dashes with round caps, so every joint doubled up. A trail is now one dash
+  painted with a gradient that follows the path. Gradient ids are unique per
+  instance, so a scene's trails and a cut's sweep can't borrow each other's
+  colours.
+- **The lanes' pain cards held too long.** The lanes are 6 bars:
+  - the card pairs are 5 beats apart (were 6 to 7);
+  - the switcher questions sit on the backbeats, with the snares pinned to
+    them;
+  - the last question holds for 3 beats.
+- **The vertical cut had an end card in the middle** (the tagline bar at
+  0:06). That bar is gone; scene A gets it (3 bars, with more time on the
+  mismatch dialog). The end card's cursor clicks Download, and the cutdowns'
+  end cards breathe (button glow, 2% push) instead of freezing.
+- **The 30-second cut's music was off.** Its stinger's F-minor hit rang for
+  about a second into the end card's F-major chord, a clash the master
+  never has, since its end card is five bars later. Stingers followed by
+  the next section within a bar now cut the hit's chord and sub short, and
+  skip the riser and pulses. The jab's shatter sound (with no shatter on
+  screen) is a whoosh. The 30 s and vertical cuts fade picture and sound
+  over their last 15 frames.
 
 ## Revision 3: highlights that fit and leave cleanly
 

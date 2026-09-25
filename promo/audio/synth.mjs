@@ -268,16 +268,18 @@ const SECTIONS = {
     const inDrop = (at) => at >= dropStart && at < dropEnd;
     drone(ctx, ctx.start, dropStart - ctx.start);
     if (dropEnd < ctx.end) drone(ctx, dropEnd, ctx.end - dropEnd);
+    // The terminal shatters at shatterAt ([bar, beat]): the clacks stop, and a
+    // kick and a riser carry the headline into the next section.
+    const shatter = p.shatterAt ? pos(ctx, p.shatterAt[0], p.shatterAt[1]) : Infinity;
     const accents = [1, 0, 0.5, 0.8, 0, 0, 0.7, 0, 0.9, 0, 0.6, 0.5, 0, 0, 0.8, 0.4];
     for (let bar = 1; bar <= ctx.bars; bar++) {
-      if (p.shatterBar && bar >= p.shatterBar) continue;
       for (let s = 0; s < 16; s++) {
         const at = pos(ctx, bar, 1, s);
-        if (accents[s] && !inDrop(at)) clack(ctx, at, accents[s]);
+        if (accents[s] && !inDrop(at) && at < shatter) clack(ctx, at, accents[s]);
       }
-      if ((bar === 1 || bar === 3) && !inDrop(pos(ctx, bar))) kick(ctx, pos(ctx, bar), 0.55);
+      if ((bar === 1 || bar === 3) && !inDrop(pos(ctx, bar)) && pos(ctx, bar) < shatter) kick(ctx, pos(ctx, bar), 0.55);
     }
-    if (p.shatterBar) { riser(ctx, pos(ctx, p.shatterBar), BAR, 0.8); kick(ctx, pos(ctx, p.shatterBar), 0.8); }
+    if (p.shatterAt) { riser(ctx, shatter, ctx.end - shatter, 0.8); kick(ctx, shatter, 0.8); }
   },
   lanes(ctx, p) {
     const jab = p.jabBar ?? 0;
@@ -373,17 +375,26 @@ const SECTIONS = {
   stinger(ctx, p) {
     const silence = p.silenceBeats ?? 4;
     const hitAt = ctx.start + silence * BEAT;
+    const end = ctx.end, tail = end - hitAt;
+    // The cutdowns go straight from the hit to the end card's F major, so
+    // there the dark (F minor) hit is cut short instead of ringing into it.
+    const short = tail < BEAT * 3;
+    // A reverse cymbal swells through the pause into the hit.
+    revCymbal(ctx, hitAt, Math.round(BEAT * 1.5), 0.9);
     // Sub drop and a dark chord under the SFX hit, then a pulse that builds.
+    const subLen = short ? Math.min(Math.round(1.8 * SR), tail) : Math.round(1.8 * SR);
+    const subFade = Math.round(0.12 * SR);
     let ph = 0;
-    for (let i = 0; i < Math.round(1.8 * SR); i++) {
+    for (let i = 0; i < subLen; i++) {
       const t = i / SR;
       ph += (2 * Math.PI * (30 + 45 * Math.exp(-t * 3))) / SR;
-      const y = Math.tanh(Math.sin(ph) * 1.4) * Math.exp(-t * 1.6) * 0.75;
+      const y = Math.tanh(Math.sin(ph) * 1.4) * Math.exp(-t * 1.6) * 0.75 * (short ? Math.min(1, (subLen - i) / subFade) : 1);
       add(ctx.bus.bass, hitAt + i, y, y);
     }
-    supersaw(ctx, ctx.bus.music, hitAt, Math.round(1.2 * SR), [41, 48, 53, 56], 0.5, { cutoff: 1100, cutoffEnv: 2, decay: 0.8, sustain: 0.3, release: 0.8, send: 0.6 });
-    const end = ctx.end;
-    const pulses = Math.floor((end - hitAt - BEAT) / (STEP * 2));
+    supersaw(ctx, ctx.bus.music, hitAt, short ? tail - Math.round(0.25 * SR) : Math.round(1.2 * SR), [41, 48, 53, 56], 0.5,
+      { cutoff: 1100, cutoffEnv: 2, decay: 0.8, sustain: 0.3, release: short ? 0.25 : 0.8, send: short ? 0.3 : 0.6 });
+    if (short) return;
+    const pulses = Math.floor((tail - BEAT) / (STEP * 2));
     for (let k = 0; k < pulses; k++) {
       const at = hitAt + BEAT + k * STEP * 2, u = (k + 1) / pulses;
       kick(ctx, at, 0.25 + 0.6 * u);

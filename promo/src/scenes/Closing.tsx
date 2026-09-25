@@ -220,6 +220,14 @@ export const Stinger: React.FC<SceneProps> = ({ placed }) => {
   const valueAt = (f: number) => (f < land ? 10 + Math.floor(random(`shuffle-${Math.floor(f / 2)}`) * 89) : total);
   const hitIn = frame >= hit;
   const drop = pop(frame, hit, 30, { damping: 11, stiffness: 170, mass: 1 });
+  // The master holds the zero for five beats while the music's pulse builds
+  // (a kick every eighth from a beat after the hit): the zero's glow beats
+  // with it and the frame pushes in.
+  const after = placed.duration - hit;
+  const since = frame - hit - 15;
+  const pulse = after >= 45 && since >= 0 ? Math.exp(-(since % 7.5) / 2.5) * (0.3 + 0.7 * clamp01(since / (after - 15))) : 0;
+  const push = after >= 45 ? 1 + 0.04 * prog(frame, hit + 10, after - 10) : 1;
+  const glowAlpha = Math.round(0x55 + 0x60 * pulse).toString(16).padStart(2, '0');
   return (
     <AbsoluteFill style={{ background: c.trueBlack }}>
       {!hitIn && (
@@ -229,12 +237,12 @@ export const Stinger: React.FC<SceneProps> = ({ placed }) => {
         </>
       )}
       {hitIn && (
-        <>
+        <AbsoluteFill style={{ transform: `scale(${push})` }}>
           <div style={{ position: 'absolute', left: vertical ? width / 2 - 300 : 1060, top: vertical ? 300 : 40, fontFamily: FONT.sans, fontWeight: 800, fontSize: vertical ? 760 : 1000, lineHeight: 1,
-            color: c.disc, transform: `translateY(${(1 - drop) * -1150}px)`, textShadow: `0 0 120px ${c.indigo}55` }}>0</div>
+            color: c.disc, transform: `translateY(${(1 - drop) * -1150}px)`, textShadow: `0 0 ${120 + 90 * pulse}px ${c.indigo}${glowAlpha}` }}>0</div>
           <div style={{ position: 'absolute', left: vertical ? 60 : 96, top: vertical ? 1180 : 400, width: vertical ? width - 120 : 1000, ...TYPE.hero, fontSize: vertical ? 120 : 140, color: c.text,
             transform: `scale(${1.25 - 0.25 * expoOut(prog(frame, hit, 6))})`, transformOrigin: vertical ? 'center' : '0 50%', textAlign: vertical ? 'center' : 'left' }}>{lines[1]}</div>
-        </>
+        </AbsoluteFill>
       )}
     </AbsoluteFill>
   );
@@ -309,31 +317,37 @@ export const EndCard: React.FC<SceneProps> = ({ placed, variant }) => {
   const t = (at: number) => (still ? 1 : enter(frame, at, 10));
   const btnRect = vertical ? { x: width / 2 - 200, y: 1150, w: 400, h: 96 } : { x: width / 2 - 470, y: 736, w: 380, h: 96 };
   const pressed = frame >= click && frame < click + 6;
+  // After the CTA lands the cutdowns' cards keep breathing: the button's glow
+  // swells on a 3-second cycle and the frame pushes in 2%.
+  const breathe = !gif && frame >= cta ? 0.5 - 0.5 * Math.cos((2 * Math.PI * (frame - cta)) / 90) : 0;
+  const push = still || gif ? 1 : 1 + 0.02 * prog(frame, cta, placed.duration - cta);
   if (cu.has('settle')) return <EndCardHero placed={placed} />;
   return (
     <AbsoluteFill style={{ background: c.background }}>
-      {!still && frame < fuse + 14 && (
-        <LaneTrails width={width} height={height} lanes={[
-          { d: `M -150 ${height * 0.25} C ${width * 0.3} ${height * 0.2}, ${base.x - 200} ${base.y + 160}, ${base.x} ${base.y}`, color: c.cyan, head: 0.2 + 0.8 * prog(frame, sweep, fuse - sweep), tail: 0.5, width: 8, opacity: 1 - prog(frame, fuse + 2, 10) },
-          { d: `M ${width + 150} ${height * 0.75} C ${width * 0.7} ${height * 0.8}, ${base.x + 200} ${base.y + 160}, ${base.x} ${base.y}`, color: c.indigo, head: 0.2 + 0.8 * prog(frame, sweep, fuse - sweep), tail: 0.5, width: 8, opacity: 1 - prog(frame, fuse + 2, 10) },
-        ]} />
-      )}
-      <LogoMerge id={`end-${placed.section}`} at={fuse} cx={lc.x} cy={lc.y} size={lc.s} fast still={still} />
-      <div style={{ position: 'absolute', left: 0, width, top: vertical ? 840 : gif ? 540 : 480, textAlign: 'center', fontFamily: FONT.sans, fontWeight: 700, fontSize: vertical ? 140 : 160, letterSpacing: '-0.03em', color: c.text,
-        opacity: t(wm), transform: `scale(${still ? 1 : 1.2 - 0.2 * expoOut(prog(frame, wm, 8))})` }}>{E.wordmark}</div>
-      <div style={{ position: 'absolute', left: 60, width: width - 120, top: vertical ? 1020 : gif ? 720 : 660, textAlign: 'center', ...TYPE.sub, fontSize: vertical ? 56 : 52, color: c.muted, opacity: t(wm + 6) }}>{E.tagline}</div>
-      {!gif && (
-        <div style={{ position: 'absolute', left: 0, width, top: vertical ? 1150 : 736, display: 'flex', flexDirection: vertical ? 'column' : 'row', alignItems: 'center', justifyContent: 'center', gap: vertical ? 40 : 44, opacity: t(cta) }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 42px', borderRadius: 16, background: pressed ? c.indigoHover : c.indigo, color: '#fff', fontFamily: FONT.sans, fontWeight: 700, fontSize: 44,
-            boxShadow: `0 0 ${pressed ? 70 : 40}px ${c.indigo}88`, transform: `scale(${pressed ? 0.96 : 1})` }}>
-            {E.cta}<span className="material-symbols-outlined" style={{ fontSize: 46 }}>arrow_forward</span>
+      <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: '50% 45%' }}>
+        {!still && frame < fuse + 14 && (
+          <LaneTrails width={width} height={height} lanes={[
+            { d: `M -150 ${height * 0.25} C ${width * 0.3} ${height * 0.2}, ${base.x - 200} ${base.y + 160}, ${base.x} ${base.y}`, color: c.cyan, head: 0.2 + 0.8 * prog(frame, sweep, fuse - sweep), tail: 0.5, width: 8, opacity: 1 - prog(frame, fuse + 2, 10) },
+            { d: `M ${width + 150} ${height * 0.75} C ${width * 0.7} ${height * 0.8}, ${base.x + 200} ${base.y + 160}, ${base.x} ${base.y}`, color: c.indigo, head: 0.2 + 0.8 * prog(frame, sweep, fuse - sweep), tail: 0.5, width: 8, opacity: 1 - prog(frame, fuse + 2, 10) },
+          ]} />
+        )}
+        <LogoMerge id={`end-${placed.section}`} at={fuse} cx={lc.x} cy={lc.y} size={lc.s} fast still={still} />
+        <div style={{ position: 'absolute', left: 0, width, top: vertical ? 840 : gif ? 540 : 480, textAlign: 'center', fontFamily: FONT.sans, fontWeight: 700, fontSize: vertical ? 140 : 160, letterSpacing: '-0.03em', color: c.text,
+          opacity: t(wm), transform: `scale(${still ? 1 : 1.2 - 0.2 * expoOut(prog(frame, wm, 8))})` }}>{E.wordmark}</div>
+        <div style={{ position: 'absolute', left: 60, width: width - 120, top: vertical ? 1020 : gif ? 720 : 660, textAlign: 'center', ...TYPE.sub, fontSize: vertical ? 56 : 52, color: c.muted, opacity: t(wm + 6) }}>{E.tagline}</div>
+        {!gif && (
+          <div style={{ position: 'absolute', left: 0, width, top: vertical ? 1150 : 736, display: 'flex', flexDirection: vertical ? 'column' : 'row', alignItems: 'center', justifyContent: 'center', gap: vertical ? 40 : 44, opacity: t(cta) }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 42px', borderRadius: 16, background: pressed ? c.indigoHover : c.indigo, color: '#fff', fontFamily: FONT.sans, fontWeight: 700, fontSize: 44,
+              boxShadow: `0 0 ${(pressed ? 70 : 40) + 30 * breathe}px ${c.indigo}88`, transform: `scale(${pressed ? 0.96 : 1})` }}>
+              {E.cta}<span className="material-symbols-outlined" style={{ fontSize: 46 }}>arrow_forward</span>
+            </div>
+            <div style={{ fontFamily: FONT.mono, fontWeight: 500, fontSize: 40, color: c.text }}>{E.url}</div>
           </div>
-          <div style={{ fontFamily: FONT.mono, fontWeight: 500, fontSize: 40, color: c.text }}>{E.url}</div>
-        </div>
-      )}
-      {gif && <div style={{ position: 'absolute', left: 0, width, top: 830, textAlign: 'center', fontFamily: FONT.mono, fontWeight: 500, fontSize: 48, color: c.text, opacity: t(cta) }}>{E.url}</div>}
-      {!gif && <div style={{ position: 'absolute', left: 0, width, top: vertical ? 1420 : 880, textAlign: 'center', ...TYPE.sub, fontSize: 40, color: c.muted, opacity: t(cta + 4) }}>{E.platforms}</div>}
-      {click < 9999 && <Cursor stops={[{ at: click - 20, x: width / 2 + 400, y: 1000 }, { at: click, x: btnRect.x + btnRect.w * 0.55, y: btnRect.y + btnRect.h * 0.6, click: true }]} enterAt={click - 20} />}
+        )}
+        {gif && <div style={{ position: 'absolute', left: 0, width, top: 830, textAlign: 'center', fontFamily: FONT.mono, fontWeight: 500, fontSize: 48, color: c.text, opacity: t(cta) }}>{E.url}</div>}
+        {!gif && <div style={{ position: 'absolute', left: 0, width, top: vertical ? 1420 : 880, textAlign: 'center', ...TYPE.sub, fontSize: 40, color: c.muted, opacity: t(cta + 4) }}>{E.platforms}</div>}
+        {click < 9999 && <Cursor stops={[{ at: click - 20, x: width / 2 + 400, y: 1000 }, { at: click, x: btnRect.x + btnRect.w * 0.55, y: btnRect.y + btnRect.h * 0.6, click: true }]} enterAt={click - 20} />}
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };
