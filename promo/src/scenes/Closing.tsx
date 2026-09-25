@@ -88,7 +88,7 @@ export const Montage: React.FC<SceneProps> = ({ placed }) => {
           const inT = expoOut(clamp01((u + 5) / 8));
           const outT = expoIn(clamp01((u - 15) / 7));
           const x = (1 - inT) * 1150 - outT * 900;
-          const sc = 1 - 0.18 * outT;
+          const sc = 1.2 * (1 - 0.18 * outT);
           const lane = k < switchAfter ? 'cyan' : 'indigo';
           return (
             <div key={k} style={{ position: 'absolute', left: width / 2 - 410, top: y - 235, transform: `translateX(${x}px) scale(${sc})`, opacity: 1 - outT }}>
@@ -113,6 +113,13 @@ const statusResult = (() => {
   try { return JSON.parse(res ?? '{}').data ?? {}; } catch { return {}; }
 })();
 
+const cropSpans = (line: Span[], cols: number): Span[] => {
+  const out: Span[] = [];
+  let n = 0;
+  for (const s of line) { if (n >= cols) break; const t = s.text.slice(0, cols - n); n += t.length; out.push({ ...s, text: t }); }
+  return out;
+};
+
 export const TwoLanes: React.FC<SceneProps> = ({ placed }) => {
   const frame = useCurrentFrame();
   const c = useColors();
@@ -123,19 +130,19 @@ export const TwoLanes: React.FC<SceneProps> = ({ placed }) => {
   const state = frame >= v ? 'after-v' : frame >= k ? 'after-k' : frame >= j ? 'after-j' : frame >= space ? 'space-menu' : 'normal';
   const shown = tuiStates.find((st) => st.name === state) ?? tuiStates[0];
   const card = { x: 580, y: 20, w: 440, h: 441 };
-  const sc = 1.12;
+  const sc = 1.25;
   const call = mcpCall.find((m) => m.message.method === 'tools/call')?.message.params;
   const split = expoOut(prog(frame, 0, 10));
   return (
     <AbsoluteFill style={{ background: c.background }}>
       <LaneTrails width={width} height={1080} lanes={[
-        { d: `M -100 ${lerp(560, 532, split)} L ${width + 100} ${lerp(560, 532, split)}`, color: c.cyan, head: 1.2, tail: 1.2, width: 5 },
-        { d: `M -100 ${lerp(560, 548, split)} L ${width + 100} ${lerp(560, 548, split)}`, color: c.indigo, head: 1.2, tail: 1.2, width: 5 },
+        { d: `M -100 ${lerp(620, 592, split)} L ${width + 100} ${lerp(620, 592, split)}`, color: c.cyan, head: 1.2, tail: 1.2, width: 5 },
+        { d: `M -100 ${lerp(620, 608, split)} L ${width + 100} ${lerp(620, 608, split)}`, color: c.indigo, head: 1.2, tail: 1.2, width: 5 },
       ]} />
       {/* Cyan: the real merge preview */}
       <div style={{ position: 'absolute', left: 96, top: 64, ...TYPE.chip, color: c.cyan }}>{T2.cyanLabel}</div>
-      <Kinetic text={T2.cyanCaption} at={4} style={{ ...TYPE.sub, fontSize: 52, fontWeight: 700, position: 'absolute', left: 96, top: 128, width: 900 }} />
-      <div style={{ position: 'absolute', left: 1040, top: 16, width: card.w * sc, height: card.h * sc, overflow: 'hidden', borderRadius: 14, transform: `translateY(${(1 - split) * -30}px)`, opacity: split }}>
+      <Kinetic text={T2.cyanCaption} at={4} style={{ ...TYPE.sub, fontSize: 60, fontWeight: 700, position: 'absolute', left: 96, top: 128, width: 980 }} />
+      <div style={{ position: 'absolute', left: 1180, top: 28, width: card.w * sc, height: card.h * sc, overflow: 'hidden', borderRadius: 14, transform: `translateY(${(1 - split) * -30}px)`, opacity: split }}>
         <div style={{ position: 'absolute', left: -card.x * sc, top: -card.y * sc, width: 1600, height: 1000, transform: `scale(${sc})`, transformOrigin: '0 0' }}>
           <AppLayer snap="merge-preview" apply={(root, f) => {
             const overlay = q(root, '.modal-overlay'); if (overlay) overlay.style.background = 'transparent';
@@ -146,15 +153,15 @@ export const TwoLanes: React.FC<SceneProps> = ({ placed }) => {
         </div>
       </div>
       {/* Indigo: the real TUI and a real MCP exchange */}
-      <div style={{ position: 'absolute', left: 96, top: 584, ...TYPE.chip, color: c.indigo }}>{T2.indigoLabel}</div>
-      <div style={{ position: 'absolute', left: 96, top: 640, width: 1000, height: 330, overflow: 'hidden', borderRadius: 12, border: `1.5px solid ${c.border}` }}>
-        <AnsiScreen lines={shown.lines} fontSize={16} rows={16} style={{ padding: '10px 14px' }} />
+      <div style={{ position: 'absolute', left: 96, top: 634, ...TYPE.chip, color: c.indigo }}>{T2.indigoLabel}</div>
+      <div style={{ position: 'absolute', left: 96, top: 748, width: 1080, height: 290, overflow: 'hidden', borderRadius: 12, border: `1.5px solid ${c.indigo}66` }}>
+        <AnsiScreen lines={shown.lines.map((l) => cropSpans(l, 78))} fontSize={23} rows={9} style={{ padding: '10px 14px' }} />
       </div>
-      <div style={{ position: 'absolute', left: 1130, top: 600, display: 'flex', gap: 14 }}>
+      <div style={{ position: 'absolute', left: 1230, top: 748, display: 'flex', gap: 14 }}>
         {[['Space', space], ['j', j], ['k', k], ['v', v], ['s', s]].map(([label, at]) => frame >= (at as number) - 2 ? <KeyCap key={label as string} label={label as string} enterAt={(at as number) - 2} pressAt={at as number} size={32} /> : null)}
       </div>
       {frame >= mcpAt && (
-        <div style={{ position: 'absolute', left: 1130, top: 700, width: 694, padding: '16px 20px', borderRadius: 14, background: c.panel, border: `1.5px solid ${c.indigo}66`, fontFamily: FONT.mono, fontSize: 24, lineHeight: 1.45, opacity: enter(frame, mcpAt, 8) }}>
+        <div style={{ position: 'absolute', left: 1230, top: 842, width: 594, padding: '14px 20px', borderRadius: 14, background: c.panel, border: `1.5px solid ${c.indigo}66`, fontFamily: FONT.mono, fontSize: 24, lineHeight: 1.45, opacity: enter(frame, mcpAt, 8) }}>
           <div style={{ color: c.muted }}>→ tools/call <span style={{ color: c.text }}>{call?.name}</span></div>
           <div style={{ color: c.spell }}>{`  { "repo": "~/code/acme-api" }`}</div>
           {frame >= res && (
@@ -166,7 +173,7 @@ export const TwoLanes: React.FC<SceneProps> = ({ placed }) => {
           )}
         </div>
       )}
-      <Kinetic text={T2.indigoCaption} at={mcpAt} style={{ ...TYPE.sub, fontSize: 44, fontWeight: 700, position: 'absolute', left: 96, top: 984, width: 1700 }} />
+      <Kinetic text={T2.indigoCaption} at={mcpAt} style={{ ...TYPE.sub, fontSize: 46, fontWeight: 700, position: 'absolute', left: 96, top: 680, width: 1700 }} />
     </AbsoluteFill>
   );
 };
@@ -197,7 +204,7 @@ export const Stinger: React.FC<SceneProps> = ({ placed }) => {
           <div style={{ position: 'absolute', left: vertical ? width / 2 - 300 : 1060, top: vertical ? 300 : 40, fontFamily: FONT.sans, fontWeight: 800, fontSize: vertical ? 760 : 1000, lineHeight: 1,
             color: c.disc, transform: `translateY(${(1 - drop) * -1150}px)`, textShadow: `0 0 120px ${c.indigo}55` }}>0</div>
           <div style={{ position: 'absolute', left: vertical ? 60 : 96, top: vertical ? 1180 : 400, width: vertical ? width - 120 : 1000, ...TYPE.hero, fontSize: vertical ? 120 : 140, color: c.text,
-            transform: `scale(${1.25 - 0.25 * expoOut(prog(frame, hit, 6))})`, transformOrigin: vertical ? 'center' : '0 50%', textAlign: vertical ? 'center' : 'left', opacity: enter(frame, hit, 3) }}>{lines[1]}</div>
+            transform: `scale(${1.25 - 0.25 * expoOut(prog(frame, hit, 6))})`, transformOrigin: vertical ? 'center' : '0 50%', textAlign: vertical ? 'center' : 'left' }}>{lines[1]}</div>
         </>
       )}
     </AbsoluteFill>
@@ -234,7 +241,7 @@ export const Checklist: React.FC<SceneProps> = ({ placed }) => {
         const strike = expoOut(prog(frame, qAts[i], 6));
         return (
           <React.Fragment key={i}>
-            <div style={{ position: 'absolute', left: 96, top: rowY(i) + 8, fontFamily: FONT.sans, fontWeight: 700, fontSize: 46, color: c.text, opacity: 0.4 * enter(frame, 0, 8) }}>
+            <div style={{ position: 'absolute', left: 96, top: rowY(i) + 8, fontFamily: FONT.sans, fontWeight: 700, fontSize: 46, color: c.text, opacity: 0.4 }}>
               {qq}
               <div style={{ position: 'absolute', left: 0, top: '54%', height: 5, width: `${strike * 100}%`, background: c.red }} />
             </div>

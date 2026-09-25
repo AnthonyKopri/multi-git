@@ -2,6 +2,7 @@ import React from 'react';
 import { Composition, Folder } from 'remotion';
 import { Promo, Promo30, ReadmeGif, Vertical } from './compositions/Film';
 import { Showcase } from './compositions/Showcase';
+import { Fidelity } from './compositions/Fidelity';
 import { defaultPropsFor, promoSchema } from './schema';
 import { durationOf, TIMING, type CompositionId } from './timing';
 
@@ -28,6 +29,7 @@ export const RemotionRoot: React.FC = () => (
     })}
     <Folder name="Dev">
       <Composition id="Primitives" component={Showcase} fps={30} width={1920} height={1080} durationInFrames={120} />
+      <Composition id="Fidelity" component={Fidelity} fps={30} width={1920} height={1080} durationInFrames={1} />
     </Folder>
   </>
 );

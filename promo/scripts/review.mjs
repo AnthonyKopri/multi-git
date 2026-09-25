@@ -80,8 +80,8 @@ async function sheet(id, spec, scale, out, tileSpec, geometry) {
 }
 
 // The frames each round looks at closely (master).
-const KEY = [15, 105, 200, 470, 500, 560, 745, 870, 990, 1215, 1455, 1620, 1760, 1860, 2100, 2250, 2430, 2640];
-const STRIPS = [[712, 723], [480, 491], [1165, 1176]]; // collapse A, logo fusion, the rewind
+const KEY = [15, 110, 205, 470, 500, 565, 750, 870, 995, 1215, 1455, 1625, 1765, 1840, 2100, 2250, 2430, 2640];
+const STRIPS = [[716, 727], [480, 491], [1180, 1191]]; // collapse A, logo fusion, the rewind
 
 await setup();
 const mode = args[0];
@@ -108,7 +108,12 @@ if (mode === 'round') {
     await renderList('Promo', parseFrames(`${a}-${b}`, c.durationInFrames), 0.3, d);
     for (const f of fs.readdirSync(d)) fs.renameSync(path.join(d, f), path.join(stripDir, f));
   }
-  tile(stripDir, path.join(out, 'filmstrips.jpg'), '12x', '128x72');
+  tile(stripDir, path.join(out, 'filmstrips.jpg'), '12x', '125x70');
+  if (n === '1') {
+    const fid = path.join(TMP, 'fidelity');
+    await renderList('Fidelity', [0], 0.8, fid);
+    tile(fid, path.join(out, 'fidelity.jpg'), '1x', '1536x864');
+  }
 } else if (mode === 'overview') {
   const out = path.resolve(PROMO, args[1] ?? 'review/tmp/overview');
   const id = args[2] ?? 'Promo';

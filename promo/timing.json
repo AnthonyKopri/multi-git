@@ -99,9 +99,9 @@
     "sceneC": {
       "scene": "SceneC", "bars": 4,
       "music": { "type": "groove", "fill": true, "tapeStop": [2, 3] },
-      "cues": { "oops": [1, 1], "fall": [1, 2], "spell": [2, 1], "collapse": [2, 3], "confirm": [2, 3, 5], "rewind": [2, 3, 9], "land": [3, 1], "headline": [3, 1], "newPoint": [4, 1], "sub": [4, 1], "card": [4, 3] },
+      "cues": { "oops": [1, 1], "fall": [1, 2], "spell": [2, 1], "collapse": [2, 3], "confirm": [2, 3, 12], "rewind": [2, 4, 3], "land": [3, 1], "headline": [3, 1], "newPoint": [4, 1], "sub": [4, 1], "card": [4, 3] },
       "counter": [["collapse", "c", 11]],
-      "sfx": [["clatter", "oops", 0, 0.35], ["boom", "oops", 0, 0.7], ["glitch", "fall", 0, 0.25], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 2, 2], ["click", "confirm", 0, 0.45], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.55], ["pop", "newPoint", 0, 0.35], ["swish", "card", 0, 0.25]]
+      "sfx": [["clatter", "oops", 0, 0.35], ["boom", "oops", 0, 0.7], ["glitch", "fall", 0, 0.25], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 2, 2], ["click", "confirm", 4, 0.45], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.55], ["pop", "newPoint", 0, 0.35], ["swish", "card", 0, 0.25]]
     },
     "sceneD": {
       "scene": "SceneD", "bars": 3,

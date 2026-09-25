@@ -55,6 +55,16 @@ const aim = (keys: CamKey[], at: number, world: R, dx = 0.5, dy = 0.5, dur = 8) 
   return { at: at - dur, x: s.x + s.w * dx, y: s.y + s.h * dy, dur };
 };
 
+// The capture machine had no SSH agent; its warning rows would steal the shot.
+const hideAgentRows = (root: HTMLElement) => {
+  const dd = q(root, '#profile-dropdown');
+  if (!dd) return;
+  [...dd.children].forEach((el) => {
+    const t = el.textContent ?? '';
+    if ((el as HTMLElement).classList.contains('agent-row') || /SSH agent|Agent:|Vault:/.test(t)) (el as HTMLElement).style.display = 'none';
+  });
+};
+
 // ------------------------------------------------------------------ scene A --
 export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
   const frame = useCurrentFrame();
@@ -70,7 +80,7 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
   const cancelBtn = rect('mismatch', '#btn-confirm-cancel');
   const keys: CamKey[] = [
     { at: 0, x: 1000, y: 250, scale: 1.25 },
-    { at: land, x: 1030, y: 290, scale: 1.7, dur: 7 },
+    { at: land + 6, x: 1030, y: 290, scale: 1.7, dur: 7 },
     ...(hasRules ? [{ at: rule, x: 930, y: 420, scale: 1.55, dur: 7 }, { at: second, x: 620, y: 40, scale: 1.85, dur: 6 }] : []),
     { at: keysAt, x: 820, y: 140, scale: 1.6, dur: 7 },
     { at: mismatch, x: 800, y: 118, scale: 2.15, dur: 6 },
@@ -92,6 +102,7 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
     }
     const work = q(root, '[data-profile-id="work"]');
     if (work && from) work.style.background = f >= pick ? 'rgba(99,102,241,0.28)' : '';
+    hideAgentRows(root);
   };
   return (
     <AbsoluteFill style={{ background: c.background }}>
@@ -156,10 +167,10 @@ export const SceneB: React.FC<SceneProps> = ({ placed }) => {
   const lr = (k: keyof typeof LINE) => { const r = rect('diff', `[data-line-id]::${LINE[k]}`); return { ...r, y: r.y + off }; };
   const keys: CamKey[] = [
     { at: 0, x: 900, y: 560, scale: 1.15 },
-    { at: land, x: 930, y: 470, scale: 1.4, dur: 7 },
-    { at: sel[2] - 4, x: 930, y: 600, scale: 1.35, dur: 7 },
-    { at: stage - 3, x: 900, y: 420, scale: 1.45, dur: 6 },
-    { at: discardSel - 2, x: 930, y: 640, scale: 1.4, dur: 6 },
+    { at: land + 6, x: 960, y: 430, scale: 1.8, dur: 7 },
+    { at: sel[2] - 4, x: 960, y: 700, scale: 1.75, dur: 7 },
+    { at: stage - 3, x: 900, y: 360, scale: 1.8, dur: 6 },
+    { at: discardSel - 2, x: 960, y: 740, scale: 1.75, dur: 6 },
     { at: keysAt + 8, x: 1400, y: 330, scale: 1.55, dur: 7 },
     { at: wordDiff, x: 960, y: 520, scale: 1.55, dur: 6 },
     { at: imageDiff, x: 930, y: 330, scale: 1.5, dur: 6 },
@@ -260,12 +271,13 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
   const falls = short ? [fall, fall + 3, fall + 6] : [fall, fall + 15, fall + 30];
   const keys: CamKey[] = [
     { at: 0, x: 1440, y: 360, scale: 1.55 },
-    { at: land - 2, x: 800, y: 230, scale: 1.4, dur: 6 },
+    { at: land - 2, x: 800, y: 200, scale: 1.45, dur: 6 },
     { at: rewind, x: 1440, y: 360, scale: 1.55, dur: 6 },
     ...(newPoint < 9999 ? [{ at: newPoint - 2, x: 800, y: 230, scale: 1.45, dur: 7 }] : []),
   ];
-  const recVis = (frame >= land - 2 && frame < rewind) || frame >= newPoint - 2;
-  const confirmVis = !short && frame >= cu.at('confirm', 9999) && frame < rewind;
+  const confirmAt = cu.at('confirm', 9999);
+  const recVis = (frame >= land - 2 && frame < Math.min(confirmAt, rewind)) || frame >= newPoint - 2;
+  const confirmVis = !short && frame >= confirmAt && frame < rewind;
   const recRow = rect('recovery', '#recovery-points-list li');
   const nodeState = (root: HTMLElement, f: number) => {
     insertCommitRow(root, f, -1, c.indigo);
@@ -285,7 +297,9 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
       const green = f >= landing && f < landing + 40;
       const circle = row.querySelector('circle');
       if (circle) (circle as SVGCircleElement).style.fill = red ? c.red : green ? c.emerald : '';
-      row.style.boxShadow = green ? `inset 3px 0 0 ${c.emerald}, 0 0 26px ${c.emerald}55` : red ? `inset 3px 0 0 ${c.red}` : '';
+      const flying = f >= back && f < landing;
+      row.style.boxShadow = flying ? `0 40px 0 ${c.emerald}33, 0 80px 0 ${c.emerald}1a, 0 120px 0 ${c.emerald}0d`
+        : green ? `inset 3px 0 0 ${c.emerald}, 0 0 26px ${c.emerald}55` : red ? `inset 3px 0 0 ${c.red}` : '';
       row.style.color = red ? c.red : '';
     });
   };
@@ -324,8 +338,9 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
       <HeadlineScrim />
       <SceneHeadline text={copy.sceneC.headline} at={landing} />
       {!short && <Sub text={copy.sceneC.sub} at={cu.at('sub', 9999)} y={214} color={c.emerald} size={56} />}
-      <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={toScreen(keys, land, recRow)} />
+      <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={toScreen(keys, land + 4, recRow)} />
       {!short && <Caption text={copy.sceneC.card} at={card} x={96} y={880} icon="delete_history" />}
+      {!short && <Cursor keys={[{ at: land, x: 1500, y: 800 }, aim(keys, confirmAt + 4, rect('restore', '#btn-confirm-ok'), 0.5, 0.55, 6)]} clicks={[confirmAt + 4]} enterAt={land} exitAt={rewind} />}
     </AbsoluteFill>
   );
 };
@@ -346,7 +361,7 @@ export const SceneD: React.FC<SceneProps> = ({ placed, variant }) => {
   const splitBtn = rect('editStop', '#btn-rebase-split');
   const keys: CamKey[] = splitOnly
     ? [{ at: 0, x: 935, y: 200, scale: 1.9 }, { at: confirm, x: 800, y: 150, scale: 1.8, dur: 6 }]
-    : [{ at: 0, x: 800, y: 380, scale: 1.3 }, { at: land, x: 800, y: 380, scale: 1.45, dur: 7 }, { at: splitPulse - 2, x: 935, y: 200, scale: 1.85, dur: 6 }, { at: confirm, x: 800, y: 150, scale: 1.8, dur: 6 }];
+    : [{ at: 0, x: 800, y: 380, scale: 1.3 }, { at: land + 6, x: 800, y: 380, scale: 1.45, dur: 7 }, { at: splitPulse - 2, x: 935, y: 200, scale: 1.85, dur: 6 }, { at: confirm, x: 800, y: 150, scale: 1.8, dur: 6 }];
   const plannerVis = !splitOnly && frame < splitPulse - 2;
   const stopVis = frame >= splitPulse - 2 && frame < confirm;
   const splitVis = frame >= confirm && frame < split;
@@ -414,6 +429,7 @@ const SplitNodes: React.FC<{ at: number; x: number; y: number }> = ({ at, x, y }
   const nodes = [-1, 0, 1];
   return (
     <div style={{ position: 'absolute', left: x - 300, top: y - 180, width: 600, height: 360 }}>
+      <div style={{ position: 'absolute', inset: -120, background: `radial-gradient(ellipse at center, ${c.background}f2 0%, ${c.background}cc 45%, transparent 72%)` }} />
       <svg width={600} height={360} style={{ overflow: 'visible' }}>
         <line x1={300} y1={-40} x2={300} y2={400} stroke={c.indigo} strokeWidth={8} strokeLinecap="round" opacity={0.7} />
         {nodes.map((k) => (
@@ -441,7 +457,7 @@ export const SceneE: React.FC<SceneProps> = ({ placed, variant }) => {
   const wtRows = ['acme-api', 'login', 'search'].map((n) => { const r = rect('worktrees', `.worktree-item::${n}`); const base = rect('worktrees', '.sidebar-section'); return { ...r, y: r.y - base.y + wtAt.y }; });
   const keys: CamKey[] = [
     { at: 0, x: 330, y: 560, scale: 1.7 },
-    { at: land, x: 300, y: 600, scale: 2.0, dur: 7 },
+    { at: land + 6, x: 300, y: 600, scale: 2.0, dur: 7 },
     ...(launcher < 9999 ? [{ at: launcher - 2, x: 800, y: 290, scale: 1.55, dur: 6 }] : []),
   ];
   const sectionVis = frame < launcher - 2;

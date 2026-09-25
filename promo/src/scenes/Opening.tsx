@@ -16,13 +16,13 @@ interface TLine { kind: 'cmd' | 'out' | 'err'; text: string; at: number; typed?:
 
 const TerminalCard: React.FC<{ lines: TLine[]; vim?: { at: number; lines: string[] } | null; frame: number; w: number; h: number; errFlash: number }> = ({ lines, vim, frame, w, h, errFlash }) => {
   const c = useColors();
-  const fs = 30, lh = fs * 1.4;
+  const fs = 32, lh = fs * 1.4;
   const visible = lines.filter((l) => frame >= l.at);
   const maxRows = Math.floor((h - 110) / lh);
   const shown = visible.slice(-maxRows);
   const inVim = vim && frame >= vim.at;
   return (
-    <div style={{ width: w, height: h, borderRadius: 20, background: '#0d1016', border: `2px solid ${errFlash > 0 ? `rgba(239,68,68,${0.35 + 0.5 * errFlash})` : c.border}`, overflow: 'hidden', position: 'relative',
+    <div style={{ width: w, height: h, borderRadius: 20, background: c.panel, border: `2px solid ${errFlash > 0 ? `rgba(239,68,68,${0.35 + 0.5 * errFlash})` : c.border}`, overflow: 'hidden', position: 'relative',
       boxShadow: `0 50px 140px rgba(0,0,0,0.7), 0 0 ${80 * errFlash}px rgba(239,68,68,${0.35 * errFlash})` }}>
       <div style={{ height: 56, display: 'flex', alignItems: 'center', gap: 14, padding: '0 24px', background: c.panel, borderBottom: `1px solid ${c.border}`, fontFamily: FONT.mono, fontSize: 24, color: c.muted }}>
         <span className="material-symbols-outlined" style={{ fontSize: 28 }}>terminal</span>~/code/acme-api
@@ -80,10 +80,10 @@ export const ColdOpen: React.FC<SceneProps> = ({ placed }) => {
   const errHits = [pushErr, resetOut, conflict].filter((f) => f < 9999);
   const errFlash = Math.max(0, ...errHits.map((f) => (frame >= f ? 1 - prog(frame, f, 14) : 0)));
   const vim = hasRebase && frame < conflict ? { at: vimAt, lines: co.vim } : null;
-  const W = Math.min(1320, width - 192), H = 600;
+  const W = Math.min(1400, width - 192), H = 520;
   const cardX = (width - W) / 2, cardY = (height - H) / 2 - 10;
   // Music drops out on beat 3 of bar 2: the card dims and "...wait." lands on beat 4.
-  const dim = frame >= dropout && frame < (hasRebase ? rebase : placed.duration) ? 0.35 : 0;
+  const dim = frame >= dropout && frame < (hasRebase ? rebase : placed.duration) ? 0.8 : 0;
   const shattered = frame >= shatter;
   const st = prog(frame, shatter, 16);
   const card = (
@@ -106,7 +106,10 @@ export const ColdOpen: React.FC<SceneProps> = ({ placed }) => {
         })}
       </Camera>
       {frame >= wait && frame < (hasRebase ? rebase : placed.duration + 1) && (
-        <Headline text={co.wait} at={wait} size={150} style={{ position: 'absolute', left: 0, width, top: height / 2 - 90, textAlign: 'center', textShadow: '0 10px 60px rgba(0,0,0,0.9)' }} />
+        <>
+          <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 50%, ${c.background}f0 0%, ${c.background}b0 40%, transparent 70%)` }} />
+          <Headline text={co.wait} at={wait} size={150} style={{ position: 'absolute', left: 0, width, top: height / 2 - 90, textAlign: 'center' }} />
+        </>
       )}
       {shattered && (
         <>

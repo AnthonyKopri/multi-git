@@ -57,7 +57,10 @@ export const AppWindow: React.FC<{ children: React.ReactNode; glow?: string }> =
   const c = useColors();
   return (
     <div style={{ position: 'absolute', left: 0, top: 0, width: APP.w, height: APP.h, borderRadius: 16, overflow: 'hidden', border: `1.5px solid ${c.border}`,
-      boxShadow: `0 40px 120px rgba(0,0,0,0.65)${glow ? `, 0 0 90px ${glow}40` : ''}`, background: c.panel }}>
+      boxShadow: `0 40px 120px rgba(0,0,0,0.65)${glow ? `, 0 0 90px ${glow}40` : ''}`, background: c.panel,
+      // A transform makes this box the containing block for the app's
+      // position:fixed dialogs, so they centre on the app, as in the app.
+      transform: 'translate(0px, 0px)' }}>
       {children}
     </div>
   );

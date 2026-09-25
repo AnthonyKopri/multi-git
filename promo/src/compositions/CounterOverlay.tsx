@@ -13,7 +13,7 @@ export function counterHidden(placed: PlacedSection[], frame: number, comp: stri
   for (const p of placed) {
     if (frame < p.from || frame >= p.from + p.duration) continue;
     const scene = p.def.scene;
-    if (scene === 'Stinger') return true;
+    if (scene === 'Stinger' || scene === 'TwoLanes') return true;
     if (scene === 'EndCard' && comp !== 'Promo') return true;
     if (scene === 'SceneF') {
       const crack = cueOf(p.def, 'crack') ?? 0, glint = cueOf(p.def, 'glint') ?? p.duration;

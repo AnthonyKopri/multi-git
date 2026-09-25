@@ -10,7 +10,7 @@ Session branch: promo/video-2
 - [x] M3 timing and audio — 2026-09-25T03:33Z — `promo: synthesize the score and sound effects`
 - [x] M4 scaffold and primitives — 2026-09-25T03:46Z — `promo: add the motion primitives` (sheet: `review/m4-primitives.jpg`)
 - [x] M5 rough cut — 2026-09-25T04:05Z — `promo: rough cut of the master`
-- [ ] M6 review round 1 and hero polish
+- [x] M6 review round 1 and hero polish — 2026-09-25T04:19Z — `promo: review round 1` (sheets: `review/round-1/`; smoke clip 420-570 at 0.25 had H.264 + AAC 48 kHz stereo)
 - [ ] M7 review round 2
 - [ ] M8 review round 3 (optional)
 - [ ] M9 cutdowns
@@ -113,6 +113,18 @@ Lane sweeps carry every cut except into the stinger (hard cut to black).
 - **Counter** values come from `src/counter.ts` (timeline ticks derived from
   `timing.json` counter rows and the spell copy); `npm run check` recomputes
   the same totals in plain JS.
+- **Viewport units.** The app's CSS sizes dialogs in `vw`/`vh`, which in
+  Remotion resolve against the 1920x1080 frame. `build-app-css.mjs` converts
+  them to px for the 1600x1000 app window (a separate postcss pass, so no rule
+  is prefixed twice), and the app window has a transform so `position: fixed`
+  dialogs centre on the app, exactly as in the captures.
+- **SSH agent rows hidden.** The capture container had no SSH agent, so the
+  SSH Key dropdown showed "Agent: unreachable" in red. The film hides those
+  rows (`hideAgentRows`) so the shot stays on the account rows.
+- **Counter** steps aside during the two-lanes beat (the merge preview needs
+  the top-right) and during the stinger, which shows it huge.
+- **Collapse choreography:** the stack lands on the control first, then the
+  camera pushes in 6 frames later, so the pulse sits on the real control.
 - The session's own branch is `promo/video-2` itself (`git branch --show-current`
   at the start), so the morning fast-forward is a no-op.
 
@@ -154,6 +166,13 @@ Lane sweeps carry every cut except into the stinger (hard cut to black).
     it stays, set as a two-line hook.
 11. **ReadmeGif runs at 30 fps** so the beat grid holds (a beat would be 7.5
     frames at 15 fps); `npm run render:gif` samples it at 15 fps.
+12. **Montage card 18** says "Submodules → Update"; the app's button reads
+    **Update all** (`src/renderer/features/submodules`). The card uses the real
+    label.
+13. **UI text vs. the 24 px floor.** The spec shows UI at 1.0-1.4x of a
+    1600x1000 window (13 px app text becomes 13-18 px) but also says nothing
+    is under 24 px. Film typography is >= 24 px; UI shots push in to 1.6-2.2x
+    on the control that matters, and the UI is the picture, not copy.
 7. **Browser mode can't open *Launch a coding agent*** (it needs
    `desktopApi.launchAgent`). The capture stubs only that function for the one
    step, so the real dialog renders; nothing is launched.

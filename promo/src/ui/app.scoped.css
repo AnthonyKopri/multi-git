@@ -75,7 +75,7 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-app);
   color: var(--text-main);
-  height: 100vh;
+  height: 1000px;
   overflow: hidden;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -418,7 +418,7 @@
 .mg-app .app-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 1000px;
 }
 
 /* Navigation Bar */
@@ -1276,7 +1276,7 @@
 
 /* Command palette */
 .mg-app .palette-card {
-  margin-top: 12vh;
+  margin-top: 120px;
   align-self: flex-start;
   padding: 0;
   overflow: hidden;
@@ -1954,8 +1954,8 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 1600px;
+  height: 1000px;
   background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: var(--glass-backdrop);
   display: flex;
@@ -1971,7 +1971,7 @@
 
 .mg-app .modal-card {
   width: min(550px, 100%);
-  max-height: calc(100vh - 40px);
+  max-height: calc(1000px - 40px);
   background-color: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -1982,11 +1982,11 @@
 }
 
 .mg-app #ssh-modal .modal-card {
-  width: min(980px, 96vw);
+  width: min(980px, 1536px);
 }
 .mg-app .modal-large {
   width: min(850px, 100%);
-  height: min(600px, calc(100vh - 40px));
+  height: min(600px, calc(1000px - 40px));
 }
 
 .mg-app .modal-body {
@@ -3565,7 +3565,7 @@
    ========================================================================== */
 
 .mg-app .modal-card-wide {
-  width: min(880px, 96vw);
+  width: min(880px, 1536px);
 }
 
 .mg-app .pr-branch-row {
@@ -3936,7 +3936,7 @@
 
 .mg-app .agent-launch-card {
   width: min(680px, 100%);
-  max-height: calc(100vh - 40px);
+  max-height: calc(1000px - 40px);
 }
 .mg-app .agent-launch-card .modal-header {
   align-items: flex-start;
@@ -4939,7 +4939,7 @@
 /* Release notes are remote text of unknown length, so the box scrolls rather
    than growing the modal past the window. */
 .mg-app .update-notes {
-  max-height: 46vh;
+  max-height: 460px;
   overflow-y: auto;
   margin: 12px 0 0;
   padding: 10px 12px;
@@ -5061,7 +5061,7 @@
    the window reads as a set of things you can change rather than an essay. */
 .mg-app .settings-card {
   width: min(920px, 100%);
-  height: min(760px, calc(100vh - 40px));
+  height: min(760px, calc(1000px - 40px));
   padding: 0;
   overflow: hidden;
 }
@@ -6160,7 +6160,7 @@
    that is mostly empty. The long lists grow to the cap and scroll inside. */
 .mg-app .modal-card.tool-modal-card {
   width: min(920px, 100%);
-  max-height: min(760px, calc(100vh - 40px));
+  max-height: min(760px, calc(1000px - 40px));
 }
 .mg-app .modal-card.tool-modal-card > .modal-body {
   flex: 1;
