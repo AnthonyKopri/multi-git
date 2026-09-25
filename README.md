@@ -389,7 +389,7 @@ message says so, along with what to check.
 
 ### Visual history and commit actions
 
-**History** loads commits from all refs and draws colored branch and merge lanes. Branch and tag refs appear beside their commits, and more history loads as you scroll.
+**History** loads commits from all refs and draws colored branch and merge lanes. Branch and tag refs have their own line above the commit message, and each row uses only the graph width its visible lanes need. More history loads as you scroll.
 
 Click a commit to open its detail drawer. You can:
 
@@ -659,6 +659,7 @@ On Windows, the same tab can add **Open in Multi-Git** to the File Explorer righ
 - **Safety Net** — how many days a recovery point is kept. 0 keeps them until you remove them by hand, and an empty box changes nothing rather than being read as 0.
 - **Worktrees and agents** — the folder new worktrees are suggested in. The text of an agent prompt is never recorded: launch history keeps the command and the folder, and nothing else.
 - **Application** — window restoration, the GitHub update check, and a **Check now** button for asking on demand.
+- **Integrations** — check whether Git and GitHub CLI are ready. When GitHub CLI is missing, install it from the desktop app where supported or open its official installation page.
 
 Every control writes as you change it. There is no Save button, because a settings window with one has two states — what is shown and what is stored — and no way to tell which is in force. What is shown is always what was stored: a value the server repaired, such as a stale-rule day count of zero, comes back corrected rather than staying as typed.
 
