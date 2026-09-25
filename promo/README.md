@@ -88,10 +88,14 @@ scan.
   each score in JS to about -14.5 LUFS and -2 dBTP, so the finished mix with
   SFX lands at about -14 LUFS and -1 dBTP. `npm run audio:check` (needs ffmpeg
   and ImageMagick) measures every file with `ebur128` and rebuilds
-  [`review/mix-preview.mp3`](review/mix-preview.mp3).
+  `review/mix-preview.mp3`.
 - **Review:** [`scripts/review.mjs`](scripts/review.mjs) renders JPEG stills
   and tiles them into contact sheets (`review/round-N/`, `review/cutdowns/`,
   and Revision 1's `review/revision-1/` via `node scripts/review.mjs revision <n>`).
+- **Local only:** everything generated stays out of git: renders (`out/`),
+  review sheets and the mix preview (`review/`), the capture screenshots
+  (`assets/captures/*.webp`) and synthesized audio. Only the captures' data
+  and DOM, which the film is built from, are tracked.
 
 ## Re-capturing the app (Linux)
 

@@ -1,6 +1,9 @@
 node_modules
 out
-review/tmp
+# Generated media stays local: contact sheets and the mix preview (review/),
+# and the capture screenshots (only the captures' data/ and dom/ feed the film).
+review/
+assets/captures/*.webp
 public/audio/*.wav
 public/audio/**/*.wav
 .claude/
