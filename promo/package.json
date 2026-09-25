@@ -1,0 +1,50 @@
+{
+  "name": "multi-git-promo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Multi-Git's second promo film (90 s master plus cutdowns), built with Remotion.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "studio": "node audio/synth.mjs --if-missing && remotion studio src/index.ts",
+    "audio": "node audio/synth.mjs",
+    "render": "node audio/synth.mjs && remotion render src/index.ts Promo out/promo-1080p.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=320k --color-space=bt709",
+    "render:prores": "node audio/synth.mjs && remotion render src/index.ts Promo out/promo-master-prores.mov --codec=prores --prores-profile=hq --audio-codec=pcm-16",
+    "render:30": "node audio/synth.mjs && remotion render src/index.ts Promo30 out/promo-30s.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=320k --color-space=bt709",
+    "render:vertical": "node audio/synth.mjs && remotion render src/index.ts Vertical out/promo-vertical.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=320k --color-space=bt709",
+    "render:gif": "node scripts/render-gif.mjs",
+    "render:thumbnail": "remotion still src/index.ts Promo out/thumbnail-1280x720.jpg --frame=2430 --scale=0.6667 --image-format=jpeg --jpeg-quality=92",
+    "render:review": "node scripts/review.mjs",
+    "audio:check": "node audio/check-audio.mjs",
+    "check": "node scripts/check.mjs",
+    "build-css": "node scripts/build-app-css.mjs",
+    "capture": "node capture/capture-all.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@remotion/bundler": "4.0.528",
+    "@remotion/cli": "4.0.528",
+    "@remotion/fonts": "4.0.528",
+    "@remotion/layout-utils": "4.0.528",
+    "@remotion/motion-blur": "4.0.528",
+    "@remotion/noise": "4.0.528",
+    "@remotion/paths": "4.0.528",
+    "@remotion/renderer": "4.0.528",
+    "@remotion/shapes": "4.0.528",
+    "@remotion/zod-types": "4.0.528",
+    "material-symbols": "^0.47.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "remotion": "4.0.528",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.0",
+    "postcss": "^8.5.6",
+    "postcss-prefix-selector": "^2.2.1",
+    "puppeteer": "^25.12.0",
+    "typescript": "~5.9.3"
+  }
+}

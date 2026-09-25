@@ -1,0 +1,9 @@
+node_modules
+out
+review/tmp
+public/audio/*.wav
+public/audio/**/*.wav
+.claude/
+.agents/
+.cache/
+skills-lock.json
