@@ -91,7 +91,7 @@ function statusClass(tool: PrerequisiteState): string {
 }
 
 /** The button for one row, or null where there is nothing to press. */
-function actionFor(tool: PrerequisiteState): HTMLElement | null {
+export function prerequisiteAction(tool: PrerequisiteState): HTMLElement | null {
   // Git Bash comes with Git for Windows. Once git is here and Git Bash is not,
   // the install is broken rather than absent, and a second download button
   // would not fix it.
@@ -114,7 +114,20 @@ function actionFor(tool: PrerequisiteState): HTMLElement | null {
     return button;
   }
 
-  const label = report?.canInstall === true ? 'Install' : 'Download';
+  const label = tool.id === 'gh'
+    ? 'Install GitHub CLI'
+    : report?.canInstall === true ? 'Install' : 'Download';
+  if (!window.desktopApi?.installPrerequisite) {
+    return el('a', {
+      className: tool.id === 'gh' ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm',
+      text: tool.id === 'gh' ? 'Install GitHub CLI' : 'Download',
+      attrs: {
+        href: tool.id === 'gh' ? 'https://cli.github.com/' : 'https://git-scm.com/downloads',
+        target: '_blank',
+        rel: 'noopener noreferrer'
+      }
+    });
+  }
   const button = el('button', {
     className: tool.id === 'gh' ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm',
     text: label,
@@ -172,7 +185,7 @@ async function openSignIn(): Promise<void> {
 }
 
 function row(tool: PrerequisiteState): HTMLLIElement {
-  const action = actionFor(tool);
+  const action = prerequisiteAction(tool);
 
   return el('li', {
     className: `setup-item ${statusClass(tool)}`,

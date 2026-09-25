@@ -22,7 +22,7 @@ import { showToast } from '../../ui/toast';
 import { withButtonBusy } from '../../ui/busy';
 import * as updates from '../updates';
 import * as terminalEdition from '../terminal-edition';
-import { prerequisites, refreshPrerequisites } from '../setup';
+import { prerequisiteAction, prerequisites, refreshPrerequisites } from '../setup';
 import { update } from '../../state/store';
 import { applyConfigSnapshot, onManageSshConfigChanged } from '../accounts';
 import { buildMatchSelect, buildStaleRulesForm } from '../maintenance/rules-form';
@@ -237,11 +237,17 @@ function buildIntegrations(): HTMLElement {
     return settingItem({
       label: tool.version ? `${tool.label} — ${tool.version}` : tool.label,
       description: tool.detail,
-      control: el('span', {
-        className: `setup-badge ${usable ? 'setup-badge-ok' : 'setup-badge-missing'}`,
+      control: el('div', {
+        className: 'settings-tool-actions',
         children: [
-          icon(usable ? 'check_circle' : 'error', 14),
-          el('span', { text: usable ? 'Ready' : tool.installed ? 'Not signed in' : 'Not installed' })
+          el('span', {
+            className: `setup-badge ${usable ? 'setup-badge-ok' : 'setup-badge-missing'}`,
+            children: [
+              icon(usable ? 'check_circle' : 'error', 14),
+              el('span', { text: usable ? 'Ready' : tool.installed ? 'Not signed in' : 'Not installed' })
+            ]
+          }),
+          tool.id === 'gh' ? prerequisiteAction(tool) : null
         ]
       })
     });
