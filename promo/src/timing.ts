@@ -12,7 +12,7 @@ export interface SectionDef {
   cues: Record<string, number[]>;
   sfx?: (string | number)[][];
   counter?: string[][];
-  cards?: { count: number; cue: string; everyFrames: number; switchAfter: number };
+  cards?: { count: number; cue: string; everyFrames: number; switchAfter: number; beats?: number[] };
 }
 export interface ArrangementItem { section: string; fromBar: number; toBar: number }
 export interface CompositionDef { width: number; height: number; audio: boolean; gifFps?: number; arrangement: ArrangementItem[] }

@@ -2,7 +2,7 @@
   "name": "multi-git-promo",
   "version": "2.0.0",
   "private": true,
-  "description": "Multi-Git's second promo film (90 s master plus cutdowns), built with Remotion.",
+  "description": "Multi-Git's second promo film (2:10 master plus cutdowns), built with Remotion.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
     "render:30": "node audio/synth.mjs && remotion render src/index.ts Promo30 out/promo-30s.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=320k --color-space=bt709",
     "render:vertical": "node audio/synth.mjs && remotion render src/index.ts Vertical out/promo-vertical.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=320k --color-space=bt709",
     "render:gif": "node scripts/render-gif.mjs",
-    "render:thumbnail": "remotion still src/index.ts Promo out/thumbnail-1280x720.jpg --frame=2430 --scale=0.6667 --image-format=jpeg --jpeg-quality=92",
+    "render:thumbnail": "remotion still src/index.ts Promo out/thumbnail-1280x720.jpg --frame=3330 --scale=0.6667 --image-format=jpeg --jpeg-quality=92",
     "render:review": "node scripts/review.mjs round latest",
     "audio:check": "node audio/check-audio.mjs",
     "check": "node scripts/check.mjs",

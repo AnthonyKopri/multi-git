@@ -3,7 +3,7 @@ import React from 'react';
 import { AbsoluteFill, random, useCurrentFrame } from 'remotion';
 import mcp from '../../assets/captures/data/mcp-transcript.json';
 import tui from '../../assets/captures/data/tui.json';
-import { clamp01, enter, expoIn, expoOut, lerp, pop, prog } from '../lib/anim';
+import { clamp01, enter, expoOut, lerp, pop, prog } from '../lib/anim';
 import { Camera } from '../primitives/Camera';
 import { MontageCard } from '../primitives/Card';
 import { SplitFlap } from '../primitives/Counter';
@@ -19,11 +19,16 @@ import { AppLayer, cues, q } from './kit';
 import type { SceneProps } from './types';
 
 // ---------------------------------------------------------------- montage --
+const SNIPPETS = new Map<string, string>();
 const snippet = (snap: string, sel: string, text?: string): string => {
+  const key = `${snap}|${sel}|${text ?? ''}`;
+  const hit = SNIPPETS.get(key);
+  if (hit !== undefined) return hit;
   const tpl = document.createElement('template');
   tpl.innerHTML = SNAP[snap] ?? '';
   const els = [...tpl.content.querySelectorAll<HTMLElement>(sel)];
   const el = text ? els.find((e) => e.textContent?.includes(text)) : els[0];
+  SNIPPETS.set(key, el?.outerHTML ?? '');
   return el?.outerHTML ?? '';
 };
 const Html: React.FC<{ html: string; scale?: number; width?: number; force?: boolean }> = ({ html, scale = 2.45, width = 330, force = true }) => (
@@ -60,6 +65,28 @@ const Control: React.FC<{ id: string }> = ({ id }) => {
   }
 };
 
+// The conveyor: each card rides the lane in from the right, is centred and
+// highlighted on its beat (tick, counter +1), and leaves on the left. The
+// centre card sits at 0.78x; its neighbours are smaller and dimmed to 60%.
+const SLOT = [{ x: 0, s: 0.78, o: 1 }, { x: 606, s: 0.6, o: 0.6 }, { x: 1138, s: 0.6, o: 0.6 }];
+const smooth = (t: number) => { const x = clamp01(t); return x * x * (3 - 2 * x); };
+const slotAt = (d: number) => {
+  const a = Math.min(2, Math.abs(d)), i = Math.min(1, Math.floor(a)), u = a - i;
+  const p = SLOT[i], q2 = SLOT[i + 1];
+  return { x: Math.sign(d) * lerp(p.x, q2.x, u), s: lerp(p.s, q2.s, u), o: lerp(p.o, q2.o, u) };
+};
+/** The conveyor position (a fractional card index) at `frame`: it steps one card per centre beat. */
+const conveyorAt = (frame: number, centres: number[], every: number, end: number) => {
+  const move = 10;
+  const stops = [...centres, Math.min(end - 15, centres[centres.length - 1] + 15)];
+  if (frame < stops[0] - move) return -1 - (stops[0] - move - frame) / every;
+  for (let i = 0; i < stops.length; i++) {
+    const m = Math.min(move, i === 0 ? move : stops[i] - stops[i - 1]);
+    if (frame < stops[i]) return i - 1 + smooth((frame - (stops[i] - m)) / m);
+  }
+  return stops.length - 1;
+};
+
 export const Montage: React.FC<SceneProps> = ({ placed }) => {
   const frame = useCurrentFrame();
   const c = useColors();
@@ -67,34 +94,35 @@ export const Montage: React.FC<SceneProps> = ({ placed }) => {
   const M = copy.montage;
   const cu = cues(placed.def);
   const start = cu.at('start'), sw = cu.at('laneSwitch');
-  const every = placed.def.cards?.everyFrames ?? 15;
-  const switchAfter = placed.def.cards?.switchAfter ?? 10;
+  const cardsDef = placed.def.cards;
+  const every = cardsDef?.everyFrames ?? 15;
+  const switchAfter = cardsDef?.switchAfter ?? 10;
+  const centres = M.cards.map((_, k) => (cardsDef?.beats?.[k] !== undefined ? (cardsDef.beats[k] - 1) * 15 : start + (k + 1) * every));
+  const pos = conveyorAt(frame, centres, every, placed.duration);
   const indigo = frame >= sw;
   const laneColor = indigo ? c.indigo : c.cyan;
   const y = 560;
-  const shakes = [0, 60, 120, 180, 240].map((b) => start + b);
   return (
     <AbsoluteFill style={{ background: c.background }}>
-      <Camera keys={[{ at: 0, x: width / 2, y: height / 2, scale: 1 }]} width={width} height={height} drift={0.02} driftFrames={placed.duration} shakes={shakes}>
+      <Camera keys={[{ at: 0, x: width / 2, y: height / 2, scale: 1 }]} width={width} height={height} drift={0.02} driftFrames={placed.duration} shakes={[sw]}>
         <LaneTrails width={width} height={height} lanes={[
           { d: `M -200 ${y + 20} C 600 ${y - 40}, 1300 ${y + 40}, ${width + 200} ${y - 10}`, color: c.cyan, head: 1.1, tail: 1.2, width: 7, opacity: indigo ? 1 - prog(frame, sw, 8) : enter(frame, 0, 8) },
           { d: `M -200 ${y - 10} C 600 ${y + 40}, 1300 ${y - 40}, ${width + 200} ${y + 20}`, color: c.indigo, head: indigo ? 0.1 + 1.2 * prog(frame, sw - 4, 10) : 0, tail: 1.2, width: 7 },
           { d: `M -200 ${y} C 600 ${y - 30}, 1300 ${y + 30}, ${width + 200} ${y}`, color: indigo ? '#c7d2fe' : '#a5f3fc', head: ((frame % 15) / 15) * 1.2, tail: 0.1, width: 4 },
         ]} />
         {M.cards.map((card, k) => {
-          const s = start + k * every;
-          const u = frame - s;
-          if (u < -5 || u > 22) return null;
-          const inT = expoOut(clamp01((u + 5) / 8));
-          const outT = expoIn(clamp01((u - 15) / 7));
-          const x = (1 - inT) * 1150 - outT * 900;
-          const sc = 1.2 * (1 - 0.18 * outT);
+          const d = k - pos;
+          if (Math.abs(d) > 2.2) return null;
+          const sl = slotAt(d);
+          const lit = clamp01(1 - Math.abs(d) * 1.6);
           const lane = k < switchAfter ? 'cyan' : 'indigo';
+          const accent = lane === 'cyan' ? c.cyan : c.indigo;
           return (
-            <div key={k} style={{ position: 'absolute', left: width / 2 - 410, top: y - 235, transform: `translateX(${x}px) scale(${sc})`, opacity: 1 - outT }}>
-              <MontageCard q={card.q} struck={card.struck} lane={lane} at={s}
+            <div key={k} style={{ position: 'absolute', left: width / 2 + sl.x, top: y, width: 820, height: 470, transform: `translate(-50%, -50%) scale(${sl.s})`, opacity: sl.o, zIndex: Math.round(10 - Math.abs(d) * 3) }}>
+              <MontageCard q={card.q} struck={card.struck} lane={lane} at={centres[k]}
                 control={<Control id={card.control} />}
-                keycap={card.control === 'search' ? <KeyCombo keys={['Ctrl', 'Shift', 'F']} size={26} enterAt={s} /> : undefined} />
+                keycap={card.control === 'search' ? <KeyCombo keys={['Ctrl', 'Shift', 'F']} size={26} enterAt={centres[k] - 10} /> : undefined} />
+              {lit > 0 && <div style={{ position: 'absolute', inset: 0, borderRadius: 26, border: `3px solid ${accent}`, boxShadow: `0 0 70px ${accent}66`, opacity: lit, pointerEvents: 'none' }} />}
             </div>
           );
         })}

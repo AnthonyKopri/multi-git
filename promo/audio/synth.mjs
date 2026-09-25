@@ -263,17 +263,19 @@ const SECTIONS = {
   none() {},
   coldOpen(ctx, p) {
     const [dBar, dBeat] = p.dropout ?? [2, 3];
-    const dropStart = pos(ctx, dBar, dBeat), dropEnd = pos(ctx, dBar + 1);
+    // The silence runs to the next bar, or until the chaos restarts (dropoutUntil).
+    const dropStart = pos(ctx, dBar, dBeat), dropEnd = p.dropoutUntil ? pos(ctx, p.dropoutUntil[0], p.dropoutUntil[1]) : pos(ctx, dBar + 1);
+    const inDrop = (at) => at >= dropStart && at < dropEnd;
     drone(ctx, ctx.start, dropStart - ctx.start);
     if (dropEnd < ctx.end) drone(ctx, dropEnd, ctx.end - dropEnd);
     const accents = [1, 0, 0.5, 0.8, 0, 0, 0.7, 0, 0.9, 0, 0.6, 0.5, 0, 0, 0.8, 0.4];
     for (let bar = 1; bar <= ctx.bars; bar++) {
-      if (p.shatterBar === bar) continue;
+      if (p.shatterBar && bar >= p.shatterBar) continue;
       for (let s = 0; s < 16; s++) {
         const at = pos(ctx, bar, 1, s);
-        if (accents[s] && !(at >= dropStart && at < dropEnd)) clack(ctx, at, accents[s]);
+        if (accents[s] && !inDrop(at)) clack(ctx, at, accents[s]);
       }
-      if (bar === 1 || bar === 3) kick(ctx, pos(ctx, bar), 0.55);
+      if ((bar === 1 || bar === 3) && !inDrop(pos(ctx, bar))) kick(ctx, pos(ctx, bar), 0.55);
     }
     if (p.shatterBar) { riser(ctx, pos(ctx, p.shatterBar), BAR, 0.8); kick(ctx, pos(ctx, p.shatterBar), 0.8); }
   },
@@ -285,9 +287,12 @@ const SECTIONS = {
       const tones = CHORDS[ch].notes;
       const cut = 350 + 3000 * ((bar - 1 + 0.5) / ctx.bars);
       for (let s = 0; s < 16; s++) arpNote(ctx, at + s * STEP, tones[[0, 1, 2, 3][s % 4]] + 12, 1.25, cut * (1 + 0.4 * (s / 16)), s % 2 ? 0.35 : -0.35);
-      if (bar === jab) {
-        for (let b = 1; b <= 4; b++) snare(ctx, pos(ctx, bar, b), 0.75 + b * 0.08);
-        riser(ctx, at, BAR, 1.1);
+      if (jab && bar >= jab) {
+        // The switcher jab runs from jabBar to the drop: one snare per question
+        // (every beat over one bar, every other beat over two), one riser.
+        const span = ctx.bars - jab + 1, beats = span === 1 ? [1, 2, 3, 4] : [1, 3];
+        beats.forEach((b, i) => snare(ctx, pos(ctx, bar, b), 0.75 + ((bar - jab) * beats.length + i + 1) * (0.32 / (span * beats.length))));
+        if (bar === jab) riser(ctx, at, ctx.end - at, 1.1);
         sub(ctx, at, BAR, CHORDS[ch].sub, 0.5);
       } else {
         for (const [s, n] of PLUCK_MOTIF) pluck(ctx, at + s * STEP, n, 1.45, -0.35);
@@ -375,7 +380,8 @@ const SECTIONS = {
     riser(ctx, end - BEAT * 2, BEAT * 2, 0.9);
   },
   lift(ctx) {
-    for (let bar = 1; bar <= ctx.bars; bar++) grooveBar(ctx, bar, { chord: bar === 1 ? 'Db' : 'Eb', doubleHats: bar === ctx.bars, arpCutoff: 2400 + 1400 * (bar - 1), fill: bar === ctx.bars });
+    // Db for the first half, Eb for the second; the arp opens up across the section.
+    for (let bar = 1; bar <= ctx.bars; bar++) grooveBar(ctx, bar, { chord: bar <= ctx.bars / 2 ? 'Db' : 'Eb', doubleHats: bar === ctx.bars, arpCutoff: 2400 + (1400 * (bar - 1)) / Math.max(1, ctx.bars - 1), fill: bar === ctx.bars });
     riser(ctx, pos(ctx, ctx.bars), BAR, 0.9);
   },
   end(ctx) {

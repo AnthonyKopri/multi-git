@@ -2,7 +2,7 @@
 // replaces count: each command line of a collapsing spell (a line ending
 // `# ×N` counts N), plus the struck command on each montage card. Comments,
 // prompts, prompt answers, file contents and output don't count.
-import { cueOf, type PlacedSection } from './timing';
+import { BEAT, cueOf, type PlacedSection } from './timing';
 import type { Copy } from './schema';
 
 const COMMAND = /^(git|ssh-keygen|ssh-add|ssh|gh|cd|for|echo)\b/;
@@ -33,7 +33,8 @@ export function counterTicks(placed: PlacedSection[], copy: Copy): Tick[] {
         const cards = p.def.cards!;
         const n = Math.min(cards.count, copy.montage.cards.length);
         for (let k = 0; k < n; k++) {
-          const at = p.from + f + k * cards.everyFrames + delay;
+          // A conveyor montage lists the section beat each card centres on.
+          const at = p.from + (cards.beats ? (cards.beats[k] - 1) * BEAT : f + k * cards.everyFrames) + delay;
           if (at < p.from + p.duration) ticks.push({ frame: at, total: ++total, source: 'card' });
         }
       } else {

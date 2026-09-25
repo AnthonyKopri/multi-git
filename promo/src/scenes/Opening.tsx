@@ -144,7 +144,7 @@ const PainCard: React.FC<{ text: string; color: string; at: number; exitAt: numb
   return (
     <div style={{ position: 'absolute', left: x, top: y, transform: `translateX(${tx}px)`, padding: '26px 38px', borderRadius: 22, background: c.card, border: `2px solid ${color}88`,
       boxShadow: `0 0 50px ${color}30, 0 20px 60px rgba(0,0,0,0.5)` }}>
-      <Kinetic text={text} at={at + 3} style={{ fontFamily: FONT.sans, fontWeight: 600, fontSize: 56, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }} />
+      <Kinetic text={text} at={at + 2} stagger={1} style={{ fontFamily: FONT.sans, fontWeight: 600, fontSize: 56, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }} />
     </div>
   );
 };

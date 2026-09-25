@@ -342,7 +342,7 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
         </div>
       )}
       {!wrappedV(variant) && <HeadlineScrim />}
-      {!wrappedV(variant) && <SceneHeadline text={copy.sceneC.headline} at={landing} />}
+      {!wrappedV(variant) && <SceneHeadline text={copy.sceneC.headline} at={cu.at('headline', landing)} />}
       {!short && <Sub text={copy.sceneC.sub} at={cu.at('sub', 9999)} y={214} color={c.emerald} size={56} />}
       <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={toScreen(keys, land + 4, recRow)} />
       {!short && <Caption text={copy.sceneC.card} at={card} x={96} y={880} icon="delete_history" />}
