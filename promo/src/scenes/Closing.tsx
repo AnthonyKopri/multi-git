@@ -331,7 +331,7 @@ export const EndCard: React.FC<SceneProps> = ({ placed, variant }) => {
       )}
       {gif && <div style={{ position: 'absolute', left: 0, width, top: 830, textAlign: 'center', fontFamily: FONT.mono, fontWeight: 500, fontSize: 48, color: c.text, opacity: t(cta) }}>{E.url}</div>}
       {!gif && <div style={{ position: 'absolute', left: 0, width, top: vertical ? 1420 : 880, textAlign: 'center', ...TYPE.sub, fontSize: 40, color: c.muted, opacity: t(cta + 4) }}>{E.platforms}</div>}
-      {click < 9999 && <Cursor keys={[{ at: click - 20, x: width / 2 + 400, y: 1000 }, { at: click - 2, x: btnRect.x + btnRect.w * 0.55, y: btnRect.y + btnRect.h * 0.6, dur: 14 }]} clicks={[click]} enterAt={click - 20} />}
+      {click < 9999 && <Cursor stops={[{ at: click - 20, x: width / 2 + 400, y: 1000 }, { at: click, x: btnRect.x + btnRect.w * 0.55, y: btnRect.y + btnRect.h * 0.6, click: true }]} enterAt={click - 20} />}
     </AbsoluteFill>
   );
 };

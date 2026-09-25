@@ -68,9 +68,10 @@ export const AppWindow: React.FC<{ children: React.ReactNode; glow?: string }> =
 };
 
 /** Top-left scrim so headlines keep >= 4.5:1 over the UI. */
-export const HeadlineScrim: React.FC<{ width?: number; height?: number }> = ({ width = 1250, height = 460 }) => {
+export const HeadlineScrim: React.FC<{ width?: number; height?: number; opacity?: number }> = ({ width = 1250, height = 460, opacity = 1 }) => {
   const c = useColors();
-  return <div style={{ position: 'absolute', left: 0, top: 0, width, height, background: `radial-gradient(ellipse at 0% 0%, ${c.background}f5 0%, ${c.background}e0 45%, transparent 75%)`, pointerEvents: 'none' }} />;
+  if (opacity <= 0) return null;
+  return <div style={{ position: 'absolute', left: 0, top: 0, width, height, opacity, background: `radial-gradient(ellipse at 0% 0%, ${c.background}f5 0%, ${c.background}e0 45%, transparent 75%)`, pointerEvents: 'none' }} />;
 };
 
 // ---------------------------------------------------------- headline block --
@@ -115,9 +116,13 @@ export const HeadlineBlock: React.FC<{ lines: BlockLine[]; x?: number; top?: num
   const c = useColors();
   const key = JSON.stringify(lines.map((l) => [l.text, l.kind, l.size]));
   const layout = useMemo(() => blockLayout(lines, width, gap), [key, width, gap]);
+  const frame = useCurrentFrame();
+  // When every line leaves, the scrim leaves with the last one.
+  const lastExit = lines.every((l) => l.exitAt !== undefined) ? Math.max(...lines.map((l) => l.exitAt!)) : undefined;
+  const scrimOpacity = lastExit === undefined ? 1 : leave(frame, lastExit, 7);
   return (
     <>
-      {scrim && <HeadlineScrim width={Math.max(1250, x + width + 200)} height={Math.max(460, top + layout.height + 190)} />}
+      {scrim && <HeadlineScrim width={Math.max(1250, x + width + 200)} height={Math.max(460, top + layout.height + 190)} opacity={scrimOpacity} />}
       <div style={{ position: 'absolute', left: x, top, width, display: 'flex', flexDirection: 'column', gap }}>
         {layout.items.map((it, i) => (it.kind === 'headline'
           ? <Headline key={i} text={it.text} at={it.at} exitAt={it.exitAt} size={it.size} color={it.color} />

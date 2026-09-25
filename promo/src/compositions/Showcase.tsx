@@ -75,7 +75,7 @@ export const Showcase: React.FC = () => {
           </Cell>
           <Cell x={2} y={2} label="Headline + Cursor">
             <Headline text="Undo the scary stuff." at={10} size={64} style={{ position: 'absolute', left: 30, top: 60, width: 560 }} />
-            <Cursor keys={[{ at: 0, x: 500, y: 300 }, { at: 30, x: 200, y: 230 }]} clicks={[45]} />
+            <Cursor stops={[{ at: 0, x: 500, y: 300 }, { at: 45, x: 200, y: 230, click: true, ring: { x: 170, y: 215, w: 90, h: 30 } }]} enterAt={0} />
           </Cell>
           <Grain />
         </AbsoluteFill>

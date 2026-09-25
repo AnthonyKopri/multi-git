@@ -5,7 +5,7 @@ import { AbsoluteFill, useCurrentFrame } from 'remotion';
 import writes from '../../assets/captures/data/terminal-writes.json';
 import { clamp01, enter, expoIn, expoOut, leave, lerp, pop, prog } from '../lib/anim';
 import { Camera, type CamKey } from '../primitives/Camera';
-import { Cursor } from '../primitives/Cursor';
+import { Cursor, type CursorMap, type CursorStop } from '../primitives/Cursor';
 import { Kinetic } from '../primitives/Headline';
 import { KeyCombo } from '../primitives/KeyCap';
 import { LaneTrails } from '../primitives/LaneTrails';
@@ -53,11 +53,13 @@ const Caption: React.FC<{ text: string; at: number; exitAt?: number; x: number; 
   );
 };
 
-/** Screen-space cursor keyframes that follow world targets through the camera. */
-const aim = (keys: CamKey[], at: number, world: R, dx = 0.5, dy = 0.5, dur = 8) => {
-  const s = toScreen(keys, at, world);
-  return { at: at - dur, x: s.x + s.w * dx, y: s.y + s.h * dy, dur };
+/** Maps stage points through a scene's camera, for the Cursor. */
+const camMap = (keys: CamKey[], duration: number): CursorMap => (f, p) => {
+  const r = toScreen(keys, f, { x: p.x, y: p.y, w: 0, h: 0 }, FEATURE_ANCHOR, 0.015, duration);
+  return { x: r.x, y: r.y };
 };
+/** A click at (fx, fy) inside a stage rect, with the hover ring on the rect (unless `ring` is false). */
+const clickOn = (at: number, r: R, fx = 0.5, fy = 0.5, ring = true): CursorStop => ({ at, x: r.x + r.w * fx, y: r.y + r.h * fy, click: true, ring: ring ? r : undefined });
 
 // The capture machine had no SSH agent; its warning rows would steal the shot.
 const hideAgentRows = (root: HTMLElement) => {
@@ -138,17 +140,17 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
           }
           qa(root, 'mark.mg-hl').forEach((m) => { m.style.background = f >= mismatch + 5 ? `${c.amber}55` : 'transparent'; m.style.color = 'inherit'; m.style.borderRadius = '4px'; m.style.padding = '0 3px'; });
           const cb = q(root, '#btn-confirm-cancel');
-          if (cb) cb.style.boxShadow = f >= cancel && f < cancel + 6 ? `0 0 0 3px ${c.indigo}` : '';
+          if (cb) cb.style.boxShadow = '';
         }} />}
       </Stage>
       {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneA.headline, at: cu.at('headline') }]} />}
       <SpellStack lines={copy.spells.a} at={spellAt} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneA.headline)} target={toScreen(keys, land, seg)} />
-      <Cursor keys={[
-        { at: land, ...(() => { const s = toScreen(keys, land, seg); return { x: s.x + s.w * 0.6, y: s.y + s.h * 0.8 }; })() },
-        aim(keys, pick, workItem, 0.4, 0.55),
-        ...(hasRules ? [{ at: rule, x: 1500, y: 900, dur: 10 }] : []),
-        aim(keys, cancel, cancelBtn, 0.5, 0.6),
-      ]} clicks={[pick, cancel]} enterAt={land} exitAt={stampAt} />
+      <Cursor map={camMap(keys, placed.duration)} stops={[
+        { at: land, x: seg.x + seg.w * 0.6, y: seg.y + seg.h * 0.8 },
+        clickOn(pick, workItem, 0.4, 0.55),
+        ...(hasRules ? [{ at: rule + 12, x: 1150, y: 560 }] : []),
+        clickOn(cancel, cancelBtn, 0.5, 0.6),
+      ]} enterAt={land} exitAt={stampAt} />
       {frame >= keysAt && <KeyCombo keys={['Ctrl', 'Alt', 'U']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: wrappedV(variant) ? 720 : 96, top: 840, opacity: leave(frame, stampAt + 20, 7) }} />}
       <Stamp text={copy.sceneA.stamp} at={stampAt} x={FEATURE_ANCHOR.x} y={560} />
     </AbsoluteFill>
@@ -194,7 +196,7 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
       const on = f >= sel[i] && f < stage + 3;
       if (on) count++;
       el.classList.toggle('diff-line-selected', on);
-      el.style.boxShadow = f >= sel[i] && f < sel[i] + 6 ? `inset 0 0 0 2px ${c.indigo}, 0 0 24px ${c.indigo}` : '';
+      el.style.boxShadow = f >= sel[i] && f < sel[i] + 12 ? `inset 3px 0 0 ${c.indigo}` : '';
       const gone = clamp01((f - stage - 6) / 6);
       el.style.maxHeight = f >= stage + 6 ? `${61 * (1 - gone)}px` : '';
       el.style.overflow = 'hidden';
@@ -216,8 +218,8 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
     if (barEl) barEl.style.visibility = count > 0 ? 'visible' : 'hidden';
     setText(q(root, '#diff-selection-count'), `${count} line${count === 1 ? '' : 's'} selected`);
     const sb = q(root, '#btn-diff-stage-selection'), db = q(root, '#btn-diff-discard-selection');
-    if (sb) sb.style.boxShadow = f >= stage && f < stage + 6 ? `0 0 0 3px ${c.indigo}, 0 0 30px ${c.indigo}` : '';
-    if (db) db.style.boxShadow = f >= discard && f < discard + 6 ? `0 0 0 3px ${c.red}, 0 0 30px ${c.red}` : '';
+    if (sb) sb.style.boxShadow = '';
+    if (db) db.style.boxShadow = f >= discard && f < discard + 12 ? `0 0 0 2px ${c.red}` : '';
   };
   return (
     <AbsoluteFill style={{ background: c.background }}>
@@ -229,11 +231,11 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
       </Stage>
       {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneB.headline, at: cu.at('headline') }]} />}
       <SpellStack lines={copy.spells.b} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneB.headline)} target={toScreen(keys, land, lr('imp'))} />
-      <Cursor keys={[
-        { at: land, ...(() => { const s = toScreen(keys, land, lr('imp')); return { x: s.x + 80, y: s.y + 20 }; })() },
-        aim(keys, sel[0], lr('imp'), 0.3, 0.5, 5), aim(keys, sel[1], lr('ifl'), 0.3, 0.4, 6), aim(keys, sel[2], lr('ref'), 0.3, 0.5, 7),
-        aim(keys, stage, stageBtn, 0.5, 0.5, 7), aim(keys, discardSel, lr('log1'), 0.3, 0.5, 6), aim(keys, discard, discardBtn, 0.5, 0.5, 6),
-      ]} clicks={[...sel, stage, discardSel, discard]} enterAt={land} exitAt={keysAt} />
+      <Cursor map={camMap(keys, placed.duration)} stops={[
+        { at: land, x: lr('imp').x + lr('imp').w * 0.3, y: lr('imp').y + lr('imp').h * 0.5 },
+        clickOn(sel[0], lr('imp'), 0.3, 0.5, false), clickOn(sel[1], lr('ifl'), 0.3, 0.5, false), clickOn(sel[2], lr('ref'), 0.3, 0.5, false),
+        clickOn(stage, stageBtn), clickOn(discardSel, lr('log1'), 0.3, 0.5, false), clickOn(discard, discardBtn),
+      ]} enterAt={land} exitAt={keysAt} />
       {!wrappedV(variant) && <Caption text={copy.sceneB.caption} at={discardSel} x={96} y={900} icon="shield" />}
       {frame >= keysAt && frame < wordDiff + 5 && <KeyCombo keys={['Ctrl', 'Enter']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: 96, top: 770, opacity: leave(frame, wordDiff, 6) }} />}
     </AbsoluteFill>
@@ -370,18 +372,24 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
       <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={screen(land + 4, recRow)} />
       {full && <Caption text={copy.sceneC.back} at={back} exitAt={newPoint - 4} x={96} y={560} icon="history" color={c.emerald} />}
       {!short && <Caption text={copy.sceneC.card} at={card} x={96} y={880} icon="delete_history" />}
-      {full && <Cursor keys={[
-        { at: land, ...(() => { const r = screen(land, recBtn); return { x: r.x + r.w * 0.5, y: r.y + r.h * 2.4 }; })() },
-        aim(keys, pickPoint, recBtn, 0.5, 0.55, 10),
-        aim(keys, restore, rect('restore', '#btn-confirm-ok'), 0.5, 0.55, 12),
-      ]} clicks={[pickPoint, restore]} enterAt={land} exitAt={restore + 8} />}
+      {full && <Cursor map={camMap(keys, placed.duration)} stops={[
+        { at: land, x: recBtn.x - 60, y: recBtn.y + 70 },
+        clickOn(pickPoint, recBtn), clickOn(restore, rect('restore', '#btn-confirm-ok'), 0.5, 0.55),
+      ]} enterAt={land} exitAt={restore + 8} />}
       {full && <VhsOverlay from={restore} to={landing} width={W} height={H} />}
     </AbsoluteFill>
   );
 };
 
 // ------------------------------------------------------------------ scene D --
-const PLAN = { rate: 'rate limiting', token: 'token helpers', high: 'highlight matched', fix: 'fixup!', docs: 'API usage' };
+// The planner rows in their captured order (data-index 0-4) and where they sit.
+const PLAN_ROWS = ['rate limiting', 'token helpers', 'highlight matched', 'fixup!', 'API usage'];
+const planRect = (slot: number, part = '') => rect('planner', `#rebase-plan-list li::${PLAN_ROWS[slot]}${part}`);
+const SEL = ' >> select.rebase-action', MOVE_UP = ' >> button[title="Move earlier"]';
+const PITCH = planRect(1).y - planRect(0).y; // the measured row pitch
+const TOKEN = 1, FIX = 3, DOCS = 4; // data-index of the rows the scene edits
+const smoothStep = (t: number) => { const x = clamp01(t); return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2; };
+
 export const SceneD: React.FC<SceneProps> = ({ placed, variant }) => {
   const frame = useCurrentFrame();
   const c = useColors();
@@ -390,65 +398,86 @@ export const SceneD: React.FC<SceneProps> = ({ placed, variant }) => {
   const vertical = height > width;
   const hook = variant === 'hook', splitOnly = variant === 'splitOnly';
   const collapse = cu.at('collapse', 9999), land = collapse + 8;
-  const move1 = cu.at('move1', 9999), move2 = cu.at('move2', 9999), squash = cu.at('squash', 9999), fixup = cu.at('fixup', 9999), drop = cu.at('drop', 9999), auto = cu.at('autosquash', 9999);
-  const splitPulse = cu.at('splitPulse', 9999), confirm = cu.at('confirm', 9999), split = cu.at('split', 9999);
-  const row = (k: keyof typeof PLAN) => rect('planner', `#rebase-plan-list li::${PLAN[k]}`);
-  const splitBtn = rect('editStop', '#btn-rebase-split');
+  const move1 = cu.at('move1', 9999), squash = cu.at('squash', 9999), fixup = cu.at('fixup', 9999), drop = cu.at('drop', 9999), auto = cu.at('autosquash', 9999);
+  const start = cu.at('start', 9999), splitPulse = cu.at('splitPulse', 9999), confirm = cu.at('confirm', 9999), split = cu.at('split', 9999);
+  // The master makes every change with a real click; the cutdowns keep their quick version.
+  const full = start < 9999;
+  const splitClick = cu.at('splitClick', confirm + 8);
+  const settled = move1 + 10;
+  const splitBtn = rect('editStop', '#btn-rebase-split'), okBtn = rect('split', '#btn-confirm-ok');
   const keys: CamKey[] = splitOnly
     ? [{ at: 0, x: 935, y: 200, scale: 1.9 }, { at: confirm, x: 800, y: 150, scale: 1.8, dur: 6 }]
-    : [{ at: 0, x: 800, y: 380, scale: 1.3 }, { at: land + 6, x: 800, y: 380, scale: 1.45, dur: 7 }, { at: splitPulse - 2, x: 935, y: 200, scale: 1.85, dur: 6 }, { at: confirm, x: 800, y: 150, scale: 1.8, dur: 6 }];
-  const plannerVis = !splitOnly && frame < splitPulse - 2;
-  const stopVis = frame >= splitPulse - 2 && frame < confirm;
-  const splitVis = frame >= confirm && frame < split;
+    : full ? [
+      { at: 0, x: 800, y: 380, scale: 1.3 },
+      { at: land + 6, x: 800, y: 300, scale: 1.6, dur: 10 },
+      { at: splitPulse - 2, x: 935, y: 200, scale: 1.85, dur: 8 },
+      { at: confirm + 3, x: 800, y: 150, scale: 1.8, dur: 8 },
+      { at: splitClick + 4, x: 800, y: 420, scale: 1.2, dur: 12 },
+    ]
+    : [{ at: 0, x: 800, y: 380, scale: 1.3 }, { at: land + 6, x: 800, y: 266, scale: 1.3, dur: 7 }, { at: splitPulse - 2, x: 935, y: 200, scale: 1.85, dur: 6 }, { at: confirm, x: 800, y: 150, scale: 1.8, dur: 6 }];
+  const screen = (f: number, r: R) => toScreen(keys, f, r, FEATURE_ANCHOR, 0.015, placed.duration);
   const applyPlan = (root: HTMLElement, f: number) => {
-    const card0 = q(root, '.modal-card');
-    if (card0) card0.style.opacity = String(f < collapse ? 0.35 : 1);
-    const li = (k: keyof typeof PLAN) => byText(root, '#rebase-plan-list li', PLAN[k]);
-    const swap = (a: HTMLElement | null, b: HTMLElement | null, at: number) => {
-      const t = expoOut(prog(f, at, 6));
-      if (a) a.style.transform = `translateY(${-55 * t}px)`;
-      if (b) b.style.transform = `translateY(${55 * t}px)`;
+    const list = q(root, '#rebase-plan-list');
+    if (!list) return;
+    const row = (i: number) => q(list, `li[data-index="${i}"]`);
+    // Move earlier: the two rows trade places over 10 frames at the measured
+    // pitch (the moving row on top, both opaque), then the new order is made real.
+    const want = f >= settled ? [0, 1, 2, DOCS, FIX] : [0, 1, 2, 3, 4];
+    if (qa(list, ':scope > li').map((li) => li.dataset.index).join() !== want.join()) want.forEach((i) => { const li = row(i); if (li) list.appendChild(li); });
+    const t = f >= move1 && f < settled ? smoothStep((f - move1) / 10) : 0;
+    [[DOCS, -1, 2], [FIX, 1, 1]].forEach(([i, dir, z]) => {
+      const li = row(i); if (!li) return;
+      li.style.transform = t ? `translateY(${dir * PITCH * t}px)` : '';
+      li.style.position = 'relative'; li.style.zIndex = t ? String(z) : '';
+      li.style.background = t ? 'var(--bg-panel)' : '';
+      li.style.boxShadow = t && i === DOCS ? '0 6px 18px rgba(0,0,0,0.5)' : '';
+    });
+    const setAction = (i: number, v: string, at: number) => {
+      const sel = row(i)?.querySelector<HTMLSelectElement>('select.rebase-action');
+      if (!sel) return;
+      sel.value = f >= at ? v : 'pick';
+      // Without a cursor (the cutdowns) the change still gets a short, readable glow.
+      sel.style.boxShadow = !full && f >= at && f < at + 12 ? `0 0 0 2px ${c.indigo}` : '';
     };
-    swap(li('docs'), li('fix'), move1);
-    if (f >= move2) { const t = expoOut(prog(f, move2, 6)); const a = li('rate'), b = li('token'); if (a) a.style.transform = `translateY(${55 * t}px)`; if (b) b.style.transform = `translateY(${-55 * t}px)`; }
-    const setAction = (k: keyof typeof PLAN, v: string, at: number) => {
-      const s = li(k)?.querySelector<HTMLSelectElement>('select.rebase-action');
-      if (s) { s.value = f >= at ? v : 'pick'; s.style.boxShadow = f >= at && f < at + 6 ? `0 0 0 2px ${c.indigo}, 0 0 18px ${c.indigo}` : ''; }
-    };
-    setAction('token', 'squash', squash);
-    setAction('fix', 'fixup', fixup);
-    setAction('docs', 'drop', drop);
-    li('docs')?.classList.toggle('rebase-dropped', f >= drop);
-    const d = li('docs'); if (d) d.style.opacity = f >= drop ? '0.45' : '';
+    setAction(TOKEN, 'squash', squash);
+    setAction(FIX, 'fixup', fixup);
+    setAction(DOCS, 'drop', drop);
+    const d = row(DOCS);
+    d?.classList.toggle('rebase-dropped', f >= drop);
+    if (d) d.style.opacity = f >= drop ? '0.45' : '';
     const a = q(root, '#rebase-autosquash') as HTMLInputElement | null;
-    if (a) { a.checked = f >= auto; a.style.boxShadow = f >= auto && f < auto + 8 ? `0 0 0 3px ${c.indigo}` : ''; }
+    if (a) a.checked = f >= auto;
   };
-  const moveBtn = (k: keyof typeof PLAN, earlier: boolean) => { const r = row(k); return { x: r.x + r.w - (earlier ? 90 : 55), y: r.y + 10, w: 30, h: 30 }; };
   return (
     <AbsoluteFill style={{ background: c.background }}>
       {!hook && (
         <Stage keys={keys} duration={placed.duration}>
           <AppLayer snap="workspace-body" base />
-          {plannerVis && <AppLayer snap="rebase-planner" apply={applyPlan} />}
-          {stopVis && <AppLayer snap="rebase-edit-stop" />}
-          {splitVis && <AppLayer snap="split-confirm" apply={(root, f) => { const b = q(root, '#btn-confirm-ok'); if (b) b.style.boxShadow = f >= confirm + 8 && f < confirm + 14 ? `0 0 0 3px ${c.indigo}` : ''; }} />}
+          {!splitOnly && <ModalLayer snap="rebase-planner" open={collapse} close={full ? start + 2 : splitPulse - 2} apply={applyPlan} />}
+          <ModalLayer snap="rebase-edit-stop" open={splitOnly ? -30 : full ? splitPulse : splitPulse - 2} close={full ? confirm + 1 : confirm} />
+          <ModalLayer snap="split-confirm" open={full ? confirm + 3 : confirm} close={full ? splitClick + 1 : split}
+            apply={(root, f) => { const b = q(root, '#btn-confirm-ok'); if (b) b.style.boxShadow = !full && f >= splitClick && f < splitClick + 12 ? `0 0 0 3px ${c.indigo}` : ''; }} />
         </Stage>
       )}
       {splitOnly && <HeadlineScrim />}
-      {!splitOnly && !hook && <HeadlineBlock lines={[{ text: copy.sceneD.headline, at: cu.at('headline') }]} />}
+      {!splitOnly && !hook && <HeadlineBlock lines={[{ text: copy.sceneD.headline, at: cu.at('headline'), exitAt: full ? collapse : undefined }]} />}
       {hook && <Kinetic text={copy.vertical.hook} at={cu.at('headline') - 6} style={{ ...TYPE.hero, fontSize: 96, position: 'absolute', left: 90, top: 290, width: width - 180 }} />}
       {!splitOnly && <SpellStack lines={copy.spells.d} at={cu.at('spell')} collapseAt={hook ? undefined : collapse}
-        box={vertical ? { x: 60, y: 720, w: width - 120 } : spellBox(copy.sceneD.headline)} target={hook ? undefined : toScreen(keys, land, rect('planner', '#rebase-plan-list'))} fontSize={vertical ? 30 : 28} />}
-      {splitOnly && <SpellStack lines={copy.spells.d} at={-40} collapseAt={0} box={vertical ? { x: 60, y: 720, w: width - 120 } : SPELL_BOX} target={toScreen(keys, 8, splitBtn)} fontSize={vertical ? 30 : 28} />}
-      {frame >= splitPulse && frame < confirm && <TargetPulse rect={toScreen(keys, splitPulse, splitBtn)} at={splitPulse} />}
-      {!hook && !splitOnly && (
-        <Cursor keys={[
-          { at: land, x: 1500, y: 700 },
-          aim(keys, move1, moveBtn('docs', true), 0.5, 0.5, 6), aim(keys, move2, moveBtn('rate', false), 0.5, 0.5, 6),
-          aim(keys, squash, row('token'), 0.07, 0.5, 6), aim(keys, fixup, row('fix'), 0.07, 0.5, 6), aim(keys, drop, row('docs'), 0.07, 0.5, 6),
-          aim(keys, auto, rect('planner', '#rebase-autosquash'), 0.5, 0.5, 6),
-          aim(keys, confirm + 8, rect('split', '#btn-confirm-ok'), 0.5, 0.5, 7),
-        ]} clicks={[move1, move2, squash, fixup, drop, auto, confirm + 8].filter((x) => x < 9999)} enterAt={land} exitAt={split} />
+        box={vertical ? { x: 60, y: 720, w: width - 120 } : spellBox(copy.sceneD.headline)} target={hook ? undefined : screen(land, rect('planner', '#rebase-plan-list'))} fontSize={vertical ? 30 : 28} />}
+      {splitOnly && <SpellStack lines={copy.spells.d} at={-40} collapseAt={0} box={vertical ? { x: 60, y: 720, w: width - 120 } : SPELL_BOX} target={screen(8, splitBtn)} fontSize={vertical ? 30 : 28} />}
+      {frame >= splitPulse && frame < confirm && <TargetPulse rect={screen(splitPulse + (full ? 4 : 0), splitBtn)} at={splitPulse + (full ? 4 : 0)} />}
+      {full && (
+        <Cursor map={camMap(keys, placed.duration)} stops={[
+          { at: land, x: 1000, y: 560 },
+          clickOn(move1, planRect(DOCS, MOVE_UP)),
+          clickOn(squash, planRect(TOKEN, SEL)),
+          clickOn(fixup, planRect(4, SEL)), // the fixup! row sits in the last slot after the reorder
+          clickOn(drop, planRect(3, SEL)), // and "docs" in the one above it
+          clickOn(auto, rect('planner', '#rebase-autosquash')),
+          clickOn(start, rect('planner', '#btn-rebase-start')),
+          clickOn(confirm, splitBtn),
+          clickOn(splitClick, okBtn),
+        ]} enterAt={land} exitAt={split} />
       )}
       {frame >= split && <SplitNodes at={split} x={vertical ? width / 2 : FEATURE_ANCHOR.x} y={vertical ? 900 : 560} />}
       {cu.has('small') && <Sub text={copy.sceneD.small} at={cu.at('small')} y={vertical ? 1440 : 930} x={vertical ? 70 : 96} width={vertical ? width - 140 : 1400} size={34} />}
@@ -623,7 +652,7 @@ export const SceneF: React.FC<SceneProps> = ({ placed }) => {
       const hov = i === hoverLine && f >= hover;
       l.style.background = hov ? 'rgba(99,102,241,0.18)' : '';
       const btn = q(l, '.terminal-copy');
-      if (btn) { btn.style.opacity = hov ? '1' : ''; btn.style.boxShadow = f >= copyAt && f < copyAt + 8 && i === hoverLine ? `0 0 0 2px ${c.indigo}, 0 0 20px ${c.indigo}` : ''; }
+      if (btn) btn.style.opacity = hov ? '1' : '';
     });
   };
   const rec = recordFor(hoverLine);
@@ -638,7 +667,8 @@ export const SceneF: React.FC<SceneProps> = ({ placed }) => {
       <CounterCrack at={crack} pour={pour} landT={landT} every={every} target={toScreen(keys, pour + landT, termBody)} />
       <HeadlineBlock width={1150} lines={[{ kind: 'sub', text: copy.sceneF.line1, at: cu.at('line1'), size: 52, color: c.text }, { text: copy.sceneF.line2, at: cu.at('line2'), size: 96 }]} />
       <HeadlineBlock scrim={false} lines={[{ text: copy.sceneF.noBlackBox, at: cu.at('noBlackBox'), exitAt: cu.at('line1') - 8 }]} />
-      <Cursor keys={[{ at: hover - 8, x: 1500, y: 560 }, aim(keys, hover + 2, { x: 1500, y: 823 + hoverLine * 22, w: 60, h: 22 }, 0.5, 0.5, 8)]} clicks={[copyAt]} enterAt={hover - 8} exitAt={glint} />
+      <Cursor map={camMap(keys, placed.duration)} stops={[{ at: hover - 10, x: 1300, y: 760 }, { at: hover, x: 1520, y: 822 + hoverLine * 22 }, clickOn(copyAt, { x: 1500, y: 811 + hoverLine * 22, w: 60, h: 22 })]}
+        enterAt={hover - 10} exitAt={glint} />
       {rec && frame >= copyAt && frame < glint && <Caption text={`${tildify(rec.cwd)} · exit ${rec.exitCode ?? 0} · ${rec.durationMs ?? 0} ms`} at={copyAt} exitAt={glint - 7} x={96} y={470} icon="content_copy" />}
       {frame >= glint && (
         <LaneTrails width={W} height={H} lanes={[{ d: `M -100 ${H - 70} C 500 ${H - 100}, 1300 ${H - 40}, ${W + 100} ${H - 80}`, color: c.cyan, head: 0.1 + 1.2 * prog(frame, glint, 16), tail: 0.5, width: 7 }]} />
