@@ -78,7 +78,13 @@ export function buildRowGutter(row: GraphRow, width: number): SVGSVGElement {
 /** Number of ref chips shown beside a commit before the rest are elided. */
 const MAX_REF_CHIPS = 2;
 
-export function buildCommitRow(row: GraphRow, width: number): HTMLLIElement {
+/** Reserve only the lanes drawn in this row, so old wide merges do not indent every message. */
+function rowGutterWidth(row: GraphRow): number {
+  const lanes = [row.lane, ...row.passLanes.map((lane) => lane.lane), ...row.edges.map((edge) => edge.lane)];
+  return gutterWidth(Math.max(...lanes) + 1);
+}
+
+export function buildCommitRow(row: GraphRow): HTMLLIElement {
   const { commit } = row;
 
   const refChips = commit.refs.slice(0, MAX_REF_CHIPS).map((ref) =>
@@ -96,20 +102,17 @@ export function buildCommitRow(row: GraphRow, width: number): HTMLLIElement {
   const messageRow = el('div', {
     className: 'commit-graph-msg-row',
     children: [
-      ...refChips,
-      el('span', { className: 'commit-msg', text: commit.message, title: commit.message }),
-      // A marker, not the note itself. Rows are a fixed height so the gutter
-      // SVGs tile, and note text is arbitrarily long — reading it is the
-      // drawer's job.
-      ...(hasNote(commit.hash)
-        ? [
-            el('span', {
-              className: 'commit-note-marker',
-              text: '•',
-              title: 'This commit carries a note'
-            })
-          ]
-        : [])
+      ...(refChips.length ? [el('div', { className: 'commit-ref-row', children: refChips })] : []),
+      el('div', {
+        className: 'commit-message-line',
+        children: [
+          el('span', { className: 'commit-msg', text: commit.message, title: commit.message }),
+          // A marker, not the note itself. Note text is read in the drawer.
+          ...(hasNote(commit.hash)
+            ? [el('span', { className: 'commit-note-marker', text: '•', title: 'This commit carries a note' })]
+            : [])
+        ]
+      })
     ]
   });
 
@@ -122,12 +125,7 @@ export function buildCommitRow(row: GraphRow, width: number): HTMLLIElement {
   });
 
   return el('li', {
-    // Whether the row carries chips decides what its second line can be when
-    // the history panel is narrow. A row height fixed at GRAPH_ROW_HEIGHT is
-    // what lets the gutter SVGs tile, so the stylesheet cannot make room by
-    // growing the row; it drops the author and date instead — but only where a
-    // chip has already taken the first line. CSS cannot ask "does this row have
-    // chips", so the class answers it here.
+    // Tagged rows use their two fixed-height lines for refs and message.
     className: refChips.length === 0
       ? 'commit-graph-row'
       : 'commit-graph-row commit-graph-row--tagged',
@@ -135,16 +133,15 @@ export function buildCommitRow(row: GraphRow, width: number): HTMLLIElement {
     // of every row carrying its own closure.
     data: { hash: commit.hash },
     children: [
-      buildRowGutter(row, width),
+      buildRowGutter(row, rowGutterWidth(row)),
       el('div', { className: 'commit-graph-content', children: [messageRow, meta] })
     ]
   });
 }
 
 /** Appends rows to the list in a single DOM operation. */
-export function appendRows(list: Element, rows: readonly GraphRow[], maxLanes: number): void {
-  const width = gutterWidth(maxLanes);
-  list.appendChild(fragment(rows.map((row) => buildCommitRow(row, width))));
+export function appendRows(list: Element, rows: readonly GraphRow[]): void {
+  list.appendChild(fragment(rows.map(buildCommitRow)));
 }
 
 export function buildEmptyState(message = 'No commits yet'): HTMLLIElement {
