@@ -28,7 +28,7 @@ export const pulse = (frame: number, at: number, dur = 6, amp = 0.08) => {
 };
 /** Small deterministic screen shake: at most 6 px, at most 4 frames. */
 export const shake = (frame: number, at: number, amp = 5) => {
-  const k = frame - at;
+  const k = Math.floor(frame - at); // motion blur renders fractional sub-frames
   if (k < 0 || k >= 4) return { x: 0, y: 0 };
   const pattern = [[1, -0.6], [-0.8, 0.9], [0.5, -0.4], [-0.2, 0.2]];
   return { x: pattern[k][0] * amp, y: pattern[k][1] * amp };

@@ -12,7 +12,7 @@ Session branch: promo/video-2
 - [x] M5 rough cut — 2026-09-25T04:05Z — `promo: rough cut of the master`
 - [x] M6 review round 1 and hero polish — 2026-09-25T04:19Z — `promo: review round 1` (sheets: `review/round-1/`; smoke clip 420-570 at 0.25 had H.264 + AAC 48 kHz stereo)
 - [x] M7 review round 2 — 2026-09-25T04:28Z — `promo: review round 2` (sheets: `review/round-2/`, incl. `montage-cards.jpg`)
-- [ ] M8 review round 3 (optional)
+- [x] M8 review round 3 (optional) — 2026-09-25T04:35Z — `promo: review round 3` (sheets: `review/round-3/`)
 - [ ] M9 cutdowns
 - [ ] M10 docs, checks and the final push
 
@@ -133,6 +133,9 @@ Lane sweeps carry every cut except into the stinger (hard cut to black).
 - **Hashes are read from the capture.** The restore hash and the reset target
   come from the captured Restore confirm, so re-capturing on another day keeps
   the film consistent.
+- **Whip pans.** Every cut except into and out of the stinger is a 6-frame
+  whip (3 out, 3 in, right to left with the lanes) under `CameraMotionBlur`
+  (5 samples, only on those frames), with the lane sweep on top.
 - The session's own branch is `promo/video-2` itself (`git branch --show-current`
   at the start), so the morning fast-forward is a no-op.
 
