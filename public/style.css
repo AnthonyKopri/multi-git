@@ -6064,7 +6064,7 @@ label.settings-item:hover {
   flex-shrink: 0;
   margin-top: 1px;
 }
-.setup-item > button {
+.setup-item > button, .setup-item > a.btn {
   margin-left: auto;
   flex-shrink: 0;
   align-self: center;
@@ -6131,6 +6131,13 @@ label.settings-item:hover {
 .setup-badge-missing {
   background-color: color-mix(in srgb, var(--color-warning) 18%, transparent);
   color: var(--color-warning);
+}
+.settings-tool-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* A control that needs the GitHub CLI and does not have it. Dimmed rather than
