@@ -109,6 +109,17 @@ if (mode === 'round') {
     for (const f of fs.readdirSync(d)) fs.renameSync(path.join(d, f), path.join(stripDir, f));
   }
   tile(stripDir, path.join(out, 'filmstrips.jpg'), '12x', '128x72');
+} else if (mode === 'overview') {
+  const out = path.resolve(PROMO, args[1] ?? 'review/tmp/overview');
+  const id = args[2] ?? 'Promo';
+  const c = await comp(id);
+  const all = parseFrames(`0-${c.durationInFrames - 1}:15`, c.durationInFrames);
+  const third = Math.ceil(all.length / 3);
+  for (let s = 0; s < 3; s++) {
+    const dir = path.join(TMP, `ov-${s + 1}`);
+    await renderList(id, all.slice(s * third, (s + 1) * third), 0.2, dir);
+    tile(dir, path.join(out, `overview-${s + 1}.jpg`), '10x', '152x86');
+  }
 } else if (mode === 'cut') {
   const id = args[1], n = args[2] ?? '1';
   const c = await comp(id);

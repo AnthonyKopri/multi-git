@@ -21,13 +21,14 @@ export function cameraAt(keys: CamKey[], frame: number) {
 
 export const Camera: React.FC<{
   keys: CamKey[]; width: number; height: number; drift?: number; driftFrames?: number; shakes?: number[];
-  children: React.ReactNode; style?: React.CSSProperties;
-}> = ({ keys, width, height, drift = 0.015, driftFrames = 240, shakes = [], children, style }) => {
+  children: React.ReactNode; style?: React.CSSProperties; anchor?: { x: number; y: number };
+}> = ({ keys, width, height, drift = 0.015, driftFrames = 240, shakes = [], children, style, anchor }) => {
   const frame = useCurrentFrame();
   const c = cameraAt(keys, frame);
   const s = c.scale * (1 + drift * Math.min(1, frame / driftFrames));
   const sh = shakes.reduce((acc, at) => { const d = shake(frame, at); return { x: acc.x + d.x, y: acc.y + d.y }; }, { x: 0, y: 0 });
-  const tx = width / 2 - c.x * s + sh.x, ty = height / 2 - c.y * s + sh.y;
+  const ax = anchor?.x ?? width / 2, ay = anchor?.y ?? height / 2;
+  const tx = ax - c.x * s + sh.x, ty = ay - c.y * s + sh.y;
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', ...style }}>
       <div style={{ position: 'absolute', left: 0, top: 0, width, height, transformOrigin: '0 0', transform: `translate(${tx}px, ${ty}px) scale(${s})` }}>

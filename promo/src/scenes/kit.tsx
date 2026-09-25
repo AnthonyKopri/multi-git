@@ -1,0 +1,95 @@
+// Shared scene building blocks: the app window made of real captured DOM
+// layers, camera helpers, cues, headline slots and transitions.
+import React, { useLayoutEffect, useRef } from 'react';
+import { useCurrentFrame } from 'remotion';
+import RECTS from '../ui/rects.generated.json';
+import { SNAP } from '../ui/snapshots.generated';
+import { cameraAt, type CamKey } from '../primitives/Camera';
+import { Headline, Kinetic } from '../primitives/Headline';
+import { LaneTrails } from '../primitives/LaneTrails';
+import { useColors, TYPE } from '../theme';
+import { cueOf, type SectionDef } from '../timing';
+import type { Apply } from '../ui/AppSnapshot';
+import { clamp01, prog } from '../lib/anim';
+
+export interface R { x: number; y: number; w: number; h: number }
+export const rect = (layer: string, sel: string): R => ((RECTS as Record<string, Record<string, R | null>>)[layer]?.[sel]) ?? { x: 0, y: 0, w: 0, h: 0 };
+export const mid = (r: R) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+export const grow = (r: R, d: number): R => ({ x: r.x - d, y: r.y - d, w: r.w + 2 * d, h: r.h + 2 * d });
+
+export const cues = (def: SectionDef) => ({
+  at: (name: string, fallback = 0) => cueOf(def, name) ?? fallback,
+  has: (name: string) => cueOf(def, name) !== null,
+});
+
+export const APP = { w: 1600, h: 1000 };
+export const FEATURE_ANCHOR = { x: 1190, y: 650 };
+
+/** Where a world rect (app coordinates) lands on screen under a camera. */
+export function toScreen(keys: CamKey[], frame: number, world: R, anchor = FEATURE_ANCHOR, drift = 0.015, driftFrames = 240): R {
+  const c = cameraAt(keys, frame);
+  const s = c.scale * (1 + drift * Math.min(1, frame / driftFrames));
+  return { x: anchor.x + (world.x - c.x) * s, y: anchor.y + (world.y - c.y) * s, w: world.w * s, h: world.h * s };
+}
+
+/**
+ * One layer of captured app DOM inside the 1600x1000 app box. `at` places a
+ * fragment (a single captured element) where it sits in the real app.
+ */
+export const AppLayer: React.FC<{ snap: string; at?: R | 'full' | 'bottom'; apply?: Apply; opacity?: number; base?: boolean; style?: React.CSSProperties; holderStyle?: React.CSSProperties }> = ({ snap, at = 'full', apply, opacity = 1, base = false, style, holderStyle }) => {
+  const frame = useCurrentFrame();
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { if (ref.current && apply) apply(ref.current, frame); });
+  const html = SNAP[snap] ?? `<div style="color:red;font-size:30px">missing ${snap}</div>`;
+  const holder: React.CSSProperties = at === 'full' ? { position: 'absolute', left: 0, top: 0, width: APP.w, height: APP.h }
+    : at === 'bottom' ? { position: 'absolute', left: 0, bottom: 0, width: APP.w }
+    : { position: 'absolute', left: at.x, top: at.y, width: at.w };
+  if (opacity <= 0) return null;
+  return (
+    <div className="mg-app" style={{ position: 'absolute', left: 0, top: 0, width: APP.w, height: APP.h, background: base ? undefined : 'transparent', overflow: 'visible', opacity, pointerEvents: 'none', ...style }}>
+      <div ref={ref} style={{ ...holder, ...holderStyle }} dangerouslySetInnerHTML={{ __html: html }} />
+    </div>
+  );
+};
+
+/** The app window frame (rounded, bordered) in world coordinates. */
+export const AppWindow: React.FC<{ children: React.ReactNode; glow?: string }> = ({ children, glow }) => {
+  const c = useColors();
+  return (
+    <div style={{ position: 'absolute', left: 0, top: 0, width: APP.w, height: APP.h, borderRadius: 16, overflow: 'hidden', border: `1.5px solid ${c.border}`,
+      boxShadow: `0 40px 120px rgba(0,0,0,0.65)${glow ? `, 0 0 90px ${glow}40` : ''}`, background: c.panel }}>
+      {children}
+    </div>
+  );
+};
+
+/** Top-left scrim so headlines keep >= 4.5:1 over the UI. */
+export const HeadlineScrim: React.FC<{ width?: number; height?: number }> = ({ width = 1250, height = 460 }) => {
+  const c = useColors();
+  return <div style={{ position: 'absolute', left: 0, top: 0, width, height, background: `radial-gradient(ellipse at 0% 0%, ${c.background}f5 0%, ${c.background}e0 45%, transparent 75%)`, pointerEvents: 'none' }} />;
+};
+
+export const SceneHeadline: React.FC<{ text: string; at: number; exitAt?: number; size?: number; width?: number; top?: number; color?: string }> = ({ text, at, exitAt, size = 112, width = 1000, top = 70, color }) => (
+  <Headline text={text} at={at} exitAt={exitAt} size={size} color={color} style={{ position: 'absolute', left: 96, top, width }} />
+);
+
+export const Sub: React.FC<{ text: string; at: number; exitAt?: number; x?: number; y: number; width?: number; color?: string; size?: number }> = ({ text, at, exitAt, x = 96, y, width = 1100, color, size = TYPE.sub.fontSize }) => {
+  const c = useColors();
+  return <Kinetic text={text} at={at} exitAt={exitAt} color={color ?? c.muted} style={{ ...TYPE.sub, fontSize: size, position: 'absolute', left: x, top: y, width }} />;
+};
+
+/** A lane trail sweeping across the frame: carries the cut between scenes. */
+export const LaneSweep: React.FC<{ at: number; color: string; y?: number; width: number; height: number; dir?: 1 | -1 }> = ({ at, color, y, width, height, dir = 1 }) => {
+  const frame = useCurrentFrame();
+  const t = prog(frame, at - 5, 11);
+  if (frame < at - 5 || t >= 1) return null;
+  const yy = y ?? height * 0.62;
+  const d = dir === 1 ? `M ${-width * 0.2} ${yy + 40} C ${width * 0.3} ${yy - 30}, ${width * 0.7} ${yy + 30}, ${width * 1.2} ${yy - 40}` : `M ${width * 1.2} ${yy + 40} C ${width * 0.7} ${yy - 30}, ${width * 0.3} ${yy + 30}, ${-width * 0.2} ${yy - 40}`;
+  return <LaneTrails width={width} height={height} lanes={[{ d, color, head: 0.15 + 1.1 * t, tail: 0.55, width: 10, opacity: clamp01(3 * (1 - t)) }]} />;
+};
+
+// Apply helpers for captured DOM.
+export const q = (root: ParentNode, sel: string) => root.querySelector<HTMLElement>(sel);
+export const qa = (root: ParentNode, sel: string) => [...root.querySelectorAll<HTMLElement>(sel)];
+export const byText = (root: ParentNode, sel: string, text: string) => qa(root, sel).find((e) => e.textContent?.includes(text)) ?? null;
+export const setText = (el: Element | null | undefined, text: string) => { if (el && el.textContent !== text) el.textContent = text; };

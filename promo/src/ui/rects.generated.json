@@ -1,0 +1,632 @@
+{
+ "base": {
+  ".navbar": {
+   "x": 0,
+   "y": 0,
+   "w": 1600,
+   "h": 64
+  },
+  "#repo-segment-wrapper": {
+   "x": 175,
+   "y": 4,
+   "w": 334,
+   "h": 55
+  },
+  "#branch-segment-wrapper": {
+   "x": 517,
+   "y": 4,
+   "w": 334,
+   "h": 55
+  },
+  "#profile-segment-wrapper": {
+   "x": 859,
+   "y": 4,
+   "w": 334,
+   "h": 55
+  },
+  "#profile-segment": {
+   "x": 859,
+   "y": 4,
+   "w": 334,
+   "h": 55
+  },
+  "#btn-push": {
+   "x": 1438,
+   "y": 13,
+   "w": 38,
+   "h": 38
+  },
+  "#sidebar-panel": {
+   "x": 0,
+   "y": 64,
+   "w": 280,
+   "h": 866
+  },
+  ".sidebar-section[data-section=\"worktrees\"]": {
+   "x": 20,
+   "y": 930,
+   "w": 240,
+   "h": 44
+  },
+  ".sidebar-section[data-section=\"safety-net\"]": {
+   "x": 20,
+   "y": 876,
+   "w": 240,
+   "h": 38
+  },
+  "#staging-view": {
+   "x": 287,
+   "y": 112,
+   "w": 986,
+   "h": 818
+  },
+  "#history-panel": {
+   "x": 1280,
+   "y": 64,
+   "w": 320,
+   "h": 866
+  },
+  "#commit-history-list": {
+   "x": 1317,
+   "y": 141,
+   "w": 246,
+   "h": 752
+  },
+  "#commit-history-list li.commit-graph-row::docs: add API usage": {
+   "x": 1317,
+   "y": 325,
+   "w": 246,
+   "h": 46
+  },
+  "#commit-history-list li.commit-graph-row::fixup! feat(search)": {
+   "x": 1317,
+   "y": 417,
+   "w": 246,
+   "h": 46
+  },
+  "#commit-history-list li.commit-graph-row::highlight matched terms": {
+   "x": 1317,
+   "y": 417,
+   "w": 246,
+   "h": 46
+  },
+  "#commit-history-list li.commit-graph-row::extract the token helpers": {
+   "x": 1317,
+   "y": 555,
+   "w": 246,
+   "h": 46
+  },
+  "#unstaged-files-list": {
+   "x": 324,
+   "y": 220,
+   "w": 431,
+   "h": 519
+  },
+  "#staged-files-list": {
+   "x": 805,
+   "y": 220,
+   "w": 431,
+   "h": 519
+  },
+  "#btn-commit": {
+   "x": 1101,
+   "y": 832,
+   "w": 152,
+   "h": 48
+  },
+  "#btn-undo-commit": {
+   "x": 1485,
+   "y": 101,
+   "w": 78,
+   "h": 28
+  },
+  "#terminal-panel": {
+   "x": 0,
+   "y": 930,
+   "w": 1600,
+   "h": 37
+  },
+  ".tab-bar": null,
+  "#tab-staging": {
+   "x": 307,
+   "y": 72,
+   "w": 137,
+   "h": 39
+  },
+  "#tab-diff": {
+   "x": 452,
+   "y": 72,
+   "w": 105,
+   "h": 39
+  }
+ },
+ "dropdownWork": {
+  "#profile-dropdown": {
+   "x": 853,
+   "y": 45,
+   "w": 340,
+   "h": 498
+  },
+  "[data-profile-id=\"work\"]": {
+   "x": 864,
+   "y": 177,
+   "w": 318,
+   "h": 45
+  },
+  "[data-profile-id=\"personal\"]": {
+   "x": 864,
+   "y": 129,
+   "w": 318,
+   "h": 45
+  },
+  "#repo-account-block": {
+   "x": 864,
+   "y": 239,
+   "w": 318,
+   "h": 71
+  },
+  "#identity-row": {
+   "x": 864,
+   "y": 327,
+   "w": 318,
+   "h": 36
+  },
+  "#profile-segment": {
+   "x": 859,
+   "y": 4,
+   "w": 334,
+   "h": 41
+  }
+ },
+ "dropdownPersonal": {
+  "#profile-dropdown": {
+   "x": 854,
+   "y": 45,
+   "w": 339,
+   "h": 548
+  },
+  "[data-profile-id=\"work\"]": {
+   "x": 865,
+   "y": 177,
+   "w": 317,
+   "h": 45
+  },
+  "[data-profile-id=\"personal\"]": {
+   "x": 865,
+   "y": 129,
+   "w": 317,
+   "h": 45
+  },
+  "#repo-account-block": {
+   "x": 865,
+   "y": 239,
+   "w": 317,
+   "h": 121
+  },
+  "#repo-account-note": {
+   "x": 875,
+   "y": 307,
+   "w": 297,
+   "h": 47
+  },
+  "#identity-row": {
+   "x": 865,
+   "y": 376,
+   "w": 317,
+   "h": 36
+  }
+ },
+ "mismatch": {
+  ".modal-card": {
+   "x": 580,
+   "y": 20,
+   "w": 440,
+   "h": 189
+  },
+  "#btn-confirm-cancel": {
+   "x": 774,
+   "y": 149,
+   "w": 80,
+   "h": 35
+  },
+  "#btn-confirm-ok": {
+   "x": 866,
+   "y": 149,
+   "w": 125,
+   "h": 35
+  },
+  "#confirm-message": {
+   "x": 605,
+   "y": 91,
+   "w": 386,
+   "h": 42
+  }
+ },
+ "merge": {
+  ".modal-card": {
+   "x": 580,
+   "y": 20,
+   "w": 440,
+   "h": 441
+  },
+  "#btn-confirm-ok": {
+   "x": 914,
+   "y": 401,
+   "w": 77,
+   "h": 35
+  },
+  "#confirm-message": {
+   "x": 605,
+   "y": 91,
+   "w": 386,
+   "h": 294
+  }
+ },
+ "restore": {
+  ".modal-card": {
+   "x": 580,
+   "y": 20,
+   "w": 440,
+   "h": 252
+  },
+  "#btn-confirm-ok": {
+   "x": 906,
+   "y": 212,
+   "w": 85,
+   "h": 35
+  }
+ },
+ "split": {
+  ".modal-card": {
+   "x": 580,
+   "y": 20,
+   "w": 440,
+   "h": 252
+  },
+  "#btn-confirm-ok": {
+   "x": 927,
+   "y": 212,
+   "w": 64,
+   "h": 35
+  }
+ },
+ "diff": {
+  "#diff-view": {
+   "x": 287,
+   "y": 112,
+   "w": 986,
+   "h": 870
+  },
+  "#diff-content": {
+   "x": 591,
+   "y": 188,
+   "w": 661,
+   "h": 773
+  },
+  "[data-line-id]::import { expiresSoon }": {
+   "x": 922,
+   "y": 267,
+   "w": 331,
+   "h": 41
+  },
+  "[data-line-id]::if (expiresSoon(": {
+   "x": 922,
+   "y": 556,
+   "w": 331,
+   "h": 61
+  },
+  "[data-line-id]::session.refreshedAt =": {
+   "x": 922,
+   "y": 847,
+   "w": 331,
+   "h": 41
+  },
+  "[data-line-id]::console.log('session'": {
+   "x": 922,
+   "y": 496,
+   "w": 331,
+   "h": 61
+  },
+  "[data-line-id]::console.log('refreshed'": {
+   "x": 922,
+   "y": 785,
+   "w": 331,
+   "h": 41
+  },
+  "#diff-selection-bar": {
+   "x": 0,
+   "y": 0,
+   "w": 0,
+   "h": 0
+  },
+  "#btn-diff-layout": {
+   "x": 820,
+   "y": 145,
+   "w": 95,
+   "h": 30
+  }
+ },
+ "diffSelected": {
+  "#diff-selection-bar": {
+   "x": 591,
+   "y": 188,
+   "w": 661,
+   "h": 47
+  },
+  "#btn-diff-stage-selection": {
+   "x": 866,
+   "y": 196,
+   "w": 146,
+   "h": 30
+  },
+  "#btn-diff-discard-selection": {
+   "x": 1018,
+   "y": 196,
+   "w": 157,
+   "h": 30
+  },
+  "#diff-selection-count": {
+   "x": 605,
+   "y": 201,
+   "w": 98,
+   "h": 20
+  }
+ },
+ "image": {
+  "#diff-content": {
+   "x": 591,
+   "y": 188,
+   "w": 661,
+   "h": 170
+  },
+  "img": {
+   "x": 759,
+   "y": 226,
+   "w": 2,
+   "h": 2
+  }
+ },
+ "planner": {
+  ".modal-card": {
+   "x": 340,
+   "y": 20,
+   "w": 920,
+   "h": 556
+  },
+  "#rebase-plan-list": {
+   "x": 365,
+   "y": 248,
+   "w": 866,
+   "h": 260
+  },
+  "#rebase-plan-list li::rate limiting": {
+   "x": 366,
+   "y": 249,
+   "w": 864,
+   "h": 55
+  },
+  "#rebase-plan-list li::token helpers": {
+   "x": 366,
+   "y": 304,
+   "w": 864,
+   "h": 55
+  },
+  "#rebase-plan-list li::highlight matched": {
+   "x": 366,
+   "y": 359,
+   "w": 864,
+   "h": 55
+  },
+  "#rebase-plan-list li::fixup!": {
+   "x": 366,
+   "y": 414,
+   "w": 864,
+   "h": 55
+  },
+  "#rebase-plan-list li::API usage": {
+   "x": 366,
+   "y": 469,
+   "w": 864,
+   "h": 54
+  },
+  "#rebase-autosquash": {
+   "x": 1044,
+   "y": 177,
+   "w": 13,
+   "h": 13
+  },
+  "#btn-rebase-start": {
+   "x": 1115,
+   "y": 516,
+   "w": 116,
+   "h": 35
+  }
+ },
+ "editStop": {
+  ".modal-card": {
+   "x": 340,
+   "y": 20,
+   "w": 920,
+   "h": 229
+  },
+  "#btn-rebase-split": {
+   "x": 870,
+   "y": 194,
+   "w": 129,
+   "h": 30
+  },
+  "#rebase-progress": {
+   "x": 365,
+   "y": 91,
+   "w": 866,
+   "h": 133
+  }
+ },
+ "recovery": {
+  ".modal-card": {
+   "x": 340,
+   "y": 20,
+   "w": 920,
+   "h": 613
+  },
+  "#recovery-points-list": {
+   "x": 365,
+   "y": 160,
+   "w": 866,
+   "h": 111
+  },
+  "#recovery-points-list li": {
+   "x": 366,
+   "y": 161,
+   "w": 864,
+   "h": 55
+  },
+  "#recovery-points-list button::Restore": null
+ },
+ "safety": {
+  ".sidebar-section": {
+   "x": 20,
+   "y": 892,
+   "w": 240,
+   "h": 278
+  },
+  "#checkpoint-list": {
+   "x": 20,
+   "y": 980,
+   "w": 240,
+   "h": 34
+  },
+  "#trash-list": {
+   "x": 20,
+   "y": 1051,
+   "w": 240,
+   "h": 34
+  },
+  "#recovery-list": {
+   "x": 20,
+   "y": 1139,
+   "w": 240,
+   "h": 32
+  },
+  "#recovery-list li": {
+   "x": 20,
+   "y": 1139,
+   "w": 240,
+   "h": 32
+  }
+ },
+ "worktrees": {
+  ".sidebar-section": {
+   "x": 20,
+   "y": 946,
+   "w": 240,
+   "h": 225
+  },
+  ".worktree-item::acme-api": {
+   "x": 20,
+   "y": 1011,
+   "w": 240,
+   "h": 51
+  },
+  ".worktree-item::login": {
+   "x": 20,
+   "y": 1066,
+   "w": 240,
+   "h": 51
+  },
+  ".worktree-item::search": {
+   "x": 20,
+   "y": 1121,
+   "w": 240,
+   "h": 50
+  }
+ },
+ "agent": {
+  ".modal-card": {
+   "x": 460,
+   "y": 20,
+   "w": 680,
+   "h": 770
+  },
+  "[data-agent-id=\"claude\"]": {
+   "x": 485,
+   "y": 233,
+   "w": 203,
+   "h": 100
+  },
+  "[data-agent-id=\"codex\"]": {
+   "x": 696,
+   "y": 233,
+   "w": 203,
+   "h": 100
+  },
+  "[data-agent-id=\"gemini\"]": {
+   "x": 908,
+   "y": 233,
+   "w": 203,
+   "h": 100
+  }
+ },
+ "palette": {
+  "#palette-modal .modal-card, #palette-modal > div": {
+   "x": 580,
+   "y": 140,
+   "w": 440,
+   "h": 468
+  },
+  "#palette-input": {
+   "x": 655,
+   "y": 177,
+   "w": 324,
+   "h": 39
+  },
+  "#palette-list": {
+   "x": 605,
+   "y": 229,
+   "w": 390,
+   "h": 320
+  }
+ },
+ "terminal": {
+  "#terminal-panel": {
+   "x": 0,
+   "y": 780,
+   "w": 1600,
+   "h": 220
+  },
+  "#terminal-body": {
+   "x": 0,
+   "y": 817,
+   "w": 1600,
+   "h": 183
+  },
+  ".terminal-line-cmd": {
+   "x": 12,
+   "y": 823,
+   "w": 1576,
+   "h": 22
+  },
+  "#terminal-show-reads": {
+   "x": 1258,
+   "y": 793,
+   "w": 13,
+   "h": 13
+  }
+ },
+ "sshWindow": {
+  ".modal-card": {
+   "x": 310,
+   "y": 20,
+   "w": 980,
+   "h": 760
+  },
+  "h2::Auto-select": null,
+  "h3::Auto-select": {
+   "x": 593,
+   "y": 739,
+   "w": 672,
+   "h": 22
+  },
+  "h4::Auto-select": null
+ }
+}

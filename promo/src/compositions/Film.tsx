@@ -10,6 +10,7 @@ import { sceneFor } from '../scenes';
 import { FilmCtx } from '../theme';
 import { placeSections, TIMING, type CompositionId } from '../timing';
 import { CounterOverlay } from './CounterOverlay';
+import { LaneSweep } from '../scenes/kit';
 
 export const makeFilm = (comp: CompositionId): React.FC<PromoProps> => {
   const Film: React.FC<PromoProps> = (props) => {
@@ -34,6 +35,9 @@ export const makeFilm = (comp: CompositionId): React.FC<PromoProps> => {
                 </Sequence>
               );
             })}
+            {placed.map((p, i) => (i === 0 || p.def.scene === 'Stinger' || p.def.scene === 'Checklist' ? null : (
+              <LaneSweep key={`sweep-${p.section}`} at={p.from} color={i % 2 ? props.colors.cyan : props.colors.indigo} width={width} height={height} dir={i % 2 ? 1 : -1} />
+            )))}
             <CounterOverlay placed={placed} />
             <Grain />
             {audio && <Music comp={comp} volume={props.musicVolume} />}

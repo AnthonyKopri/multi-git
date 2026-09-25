@@ -9,7 +9,7 @@ Session branch: promo/video-2
 - [x] M2 demo world and captures — 2026-09-25T03:18Z — `promo: capture the demo world and real UI/CLI output`
 - [x] M3 timing and audio — 2026-09-25T03:33Z — `promo: synthesize the score and sound effects`
 - [x] M4 scaffold and primitives — 2026-09-25T03:46Z — `promo: add the motion primitives` (sheet: `review/m4-primitives.jpg`)
-- [ ] M5 rough cut
+- [x] M5 rough cut — 2026-09-25T04:05Z — `promo: rough cut of the master`
 - [ ] M6 review round 1 and hero polish
 - [ ] M7 review round 2
 - [ ] M8 review round 3 (optional)
@@ -24,7 +24,27 @@ _(filled in at M10)_
 
 ## The storyboard as built
 
-_(filled in as scenes land)_
+Master `Promo`, 30 fps, 2700 frames. Bars and frames match the spec exactly;
+every cue is in `timing.json` (section-local `[bar, beat, offset]`).
+
+| Section | Bars | Frames | Scene | Built as |
+| --- | --- | --- | --- | --- |
+| coldOpen | 1-4 | 0-239 | `ColdOpen` | Terminal card: `git push` half typed at frame 0, errors on 1.3 with shake, reset on bar 2, dim + "…wait." on 2.4, Vim flood + CONFLICT on bar 3, shatter into two trails on bar 4 with both lines |
+| lanes | 5-8 | 240-479 | `Lanes` | Cyan/indigo trails with pulses, chips, pain cards (cyan beat 1, indigo beat 2), switcher jab on bar 8 |
+| reveal | 9-11 | 480-659 | `Reveal` | Lanes dive into the trunk (bloom <= 40%, shake), `LogoMerge`, wordmark slam, tagline, app assembles per beat with graph lanes drawing, caption |
+| sceneA | 12-15 | 660-899 | `SceneA` | Spell A -> SSH Key segment; Personal -> Work dropdown flip; Auto-select rules; acme-web on Work; Ctrl+Alt+U -> real Account mismatch (Work/Personal highlighted) -> Cancel -> stamp |
+| sceneB | 16-18 | 900-1079 | `SceneB` | Spell B -> File Diff; 3 line clicks, selection bar count, Stage selection; console.logs -> Discard selection + caption; Ctrl+Enter; commit lands in History; diff; image diff |
+| sceneC | 19-22 | 1080-1319 | `SceneC` | `git reset --hard HEAD~3` types; three History rows turn red and fall; shaky spell C -> recovery point -> real Restore confirm; rewind; emerald landing; new recovery point; 24 h card |
+| sceneD | 23-25 | 1320-1499 | `SceneD` | Spell D -> real planner; Move earlier/later; squash/fixup/drop; Autosquash; edit stop "Split this commit" pulse (+9); real Split confirm; one node -> three; lease note |
+| sceneE | 26-29 | 1500-1739 | `SceneE` | Spell E -> Worktrees section; rows fan out; windows; real Launch window cards light up and fly; three terminals (`claude`, `codex`, `gemini`); small text |
+| sceneF | 30-32 | 1740-1919 | `SceneF` | Counter cracks, glyphs pour into the real Terminal panel, the film's real write commands appear; hover + Copy with cwd/exit/duration; lines; cyan glint; Ctrl+K -> real palette |
+| montage | 33-37 | 1920-2219 | `Montage` | 20 cards, one per beat, real controls, struck commands; lane switch at 2070 |
+| twoLanes | 38-39 | 2220-2339 | `TwoLanes` | Real merge preview (cyan); real TUI states + keycaps and a real MCP `tools/call` (indigo) |
+| stinger | 40-41 | 2340-2459 | `Stinger` | True black, split-flap reshuffle lands on 45; hit at 2400: "You typed zero." with the 0 dropping in |
+| checklist | 42-43 | 2460-2579 | `Checklist` | Questions struck and answered one per beat; three more checks |
+| endCard | 44-45 | 2580-2699 | `EndCard` | Lanes sweep and fuse (fast `LogoMerge`), wordmark, tagline, Download free + URL, platforms; click at 2670 ticks the counter to 46 |
+
+Lane sweeps carry every cut except into the stinger (hard cut to black).
 
 ## Decision log
 

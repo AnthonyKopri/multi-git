@@ -1,0 +1,4 @@
+/* Film-only tweaks on top of the app's scoped CSS. */
+.mg-app.mg-snap, .mg-app { -webkit-font-smoothing: antialiased; }
+.mg-force-visible .file-actions, .mg-force-visible .branch-actions, .mg-force-visible .stash-actions { opacity: 1 !important; visibility: visible !important; }
+.mg-force-visible li { list-style: none; }
