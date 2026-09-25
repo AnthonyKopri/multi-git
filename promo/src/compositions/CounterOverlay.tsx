@@ -38,7 +38,7 @@ export const CounterOverlay: React.FC<{ placed: PlacedSection[] }> = ({ placed }
   let k = 0;
   while (k < 10 && frame - k - 1 >= first && !counterHidden(placed, frame - k - 1, comp)) k++;
   const vis = enter(frame, first, 10) * (k < 10 && frame - k - 1 >= first ? enter(k, 0, 10) : 1);
-  const recent = ticks.some((t) => frame >= t.frame && frame < t.frame + 8);
+  const recent = ticks.some((t) => frame >= t.frame && frame < t.frame + 12);
   const vertical = height > width;
   return <CornerCounter valueAt={valueAt} label={copy.counterLabel} x={vertical ? 72 : 96} y={vertical ? 262 : 54} opacity={vis} accent={recent} scale={width < 1000 && !vertical ? 0.6 : 1} />;
 };

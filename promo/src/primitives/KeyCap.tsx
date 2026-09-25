@@ -17,7 +17,7 @@ export const KeyCap: React.FC<{ label: string; enterAt?: number; pressAt?: numbe
   const s = pop(frame, enterAt);
   const d = pressDepth(frame, pressAt);
   const edge = 6 - 4 * d;
-  const lit = glow && d > 0;
+  const lit = glow && frame >= pressAt && frame < pressAt + 12; // no glow shorter than 10 frames
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: size * 1.5, height: size * 1.75,

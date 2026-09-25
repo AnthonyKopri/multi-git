@@ -173,6 +173,15 @@ export const Sub: React.FC<{ text: string; at: number; exitAt?: number; x?: numb
   return <Kinetic text={text} at={at} exitAt={exitAt} color={color ?? c.muted} style={{ ...TYPE.sub, fontSize: size, position: 'absolute', left: x, top: y, width }} />;
 };
 
+/** A dark gradient up from the bottom edge, fading in with a bottom line of text so no UI text reads under it. */
+export const BottomScrim: React.FC<{ at: number; height?: number }> = ({ at, height = 300 }) => {
+  const frame = useCurrentFrame();
+  const c = useColors();
+  const o = enter(frame, at - 6, 8);
+  if (o <= 0) return null;
+  return <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height, opacity: o, pointerEvents: 'none', background: `linear-gradient(to top, ${c.background}f7 0%, ${c.background}eb 50%, ${c.background}00 100%)` }} />;
+};
+
 /** A lane trail sweeping across the frame: carries the cut between scenes. */
 export const LaneSweep: React.FC<{ at: number; color: string; y?: number; width: number; height: number; dir?: 1 | -1 }> = ({ at, color, y, width, height, dir = 1 }) => {
   const frame = useCurrentFrame();

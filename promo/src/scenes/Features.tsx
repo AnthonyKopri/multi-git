@@ -15,7 +15,7 @@ import { VhsOverlay, VhsStage } from '../primitives/Vhs';
 import { openWorktrees } from '../ui/edits';
 import { FONT, TYPE, useColors, useFilm } from '../theme';
 import { SNAP } from '../ui/snapshots.generated';
-import { AppLayer, AppWindow, blockBottom, byText, cues, FEATURE_ANCHOR, HeadlineBlock, HeadlineScrim, ModalLayer, q, qa, rect, rgba, setText, Sub, toScreen, type R } from './kit';
+import { AppLayer, AppWindow, blockBottom, BottomScrim, byText, cues, FEATURE_ANCHOR, HeadlineBlock, HeadlineScrim, ModalLayer, q, qa, rect, rgba, setText, Sub, toScreen, type R } from './kit';
 import type { SceneProps } from './types';
 
 const W = 1920, H = 1080;
@@ -487,6 +487,7 @@ export const SceneD: React.FC<SceneProps> = ({ placed, variant }) => {
         ]} enterAt={land} exitAt={split} />
       )}
       {frame >= split && <SplitNodes at={split} x={vertical ? width / 2 : FEATURE_ANCHOR.x} y={vertical ? 900 : 560} />}
+      {cu.has('small') && !vertical && <BottomScrim at={cu.at('small')} />}
       {cu.has('small') && <Sub text={copy.sceneD.small} at={cu.at('small')} y={vertical ? 1440 : 930} x={vertical ? 70 : 96} width={vertical ? width - 140 : 1400} size={34} />}
     </AbsoluteFill>
   );
@@ -701,6 +702,7 @@ export const SceneF: React.FC<SceneProps> = ({ placed }) => {
       <Cursor map={camMap(keys, placed.duration)} stops={[{ at: hover - 10, x: 1300, y: 760 }, { at: hover, x: 1520, y: 822 + hoverLine * 22 }, clickOn(copyAt, { x: 1500, y: 811 + hoverLine * 22, w: 60, h: 22 })]}
         enterAt={hover - 10} exitAt={glint} />
       {rec && frame >= copyAt && frame < glint && <Caption text={`${tildify(rec.cwd)} · exit ${rec.exitCode ?? 0} · ${rec.durationMs ?? 0} ms`} at={copyAt} exitAt={glint - 7} x={96} y={470} icon="content_copy" />}
+      <BottomScrim at={glint + 2} height={260} />
       {frame >= glint && (
         <LaneTrails width={W} height={H} lanes={[{ d: `M -100 ${H - 70} C 500 ${H - 100}, 1300 ${H - 40}, ${W + 100} ${H - 80}`, color: c.cyan, head: 0.1 + 1.2 * prog(frame, glint, 16), tail: 0.5, width: 7 }]} />
       )}

@@ -4,6 +4,7 @@
 //   node scripts/review.mjs round <N>            the round's standard sheets
 //   node scripts/review.mjs sheet --comp=Promo --frames=0-2699:15 --scale=0.2 --tile=10x --geometry=152x86 --out=review/tmp/x.jpg
 //   node scripts/review.mjs cut <Promo30|Vertical|ReadmeGif> <N>   one overview sheet per cut
+//   node scripts/review.mjs revision <round>     Revision 1's sheets (review/revision-1/)
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -83,9 +84,52 @@ async function sheet(id, spec, scale, out, tileSpec, geometry) {
 const KEY = [15, 110, 205, 470, 500, 565, 750, 870, 995, 1215, 1455, 1625, 1765, 1840, 2100, 2250, 2430, 2640];
 const STRIPS = [[716, 727], [480, 491], [1180, 1191]]; // collapse A, logo fusion, the rewind
 
+// Revision 1: frames from the master's arrangement (section start + local frame).
+const T = JSON.parse(fs.readFileSync(path.join(PROMO, 'timing.json'), 'utf8'));
+const startOf = (name) => (T.compositions.Promo.arrangement.find((a) => a.section === name).fromBar - 1) * T.barFrames;
+const at = (name, local) => startOf(name) + local;
+async function revision(n) {
+  const out = path.join(PROMO, 'review', 'revision-1');
+  const c = await comp('Promo');
+  // 1. Overview: every 30th frame at 0.2, in two sheets.
+  const all = parseFrames(`0-${c.durationInFrames - 1}:30`, c.durationInFrames);
+  const half = Math.ceil(all.length / 2);
+  for (let k = 0; k < 2; k++) {
+    const dir = path.join(TMP, `rev-ov-${k + 1}`);
+    await renderList('Promo', all.slice(k * half, (k + 1) * half), 0.2, dir);
+    tile(dir, path.join(out, `r${n}-overview-${k + 1}.jpg`), '10x', '152x86');
+  }
+  // 2. Fixes: scene C from the Restore click, D from the collapse, E from the collapse (two rows each).
+  const span = (name, from) => Array.from({ length: 12 }, (_, i) => at(name, from + i * 10));
+  const fixes = [...span('sceneC', 150), ...span('sceneD', 60), ...span('sceneE', 60)];
+  const fixDir = path.join(TMP, 'rev-fix');
+  fs.rmSync(fixDir, { recursive: true, force: true }); fs.mkdirSync(fixDir, { recursive: true });
+  for (const [i, f] of fixes.entries()) {
+    await renderStill({ composition: c, serveUrl, frame: f, output: path.join(fixDir, `f${pad(i)}-${f}.jpg`), imageFormat: 'jpeg', jpegQuality: 85, scale: 0.3, puppeteerInstance: browser, inputProps: {} });
+  }
+  tile(fixDir, path.join(out, `r${n}-fixes.jpg`), '6x', '320x180');
+  // 3. Headlines at full hold, a spell plate over busy UI, and the end card's bars 2, 3 and 5.
+  const heads = [at('coldOpen', 290), n === '1' ? at('reveal', 150) : at('lanes', 185), at('sceneA', 45), at('sceneA', 230), at('sceneA', 285), at('sceneB', 230), at('sceneC', 215), at('sceneC', 300),
+    at('sceneD', 40), n === '1' ? at('sceneD', 190) : at('sceneD', 335), at('sceneE', 300), at('sceneF', 165), at('endCard', 110), at('endCard', 170), at('endCard', 270)];
+  const headDir = path.join(TMP, 'rev-head');
+  await renderList('Promo', heads, 0.3, headDir);
+  tile(headDir, path.join(out, `r${n}-headlines.jpg`), '3x', '524x295');
+  // 4. The cutdowns, every 30th frame, on one sheet.
+  const cutDir = path.join(TMP, 'rev-cuts');
+  fs.rmSync(cutDir, { recursive: true, force: true }); fs.mkdirSync(cutDir, { recursive: true });
+  for (const [k, id] of ['Promo30', 'Vertical', 'ReadmeGif'].entries()) {
+    const cc = await comp(id);
+    const d = path.join(TMP, `rev-cut-${id}`);
+    await renderList(id, parseFrames(`0-${cc.durationInFrames - 1}:30`, cc.durationInFrames), cc.height > cc.width ? 0.1 : id === 'ReadmeGif' ? 0.25 : 0.1, d);
+    for (const f of fs.readdirSync(d)) fs.renameSync(path.join(d, f), path.join(cutDir, `${k}-${f}`));
+  }
+  tile(cutDir, path.join(out, `r${n}-cutdowns.jpg`), '14x', '108x108');
+}
+
 await setup();
 const mode = args[0];
-if (mode === 'round') {
+if (mode === 'revision') await revision(args[1] ?? '1');
+else if (mode === 'round') {
   const n = args[1] ?? '1';
   const out = path.join(PROMO, 'review', `round-${n}`);
   const c = await comp('Promo');

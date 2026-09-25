@@ -196,7 +196,8 @@ export const Lanes: React.FC<SceneProps> = ({ placed, variant }) => {
           <Chip text={L.cyanLabel} color={c.cyan} at={cu.at('labels')} exitAt={jab} x={96} y={200} />
           <Chip text={L.indigoLabel} color={c.indigo} at={cu.at('labels') + 4} exitAt={jab} x={96} y={580} />
           {cards.map(([ca, ia], i) => {
-            const nextC = cards[i + 1]?.[0] ?? jab, nextI = cards[i + 1]?.[1] ?? jab;
+            // The last pair clears before the first switcher question lands in its place.
+            const nextC = cards[i + 1]?.[0] ?? jab - 8, nextI = cards[i + 1]?.[1] ?? jab - 8;
             return (
               <React.Fragment key={i}>
                 <PainCard text={L.pains[i][0]} color={c.cyan} at={ca} exitAt={nextC} x={96} y={290} width={1300} />
