@@ -388,6 +388,19 @@ const SECTIONS = {
     const at = pos(ctx, 1), len = ctx.end - at;
     crash(ctx, at, 0.9);
     kick(ctx, at, 1.1);
+    if (ctx.bars >= 4) {
+      // The master's long ending: the F chord rings under bars 1-3, is struck
+      // again on bar 4 (the click) and sustains through bar 5, decaying into the fade.
+      const again = pos(ctx, 4);
+      supersaw(ctx, ctx.bus.music, at, again - at, CHORDS.F.notes, 0.62, { cutoff: 2400, cutoffEnv: 1.2, attack: 0.01, decay: 1.8, sustain: 0.35, release: 0.6, send: 0.6 });
+      sub(ctx, at, again - at, 29, 0.9);
+      const notes = [65, 69, 72, 77, 81, 77, 72, 69];
+      for (let k = 0; k < 24; k++) pluck(ctx, at + k * STEP * 2, notes[k % notes.length], 0.9 * (1 - k / 30), k % 2 ? 0.3 : -0.3);
+      crash(ctx, again, 0.5);
+      supersaw(ctx, ctx.bus.music, again, ctx.end - again, CHORDS.F.notes, 0.58, { cutoff: 2200, cutoffEnv: 0.8, attack: 0.02, decay: 2.4, sustain: 0.1, release: 0.3, send: 0.8 });
+      sub(ctx, again, ctx.end - again, 29, 0.55); // the sub has no decay of its own: the fade takes it out
+      return;
+    }
     supersaw(ctx, ctx.bus.music, at, len - Math.round(0.2 * SR), CHORDS.F.notes, 0.62, { cutoff: 2400, cutoffEnv: 1.2, attack: 0.01, decay: 1.8, sustain: 0.35, release: 0.2, send: 0.6 });
     sub(ctx, at, len - Math.round(0.25 * SR), 29, 0.9);
     const arp = [65, 69, 72, 77, 81, 77, 72, 69];
@@ -486,7 +499,8 @@ function renderComposition(name) {
   }
   let tp = D.truePeak(mix);
   for (let k = 0; k < 4 && tp > PARAMS.ceilingDbtp; k++) { D.limit(mix, D.dbToLin(PARAMS.ceilingDbtp - 0.4 - (tp - PARAMS.ceilingDbtp) - 0.1 * (k + 1))); tp = D.truePeak(mix); }
-  const fadeIn = 240, fadeOut = Math.round(0.35 * SR);
+  // The master fades out over its last fadeOutFrames, with the picture.
+  const fadeIn = 240, fadeOut = comp.fadeOutFrames ? Math.round(comp.fadeOutFrames * FRAME) : Math.round(0.35 * SR);
   for (let i = 0; i < fadeIn; i++) { mix[0][i] *= i / fadeIn; mix[1][i] *= i / fadeIn; }
   for (let i = 0; i < fadeOut; i++) { const g = i / fadeOut; mix[0][len - 1 - i] *= g; mix[1][len - 1 - i] *= g; }
   return { mix, raw, lufs: D.integratedLoudness(mix), tp: D.truePeak(mix) };

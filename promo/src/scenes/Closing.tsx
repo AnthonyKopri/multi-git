@@ -15,6 +15,7 @@ import { LogoMerge, logoPoint, TRUNK_BASE } from '../primitives/LogoMerge';
 import { AnsiScreen, type Span } from '../primitives/Terminal';
 import { FONT, TYPE, useColors, useFilm } from '../theme';
 import { SNAP } from '../ui/snapshots.generated';
+import { measureText } from '@remotion/layout-utils';
 import { AppLayer, cues, q } from './kit';
 import type { SceneProps } from './types';
 
@@ -308,6 +309,7 @@ export const EndCard: React.FC<SceneProps> = ({ placed, variant }) => {
   const t = (at: number) => (still ? 1 : enter(frame, at, 10));
   const btnRect = vertical ? { x: width / 2 - 200, y: 1150, w: 400, h: 96 } : { x: width / 2 - 470, y: 736, w: 380, h: 96 };
   const pressed = frame >= click && frame < click + 6;
+  if (cu.has('settle')) return <EndCardHero placed={placed} />;
   return (
     <AbsoluteFill style={{ background: c.background }}>
       {!still && frame < fuse + 14 && (
@@ -332,6 +334,63 @@ export const EndCard: React.FC<SceneProps> = ({ placed, variant }) => {
       {gif && <div style={{ position: 'absolute', left: 0, width, top: 830, textAlign: 'center', fontFamily: FONT.mono, fontWeight: 500, fontSize: 48, color: c.text, opacity: t(cta) }}>{E.url}</div>}
       {!gif && <div style={{ position: 'absolute', left: 0, width, top: vertical ? 1420 : 880, textAlign: 'center', ...TYPE.sub, fontSize: 40, color: c.muted, opacity: t(cta + 4) }}>{E.platforms}</div>}
       {click < 9999 && <Cursor stops={[{ at: click - 20, x: width / 2 + 400, y: 1000 }, { at: click, x: btnRect.x + btnRect.w * 0.55, y: btnRect.y + btnRect.h * 0.6, click: true }]} enterAt={click - 20} />}
+    </AbsoluteFill>
+  );
+};
+
+/**
+ * The master's end card (5 bars): the lanes fuse into a hero-sized logo; it
+ * settles upward as the wordmark slams in and the tagline lands; the CTA,
+ * URL and platforms arrive and the button's glow breathes; the cursor glides
+ * in and clicks (ripple, counter to 46); then a still hold with a 2% push.
+ * The film fades picture and sound together over its last 20 frames (Film).
+ */
+const EndCardHero: React.FC<{ placed: SceneProps['placed'] }> = ({ placed }) => {
+  const frame = useCurrentFrame();
+  const c = useColors();
+  const { copy, width, height } = useFilm();
+  const E = copy.endCard;
+  const cu = cues(placed.def);
+  const sweep = cu.at('sweep'), fuse = cu.at('fuse'), settle = cu.at('settle'), wm = cu.at('wordmark'), tag = cu.at('tagline');
+  const cta = cu.at('cta'), plat = cu.at('platforms'), glide = cu.at('glide'), click = cu.at('click'), hold = cu.at('hold');
+  const hero = { x: width / 2, y: 470, s: 560 };
+  const st = expoOut(prog(frame, settle, 12));
+  const lc = { x: hero.x, y: lerp(hero.y, 245, st), s: lerp(hero.s, 300, st) };
+  const base = logoPoint(TRUNK_BASE.x, TRUNK_BASE.y + 60, hero.x, hero.y, hero.s);
+  // The CTA row, laid out exactly so the cursor can aim at the real button.
+  const urlW = measureText({ text: E.url, fontFamily: FONT.mono, fontSize: 40, fontWeight: '500' }).width;
+  const btn = { w: 400, h: 96, y: 716, x: 0 };
+  btn.x = (width - (btn.w + 44 + urlW)) / 2;
+  const pressed = frame >= click && frame < click + 6;
+  const breathe = frame >= cta ? 0.5 - 0.5 * Math.cos((2 * Math.PI * (frame - cta)) / 90) : 0;
+  const ripple = frame >= click ? prog(frame, click, 18) : 0;
+  const push = 1 + 0.02 * prog(frame, hold, placed.duration - hold);
+  const hit = { x: btn.x + btn.w * 0.55, y: btn.y + btn.h * 0.6 };
+  return (
+    <AbsoluteFill style={{ background: c.background }}>
+      <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: '50% 45%' }}>
+        {frame < fuse + 14 && (
+          <LaneTrails width={width} height={height} lanes={[
+            { d: `M -150 ${height * 0.22} C ${width * 0.3} ${height * 0.18}, ${base.x - 240} ${base.y + 180}, ${base.x} ${base.y}`, color: c.cyan, head: 0.2 + 0.8 * prog(frame, sweep, fuse - sweep), tail: 0.5, width: 9, opacity: 1 - prog(frame, fuse + 2, 10) },
+            { d: `M ${width + 150} ${height * 0.8} C ${width * 0.7} ${height * 0.84}, ${base.x + 240} ${base.y + 180}, ${base.x} ${base.y}`, color: c.indigo, head: 0.2 + 0.8 * prog(frame, sweep, fuse - sweep), tail: 0.5, width: 9, opacity: 1 - prog(frame, fuse + 2, 10) },
+          ]} />
+        )}
+        <LogoMerge id={`end-${placed.section}`} at={fuse} cx={lc.x} cy={lc.y} size={lc.s} />
+        <div style={{ position: 'absolute', left: 0, width, top: 418, textAlign: 'center', fontFamily: FONT.sans, fontWeight: 700, fontSize: 168, lineHeight: 1, letterSpacing: '-0.03em', color: c.text,
+          opacity: enter(frame, wm, 4), transform: `scale(${1.25 - 0.25 * expoOut(prog(frame, wm, 8))})` }}>{E.wordmark}</div>
+        <Kinetic text={E.tagline} at={tag} color={c.muted} style={{ ...TYPE.sub, fontSize: 56, position: 'absolute', left: 60, width: width - 120, top: 618, textAlign: 'center' }} />
+        <div style={{ position: 'absolute', left: btn.x, top: btn.y, display: 'flex', alignItems: 'center', gap: 44, opacity: enter(frame, cta, 10), transform: `translateY(${(1 - enter(frame, cta, 10)) * 24}px)` }}>
+          <div style={{ position: 'relative', overflow: 'hidden', width: btn.w, height: btn.h, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, borderRadius: 16,
+            background: pressed ? c.indigoHover : c.indigo, color: '#fff', fontFamily: FONT.sans, fontWeight: 700, fontSize: 44,
+            boxShadow: `0 0 ${36 + 34 * breathe + (pressed ? 30 : 0)}px ${c.indigo}${pressed ? 'aa' : '80'}`, transform: `scale(${pressed ? 0.96 : 1})` }}>
+            {ripple > 0 && ripple < 1 && <div style={{ position: 'absolute', left: hit.x - btn.x - 30 - 300 * ripple, top: hit.y - btn.y - 30 - 300 * ripple, width: 60 + 600 * ripple, height: 60 + 600 * ripple, borderRadius: '50%', background: '#ffffff', opacity: 0.35 * (1 - ripple) }} />}
+            <span style={{ position: 'relative' }}>{E.cta}</span><span className="material-symbols-outlined" style={{ fontSize: 46, position: 'relative' }}>arrow_forward</span>
+          </div>
+          <div style={{ fontFamily: FONT.mono, fontWeight: 500, fontSize: 40, color: c.text, whiteSpace: 'nowrap' }}>{E.url}</div>
+        </div>
+        <div style={{ position: 'absolute', left: 0, width, top: 866, textAlign: 'center', ...TYPE.sub, fontSize: 40, color: c.muted, opacity: enter(frame, plat, 10) }}>{E.platforms}</div>
+        <Cursor stops={[{ at: click - 25, x: width - 300, y: height + 20 }, { at: click, x: hit.x, y: hit.y, click: true }]} enterAt={glide} />
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };

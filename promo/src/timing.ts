@@ -15,7 +15,7 @@ export interface SectionDef {
   cards?: { count: number; cue: string; everyFrames: number; switchAfter: number; beats?: number[] };
 }
 export interface ArrangementItem { section: string; fromBar: number; toBar: number }
-export interface CompositionDef { width: number; height: number; audio: boolean; gifFps?: number; arrangement: ArrangementItem[] }
+export interface CompositionDef { width: number; height: number; audio: boolean; gifFps?: number; fadeOutFrames?: number; arrangement: ArrangementItem[] }
 export type CompositionId = 'Promo' | 'Promo30' | 'Vertical' | 'ReadmeGif';
 
 export const TIMING = timingJson as unknown as {

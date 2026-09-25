@@ -152,7 +152,7 @@
     "endCard": {
       "scene": "EndCard", "bars": 5,
       "music": { "type": "end" },
-      "cues": { "sweep": [1, 1], "fuse": [1, 1, 10], "arrows": [1, 2], "disc": [1, 3], "settle": [2, 1], "wordmark": [2, 1], "tagline": [2, 3], "cta": [3, 1], "platforms": [3, 2], "glide": [4, 1], "click": [4, 2], "hold": [5, 1], "fade": [5, 3, 10] },
+      "cues": { "sweep": [1, 1], "fuse": [1, 1, 10], "arrows": [1, 2], "disc": [1, 3], "settle": [2, 1], "wordmark": [2, 1], "tagline": [2, 3], "cta": [3, 1], "platforms": [3, 2], "glide": [4, 1], "click": [4, 2], "hold": [5, 1] },
       "counter": [["click", "viewer", 3]],
       "sfx": [["swish", "sweep", 0, 0.35], ["impact", "fuse", 0, 0.4], ["thunk", "wordmark", 0, 0.35], ["pop", "cta", 0, 0.3], ["click", "click", -2, 0.6], ["flip", "click", 3, 0.45]]
     },

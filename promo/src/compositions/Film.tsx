@@ -37,6 +37,13 @@ const Whip: React.FC<{ duration: number; whipIn: boolean; whipOut: boolean; chil
   return active ? <CameraMotionBlur shutterAngle={200} samples={5}>{mover}</CameraMotionBlur> : mover;
 };
 
+// The master ends by fading picture (and, in the synth, sound) to black together.
+const FadeOut: React.FC<{ from: number; frames: number }> = ({ from, frames }) => {
+  const f = useCurrentFrame();
+  if (f < from) return null;
+  return <AbsoluteFill style={{ background: '#000', opacity: Math.min(1, (f - from + 1) / frames) }} />;
+};
+
 // Cutdown framing: Vertical and ReadmeGif crop a window around the action
 // out of the landscape feature scenes (UI stays at a readable scale).
 interface Crop { sx: number; sy: number; w: number; h: number; dx: number; dy: number; scale: number }
@@ -64,6 +71,7 @@ export const makeFilm = (comp: CompositionId): React.FC<PromoProps> => {
     const placed = useMemo(() => placeSections(comp, props.sceneBars), [props.sceneBars]);
     const ctx = useMemo(() => ({ comp, props, colors: props.colors, copy: props.copy, width, height }), [props, width, height]);
     const audio = TIMING.compositions[comp].audio;
+    const fadeFrames = TIMING.compositions[comp].fadeOutFrames ?? 0;
     // ReadmeGif scenes are laid out on the 1920x1080 stage and scaled down.
     const stageScale = comp === 'ReadmeGif' ? width / 1920 : 1;
     return (
@@ -116,6 +124,7 @@ export const makeFilm = (comp: CompositionId): React.FC<PromoProps> => {
             )))}
             <CounterOverlay placed={placed} />
             <Grain />
+            {fadeFrames > 0 && <FadeOut from={placed[placed.length - 1].from + placed[placed.length - 1].duration - fadeFrames} frames={fadeFrames} />}
             {audio && <Music comp={comp} volume={props.musicVolume} />}
           </AbsoluteFill>
         </FontGate>
