@@ -37,7 +37,7 @@ export function toScreen(keys: CamKey[], frame: number, world: R, anchor = FEATU
  * One layer of captured app DOM inside the 1600x1000 app box. `at` places a
  * fragment (a single captured element) where it sits in the real app.
  */
-export const AppLayer: React.FC<{ snap: string; at?: R | 'full' | 'bottom'; apply?: Apply; opacity?: number; base?: boolean; style?: React.CSSProperties; holderStyle?: React.CSSProperties }> = ({ snap, at = 'full', apply, opacity = 1, base = false, style, holderStyle }) => {
+export const AppLayer: React.FC<{ snap: string; at?: R | 'full' | 'bottom'; apply?: Apply; opacity?: number; base?: boolean; opaque?: boolean; style?: React.CSSProperties; holderStyle?: React.CSSProperties }> = ({ snap, at = 'full', apply, opacity = 1, base = false, opaque = false, style, holderStyle }) => {
   const frame = useCurrentFrame();
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { if (ref.current && apply) apply(ref.current, frame); });
@@ -45,6 +45,9 @@ export const AppLayer: React.FC<{ snap: string; at?: R | 'full' | 'bottom'; appl
   const holder: React.CSSProperties = at === 'full' ? { position: 'absolute', left: 0, top: 0, width: APP.w, height: APP.h }
     : at === 'bottom' ? { position: 'absolute', left: 0, bottom: 0, width: APP.w }
     : { position: 'absolute', left: at.x, top: at.y, width: at.w };
+  // A fragment drawn over the base gets the app's panel behind it, clipped to
+  // its rect, so the base never reads through (the scene also hides that region).
+  if (opaque) Object.assign(holder, { background: 'var(--bg-panel)' }, typeof at === 'object' ? { height: at.h, overflow: 'hidden' } : {});
   if (opacity <= 0) return null;
   return (
     <div className="mg-app" style={{ position: 'absolute', left: 0, top: 0, width: APP.w, height: APP.h, background: base ? undefined : 'transparent', overflow: 'visible', opacity, pointerEvents: 'none', ...style }}>

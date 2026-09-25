@@ -12,6 +12,7 @@ import { LaneTrails } from '../primitives/LaneTrails';
 import { SpellStack, TargetPulse } from '../primitives/SpellStack';
 import { Caret, TerminalWindow, tildify, type LogRecord } from '../primitives/Terminal';
 import { VhsOverlay, VhsStage } from '../primitives/Vhs';
+import { openWorktrees } from '../ui/edits';
 import { FONT, TYPE, useColors, useFilm } from '../theme';
 import { SNAP } from '../ui/snapshots.generated';
 import { AppLayer, AppWindow, blockBottom, byText, cues, FEATURE_ANCHOR, HeadlineBlock, HeadlineScrim, ModalLayer, q, qa, rect, rgba, setText, Sub, toScreen, type R } from './kit';
@@ -94,12 +95,12 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
     { at: keysAt, x: 820, y: 140, scale: 1.6, dur: 7 },
     { at: mismatch, x: 800, y: 118, scale: 2.15, dur: 6 },
   ];
-  const dropdownOpen = frame >= land && frame < (hasRules ? rule : keysAt);
+  const ddClose = hasRules ? rule : keysAt;
+  const dropdownOpen = frame >= land && frame < ddClose + 6;
+  const ddT = enter(frame, land, 6) * leave(frame, ddClose, 6);
   const flipT = prog(frame, flip, 8);
   const personalVis = dropdownOpen && flipT < 0.5;
   const workVis = dropdownOpen && flipT >= 0.5;
-  const rulesVis = frame >= rule && frame < second;
-  const mismatchVis = frame >= mismatch && frame < cancel + 5;
   const pastPick = frame >= flip + 4;
   const segName = frame >= keysAt ? 'Personal' : pastPick ? 'Work' : 'Personal';
   const flipRows = (root: HTMLElement, f: number, from: boolean) => {
@@ -111,18 +112,22 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
     }
     const work = q(root, '[data-profile-id="work"]');
     if (work && from) work.style.background = f >= pick ? 'rgba(99,102,241,0.28)' : '';
+    const dd = q(root, '#profile-dropdown');
+    if (dd) { dd.style.opacity = String(ddT); dd.style.transform = `translateY(${(1 - ddT) * -8}px)`; }
     hideAgentRows(root);
   };
   return (
     <AbsoluteFill style={{ background: c.background }}>
       <Stage keys={keys} duration={placed.duration} shakes={[mismatch]}>
         <AppLayer snap="workspace-body" base apply={(root) => {
+          // The dropdown layer carries its own segment button: hide the base's under it.
+          const w = q(root, '#profile-segment-wrapper'); if (w) w.style.visibility = dropdownOpen ? 'hidden' : '';
           setText(q(root, '#profile-segment-name'), segName);
           setText(q(root, '#repo-segment-name'), frame >= second && frame < keysAt ? 'acme-web' : 'acme-api');
         }} />
         {personalVis && <AppLayer snap="ssh-dropdown-personal" at={seg} apply={(r, f) => flipRows(r, f, true)} />}
         {workVis && <AppLayer snap="ssh-dropdown-work" at={seg} apply={(r, f) => flipRows(r, f, false)} />}
-        {rulesVis && <AppLayer snap="ssh-window" apply={(root, f) => {
+        {hasRules && <ModalLayer snap="ssh-window" open={rule} close={second} apply={(root, f) => {
           const h = byText(root, 'h3', 'Auto-select');
           let p: HTMLElement | null = h?.parentElement ?? null;
           while (p && p !== root && !(p.scrollHeight > p.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(p).overflowY))) p = p.parentElement;
@@ -130,9 +135,9 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
           const rows = qa(root, '[data-rule-id], .rule-item, .account-rule, li').filter((li) => /github\.com\/acme\//.test(li.textContent ?? ''));
           rows.forEach((li) => { const s = pop(f, rule + 4); li.style.transform = `scale(${0.6 + 0.4 * s})`; li.style.opacity = String(clamp01(s)); li.style.boxShadow = f - rule < 20 ? `0 0 0 2px ${c.indigo}` : ''; });
         }} />}
-        {mismatchVis && <AppLayer snap="account-mismatch" apply={(root, f) => {
+        <ModalLayer snap="account-mismatch" open={mismatch} close={cancel + 1} apply={(root, f) => {
           const card = q(root, '.modal-card');
-          if (card) { const t = expoOut(prog(f, mismatch, 6)); card.style.transform = `scale(${1.18 - 0.18 * t})`; card.style.opacity = String(t); }
+          if (card) { const t = expoOut(prog(f, mismatch, 6)); card.style.transform = `scale(${1.18 - 0.18 * t})`; } // the slam; ModalLayer fades it
           const msg = q(root, '#confirm-message');
           if (msg && !msg.dataset.mg) {
             msg.dataset.mg = '1';
@@ -141,7 +146,7 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
           qa(root, 'mark.mg-hl').forEach((m) => { m.style.background = f >= mismatch + 5 ? `${c.amber}55` : 'transparent'; m.style.color = 'inherit'; m.style.borderRadius = '4px'; m.style.padding = '0 3px'; });
           const cb = q(root, '#btn-confirm-cancel');
           if (cb) cb.style.boxShadow = '';
-        }} />}
+        }} />
       </Stage>
       {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneA.headline, at: cu.at('headline') }]} />}
       <SpellStack lines={copy.spells.a} at={spellAt} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneA.headline)} target={toScreen(keys, land, seg)} />
@@ -184,7 +189,6 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
     { at: wordDiff, x: WORD.x, y: WORD.y + WORD.h / 2, scale: 2.0, dur: 6 },
     { at: imageDiff, x: 930, y: 330, scale: 1.5, dur: 6 },
   ];
-  const showDiff = frame < keysAt + 8 || (frame >= wordDiff && frame < imageDiff);
   const showImage = frame >= imageDiff;
   const stageBtn = rect('diffSelected', '#btn-diff-stage-selection'), discardBtn = rect('diffSelected', '#btn-diff-discard-selection');
   const applyDiff = (root: HTMLElement, f: number) => {
@@ -224,10 +228,13 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
   return (
     <AbsoluteFill style={{ background: c.background }}>
       <Stage keys={keys} duration={placed.duration}>
-        <AppLayer snap="workspace-body" base apply={(root, f) => insertCommitRow(root, f, commit, c.indigo)} />
-        {showDiff && frame < wordDiff && <AppLayer snap="filediff-selected" at={diffAt} apply={applyDiff} />}
-        {frame >= wordDiff && frame < imageDiff && <AppLayer snap="worddiff" at={diffAt} />}
-        {showImage && <AppLayer snap="imagediff" at={diffAt} />}
+        <AppLayer snap="workspace-body" base apply={(root, f) => {
+          insertCommitRow(root, f, commit, c.indigo);
+          const sv = q(root, '#staging-view'); if (sv) sv.style.visibility = 'hidden'; // a diff layer always covers it
+        }} />
+        {frame < wordDiff && <AppLayer snap="filediff-selected" at={diffAt} opaque apply={applyDiff} />}
+        {frame >= wordDiff && frame < imageDiff && <AppLayer snap="worddiff" at={diffAt} opaque />}
+        {showImage && <AppLayer snap="imagediff" at={diffAt} opaque />}
       </Stage>
       {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneB.headline, at: cu.at('headline') }]} />}
       <SpellStack lines={copy.spells.b} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneB.headline)} target={toScreen(keys, land, lr('imp'))} />
@@ -508,6 +515,10 @@ const SplitNodes: React.FC<{ at: number; x: number; y: number }> = ({ at, x, y }
 };
 
 // ------------------------------------------------------------------ scene E --
+// The Worktrees section is shown by the base layer itself: expanded, with the
+// sidebar scrolled to it (src/ui/edits.ts), measured as layer "worktreesOpen".
+const WT_NAMES = [['acme-api', 'main'], ['login', 'feature/login'], ['search', 'feature/search']];
+
 export const SceneE: React.FC<SceneProps> = ({ placed, variant }) => {
   const frame = useCurrentFrame();
   const c = useColors();
@@ -517,66 +528,87 @@ export const SceneE: React.FC<SceneProps> = ({ placed, variant }) => {
   const rows = [cu.at('row1'), cu.at('row2'), cu.at('row3')];
   const windowsAt = cu.at('windows', 9999), launcher = cu.at('launcher', 9999), cards = [cu.at('card1', 9999), cu.at('card2', 9999), cu.at('card3', 9999)], fly = cu.at('fly', 9999);
   const terminals = cu.at('terminals'), small = cu.at('small');
-  const wtAt: R = { x: 20, y: 470, w: 240, h: 225 };
-  const wtRows = ['acme-api', 'login', 'search'].map((n) => { const r = rect('worktrees', `.worktree-item::${n}`); const base = rect('worktrees', '.sidebar-section'); return { ...r, y: r.y - base.y + wtAt.y }; });
+  const accent = [c.emerald, c.cyan, c.indigo];
+  const section = rect('worktreesOpen', '.sidebar-section[data-section="worktrees"]');
+  const wtRows = WT_NAMES.map(([n]) => rect('worktreesOpen', `.worktree-item::${n}`));
   const keys: CamKey[] = [
-    { at: 0, x: 330, y: 560, scale: 1.7 },
-    { at: land + 6, x: 300, y: 600, scale: 2.0, dur: 7 },
-    ...(launcher < 9999 ? [{ at: launcher - 2, x: 800, y: 290, scale: 1.55, dur: 6 }] : []),
+    { at: 0, x: 330, y: 600, scale: 1.7 },
+    { at: land + 6, x: 300, y: 625, scale: 1.9, dur: 8 },
+    ...(launcher < 9999 ? [{ at: launcher - 2, x: 800, y: 250, scale: 1.55, dur: 8 }] : []),
   ];
-  const sectionVis = frame < launcher - 2;
-  const agentVis = frame >= launcher - 2 && frame < fly + 8;
-  const showStage = frame < terminals;
+  const screen = (f: number, r: R) => toScreen(keys, f, r, FEATURE_ANCHOR, 0.015, placed.duration);
+  // The stage is covered (not cut) before the terminals rise.
+  const coverFrom = fly < 9999 ? fly + 4 : terminals - 8;
+  const cover = prog(frame, coverFrom, Math.max(4, terminals + 2 - coverFrom));
+  const showStage = frame < terminals + 8;
+  const baseApply = (root: HTMLElement, f: number) => {
+    openWorktrees(root);
+    const list = q(root, '#worktree-list');
+    if (list) list.style.overflow = 'hidden'; // the rows fan in inside the section's bounds
+    qa(root, '#worktree-list .worktree-item').forEach((li, i) => {
+      const at = rows[i] ?? rows[0];
+      const t = f >= at ? expoOut(prog(f, at, 10)) : 0;
+      li.style.transform = `translateX(${(1 - t) * -40}px)`;
+      li.style.opacity = String(t);
+      li.style.boxShadow = f >= at && f < at + 14 ? `inset 3px 0 0 ${accent[i]}` : '';
+    });
+  };
   return (
     <AbsoluteFill style={{ background: c.background }}>
       {showStage && (
         <Stage keys={keys} duration={placed.duration}>
-          <AppLayer snap="workspace-body" base />
-          {sectionVis && <AppLayer snap="worktrees-section" at={wtAt} apply={(root, f) => {
-            qa(root, '.worktree-item').forEach((li, i) => {
-              const t = pop(f, rows[i] ?? rows[0]);
-              li.style.transform = `translate(${(1 - t) * -30}px, ${(1 - t) * -24 * (i + 1)}px) rotate(${(1 - t) * -8}deg)`;
-              li.style.transformOrigin = '0 0';
-              li.style.opacity = String(clamp01(t));
-              li.style.boxShadow = f >= rows[i] && f < rows[i] + 10 ? `inset 3px 0 0 ${[c.emerald, c.cyan, c.indigo][i]}` : '';
-            });
-          }} />}
-          {agentVis && <AppLayer snap="agent-launch" apply={(root, f) => {
+          <AppLayer snap="workspace-body" base apply={baseApply} />
+          {launcher < 9999 && <ModalLayer snap="agent-launch" open={launcher} close={fly + 2} apply={(root, f) => {
             ['claude', 'codex', 'gemini'].forEach((id, i) => {
               const el = q(root, `[data-agent-id="${id}"]`);
               if (!el) return;
-              const on = f >= cards[i] && f < fly;
+              const on = f >= cards[i];
               el.classList.toggle('agent-card-selected', on);
               el.style.boxShadow = on ? `0 0 0 2px ${c.indigo}, 0 0 34px ${c.indigo}88` : '';
-              el.style.transform = f >= fly ? `translate(${(i - 1) * 300 * expoIn(prog(f, fly, 8))}px, ${600 * expoIn(prog(f, fly, 8))}px) scale(${1 - 0.5 * expoIn(prog(f, fly, 8))})` : '';
+              const t = expoIn(prog(f, fly, 8));
+              el.style.transform = f >= fly ? `translate(${(i - 1) * 300 * t}px, ${600 * t}px) scale(${1 - 0.5 * t})` : '';
             });
-            const card0 = q(root, '.modal-card'); if (card0) card0.style.opacity = String(enter(f, launcher - 2, 6));
           }} />}
         </Stage>
       )}
-      {showStage && frame >= windowsAt && frame < launcher && <MiniWindows at={windowsAt} keys={keys} rows={wtRows} />}
+      {showStage && windowsAt < 9999 && <MiniWindows at={windowsAt} close={launcher - 10} from={wtRows.map((r) => screen(windowsAt, r))} />}
+      {cover > 0 && frame < terminals + 8 && <div style={{ position: 'absolute', inset: 0, background: c.background, opacity: cover }} />}
       {frame >= terminals && <AgentTerminals at={terminals} compact={wrappedV(variant)} />}
       {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneE.headline, at: cu.at('headline'), size: 96 }]} />}
-      <SpellStack lines={copy.spells.e} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneE.headline, 330, 96)} target={toScreen(keys, land, wtAt)} />
+      <SpellStack lines={copy.spells.e} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneE.headline, 330, 96)} target={screen(land, section)} />
       {!wrappedV(variant) && <Sub text={copy.sceneE.small} at={small} y={868} size={34} width={1700} color={c.text} />}
     </AbsoluteFill>
   );
 };
 
-const MiniWindows: React.FC<{ at: number; keys: CamKey[]; rows: R[] }> = ({ at, keys, rows }) => {
+/** "Open in a new window": three framed, opaque windows open from their rows over a dimmed stage, then close. */
+const MiniWindows: React.FC<{ at: number; close: number; from: R[] }> = ({ at, close, from }) => {
   const frame = useCurrentFrame();
   const c = useColors();
+  if (frame < at || frame >= close + 8) return null;
+  const dim = enter(frame, at, 8) * leave(frame, close, 8);
+  const out = leave(frame, close, 7);
+  const accent = [c.emerald, c.cyan, c.indigo];
+  const WW = 440, BAR_H = 30, BODY = 275;
   return (
     <>
-      {rows.map((r, i) => {
-        const s = toScreen(keys, at, r);
-        const t = pop(frame, at + i * 2);
-        const tx = 900 + i * 60, ty = 150 + i * 190;
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', opacity: dim }} />
+      {from.map((s, i) => {
+        const t = pop(frame, at + i * 4);
+        const tx = 1250 + i * 80, ty = 300 + i * 150;
         return (
-          <div key={i} style={{ position: 'absolute', left: lerp(s.x + s.w, tx, t), top: lerp(s.y, ty, t), width: 440, height: 250, transform: `scale(${0.2 + 0.8 * t})`, transformOrigin: '0 0',
-            borderRadius: 12, overflow: 'hidden', border: `2px solid ${[c.emerald, c.cyan, c.indigo][i]}`, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', background: c.panel }}>
-            <div style={{ transform: 'scale(0.275)', transformOrigin: '0 0', width: 1600, height: 1000, position: 'relative' }}>
-              <AppLayer snap="workspace-body" base />
+          <div key={i} style={{ position: 'absolute', left: lerp(s.x + s.w * 0.8, tx, t), top: lerp(s.y, ty, t), width: WW, height: BAR_H + BODY,
+            transform: `scale(${(0.2 + 0.8 * clamp01(t)) * (0.96 + 0.04 * out)})`, transformOrigin: '0 0', opacity: clamp01(t * 3) * out,
+            borderRadius: 12, overflow: 'hidden', border: `2px solid ${accent[i]}`, boxShadow: '0 24px 70px rgba(0,0,0,0.7)', background: c.panel }}>
+            <div style={{ height: BAR_H, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', background: c.card, borderBottom: `1px solid ${c.border}`,
+              fontFamily: FONT.sans, fontSize: 15, fontWeight: 600, color: c.text, whiteSpace: 'nowrap' }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: accent[i] }} />
+              {WT_NAMES[i][0]}<span style={{ color: c.muted, fontWeight: 500 }}>· {WT_NAMES[i][1]}</span>
+            </div>
+            <div style={{ position: 'relative', width: WW, height: BODY, overflow: 'hidden', background: c.panel }}>
+              <div style={{ transform: 'scale(0.275)', transformOrigin: '0 0', width: 1600, height: 1000, position: 'absolute', left: 0, top: 0 }}>
+                <AppLayer snap="workspace-body" base apply={(root) => setText(q(root, '#branch-segment-name'), WT_NAMES[i][1])} />
+              </div>
             </div>
           </div>
         );
@@ -631,7 +663,6 @@ export const SceneF: React.FC<SceneProps> = ({ placed }) => {
     { at: hover - 4, x: 1000, y: 880, scale: 1.75, dur: 7 },
     { at: keysAt + 2, x: 800, y: 330, scale: 1.45, dur: 6 },
   ];
-  const paletteVis = frame >= keysAt + 3;
   const hoverLine = 4; // the commit line
   const applyTerm = (root: HTMLElement, f: number) => {
     const body = q(root, '#terminal-body');
@@ -661,8 +692,8 @@ export const SceneF: React.FC<SceneProps> = ({ placed }) => {
     <AbsoluteFill style={{ background: c.background }}>
       <Stage keys={keys} duration={placed.duration}>
         <AppLayer snap="workspace-body" base />
-        <AppLayer snap="terminal-panel" at="bottom" apply={applyTerm} />
-        {paletteVis && <AppLayer snap="palette" apply={(root, f) => { const card0 = q(root, '.modal-card') ?? (q(root, '#palette-modal')?.firstElementChild as HTMLElement | null); if (card0) { const t = expoOut(prog(f, keysAt + 3, 6)); card0.style.transform = `scale(${0.9 + 0.1 * t})`; card0.style.opacity = String(t); } }} />}
+        <AppLayer snap="terminal-panel" at="bottom" opaque apply={applyTerm} />
+        <ModalLayer snap="palette" open={keysAt + 3} />
       </Stage>
       <CounterCrack at={crack} pour={pour} landT={landT} every={every} target={toScreen(keys, pour + landT, termBody)} />
       <HeadlineBlock width={1150} lines={[{ kind: 'sub', text: copy.sceneF.line1, at: cu.at('line1'), size: 52, color: c.text }, { text: copy.sceneF.line2, at: cu.at('line2'), size: 96 }]} />

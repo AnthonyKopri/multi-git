@@ -78,9 +78,12 @@ export const SpellStack: React.FC<{
     <>
       {!done && (
         <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          {/* A soft 35% scrim on the stage around the plate, so the UI behind is subdued. */}
+          <div style={{ position: 'absolute', left: plate.x - 280, top: plate.y - 220, width: plate.w + 560, height: plate.h + 440, opacity: (1 - cp) * clamp01((local + 1) / 4),
+            background: 'radial-gradient(ellipse at center, rgba(4,5,8,0.35) 0%, rgba(4,5,8,0.35) 52%, rgba(4,5,8,0) 100%)' }} />
           <div style={{
             position: 'absolute', left: plate.x, top: plate.y, width: plate.w, height: plate.h, borderRadius: 18,
-            background: 'rgba(10,12,16,0.9)', border: `1.5px solid ${c.red}33`, boxShadow: `0 0 80px ${c.red}22, 0 30px 80px rgba(0,0,0,0.6)`,
+            background: 'rgba(8,9,13,0.98)', border: `1.5px solid ${c.red}33`, boxShadow: `0 0 80px ${c.red}22, 0 30px 80px rgba(0,0,0,0.6)`,
             opacity: (1 - cp) * clamp01((local + 1) / 4), transform: target ? `scale(${1 - 0.5 * cp})` : undefined, transformOrigin: 'center',
           }} />
           <div style={{ position: 'absolute', left: plate.x - 80, top: plate.y - 60, width: plate.w + 160, height: plate.h + 120, opacity: 0.25 * (1 - cp),
