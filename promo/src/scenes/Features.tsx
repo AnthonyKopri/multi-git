@@ -3,7 +3,7 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame } from 'remotion';
 import writes from '../../assets/captures/data/terminal-writes.json';
-import { clamp01, enter, expoIn, expoOut, leave, lerp, pop, prog, pulse } from '../lib/anim';
+import { clamp01, enter, expoIn, expoOut, leave, lerp, pop, prog } from '../lib/anim';
 import { Camera, type CamKey } from '../primitives/Camera';
 import { Cursor } from '../primitives/Cursor';
 import { Kinetic } from '../primitives/Headline';
@@ -13,7 +13,7 @@ import { SpellStack, TargetPulse } from '../primitives/SpellStack';
 import { Caret, TerminalWindow, tildify, type LogRecord } from '../primitives/Terminal';
 import { FONT, TYPE, useColors, useFilm } from '../theme';
 import { SNAP } from '../ui/snapshots.generated';
-import { AppLayer, AppWindow, byText, cues, FEATURE_ANCHOR, HeadlineScrim, mid, q, qa, rect, SceneHeadline, setText, Sub, toScreen, type R } from './kit';
+import { AppLayer, AppWindow, byText, cues, FEATURE_ANCHOR, HeadlineScrim, q, qa, rect, SceneHeadline, setText, Sub, toScreen, type R } from './kit';
 import type { SceneProps } from './types';
 
 const W = 1920, H = 1080;
@@ -663,4 +663,3 @@ const CounterCrack: React.FC<{ at: number; pour: number; landT: number; every: n
 };
 
 export const featureScenes = { SceneA, SceneB, SceneC, SceneD, SceneE, SceneF };
-export { pulse, mid, Kinetic };

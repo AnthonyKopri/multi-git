@@ -3,7 +3,7 @@ import React from 'react';
 import { AbsoluteFill, random, useCurrentFrame } from 'remotion';
 import mcp from '../../assets/captures/data/mcp-transcript.json';
 import tui from '../../assets/captures/data/tui.json';
-import { clamp01, enter, expoIn, expoOut, leave, lerp, pop, prog } from '../lib/anim';
+import { clamp01, enter, expoIn, expoOut, lerp, pop, prog } from '../lib/anim';
 import { Camera } from '../primitives/Camera';
 import { MontageCard } from '../primitives/Card';
 import { SplitFlap } from '../primitives/Counter';
@@ -309,4 +309,3 @@ export const EndCard: React.FC<SceneProps> = ({ placed, variant }) => {
 };
 
 export const closingScenes = { Montage, TwoLanes, Stinger, Checklist, EndCard };
-export { leave };

@@ -1,6 +1,6 @@
 // Cold open, the two lanes (with the switcher jab) and the reveal.
 import React from 'react';
-import { AbsoluteFill, interpolate, random, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, random, useCurrentFrame } from 'remotion';
 import { clamp01, enter, expoIn, expoOut, leave, lerp, pop, prog } from '../lib/anim';
 import { Camera } from '../primitives/Camera';
 import { Headline, Kinetic } from '../primitives/Headline';
@@ -301,4 +301,3 @@ const AppAssemble: React.FC<{ at: number; cues: { sidebar: number; staging: numb
 };
 
 export const openingScenes = { ColdOpen, Lanes, Reveal };
-export { interpolate };

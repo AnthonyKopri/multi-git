@@ -14,13 +14,17 @@ Session branch: promo/video-2
 - [x] M7 review round 2 — 2026-09-25T04:28Z — `promo: review round 2` (sheets: `review/round-2/`, incl. `montage-cards.jpg`)
 - [x] M8 review round 3 (optional) — 2026-09-25T04:35Z — `promo: review round 3` (sheets: `review/round-3/`)
 - [x] M9 cutdowns — 2026-09-25T04:41Z — `promo: cutdowns` (sheets: `review/cutdowns/`)
-- [ ] M10 docs, checks and the final push
+- [x] M10 docs, checks and the final push — 2026-09-25T04:43Z — `promo: docs and final checks`
 
 Earlier sessions: none. This session started from `67963aa` on `promo/video-2`.
 
 ## Morning checklist
 
-_(filled in at M10)_
+1. Nothing to fast-forward: this session pushed straight to `promo/video-2`. Pull it, then `cd promo && npm ci && npm run render`.
+2. Watch `out/promo-1080p.mp4` start to finish first; the film was only ever seen here as stills and contact sheets (`review/round-3/`).
+3. Judge the music and the mix by ear (`review/mix-preview.mp3` is a quick listen); the synth is tuned by numbers only. Knobs: `PARAMS` in `audio/synth.mjs`.
+4. Judge the pacing: the montage runs a card per beat (0.5 s), and the feature scenes change state every beat. Retime in `timing.json` if needed.
+5. Then render the cuts (`render:30`, `render:vertical`, `render:gif`) and check the vertical on a phone.
 
 ## The storyboard as built
 
@@ -211,12 +215,67 @@ stage selection, discard selection, commit, hard reset, restore, worktree add).
 The TUI is real `multi-git tui` output in tmux, and the MCP exchange is a real
 stdio transcript.
 
-_(Which film shots use plates vs. the live rebuild: filled in at M5.)_
+**In the film, every UI shot is the live rebuild**: the captured DOM under
+the app's own scoped CSS, animated per frame (selections, dropdown flips,
+dialogs, row moves, new History and recovery rows). No screenshot plates
+appear in the film. The WebP plates are references, and `workspace.webp` is
+used once, in the dev-only `Fidelity` composition (review round 1), which puts
+the capture beside the rebuild: they match.
+
+Rebuilt rather than captured:
+
+- The cold-open terminal, the spells, the montage cards' frames and the
+  stinger/checklist/end-card typography are film graphics, not app UI.
+- A few montage controls are built from the app's real classes and labels
+  (Undo, Amend, Revert, Use HEAD (Ours) / Use Incoming (Theirs), Start bisect,
+  Fetch all, Update all, Force Push (with lease), Delete merged branches), the
+  rest are real captured rows and palette items.
+- The Terminal panel in scene F is the captured panel with its body reduced to
+  the film's eight real write commands (the account switch, stage selection,
+  discard selection, commit, the hard reset, the restore, worktree add), in
+  the app's own markup. cwd, exit code and duration come from the captured
+  `LogEntry` records.
+- The three agent terminals in scene E only show the command that started
+  them and a cursor, as the spec asks.
 
 ## Known issues and TODOs
 
-_(none yet)_
+Ranked, most important first:
+
+1. **Never seen in motion at full size.** The budget allowed stills, contact
+   sheets and one 5 s smoke clip at 0.25 scale, so the first full render is
+   yours. Watch for text overlaps during camera moves and any beat that feels
+   late.
+2. **The music is untested by ear.** Loudness, peaks and bar placement are
+   measured (-14.1 LUFS / -1.0 dBTP for the mix; drop on bar 9, tape-stop on
+   bar 20, silence on bar 40), but the balance and the sound design need a
+   listen.
+3. **UI text size.** UI shots push in to 1.6-2.2x, but some frames (the
+   History panel in scene C, the terminal lines in scene F, the TUI) still
+   carry app text around 20 px. Check on a phone, especially the vertical.
+4. **The montage is fast by design** (a card per beat): each card is fully on
+   screen for about 8 frames.
+5. **Scene F's counter crack and glyph pour** are simple (a crack line and 28
+   glyphs on arcs); a richer shatter would sell the twist more.
+6. **The GIF's size is unmeasured** (no full renders here). `render:gif`
+   prints it; lower `max_colors` if it's over 10 MB.
+7. **Motion-blurred whips** render 5 samples for 6 frames per cut, which adds
+   render time.
+8. **`npm run render:review` needs ImageMagick** (`montage`, `identify`) on
+   the PATH.
+9. The spec's `docs/images/multi-git-promo.gif` should only be replaced once
+   the new GIF is approved (not done here: files outside `promo/` are out of
+   bounds for this session).
 
 ## Licenses
 
-_(filled in at M10)_
+- **Remotion** is source-available under the Remotion License: free for
+  individuals, non-profits and companies of up to 3 employees; larger
+  companies need a company license. Check that this applies before
+  publishing.
+- **Inter** and **JetBrains Mono** are SIL Open Font License 1.1 (license
+  texts in `public/fonts/`); **Material Symbols** is Apache-2.0.
+- **The music and SFX** are original, synthesized here by `audio/synth.mjs`
+  from a seeded PRNG. No samples are used.
+- The captured UI is Multi-Git's own (MIT). All people, emails, keys and
+  repositories in it are the spec's fictional cast.
