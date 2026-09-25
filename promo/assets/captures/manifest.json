@@ -10,7 +10,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:17:05.215Z"
+      "capturedAt": "2026-09-25T04:20:59.233Z"
     },
     {
       "file": "agent-launch.webp",
@@ -22,283 +22,289 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:47.882Z"
+      "capturedAt": "2026-09-25T04:20:41.656Z"
     },
     {
       "file": "data/auth-diff-pristine.json",
       "shows": "Structured diff of src/auth.ts before any action",
       "how": "GET /api/git/diff/structured",
-      "capturedAt": "2026-09-25T03:16:05.119Z"
+      "capturedAt": "2026-09-25T04:19:54.584Z"
     },
     {
       "file": "data/auth-diff-structured.json",
       "shows": "Structured diff of src/auth.ts (working tree) before staging",
       "how": "GET /api/git/diff/structured",
-      "capturedAt": "2026-09-25T03:17:05.887Z"
+      "capturedAt": "2026-09-25T04:20:59.943Z"
     },
     {
       "file": "data/branches.json",
       "shows": "Local and remote branches",
       "how": "GET /api/git/branches",
-      "capturedAt": "2026-09-25T03:16:05.031Z"
+      "capturedAt": "2026-09-25T04:19:54.517Z"
     },
     {
       "file": "data/checkpoints.json",
       "shows": "Undoable operations",
       "how": "GET /api/git/checkpoints",
-      "capturedAt": "2026-09-25T03:16:05.102Z"
+      "capturedAt": "2026-09-25T04:19:54.571Z"
     },
     {
       "file": "data/cli-history.json",
       "shows": "JSON CLI: multi-git history --repo ~/code/acme-api --input -",
       "how": "node scripts/multi-git.cjs with MULTI_GIT_URL",
-      "capturedAt": "2026-09-25T03:17:30.476Z"
+      "capturedAt": "2026-09-25T04:21:24.947Z"
     },
     {
       "file": "data/cli-ssh-inspect.json",
       "shows": "JSON CLI: multi-git ssh.inspect --repo ~/code/acme-api",
       "how": "node scripts/multi-git.cjs with MULTI_GIT_URL",
-      "capturedAt": "2026-09-25T03:17:30.721Z"
+      "capturedAt": "2026-09-25T04:21:25.245Z"
     },
     {
       "file": "data/cli-ssh-select-dry-run.json",
       "shows": "JSON CLI: multi-git ssh.select --repo ~/code/acme-api --dry-run --input -",
       "how": "node scripts/multi-git.cjs with MULTI_GIT_URL",
-      "capturedAt": "2026-09-25T03:17:30.903Z"
+      "capturedAt": "2026-09-25T04:21:25.431Z"
     },
     {
       "file": "data/cli-status.json",
       "shows": "JSON CLI: multi-git status --repo ~/code/acme-api",
       "how": "node scripts/multi-git.cjs with MULTI_GIT_URL",
-      "capturedAt": "2026-09-25T03:17:30.225Z"
+      "capturedAt": "2026-09-25T04:21:24.696Z"
     },
     {
       "file": "data/history.json",
       "shows": "History of acme-api, newest first",
       "how": "GET /api/git/log?limit=40",
-      "capturedAt": "2026-09-25T03:16:05.024Z"
+      "capturedAt": "2026-09-25T04:19:54.509Z"
     },
     {
       "file": "data/mcp-transcript.json",
       "shows": "MCP over stdio: initialize, notifications/initialized, tools/list, tools/call status",
       "how": "node scripts/multi-git.cjs mcp (read-only), JSON-RPC lines",
-      "capturedAt": "2026-09-25T03:17:39.273Z"
+      "capturedAt": "2026-09-25T04:21:33.808Z"
     },
     {
       "file": "data/rebase-plan.json",
       "shows": "Rebase plan for HEAD~5 with autosquash",
       "how": "GET /api/git/rebase/plan",
-      "capturedAt": "2026-09-25T03:16:05.083Z"
+      "capturedAt": "2026-09-25T04:19:54.555Z"
     },
     {
       "file": "data/recovery-after-reset.json",
       "shows": "Recovery points and reflog right after the hard reset",
       "how": "GET /api/git/recovery",
-      "capturedAt": "2026-09-25T03:17:05.968Z"
+      "capturedAt": "2026-09-25T04:21:00.054Z"
     },
     {
       "file": "data/recovery.json",
       "shows": "Recovery points and reflog (seeded)",
       "how": "GET /api/git/recovery",
-      "capturedAt": "2026-09-25T03:16:05.096Z"
+      "capturedAt": "2026-09-25T04:19:54.565Z"
     },
     {
       "file": "data/status.json",
       "shows": "Working tree status of acme-api (scene B state)",
       "how": "GET /api/git/status",
-      "capturedAt": "2026-09-25T03:16:05.013Z"
+      "capturedAt": "2026-09-25T04:19:54.498Z"
     },
     {
       "file": "data/terminal-backlog.json",
       "shows": "The Terminal panel backlog (all LogEntry records) after the scene-like actions",
       "how": "GET /api/logs/stream, first \"backlog\" event",
-      "capturedAt": "2026-09-25T03:17:13.010Z"
+      "capturedAt": "2026-09-25T04:21:07.342Z"
     },
     {
       "file": "data/terminal-writes.json",
       "shows": "Only kind \"write\" commands: what the panel shows with Reads off (scene F)",
       "how": "filtered from terminal-backlog",
-      "capturedAt": "2026-09-25T03:17:13.011Z"
+      "capturedAt": "2026-09-25T04:21:07.343Z"
     },
     {
       "file": "data/trash.json",
       "shows": "Recently Discarded (seeded)",
       "how": "GET /api/git/trash",
-      "capturedAt": "2026-09-25T03:16:05.099Z"
+      "capturedAt": "2026-09-25T04:19:54.568Z"
     },
     {
       "file": "data/tui.json",
       "shows": "multi-git tui at 120x34: NORMAL, Space menu, j, k, v (ANSI converted to spans)",
       "how": "tmux -L mgpromo capture-pane -p -e, then capture/ansi-to-spans.mjs",
-      "capturedAt": "2026-09-25T03:17:38.999Z"
+      "capturedAt": "2026-09-25T04:21:33.535Z"
     },
     {
       "file": "data/worktrees.json",
       "shows": "Worktrees of acme-api",
       "how": "GET /api/worktrees",
-      "capturedAt": "2026-09-25T03:16:05.052Z"
+      "capturedAt": "2026-09-25T04:19:54.529Z"
     },
     {
       "file": "dom/account-mismatch.html",
       "shows": "Account mismatch dialog",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:17:05.231Z"
+      "capturedAt": "2026-09-25T04:20:59.238Z"
     },
     {
       "file": "dom/agent-launch.html",
       "shows": "Launch a coding agent window",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:47.887Z"
+      "capturedAt": "2026-09-25T04:20:41.660Z"
     },
     {
       "file": "dom/filediff-selected.html",
       "shows": "File Diff with 3 lines selected and the selection bar",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:11.879Z"
+      "capturedAt": "2026-09-25T04:20:01.321Z"
     },
     {
       "file": "dom/filediff-unselected.html",
       "shows": "File Diff for src/auth.ts in split view, nothing selected",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:10.743Z"
+      "capturedAt": "2026-09-25T04:20:00.166Z"
     },
     {
       "file": "dom/hub-bisect.html",
       "shows": "Repository hub, bisect tab",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:35.526Z"
+      "capturedAt": "2026-09-25T04:20:29.097Z"
     },
     {
       "file": "dom/hub-lfs.html",
       "shows": "Repository hub, lfs tab",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:33.530Z"
+      "capturedAt": "2026-09-25T04:20:26.939Z"
     },
     {
       "file": "dom/hub-notes.html",
       "shows": "Repository hub, notes tab",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:39.343Z"
+      "capturedAt": "2026-09-25T04:20:33.021Z"
     },
     {
       "file": "dom/hub-remotes.html",
       "shows": "Repository hub, remotes tab",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:31.131Z"
+      "capturedAt": "2026-09-25T04:20:25.017Z"
     },
     {
       "file": "dom/hub-submodules.html",
       "shows": "Repository hub, submodules tab",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:37.452Z"
+      "capturedAt": "2026-09-25T04:20:31.079Z"
     },
     {
       "file": "dom/imagediff.html",
       "shows": "Image diff markup",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:16.139Z"
+      "capturedAt": "2026-09-25T04:20:09.940Z"
     },
     {
       "file": "dom/merge-preview.html",
       "shows": "Merge preview dialog",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:28.029Z"
+      "capturedAt": "2026-09-25T04:20:21.413Z"
     },
     {
       "file": "dom/palette.html",
       "shows": "Command palette",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:25.465Z"
+      "capturedAt": "2026-09-25T04:20:18.923Z"
     },
     {
       "file": "dom/profile-switch-confirm.html",
       "shows": "The confirm shown when switching the repo to Personal",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:17:01.072Z"
+      "capturedAt": "2026-09-25T04:20:55.088Z"
     },
     {
       "file": "dom/rebase-edit-stop.html",
       "shows": "Rebase modal at the edit stop",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:17:24.173Z"
+      "capturedAt": "2026-09-25T04:21:18.484Z"
     },
     {
       "file": "dom/rebase-planner.html",
       "shows": "Rebase planner with rows",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:53.347Z"
+      "capturedAt": "2026-09-25T04:20:47.207Z"
     },
     {
       "file": "dom/recovery-after-reset.html",
       "shows": "Recovery points window after the reset",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:17:10.088Z"
+      "capturedAt": "2026-09-25T04:21:04.224Z"
     },
     {
       "file": "dom/recovery-window.html",
       "shows": "Recovery points window",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:58.675Z"
+      "capturedAt": "2026-09-25T04:20:52.655Z"
     },
     {
       "file": "dom/restore-confirm.html",
       "shows": "Restore confirm dialog",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:17:12.614Z"
+      "capturedAt": "2026-09-25T04:21:06.941Z"
     },
     {
       "file": "dom/safety-net.html",
       "shows": "Safety Net section",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:55.715Z"
+      "capturedAt": "2026-09-25T04:20:49.657Z"
     },
     {
       "file": "dom/split-confirm.html",
       "shows": "Split commit confirm",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:17:26.234Z"
+      "capturedAt": "2026-09-25T04:21:20.545Z"
     },
     {
       "file": "dom/ssh-dropdown-personal.html",
       "shows": "SSH Key dropdown, Personal selected, account note",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:17:03.370Z"
+      "capturedAt": "2026-09-25T04:20:57.361Z"
     },
     {
       "file": "dom/ssh-dropdown-work.html",
       "shows": "SSH Key segment and dropdown, Work selected",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:17.994Z"
+      "capturedAt": "2026-09-25T04:20:11.756Z"
     },
     {
       "file": "dom/ssh-window.html",
       "shows": "Manage SSH profiles window",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:22.197Z"
+      "capturedAt": "2026-09-25T04:20:15.872Z"
     },
     {
       "file": "dom/terminal-panel.html",
       "shows": "Terminal panel with Reads off",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:17:15.621Z"
+      "capturedAt": "2026-09-25T04:21:09.927Z"
+    },
+    {
+      "file": "dom/worddiff.html",
+      "shows": "Split diff with word-level highlights",
+      "how": "outerHTML of the live app after the step, for the rebuild",
+      "capturedAt": "2026-09-25T04:20:05.642Z"
     },
     {
       "file": "dom/workspace-body.html",
       "shows": "The whole rendered body (all regions and hidden dialogs) in the workspace state",
       "how": "body innerHTML without scripts",
-      "capturedAt": "2026-09-25T03:16:06.974Z"
+      "capturedAt": "2026-09-25T04:19:56.439Z"
     },
     {
       "file": "dom/worktrees-section.html",
       "shows": "Worktrees section",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:41.729Z"
+      "capturedAt": "2026-09-25T04:20:35.410Z"
     },
     {
       "file": "dom/worktrees-window.html",
       "shows": "Manage worktrees window",
       "how": "outerHTML of the live app after the step, for the rebuild",
-      "capturedAt": "2026-09-25T03:16:43.623Z"
+      "capturedAt": "2026-09-25T04:20:37.409Z"
     },
     {
       "file": "filediff-selected.webp",
@@ -310,7 +316,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:11.875Z"
+      "capturedAt": "2026-09-25T04:20:01.316Z"
     },
     {
       "file": "hub-bisect.webp",
@@ -322,7 +328,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:35.522Z"
+      "capturedAt": "2026-09-25T04:20:29.092Z"
     },
     {
       "file": "hub-lfs.webp",
@@ -334,7 +340,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:33.526Z"
+      "capturedAt": "2026-09-25T04:20:26.934Z"
     },
     {
       "file": "hub-notes.webp",
@@ -346,7 +352,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:39.338Z"
+      "capturedAt": "2026-09-25T04:20:33.016Z"
     },
     {
       "file": "hub-remotes.webp",
@@ -358,7 +364,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:31.127Z"
+      "capturedAt": "2026-09-25T04:20:25.014Z"
     },
     {
       "file": "hub-submodules.webp",
@@ -370,7 +376,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:37.449Z"
+      "capturedAt": "2026-09-25T04:20:31.075Z"
     },
     {
       "file": "imagediff.webp",
@@ -382,7 +388,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:16.135Z"
+      "capturedAt": "2026-09-25T04:20:09.936Z"
     },
     {
       "file": "merge-preview.webp",
@@ -394,7 +400,7 @@
         "width": 472,
         "height": 473
       },
-      "capturedAt": "2026-09-25T03:16:28.027Z"
+      "capturedAt": "2026-09-25T04:20:21.411Z"
     },
     {
       "file": "palette.webp",
@@ -406,7 +412,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:25.460Z"
+      "capturedAt": "2026-09-25T04:20:18.919Z"
     },
     {
       "file": "rebase-edit-stop.webp",
@@ -418,7 +424,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:17:24.170Z"
+      "capturedAt": "2026-09-25T04:21:18.478Z"
     },
     {
       "file": "rebase-planner.webp",
@@ -430,7 +436,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:53.342Z"
+      "capturedAt": "2026-09-25T04:20:47.203Z"
     },
     {
       "file": "recovery-after-reset.webp",
@@ -442,7 +448,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:17:10.081Z"
+      "capturedAt": "2026-09-25T04:21:04.215Z"
     },
     {
       "file": "recovery-window.webp",
@@ -454,7 +460,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:58.670Z"
+      "capturedAt": "2026-09-25T04:20:52.647Z"
     },
     {
       "file": "restore-confirm.webp",
@@ -466,7 +472,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:17:12.610Z"
+      "capturedAt": "2026-09-25T04:21:06.937Z"
     },
     {
       "file": "safety-net.webp",
@@ -478,7 +484,7 @@
         "width": 320,
         "height": 308
       },
-      "capturedAt": "2026-09-25T03:16:55.713Z"
+      "capturedAt": "2026-09-25T04:20:49.655Z"
     },
     {
       "file": "split-confirm.webp",
@@ -490,7 +496,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:17:26.230Z"
+      "capturedAt": "2026-09-25T04:21:20.541Z"
     },
     {
       "file": "ssh-dropdown-personal.webp",
@@ -502,7 +508,7 @@
         "width": 371.28125,
         "height": 579.59375
       },
-      "capturedAt": "2026-09-25T03:17:03.369Z"
+      "capturedAt": "2026-09-25T04:20:57.359Z"
     },
     {
       "file": "ssh-dropdown-work.webp",
@@ -514,7 +520,7 @@
         "width": 372.453125,
         "height": 530.0625
       },
-      "capturedAt": "2026-09-25T03:16:17.991Z"
+      "capturedAt": "2026-09-25T04:20:11.754Z"
     },
     {
       "file": "ssh-window-rules.webp",
@@ -526,7 +532,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:22.188Z"
+      "capturedAt": "2026-09-25T04:20:15.868Z"
     },
     {
       "file": "terminal-panel.webp",
@@ -538,7 +544,19 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:17:15.616Z"
+      "capturedAt": "2026-09-25T04:21:09.920Z"
+    },
+    {
+      "file": "worddiff.webp",
+      "shows": "Split File Diff of src/handlers/health.ts: one modified line with word-level highlights",
+      "how": "Puppeteer, browser mode, 1600x1000 viewport at 2x",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "capturedAt": "2026-09-25T04:20:05.639Z"
     },
     {
       "file": "workspace.webp",
@@ -550,7 +568,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:06.951Z"
+      "capturedAt": "2026-09-25T04:19:56.415Z"
     },
     {
       "file": "worktrees-section.webp",
@@ -562,7 +580,7 @@
         "width": 320,
         "height": 362
       },
-      "capturedAt": "2026-09-25T03:16:41.727Z"
+      "capturedAt": "2026-09-25T04:20:35.407Z"
     },
     {
       "file": "worktrees-window.webp",
@@ -574,7 +592,7 @@
         "width": 1600,
         "height": 1000
       },
-      "capturedAt": "2026-09-25T03:16:43.619Z"
+      "capturedAt": "2026-09-25T04:20:37.405Z"
     }
   ]
 }

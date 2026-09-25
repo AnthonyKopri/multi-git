@@ -207,6 +207,17 @@ const steps = {
     await shot('filediff-selected', 'File Diff, split view, 3 added lines selected, with the selection bar');
     await dom('filediff-selected', ['#diff-view'], 'File Diff with 3 lines selected and the selection bar');
   },
+  async worddiff() {
+    await openRepo();
+    await click('#tab-diff');
+    await sleep(700);
+    await click('#diff-files-list li[data-path="src/handlers/health.ts"]');
+    await sleep(1200);
+    const label = await page.$eval('#btn-diff-layout-label', (e) => e.textContent.trim()).catch(() => '');
+    if (label === 'Split') { await click('#btn-diff-layout'); await sleep(700); }
+    await shot('worddiff', 'Split File Diff of src/handlers/health.ts: one modified line with word-level highlights');
+    await dom('worddiff', ['#diff-view'], 'Split diff with word-level highlights');
+  },
   async imagediff() {
     await openRepo();
     await click('#tab-diff');

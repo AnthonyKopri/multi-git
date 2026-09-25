@@ -1,7 +1,7 @@
 [
   {
     "seq": 1,
-    "ts": 1790306164189,
+    "ts": 1790309993710,
     "type": "cmd",
     "text": "git config --local user.name Jane Doe",
     "repoPath": "/home/jane/code/acme-web",
@@ -15,13 +15,13 @@
       ],
       "cwd": "/home/jane/code/acme-web",
       "kind": "write",
-      "durationMs": 5,
+      "durationMs": 6,
       "exitCode": 0
     }
   },
   {
     "seq": 2,
-    "ts": 1790306164193,
+    "ts": 1790309993715,
     "type": "cmd",
     "text": "git config --local user.email jane@acme.example",
     "repoPath": "/home/jane/code/acme-web",
@@ -35,13 +35,13 @@
       ],
       "cwd": "/home/jane/code/acme-web",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 5,
       "exitCode": 0
     }
   },
   {
     "seq": 11,
-    "ts": 1790306164231,
+    "ts": 1790309993749,
     "type": "cmd",
     "text": "git config --local core.sshCommand ssh -F /dev/null -i \"/home/jane/.ssh/id_ed25519_work\" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new",
     "repoPath": "/home/jane/code/acme-web",
@@ -61,7 +61,7 @@
   },
   {
     "seq": 22,
-    "ts": 1790306164271,
+    "ts": 1790309993803,
     "type": "cmd",
     "text": "git config --local user.name Jane Doe",
     "repoPath": "/home/jane/code/dotfiles",
@@ -81,7 +81,7 @@
   },
   {
     "seq": 23,
-    "ts": 1790306164275,
+    "ts": 1790309993807,
     "type": "cmd",
     "text": "git config --local user.email jane@example.com",
     "repoPath": "/home/jane/code/dotfiles",
@@ -95,13 +95,13 @@
       ],
       "cwd": "/home/jane/code/dotfiles",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 3,
       "exitCode": 0
     }
   },
   {
     "seq": 32,
-    "ts": 1790306164300,
+    "ts": 1790309993834,
     "type": "cmd",
     "text": "git config --local core.sshCommand ssh -F /dev/null -i \"/home/jane/.ssh/id_ed25519_personal\" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new",
     "repoPath": "/home/jane/code/dotfiles",
@@ -121,7 +121,7 @@
   },
   {
     "seq": 43,
-    "ts": 1790306164338,
+    "ts": 1790309993872,
     "type": "cmd",
     "text": "git config --local user.name Jane Doe",
     "repoPath": "/home/jane/code/acme-api",
@@ -135,13 +135,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 3,
       "exitCode": 0
     }
   },
   {
     "seq": 44,
-    "ts": 1790306164342,
+    "ts": 1790309993876,
     "type": "cmd",
     "text": "git config --local user.email jane@acme.example",
     "repoPath": "/home/jane/code/acme-api",
@@ -161,7 +161,7 @@
   },
   {
     "seq": 53,
-    "ts": 1790306164369,
+    "ts": 1790309993901,
     "type": "cmd",
     "text": "git config --local core.sshCommand ssh -F /dev/null -i \"/home/jane/.ssh/id_ed25519_work\" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new",
     "repoPath": "/home/jane/code/acme-api",
@@ -175,13 +175,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 3,
       "exitCode": 0
     }
   },
   {
     "seq": 66,
-    "ts": 1790306164416,
+    "ts": 1790309993948,
     "type": "cmd",
     "text": "git symbolic-ref --quiet HEAD",
     "repoPath": "/home/jane/code/acme-api",
@@ -194,13 +194,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 4,
       "exitCode": 0
     }
   },
   {
     "seq": 69,
-    "ts": 1790306164429,
+    "ts": 1790309993960,
     "type": "cmd",
     "text": "git branch -d spike/old-cache",
     "repoPath": "/home/jane/code/acme-api",
@@ -219,7 +219,7 @@
   },
   {
     "seq": 70,
-    "ts": 1790306164437,
+    "ts": 1790309993968,
     "type": "cmd",
     "text": "git checkout -- docs/usage.md",
     "repoPath": "/home/jane/code/acme-api",
@@ -237,8 +237,8 @@
     }
   },
   {
-    "seq": 87,
-    "ts": 1790306165552,
+    "seq": 85,
+    "ts": 1790309994979,
     "type": "cmd",
     "text": "git --version",
     "command": {
@@ -248,13 +248,30 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 11,
+      "durationMs": 10,
       "exitCode": 0
     }
   },
   {
-    "seq": 122,
-    "ts": 1790306165802,
+    "seq": 125,
+    "ts": 1790309995241,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 13,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 129,
+    "ts": 1790309995260,
     "type": "error",
     "text": "git lfs version",
     "repoPath": "/home/jane/code/acme-api",
@@ -266,30 +283,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 14,
+      "durationMs": 13,
       "exitCode": 1
     }
   },
   {
-    "seq": 127,
-    "ts": 1790306165813,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 4,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 146,
-    "ts": 1790306167279,
+    "seq": 144,
+    "ts": 1790309996745,
     "type": "cmd",
     "text": "git --version",
     "command": {
@@ -305,25 +305,7 @@
   },
   {
     "seq": 184,
-    "ts": 1790306167548,
-    "type": "error",
-    "text": "git lfs version",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "lfs",
-        "version"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 8,
-      "exitCode": 1
-    }
-  },
-  {
-    "seq": 185,
-    "ts": 1790306167550,
+    "ts": 1790309996972,
     "type": "cmd",
     "text": "git remote",
     "repoPath": "/home/jane/code/acme-api",
@@ -339,8 +321,26 @@
     }
   },
   {
+    "seq": 185,
+    "ts": 1790309996977,
+    "type": "error",
+    "text": "git lfs version",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "lfs",
+        "version"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 9,
+      "exitCode": 1
+    }
+  },
+  {
     "seq": 208,
-    "ts": 1790306172208,
+    "ts": 1790310001623,
     "type": "cmd",
     "text": "git --version",
     "command": {
@@ -350,13 +350,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 16,
+      "durationMs": 18,
       "exitCode": 0
     }
   },
   {
     "seq": 246,
-    "ts": 1790306172436,
+    "ts": 1790310001859,
     "type": "cmd",
     "text": "git remote",
     "repoPath": "/home/jane/code/acme-api",
@@ -367,13 +367,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 6,
+      "durationMs": 8,
       "exitCode": 0
     }
   },
   {
-    "seq": 249,
-    "ts": 1790306172450,
+    "seq": 248,
+    "ts": 1790310001863,
     "type": "error",
     "text": "git lfs version",
     "repoPath": "/home/jane/code/acme-api",
@@ -385,13 +385,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 6,
+      "durationMs": 7,
       "exitCode": 1
     }
   },
   {
-    "seq": 268,
-    "ts": 1790306176477,
+    "seq": 270,
+    "ts": 1790310005978,
     "type": "cmd",
     "text": "git --version",
     "command": {
@@ -401,166 +401,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 12,
+      "durationMs": 5,
       "exitCode": 0
     }
   },
   {
     "seq": 308,
-    "ts": 1790306176738,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 3,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 311,
-    "ts": 1790306176757,
-    "type": "error",
-    "text": "git lfs version",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "lfs",
-        "version"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 8,
-      "exitCode": 1
-    }
-  },
-  {
-    "seq": 328,
-    "ts": 1790306178628,
-    "type": "cmd",
-    "text": "git --version",
-    "command": {
-      "argv": [
-        "git",
-        "--version"
-      ],
-      "cwd": "",
-      "kind": "write",
-      "durationMs": 18,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 365,
-    "ts": 1790306178886,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 7,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 367,
-    "ts": 1790306178889,
-    "type": "error",
-    "text": "git lfs version",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "lfs",
-        "version"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 4,
-      "exitCode": 1
-    }
-  },
-  {
-    "seq": 386,
-    "ts": 1790306182810,
-    "type": "cmd",
-    "text": "git --version",
-    "command": {
-      "argv": [
-        "git",
-        "--version"
-      ],
-      "cwd": "",
-      "kind": "write",
-      "durationMs": 11,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 412,
-    "ts": 1790306183048,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 7,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 427,
-    "ts": 1790306183073,
-    "type": "error",
-    "text": "git lfs version",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "lfs",
-        "version"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 8,
-      "exitCode": 1
-    }
-  },
-  {
-    "seq": 444,
-    "ts": 1790306186097,
-    "type": "cmd",
-    "text": "git --version",
-    "command": {
-      "argv": [
-        "git",
-        "--version"
-      ],
-      "cwd": "",
-      "kind": "write",
-      "durationMs": 15,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 483,
-    "ts": 1790306186365,
+    "ts": 1790310006234,
     "type": "cmd",
     "text": "git remote",
     "repoPath": "/home/jane/code/acme-api",
@@ -576,8 +423,8 @@
     }
   },
   {
-    "seq": 485,
-    "ts": 1790306186377,
+    "seq": 310,
+    "ts": 1790310006244,
     "type": "error",
     "text": "git lfs version",
     "repoPath": "/home/jane/code/acme-api",
@@ -589,13 +436,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 6,
+      "durationMs": 5,
       "exitCode": 1
     }
   },
   {
-    "seq": 509,
-    "ts": 1790306188353,
+    "seq": 330,
+    "ts": 1790310010240,
     "type": "cmd",
     "text": "git --version",
     "command": {
@@ -605,13 +452,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 18,
+      "durationMs": 9,
       "exitCode": 0
     }
   },
   {
-    "seq": 549,
-    "ts": 1790306188588,
+    "seq": 370,
+    "ts": 1790310010505,
     "type": "error",
     "text": "git lfs version",
     "repoPath": "/home/jane/code/acme-api",
@@ -623,98 +470,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 7,
+      "durationMs": 13,
       "exitCode": 1
     }
   },
   {
-    "seq": 550,
-    "ts": 1790306188594,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 10,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 566,
-    "ts": 1790306189186,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 4,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 568,
-    "ts": 1790306189207,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 4,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 570,
-    "ts": 1790306191142,
-    "type": "error",
-    "text": "git lfs version",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "lfs",
-        "version"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 4,
-      "exitCode": 1
-    }
-  },
-  {
-    "seq": 580,
-    "ts": 1790306200009,
-    "type": "cmd",
-    "text": "git --version",
-    "command": {
-      "argv": [
-        "git",
-        "--version"
-      ],
-      "cwd": "",
-      "kind": "write",
-      "durationMs": 10,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 617,
-    "ts": 1790306200235,
+    "seq": 371,
+    "ts": 1790310010510,
     "type": "cmd",
     "text": "git remote",
     "repoPath": "/home/jane/code/acme-api",
@@ -730,8 +492,41 @@
     }
   },
   {
-    "seq": 619,
-    "ts": 1790306200238,
+    "seq": 388,
+    "ts": 1790310012372,
+    "type": "cmd",
+    "text": "git --version",
+    "command": {
+      "argv": [
+        "git",
+        "--version"
+      ],
+      "cwd": "",
+      "kind": "write",
+      "durationMs": 22,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 428,
+    "ts": 1790310012639,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 13,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 430,
+    "ts": 1790310012644,
     "type": "error",
     "text": "git lfs version",
     "repoPath": "/home/jane/code/acme-api",
@@ -743,13 +538,269 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 8,
       "exitCode": 1
     }
   },
   {
-    "seq": 637,
-    "ts": 1790306201754,
+    "seq": 448,
+    "ts": 1790310016526,
+    "type": "cmd",
+    "text": "git --version",
+    "command": {
+      "argv": [
+        "git",
+        "--version"
+      ],
+      "cwd": "",
+      "kind": "write",
+      "durationMs": 17,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 485,
+    "ts": 1790310016739,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 16,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 486,
+    "ts": 1790310016741,
+    "type": "error",
+    "text": "git lfs version",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "lfs",
+        "version"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 8,
+      "exitCode": 1
+    }
+  },
+  {
+    "seq": 504,
+    "ts": 1790310019565,
+    "type": "cmd",
+    "text": "git --version",
+    "command": {
+      "argv": [
+        "git",
+        "--version"
+      ],
+      "cwd": "",
+      "kind": "write",
+      "durationMs": 9,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 541,
+    "ts": 1790310019816,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 4,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 547,
+    "ts": 1790310019827,
+    "type": "error",
+    "text": "git lfs version",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "lfs",
+        "version"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 6,
+      "exitCode": 1
+    }
+  },
+  {
+    "seq": 573,
+    "ts": 1790310021817,
+    "type": "cmd",
+    "text": "git --version",
+    "command": {
+      "argv": [
+        "git",
+        "--version"
+      ],
+      "cwd": "",
+      "kind": "write",
+      "durationMs": 15,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 610,
+    "ts": 1790310022052,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 5,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 614,
+    "ts": 1790310022057,
+    "type": "error",
+    "text": "git lfs version",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "lfs",
+        "version"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 7,
+      "exitCode": 1
+    }
+  },
+  {
+    "seq": 628,
+    "ts": 1790310022690,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 5,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 630,
+    "ts": 1790310022704,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 4,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 632,
+    "ts": 1790310025029,
+    "type": "error",
+    "text": "git lfs version",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "lfs",
+        "version"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 5,
+      "exitCode": 1
+    }
+  },
+  {
+    "seq": 642,
+    "ts": 1790310033671,
+    "type": "cmd",
+    "text": "git --version",
+    "command": {
+      "argv": [
+        "git",
+        "--version"
+      ],
+      "cwd": "",
+      "kind": "write",
+      "durationMs": 6,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 679,
+    "ts": 1790310033926,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 9,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 684,
+    "ts": 1790310033940,
+    "type": "error",
+    "text": "git lfs version",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "lfs",
+        "version"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 9,
+      "exitCode": 1
+    }
+  },
+  {
+    "seq": 700,
+    "ts": 1790310035431,
     "type": "cmd",
     "text": "git worktree prune --dry-run -v",
     "repoPath": "/home/jane/code/acme-api",
@@ -768,8 +819,8 @@
     }
   },
   {
-    "seq": 648,
-    "ts": 1790306204255,
+    "seq": 710,
+    "ts": 1790310038075,
     "type": "cmd",
     "text": "git --version",
     "command": {
@@ -779,13 +830,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 33,
+      "durationMs": 11,
       "exitCode": 0
     }
   },
   {
-    "seq": 687,
-    "ts": 1790306204477,
+    "seq": 749,
+    "ts": 1790310038317,
     "type": "cmd",
     "text": "git remote",
     "repoPath": "/home/jane/code/acme-api",
@@ -801,8 +852,8 @@
     }
   },
   {
-    "seq": 691,
-    "ts": 1790306204491,
+    "seq": 753,
+    "ts": 1790310038335,
     "type": "error",
     "text": "git lfs version",
     "repoPath": "/home/jane/code/acme-api",
@@ -819,8 +870,8 @@
     }
   },
   {
-    "seq": 705,
-    "ts": 1790306205568,
+    "seq": 767,
+    "ts": 1790310039301,
     "type": "error",
     "text": "which droid",
     "command": {
@@ -830,13 +881,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 5,
+      "durationMs": 6,
       "exitCode": 1
     }
   },
   {
-    "seq": 706,
-    "ts": 1790306205569,
+    "seq": 768,
+    "ts": 1790310039301,
     "type": "error",
     "text": "which amp",
     "command": {
@@ -846,13 +897,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 10,
+      "durationMs": 8,
       "exitCode": 1
     }
   },
   {
-    "seq": 707,
-    "ts": 1790306205569,
+    "seq": 769,
+    "ts": 1790310039301,
     "type": "error",
     "text": "which copilot",
     "command": {
@@ -862,13 +913,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 12,
+      "durationMs": 9,
       "exitCode": 1
     }
   },
   {
-    "seq": 708,
-    "ts": 1790306205569,
+    "seq": 770,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which goose",
     "command": {
@@ -878,13 +929,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 14,
+      "durationMs": 13,
       "exitCode": 1
     }
   },
   {
-    "seq": 709,
-    "ts": 1790306205569,
+    "seq": 771,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which crush",
     "command": {
@@ -894,13 +945,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 16,
+      "durationMs": 15,
       "exitCode": 1
     }
   },
   {
-    "seq": 710,
-    "ts": 1790306205569,
+    "seq": 772,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which opencode",
     "command": {
@@ -910,13 +961,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 18,
+      "durationMs": 16,
       "exitCode": 1
     }
   },
   {
-    "seq": 711,
-    "ts": 1790306205569,
+    "seq": 773,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which kimi",
     "command": {
@@ -926,13 +977,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 21,
+      "durationMs": 18,
       "exitCode": 1
     }
   },
   {
-    "seq": 712,
-    "ts": 1790306205569,
+    "seq": 774,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which aider",
     "command": {
@@ -942,13 +993,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 23,
+      "durationMs": 20,
       "exitCode": 1
     }
   },
   {
-    "seq": 713,
-    "ts": 1790306205569,
+    "seq": 775,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which cursor-agent",
     "command": {
@@ -958,13 +1009,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 25,
+      "durationMs": 23,
       "exitCode": 1
     }
   },
   {
-    "seq": 714,
-    "ts": 1790306205569,
+    "seq": 776,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which qwen",
     "command": {
@@ -974,13 +1025,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 28,
+      "durationMs": 25,
       "exitCode": 1
     }
   },
   {
-    "seq": 715,
-    "ts": 1790306205569,
+    "seq": 777,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which gemini",
     "command": {
@@ -990,13 +1041,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 30,
+      "durationMs": 27,
       "exitCode": 1
     }
   },
   {
-    "seq": 716,
-    "ts": 1790306205569,
+    "seq": 778,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which codex",
     "command": {
@@ -1006,13 +1057,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 32,
+      "durationMs": 29,
       "exitCode": 1
     }
   },
   {
-    "seq": 717,
-    "ts": 1790306205569,
+    "seq": 779,
+    "ts": 1790310039302,
     "type": "cmd",
     "text": "which claude",
     "command": {
@@ -1022,13 +1073,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 35,
+      "durationMs": 31,
       "exitCode": 0
     }
   },
   {
-    "seq": 718,
-    "ts": 1790306205569,
+    "seq": 780,
+    "ts": 1790310039302,
     "type": "error",
     "text": "which cn",
     "command": {
@@ -1043,8 +1094,8 @@
     }
   },
   {
-    "seq": 722,
-    "ts": 1790306208535,
+    "seq": 784,
+    "ts": 1790310042311,
     "type": "cmd",
     "text": "git --version",
     "command": {
@@ -1054,115 +1105,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 5,
+      "durationMs": 7,
       "exitCode": 0
     }
   },
   {
-    "seq": 760,
-    "ts": 1790306208748,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 13,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 761,
-    "ts": 1790306208752,
-    "type": "error",
-    "text": "git lfs version",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "lfs",
-        "version"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 6,
-      "exitCode": 1
-    }
-  },
-  {
-    "seq": 788,
-    "ts": 1790306214003,
-    "type": "cmd",
-    "text": "git --version",
-    "command": {
-      "argv": [
-        "git",
-        "--version"
-      ],
-      "cwd": "",
-      "kind": "write",
-      "durationMs": 8,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 824,
-    "ts": 1790306214235,
-    "type": "cmd",
-    "text": "git remote",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "remote"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 10,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 826,
-    "ts": 1790306214238,
-    "type": "error",
-    "text": "git lfs version",
-    "repoPath": "/home/jane/code/acme-api",
-    "command": {
-      "argv": [
-        "git",
-        "lfs",
-        "version"
-      ],
-      "cwd": "/home/jane/code/acme-api",
-      "kind": "write",
-      "durationMs": 5,
-      "exitCode": 1
-    }
-  },
-  {
-    "seq": 847,
-    "ts": 1790306219303,
-    "type": "cmd",
-    "text": "git --version",
-    "command": {
-      "argv": [
-        "git",
-        "--version"
-      ],
-      "cwd": "",
-      "kind": "write",
-      "durationMs": 8,
-      "exitCode": 0
-    }
-  },
-  {
-    "seq": 884,
-    "ts": 1790306219513,
+    "seq": 822,
+    "ts": 1790310042586,
     "type": "cmd",
     "text": "git remote",
     "repoPath": "/home/jane/code/acme-api",
@@ -1178,8 +1127,8 @@
     }
   },
   {
-    "seq": 889,
-    "ts": 1790306219525,
+    "seq": 823,
+    "ts": 1790310042590,
     "type": "error",
     "text": "git lfs version",
     "repoPath": "/home/jane/code/acme-api",
@@ -1191,13 +1140,115 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 5,
+      "durationMs": 9,
       "exitCode": 1
     }
   },
   {
-    "seq": 910,
-    "ts": 1790306221095,
+    "seq": 850,
+    "ts": 1790310047909,
+    "type": "cmd",
+    "text": "git --version",
+    "command": {
+      "argv": [
+        "git",
+        "--version"
+      ],
+      "cwd": "",
+      "kind": "write",
+      "durationMs": 13,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 888,
+    "ts": 1790310048189,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 22,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 891,
+    "ts": 1790310048195,
+    "type": "error",
+    "text": "git lfs version",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "lfs",
+        "version"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 14,
+      "exitCode": 1
+    }
+  },
+  {
+    "seq": 909,
+    "ts": 1790310053328,
+    "type": "cmd",
+    "text": "git --version",
+    "command": {
+      "argv": [
+        "git",
+        "--version"
+      ],
+      "cwd": "",
+      "kind": "write",
+      "durationMs": 16,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 947,
+    "ts": 1790310053567,
+    "type": "cmd",
+    "text": "git remote",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "remote"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 4,
+      "exitCode": 0
+    }
+  },
+  {
+    "seq": 949,
+    "ts": 1790310053584,
+    "type": "error",
+    "text": "git lfs version",
+    "repoPath": "/home/jane/code/acme-api",
+    "command": {
+      "argv": [
+        "git",
+        "lfs",
+        "version"
+      ],
+      "cwd": "/home/jane/code/acme-api",
+      "kind": "write",
+      "durationMs": 8,
+      "exitCode": 1
+    }
+  },
+  {
+    "seq": 972,
+    "ts": 1790310055113,
     "type": "cmd",
     "text": "git config --local core.sshCommand ssh -F /dev/null -i \"/home/jane/.ssh/id_ed25519_personal\" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new",
     "repoPath": "/home/jane/code/acme-api",
@@ -1211,13 +1262,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 4,
       "exitCode": 0
     }
   },
   {
-    "seq": 913,
-    "ts": 1790306221105,
+    "seq": 975,
+    "ts": 1790310055129,
     "type": "cmd",
     "text": "git config --local user.name Jane Doe",
     "repoPath": "/home/jane/code/acme-api",
@@ -1231,13 +1282,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 6,
       "exitCode": 0
     }
   },
   {
-    "seq": 914,
-    "ts": 1790306221109,
+    "seq": 976,
+    "ts": 1790310055134,
     "type": "cmd",
     "text": "git config --local user.email jane@example.com",
     "repoPath": "/home/jane/code/acme-api",
@@ -1251,13 +1302,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 5,
       "exitCode": 0
     }
   },
   {
-    "seq": 930,
-    "ts": 1790306225751,
+    "seq": 992,
+    "ts": 1790310059756,
     "type": "cmd",
     "text": "git config --local user.name Jane Doe",
     "repoPath": "/home/jane/code/acme-api",
@@ -1271,13 +1322,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 5,
       "exitCode": 0
     }
   },
   {
-    "seq": 931,
-    "ts": 1790306225755,
+    "seq": 993,
+    "ts": 1790310059762,
     "type": "cmd",
     "text": "git config --local user.email jane@acme.example",
     "repoPath": "/home/jane/code/acme-api",
@@ -1291,13 +1342,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 6,
       "exitCode": 0
     }
   },
   {
-    "seq": 940,
-    "ts": 1790306225780,
+    "seq": 1002,
+    "ts": 1790310059800,
     "type": "cmd",
     "text": "git config --local core.sshCommand ssh -F /dev/null -i \"/home/jane/.ssh/id_ed25519_work\" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new",
     "repoPath": "/home/jane/code/acme-api",
@@ -1311,13 +1362,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 5,
       "exitCode": 0
     }
   },
   {
-    "seq": 951,
-    "ts": 1790306225821,
+    "seq": 1013,
+    "ts": 1790310059862,
     "type": "cmd",
     "text": "git config --local user.name Jane Doe",
     "repoPath": "/home/jane/code/acme-api",
@@ -1331,13 +1382,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 7,
       "exitCode": 0
     }
   },
   {
-    "seq": 952,
-    "ts": 1790306225825,
+    "seq": 1014,
+    "ts": 1790310059867,
     "type": "cmd",
     "text": "git config --local user.email jane@acme.example",
     "repoPath": "/home/jane/code/acme-api",
@@ -1351,13 +1402,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 4,
       "exitCode": 0
     }
   },
   {
-    "seq": 975,
-    "ts": 1790306225900,
+    "seq": 1037,
+    "ts": 1790310059961,
     "type": "cmd",
     "text": "git apply --whitespace=nowarn --cached",
     "repoPath": "/home/jane/code/acme-api",
@@ -1370,13 +1421,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 4,
       "exitCode": 0
     }
   },
   {
-    "seq": 980,
-    "ts": 1790306225923,
+    "seq": 1042,
+    "ts": 1790310059991,
     "type": "cmd",
     "text": "git apply --whitespace=nowarn --reverse",
     "repoPath": "/home/jane/code/acme-api",
@@ -1389,13 +1440,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 5,
       "exitCode": 0
     }
   },
   {
-    "seq": 981,
-    "ts": 1790306225932,
+    "seq": 1043,
+    "ts": 1790310060004,
     "type": "cmd",
     "text": "git commit -m fix(auth): refresh the token before expiry",
     "repoPath": "/home/jane/code/acme-api",
@@ -1408,13 +1459,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 7,
+      "durationMs": 9,
       "exitCode": 0
     }
   },
   {
-    "seq": 984,
-    "ts": 1790306225955,
+    "seq": 1046,
+    "ts": 1790310060036,
     "type": "cmd",
     "text": "git symbolic-ref --quiet HEAD",
     "repoPath": "/home/jane/code/acme-api",
@@ -1427,13 +1478,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 4,
       "exitCode": 0
     }
   },
   {
-    "seq": 985,
-    "ts": 1790306225960,
+    "seq": 1047,
+    "ts": 1790310060043,
     "type": "cmd",
     "text": "git reset --hard 021fd393d5f3c98da4e589df9b685b2e66b9be96",
     "repoPath": "/home/jane/code/acme-api",
@@ -1446,13 +1497,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 4,
+      "durationMs": 6,
       "exitCode": 0
     }
   },
   {
-    "seq": 990,
-    "ts": 1790306226301,
+    "seq": 1052,
+    "ts": 1790310060400,
     "type": "cmd",
     "text": "git --version",
     "command": {
@@ -1462,13 +1513,13 @@
       ],
       "cwd": "",
       "kind": "write",
-      "durationMs": 5,
+      "durationMs": 6,
       "exitCode": 0
     }
   },
   {
-    "seq": 1027,
-    "ts": 1790306226554,
+    "seq": 1089,
+    "ts": 1790310060675,
     "type": "cmd",
     "text": "git remote",
     "repoPath": "/home/jane/code/acme-api",
@@ -1479,13 +1530,13 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 10,
+      "durationMs": 7,
       "exitCode": 0
     }
   },
   {
-    "seq": 1028,
-    "ts": 1790306226559,
+    "seq": 1093,
+    "ts": 1790310060684,
     "type": "error",
     "text": "git lfs version",
     "repoPath": "/home/jane/code/acme-api",
@@ -1502,8 +1553,8 @@
     }
   },
   {
-    "seq": 1048,
-    "ts": 1790306232941,
+    "seq": 1110,
+    "ts": 1790310067270,
     "type": "cmd",
     "text": "git symbolic-ref --quiet HEAD",
     "repoPath": "/home/jane/code/acme-api",
@@ -1516,22 +1567,22 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 3,
+      "durationMs": 4,
       "exitCode": 0
     }
   },
   {
-    "seq": 1049,
-    "ts": 1790306232948,
+    "seq": 1111,
+    "ts": 1790310067276,
     "type": "cmd",
-    "text": "git reset --hard e5e83a4b2f4d3d805056ec112d476240e8537567",
+    "text": "git reset --hard 48b2e3adce982def425749351a53c2bc85fb2256",
     "repoPath": "/home/jane/code/acme-api",
     "command": {
       "argv": [
         "git",
         "reset",
         "--hard",
-        "e5e83a4b2f4d3d805056ec112d476240e8537567"
+        "48b2e3adce982def425749351a53c2bc85fb2256"
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
@@ -1540,8 +1591,8 @@
     }
   },
   {
-    "seq": 1053,
-    "ts": 1790306232989,
+    "seq": 1115,
+    "ts": 1790310067320,
     "type": "cmd",
     "text": "git worktree add -b fix/rate-limit /home/jane/code/acme-api.worktrees/hotfix",
     "repoPath": "/home/jane/code/acme-api",
@@ -1556,7 +1607,7 @@
       ],
       "cwd": "/home/jane/code/acme-api",
       "kind": "write",
-      "durationMs": 19,
+      "durationMs": 15,
       "exitCode": 0
     }
   }

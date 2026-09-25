@@ -377,6 +377,8 @@ export function makeDemoWorld() {
     'src/auth.ts': AUTH_WORK,
     'docs/token-refresh.md': '# Token refresh\n\nRefresh a minute before expiry, never after.\n',
     'public/logo.png': logoPng('#f97316'),
+    // One modified line, for the split diff's word-level highlights.
+    'src/handlers/health.ts': "import type { Request, Response } from 'express';\n\nexport const health = (_req: Request, res: Response) => res.json({ ok: true, uptime: process.uptime() });\n",
     // Discarded through the API by the seed step (Recently Discarded).
     'docs/usage.md': '# Using the API\n\n- `GET /health` answers `{ ok: true }`.\n- Sessions expire after 30 minutes.\n- TODO: rate limits\n',
   });

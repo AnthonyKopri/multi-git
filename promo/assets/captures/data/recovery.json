@@ -2,7 +2,7 @@
   "success": true,
   "points": [
     {
-      "id": "muge2dhg-gkrhwp",
+      "id": "muggcgdb-qdauc5",
       "operation": "branch-delete",
       "label": "Delete branch spike/old-cache",
       "refs": {
@@ -11,8 +11,8 @@
         "refs/heads/spike/old-cache": "835e040e8a614af6daaf96fe42fb0291c7cfe7b3"
       },
       "headRef": "refs/heads/main",
-      "createdAt": "2026-09-25T03:16:04.420Z",
-      "expiresAt": "2026-10-09T03:16:04.420Z"
+      "createdAt": "2026-09-25T04:19:53.951Z",
+      "expiresAt": "2026-10-09T04:19:53.951Z"
     }
   ],
   "reflog": [

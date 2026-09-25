@@ -21,7 +21,7 @@ export const MontageCard: React.FC<{
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{control}</div>
       <div style={{ position: 'relative', alignSelf: 'flex-start', maxWidth: '100%', fontFamily: FONT.mono, fontSize: 26, color: c.spell, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {struck}
-        <div style={{ position: 'absolute', left: 0, top: '52%', height: 3, width: `${strike * 100}%`, background: c.red, boxShadow: `0 0 8px ${c.red}` }} />
+        <div style={{ position: 'absolute', left: 0, top: '54%', height: 2, width: `${strike * 100}%`, background: c.red, opacity: 0.85 }} />
       </div>
     </div>
   );

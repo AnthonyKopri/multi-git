@@ -26,7 +26,7 @@ const snippet = (snap: string, sel: string, text?: string): string => {
   const el = text ? els.find((e) => e.textContent?.includes(text)) : els[0];
   return el?.outerHTML ?? '';
 };
-const Html: React.FC<{ html: string; scale?: number; width?: number; force?: boolean }> = ({ html, scale = 1.9, width = 380, force = true }) => (
+const Html: React.FC<{ html: string; scale?: number; width?: number; force?: boolean }> = ({ html, scale = 2.45, width = 330, force = true }) => (
   <div className="mg-app" style={{ background: 'transparent', height: 'auto', width, transform: `scale(${scale})`, transformOrigin: 'center center', pointerEvents: 'none' }}>
     <div className={force ? 'mg-force-visible' : undefined} dangerouslySetInnerHTML={{ __html: html }} />
   </div>
@@ -36,26 +36,26 @@ const Btn: React.FC<{ icon?: string; label: string; kind?: string }> = ({ icon, 
 
 const Control: React.FC<{ id: string }> = ({ id }) => {
   switch (id) {
-    case 'undo': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.4)' }}><button className="btn btn-text btn-sm" type="button"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>undo</span><span>Undo</span></button></div>;
+    case 'undo': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(3.12)' }}><button className="btn btn-text btn-sm" type="button"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>undo</span><span>Undo</span></button></div>;
     case 'stagedRow': return <Html html={snippet('workspace-body', '#staged-files-list li.file-item')} />;
     case 'trash': return <Html html={snippet('workspace-body', '#unstaged-files-list li.file-item', 'src/auth.ts')} />;
-    case 'amend': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.4)' }}><label className="amend-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" defaultChecked /><span>Amend</span></label></div>;
+    case 'amend': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(3.12)' }}><label className="amend-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" defaultChecked /><span>Amend</span></label></div>;
     case 'remoteBranch': return <Html html={snippet('workspace-body', '.branch-item', 'origin/feature/export') || snippet('workspace-body', 'li', 'origin/feature/export')} />;
     case 'rename': return <Html html={snippet('palette', 'li.palette-item', 'Branch maintenance')} width={420} />;
     case 'deleteBranch': return <Html html={snippet('workspace-body', '.branch-item', 'feature/search') || snippet('workspace-body', 'li', 'feature/search')} />;
     case 'ignore': return <Html html={snippet('workspace-body', '#unstaged-files-list li.file-item', 'token-refresh.md')} />;
-    case 'conflict': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(1.9)' }}><div className="conflict-quick-actions" style={{ display: 'flex', gap: 8 }}><Btn icon="arrow_back" label="Use HEAD (Ours)" /><Btn icon="arrow_forward" label="Use Incoming (Theirs)" /></div></div>;
-    case 'revert': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.4)' }}><Btn icon="undo" label="Revert" /></div>;
+    case 'conflict': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.47)' }}><div className="conflict-quick-actions" style={{ display: 'flex', gap: 8 }}><Btn icon="arrow_back" label="Use HEAD (Ours)" /><Btn icon="arrow_forward" label="Use Incoming (Theirs)" /></div></div>;
+    case 'revert': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(3.12)' }}><Btn icon="undo" label="Revert" /></div>;
     case 'pr': return <Html html={snippet('palette', 'li.palette-item', 'Create a pull request')} width={420} />;
-    case 'verified': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.4)', display: 'flex', gap: 10, alignItems: 'center' }}><span style={{ color: '#d1d5db', fontSize: 14 }}>feat(auth): add login form</span><span className="badge signature-badge signature-good">Verified</span></div>;
-    case 'bisect': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.1)', display: 'flex', gap: 8, alignItems: 'center' }}><input className="form-input" readOnly value="npm test" style={{ width: 130 }} /><Btn icon="play_arrow" label="Start bisect" /></div>;
-    case 'fetchAll': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.4)', display: 'flex', gap: 10, alignItems: 'center' }}><span style={{ color: '#d1d5db', fontSize: 14, fontWeight: 600 }}>Acme</span><Btn icon="sync" label="Fetch all" /></div>;
-    case 'deleteMerged': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.0)' }}><div className="modal-card modal-small" style={{ padding: 14, position: 'static' }}><h2 style={{ fontSize: 15, marginBottom: 12 }}>Delete merged branches</h2><div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}><button className="btn btn-secondary btn-sm" type="button">Cancel</button><button className="btn btn-danger btn-sm" type="button">Delete</button></div></div></div>;
+    case 'verified': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(3.12)', display: 'flex', gap: 10, alignItems: 'center' }}><span style={{ color: '#d1d5db', fontSize: 14 }}>feat(auth): add login form</span><span className="badge signature-badge signature-good">Verified</span></div>;
+    case 'bisect': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.73)', display: 'flex', gap: 8, alignItems: 'center' }}><input className="form-input" readOnly value="npm test" style={{ width: 130 }} /><Btn icon="play_arrow" label="Start bisect" /></div>;
+    case 'fetchAll': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(3.12)', display: 'flex', gap: 10, alignItems: 'center' }}><span style={{ color: '#d1d5db', fontSize: 14, fontWeight: 600 }}>Acme</span><Btn icon="sync" label="Fetch all" /></div>;
+    case 'deleteMerged': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.6)' }}><div className="modal-card modal-small" style={{ padding: 14, position: 'static' }}><h2 style={{ fontSize: 15, marginBottom: 12 }}>Delete merged branches</h2><div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}><button className="btn btn-secondary btn-sm" type="button">Cancel</button><button className="btn btn-danger btn-sm" type="button">Delete</button></div></div></div>;
     case 'search': return <Html html={snippet('palette', 'li.palette-item', 'Search commits')} width={420} />;
     case 'compare': return <Html html={snippet('palette', 'li.palette-item', 'Compare two refs')} width={420} />;
-    case 'submodules': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.2)', display: 'flex', gap: 10, alignItems: 'center' }}><button className="settings-nav-item hub-tab" type="button" aria-selected="true">Submodules</button><Btn icon="download" label="Update all" /></div>;
-    case 'lfs': return <Html html={snippet('hub-lfs', '#hub-tab-lfs')} width={240} scale={2.4} />;
-    case 'forceLease': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.2)' }}><button className="btn btn-danger" type="button">Force Push (with lease)</button></div>;
+    case 'submodules': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.86)', display: 'flex', gap: 10, alignItems: 'center' }}><button className="settings-nav-item hub-tab" type="button" aria-selected="true">Submodules</button><Btn icon="download" label="Update all" /></div>;
+    case 'lfs': return <Html html={snippet('hub-lfs', '#hub-tab-lfs')} width={240} scale={3.1} />;
+    case 'forceLease': return <div className="mg-app" style={{ background: 'transparent', height: 'auto', transform: 'scale(2.86)' }}><button className="btn btn-danger" type="button">Force Push (with lease)</button></div>;
     default: return null;
   }
 };
@@ -130,7 +130,7 @@ export const TwoLanes: React.FC<SceneProps> = ({ placed }) => {
   const state = frame >= v ? 'after-v' : frame >= k ? 'after-k' : frame >= j ? 'after-j' : frame >= space ? 'space-menu' : 'normal';
   const shown = tuiStates.find((st) => st.name === state) ?? tuiStates[0];
   const card = { x: 580, y: 20, w: 440, h: 441 };
-  const sc = 1.25;
+  const sc = 1.3;
   const call = mcpCall.find((m) => m.message.method === 'tools/call')?.message.params;
   const split = expoOut(prog(frame, 0, 10));
   return (
@@ -142,7 +142,7 @@ export const TwoLanes: React.FC<SceneProps> = ({ placed }) => {
       {/* Cyan: the real merge preview */}
       <div style={{ position: 'absolute', left: 96, top: 64, ...TYPE.chip, color: c.cyan }}>{T2.cyanLabel}</div>
       <Kinetic text={T2.cyanCaption} at={4} style={{ ...TYPE.sub, fontSize: 60, fontWeight: 700, position: 'absolute', left: 96, top: 128, width: 980 }} />
-      <div style={{ position: 'absolute', left: 1180, top: 28, width: card.w * sc, height: card.h * sc, overflow: 'hidden', borderRadius: 14, transform: `translateY(${(1 - split) * -30}px)`, opacity: split }}>
+      <div style={{ position: 'absolute', left: 1150, top: 12, width: card.w * sc, height: card.h * sc, overflow: 'hidden', borderRadius: 14, transform: `translateY(${(1 - split) * -30}px)`, opacity: split }}>
         <div style={{ position: 'absolute', left: -card.x * sc, top: -card.y * sc, width: 1600, height: 1000, transform: `scale(${sc})`, transformOrigin: '0 0' }}>
           <AppLayer snap="merge-preview" apply={(root, f) => {
             const overlay = q(root, '.modal-overlay'); if (overlay) overlay.style.background = 'transparent';

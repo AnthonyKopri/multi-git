@@ -34,6 +34,7 @@ export const LAYERS = {
   split: { snap: 'split-confirm', place: 'full', measure: ['.modal-card', '#btn-confirm-ok'] },
   diff: { snap: 'filediff-unselected', sel: '#diff-view', place: ['base', '#staging-view'], measure: ['#diff-view', '#diff-content', ...LINES.map((l) => `[data-line-id]::${l}`), '#diff-selection-bar', '#btn-diff-layout'] },
   diffSelected: { snap: 'filediff-selected', sel: '#diff-view', place: ['base', '#staging-view'], measure: ['#diff-selection-bar', '#btn-diff-stage-selection', '#btn-diff-discard-selection', '#diff-selection-count'] },
+  word: { snap: 'worddiff', sel: '#diff-view', place: ['base', '#staging-view'], measure: ['#diff-content', '[data-line-id]::uptime', '.diff-line-deletion', '.diff-line-addition'] },
   image: { snap: 'imagediff', sel: '#diff-view', place: ['base', '#staging-view'], measure: ['#diff-content', 'img'] },
   planner: { snap: 'rebase-planner', place: 'full', measure: ['.modal-card', '#rebase-plan-list', '#rebase-plan-list li::rate limiting', '#rebase-plan-list li::token helpers', '#rebase-plan-list li::highlight matched', '#rebase-plan-list li::fixup!', '#rebase-plan-list li::API usage', '#rebase-autosquash', '#btn-rebase-start'] },
   editStop: { snap: 'rebase-edit-stop', place: 'full', measure: ['.modal-card', '#btn-rebase-split', '#rebase-progress'] },

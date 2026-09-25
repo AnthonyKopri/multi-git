@@ -23,6 +23,10 @@
       "status": "M"
     },
     {
+      "path": "src/handlers/health.ts",
+      "status": "M"
+    },
+    {
       "path": "docs/token-refresh.md",
       "status": "?"
     }

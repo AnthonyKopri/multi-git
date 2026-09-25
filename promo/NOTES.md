@@ -11,7 +11,7 @@ Session branch: promo/video-2
 - [x] M4 scaffold and primitives — 2026-09-25T03:46Z — `promo: add the motion primitives` (sheet: `review/m4-primitives.jpg`)
 - [x] M5 rough cut — 2026-09-25T04:05Z — `promo: rough cut of the master`
 - [x] M6 review round 1 and hero polish — 2026-09-25T04:19Z — `promo: review round 1` (sheets: `review/round-1/`; smoke clip 420-570 at 0.25 had H.264 + AAC 48 kHz stereo)
-- [ ] M7 review round 2
+- [x] M7 review round 2 — 2026-09-25T04:28Z — `promo: review round 2` (sheets: `review/round-2/`, incl. `montage-cards.jpg`)
 - [ ] M8 review round 3 (optional)
 - [ ] M9 cutdowns
 - [ ] M10 docs, checks and the final push
@@ -125,6 +125,14 @@ Lane sweeps carry every cut except into the stinger (hard cut to black).
   the top-right) and during the stinger, which shows it huge.
 - **Collapse choreography:** the stack lands on the control first, then the
   camera pushes in 6 frames later, so the pulse sits on the real control.
+- **Word-level diff.** The storyboard's quick flex needs a modified line, so
+  the demo world also changes one line of `src/handlers/health.ts` (a fourth
+  working-tree change; the spec's listed state is unchanged). Its split diff
+  (`worddiff`) shows the app's real `diff-word-changed` highlights; the image
+  diff shows the app's own checkerboard.
+- **Hashes are read from the capture.** The restore hash and the reset target
+  come from the captured Restore confirm, so re-capturing on another day keeps
+  the film consistent.
 - The session's own branch is `promo/video-2` itself (`git branch --show-current`
   at the start), so the morning fast-forward is a no-op.
 
@@ -143,7 +151,7 @@ Lane sweeps carry every cut except into the stinger (hard cut to black).
    the card "Codex". The seeded `externalAgents` entry is labelled `Codex` (a
    user-editable label), so the real window says "Codex".
 4. **Restore confirm title** is "Restore ref" in the app; the spec gives only
-   the body. Real values: *Reset main back to e5e83a4b? … anything committed
+   the body. Real values: *Reset main back to 48b2e3ad? … anything committed
    since "Reset (hard) to 021fd393" goes with it.*
 5. **Merge preview** in a dirty tree adds "Note: 3 uncommitted changes in
    tracked files…". The film omits that line (a clean tree doesn't show it).

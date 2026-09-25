@@ -1,0 +1,71 @@
+<!-- #diff-view -->
+<div id="diff-view" class="view-pane">
+          <div class="diff-workspace">
+            <aside class="diff-files-pane">
+              <div class="card-header">
+                <h3>Modified Files</h3>
+                <button id="btn-diff-refresh" class="btn btn-icon btn-sm" title="Refresh modified files">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                </button>
+              </div>
+              <ul id="diff-files-list" class="file-list diff-file-list"><li class="file-item diff-file-item" title="Unstaged: public/logo.png" data-path="public/logo.png" data-staged="false" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="public/logo.png">public/logo.png</span></div><span class="diff-file-scope">Unstaged</span></li><li class="file-item diff-file-item" title="Unstaged: src/auth.ts" data-path="src/auth.ts" data-staged="false" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="src/auth.ts">src/auth.ts</span></div><span class="diff-file-scope">Unstaged</span></li><li class="file-item diff-file-item" title="Unstaged: src/handlers/health.ts" data-path="src/handlers/health.ts" data-staged="false" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="src/handlers/health.ts">src/handlers/health.ts</span></div><span class="diff-file-scope">Unstaged</span></li><li class="file-item diff-file-item" title="Untracked: docs/token-refresh.md" data-path="docs/token-refresh.md" data-staged="false" data-status="?"><div class="file-info"><span class="status-indicator status-q" title="Untracked">?</span><span class="file-name" title="docs/token-refresh.md">docs/token-refresh.md</span></div><span class="diff-file-scope">Untracked</span></li><li class="file-item diff-file-item" title="Staged: src/types.ts" data-path="src/types.ts" data-staged="true" data-status="M"><div class="file-info"><span class="status-indicator status-m" title="Modified">M</span><span class="file-name" title="src/types.ts">src/types.ts</span></div><span class="diff-file-scope">Staged</span></li></ul>
+            </aside>
+
+            <div class="pane-resizer pane-resizer-col" data-pane="diffFiles" role="separator" aria-orientation="vertical" aria-label="Resize the modified files list" title="Drag to resize · double-click to reset" tabindex="0" aria-valuemin="170" aria-valuemax="640"></div>
+
+            <div class="diff-viewer-card">
+              <div class="card-header diff-view-header">
+                <div class="diff-title-group">
+                  <button id="btn-diff-back" class="btn btn-text btn-sm" title="Back to Staging Area">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">arrow_back</span>
+                    <span>Staging</span>
+                  </button>
+                  <h3 id="diff-file-title">src/handlers/health.ts</h3>
+                  <span id="diff-file-type" class="badge status-m">Unstaged</span>
+                </div>
+                <div class="diff-view-options">
+                  <button id="btn-diff-layout" class="btn btn-secondary btn-sm" title="Switch between unified and side-by-side">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">splitscreen</span>
+                    <span id="btn-diff-layout-label">Unified</span>
+                  </button>
+                  <select id="diff-whitespace" class="btn btn-secondary btn-sm" aria-label="Whitespace handling" title="Whitespace handling">
+                    <option value="show">Show whitespace</option>
+                    <option value="ignore-change">Ignore whitespace changes</option>
+                    <option value="ignore-all">Ignore all whitespace</option>
+                  </select>
+                </div>
+                <div id="diff-actions" class="card-header-actions">
+                  <button id="btn-diff-toggle-stage" class="btn btn-secondary btn-sm">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                    <span id="btn-diff-toggle-stage-label">Stage</span>
+                  </button>
+                  <button id="btn-diff-discard" class="btn btn-secondary btn-sm btn-text-danger" title="Discard this file's changes">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    <span>Discard</span>
+                  </button>
+                </div>
+              </div>
+              <div id="diff-selection-bar" class="diff-selection-bar hidden" role="toolbar" aria-label="Selected line actions">
+                <span id="diff-selection-count" class="diff-selection-count">0 lines selected</span>
+                <div class="diff-selection-actions">
+                  <button id="btn-diff-stage-selection" class="btn btn-secondary btn-sm" title="Stage only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                    <span>Stage selection</span>
+                  </button>
+                  <button id="btn-diff-unstage-selection" class="btn btn-secondary btn-sm" title="Unstage only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">remove</span>
+                    <span>Unstage selection</span>
+                  </button>
+                  <button id="btn-diff-discard-selection" class="btn btn-secondary btn-sm btn-text-danger" title="Discard only the selected lines">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    <span>Discard selection</span>
+                  </button>
+                  <button id="btn-diff-clear-selection" class="btn btn-text btn-sm" title="Clear the selection">
+                    <span>Clear</span>
+                  </button>
+                </div>
+              </div>
+              <div id="diff-content" class="diff-body diff-split"><div class="diff-line diff-line-hunk" data-hunk-id="b2b64cf570c1"><div class="diff-line-nums"><span></span><span></span></div><div class="diff-line-content">@@ -1,3 +1,3 @@</div><div class="diff-hunk-actions"><button class="btn btn-secondary btn-sm diff-hunk-action" title="Stage this hunk" data-hunk-action="stage" data-hunk-id="b2b64cf570c1" aria-label="Stage this hunk"><span class="material-symbols-outlined">add</span></button><button class="btn btn-secondary btn-sm diff-hunk-action" title="Discard this hunk" data-hunk-action="discard" data-hunk-id="b2b64cf570c1" aria-label="Discard this hunk"><span class="material-symbols-outlined">delete</span></button></div></div><div class="diff-line diff-side-both" data-hunk-id="b2b64cf570c1"><div class="diff-line-nums"><span>1</span><span>1</span></div><div class="diff-line-content">import type { Request, Response } from 'express';</div></div><div class="diff-line diff-side-both" data-hunk-id="b2b64cf570c1"><div class="diff-line-nums"><span>2</span><span>2</span></div><div class="diff-line-content"></div></div><div class="diff-line diff-line-deletion diff-line-selectable diff-side-old" data-line-id="b2b64cf570c1:2" data-hunk-id="b2b64cf570c1" role="checkbox" aria-checked="false" tabindex="0"><div class="diff-line-nums"><span>3</span><span></span></div><div class="diff-line-content">export const health = (_req: Request, res: Response) =&gt; res.json({ ok: true });</div></div><div class="diff-line diff-line-addition diff-line-selectable diff-side-new" data-line-id="b2b64cf570c1:3" data-hunk-id="b2b64cf570c1" role="checkbox" aria-checked="false" tabindex="0"><div class="diff-line-nums"><span></span><span>3</span></div><div class="diff-line-content">export const health = (_req: Request, res: Response) =&gt; res.json({ ok: true<span class="diff-word-changed">,</span> <span class="diff-word-changed">uptime: process.uptime() </span>});</div></div></div>
+            </div>
+          </div>
+        </div>

@@ -494,7 +494,7 @@
         "content": [
           {
             "type": "text",
-            "text": "{\"schemaVersion\":1,\"success\":true,\"command\":\"status\",\"data\":{\"success\":true,\"branch\":\"main\",\"tracking\":\"origin/main\",\"ahead\":2,\"behind\":0,\"detached\":false,\"noCommits\":false,\"staged\":[{\"path\":\"src/types.ts\",\"status\":\"M\",\"origPath\":null}],\"unstaged\":[{\"path\":\"public/logo.png\",\"status\":\"M\"},{\"path\":\"src/auth.ts\",\"status\":\"M\"},{\"path\":\"docs/token-refresh.md\",\"status\":\"?\"}],\"conflicts\":[],\"isMerging\":false,\"isRebasing\":false}}"
+            "text": "{\"schemaVersion\":1,\"success\":true,\"command\":\"status\",\"data\":{\"success\":true,\"branch\":\"main\",\"tracking\":\"origin/main\",\"ahead\":2,\"behind\":0,\"detached\":false,\"noCommits\":false,\"staged\":[{\"path\":\"src/types.ts\",\"status\":\"M\",\"origPath\":null}],\"unstaged\":[{\"path\":\"public/logo.png\",\"status\":\"M\"},{\"path\":\"src/auth.ts\",\"status\":\"M\"},{\"path\":\"src/handlers/health.ts\",\"status\":\"M\"},{\"path\":\"docs/token-refresh.md\",\"status\":\"?\"}],\"conflicts\":[],\"isMerging\":false,\"isRebasing\":false}}"
           }
         ],
         "structuredContent": {
@@ -523,6 +523,10 @@
               },
               {
                 "path": "src/auth.ts",
+                "status": "M"
+              },
+              {
+                "path": "src/handlers/health.ts",
                 "status": "M"
               },
               {

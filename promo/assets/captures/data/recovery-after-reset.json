@@ -2,19 +2,19 @@
   "success": true,
   "points": [
     {
-      "id": "muge3oyr-3q02mr",
+      "id": "muggdvd0-djvwgw",
       "operation": "reset",
       "label": "Reset (hard) to 021fd393",
       "refs": {
-        "HEAD": "e5e83a4b2f4d3d805056ec112d476240e8537567",
-        "refs/heads/main": "e5e83a4b2f4d3d805056ec112d476240e8537567"
+        "HEAD": "48b2e3adce982def425749351a53c2bc85fb2256",
+        "refs/heads/main": "48b2e3adce982def425749351a53c2bc85fb2256"
       },
       "headRef": "refs/heads/main",
-      "createdAt": "2026-09-25T03:17:05.955Z",
-      "expiresAt": "2026-10-09T03:17:05.955Z"
+      "createdAt": "2026-09-25T04:21:00.036Z",
+      "expiresAt": "2026-10-09T04:21:00.036Z"
     },
     {
-      "id": "muge2dhg-gkrhwp",
+      "id": "muggcgdb-qdauc5",
       "operation": "branch-delete",
       "label": "Delete branch spike/old-cache",
       "refs": {
@@ -23,8 +23,8 @@
         "refs/heads/spike/old-cache": "835e040e8a614af6daaf96fe42fb0291c7cfe7b3"
       },
       "headRef": "refs/heads/main",
-      "createdAt": "2026-09-25T03:16:04.420Z",
-      "expiresAt": "2026-10-09T03:16:04.420Z"
+      "createdAt": "2026-09-25T04:19:53.951Z",
+      "expiresAt": "2026-10-09T04:19:53.951Z"
     }
   ],
   "reflog": [
@@ -32,7 +32,7 @@
       "ref": "HEAD",
       "selector": "HEAD@{0}",
       "oid": "021fd393d5f3c98da4e589df9b685b2e66b9be96",
-      "previousOid": "e5e83a4b2f4d3d805056ec112d476240e8537567",
+      "previousOid": "48b2e3adce982def425749351a53c2bc85fb2256",
       "action": "reset",
       "subject": "moving to 021fd393d5f3c98da4e589df9b685b2e66b9be96",
       "timestamp": "2026-09-21T03:00:00+00:00"
@@ -40,11 +40,11 @@
     {
       "ref": "HEAD",
       "selector": "HEAD@{1}",
-      "oid": "e5e83a4b2f4d3d805056ec112d476240e8537567",
+      "oid": "48b2e3adce982def425749351a53c2bc85fb2256",
       "previousOid": "86bf7785d73b3931aa5312cb4f3610ad8091b9ec",
       "action": "commit",
       "subject": "fix(auth): refresh the token before expiry",
-      "timestamp": "2026-09-25T03:17:05+00:00"
+      "timestamp": "2026-09-25T04:20:59+00:00"
     },
     {
       "ref": "HEAD",

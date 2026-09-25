@@ -12,6 +12,7 @@ import { LaneTrails } from '../primitives/LaneTrails';
 import { SpellStack, TargetPulse } from '../primitives/SpellStack';
 import { Caret, TerminalWindow, tildify, type LogRecord } from '../primitives/Terminal';
 import { FONT, TYPE, useColors, useFilm } from '../theme';
+import { SNAP } from '../ui/snapshots.generated';
 import { AppLayer, AppWindow, byText, cues, FEATURE_ANCHOR, HeadlineScrim, mid, q, qa, rect, SceneHeadline, setText, Sub, toScreen, type R } from './kit';
 import type { SceneProps } from './types';
 
@@ -163,6 +164,7 @@ export const SceneB: React.FC<SceneProps> = ({ placed }) => {
   const stage = cu.at('stage'), discardSel = cu.at('discardSel', 9999), discard = cu.at('discard', 9999);
   const keysAt = cu.at('keys', 9999), commit = cu.at('commit', 9999), wordDiff = cu.at('wordDiff', 9999), imageDiff = cu.at('imageDiff', 9999);
   const diffAt = rect('base', '#staging-view');
+  const WORD = rect('word', '[data-line-id]::uptime');
   const off = 47; // the selection bar's height: lines sit below it
   const lr = (k: keyof typeof LINE) => { const r = rect('diff', `[data-line-id]::${LINE[k]}`); return { ...r, y: r.y + off }; };
   const keys: CamKey[] = [
@@ -172,7 +174,7 @@ export const SceneB: React.FC<SceneProps> = ({ placed }) => {
     { at: stage - 3, x: 900, y: 360, scale: 1.8, dur: 6 },
     { at: discardSel - 2, x: 960, y: 740, scale: 1.75, dur: 6 },
     { at: keysAt + 8, x: 1400, y: 330, scale: 1.55, dur: 7 },
-    { at: wordDiff, x: 960, y: 520, scale: 1.55, dur: 6 },
+    { at: wordDiff, x: WORD.x, y: WORD.y + WORD.h / 2, scale: 2.0, dur: 6 },
     { at: imageDiff, x: 930, y: 330, scale: 1.5, dur: 6 },
   ];
   const showDiff = frame < keysAt + 8 || (frame >= wordDiff && frame < imageDiff);
@@ -216,7 +218,8 @@ export const SceneB: React.FC<SceneProps> = ({ placed }) => {
     <AbsoluteFill style={{ background: c.background }}>
       <Stage keys={keys} duration={placed.duration}>
         <AppLayer snap="workspace-body" base apply={(root, f) => insertCommitRow(root, f, commit, c.indigo)} />
-        {showDiff && <AppLayer snap="filediff-selected" at={diffAt} apply={applyDiff} />}
+        {showDiff && frame < wordDiff && <AppLayer snap="filediff-selected" at={diffAt} apply={applyDiff} />}
+        {frame >= wordDiff && frame < imageDiff && <AppLayer snap="worddiff" at={diffAt} />}
         {showImage && <AppLayer snap="imagediff" at={diffAt} />}
       </Stage>
       <HeadlineScrim />
@@ -318,7 +321,7 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
             if (!nr && first) {
               nr = first.cloneNode(true) as HTMLElement; nr.classList.add('mg-new');
               const lab = nr.querySelector<HTMLElement>('.recovery-label');
-              if (lab) lab.textContent = 'Before restoring main to e5e83a4b';
+              if (lab) lab.textContent = `Before restoring main to ${RESTORE_TO}`;
               list.insertBefore(nr, first);
             }
             if (nr) { const t = expoOut(prog(f, newPoint, 8)); nr.style.maxHeight = `${56 * t}px`; nr.style.overflow = 'hidden'; nr.style.boxShadow = `inset 0 0 0 2px ${c.emerald}`; }
@@ -548,7 +551,11 @@ const AgentTerminals: React.FC<{ at: number }> = ({ at }) => {
 };
 
 // ------------------------------------------------------------------ scene F --
-const FILM_CMDS = [/core\.sshCommand.*id_ed25519_work/, /user\.email jane@acme\.example/, /apply .*--cached/, /apply .*--reverse/, /^git commit -m/, /^git reset --hard 021/, /^git reset --hard e5e/, /^git worktree add/];
+// The film's own actions, in order (the second hard reset is the restore).
+const RESTORE_TO = /back to ([0-9a-f]{7,})/.exec(SNAP['restore-confirm'] ?? '')?.[1] ?? '';
+const RESET_TO = /Reset \(hard\) to ([0-9a-f]{7,})/.exec(SNAP['restore-confirm'] ?? '')?.[1] ?? '';
+const FILM_CMDS = [/core\.sshCommand.*id_ed25519_work/, /user\.email jane@acme\.example/, /apply .*--cached/, /apply .*--reverse/, /^git commit -m/,
+  new RegExp(`^git reset --hard ${RESET_TO || '[0-9a-f]'}`), new RegExp(`^git reset --hard ${RESTORE_TO || '[0-9a-f]'}`), /^git worktree add/];
 const RECORDS = (writes as { command: LogRecord }[]).map((w) => w.command);
 const recordFor = (i: number): LogRecord | undefined => RECORDS.find((r) => FILM_CMDS[i].test(r.argv.join(' ')));
 
