@@ -13,7 +13,7 @@ Session branch: promo/video-2
 - [x] M6 review round 1 and hero polish — 2026-09-25T04:19Z — `promo: review round 1` (sheets: `review/round-1/`; smoke clip 420-570 at 0.25 had H.264 + AAC 48 kHz stereo)
 - [x] M7 review round 2 — 2026-09-25T04:28Z — `promo: review round 2` (sheets: `review/round-2/`, incl. `montage-cards.jpg`)
 - [x] M8 review round 3 (optional) — 2026-09-25T04:35Z — `promo: review round 3` (sheets: `review/round-3/`)
-- [ ] M9 cutdowns
+- [x] M9 cutdowns — 2026-09-25T04:41Z — `promo: cutdowns` (sheets: `review/cutdowns/`)
 - [ ] M10 docs, checks and the final push
 
 Earlier sessions: none. This session started from `67963aa` on `promo/video-2`.
@@ -45,6 +45,20 @@ every cue is in `timing.json` (section-local `[bar, beat, offset]`).
 | endCard | 44-45 | 2580-2699 | `EndCard` | Lanes sweep and fuse (fast `LogoMerge`), wordmark, tagline, Download free + URL, platforms; click at 2670 ticks the counter to 46 |
 
 Lane sweeps carry every cut except into the stinger (hard cut to black).
+
+Cutdowns (each with its own arrangement, music and counter in `timing.json`):
+
+| Cut | Bars | Sections (scene/variant) | Counter |
+| --- | --- | --- | --- |
+| `Promo30` 1920x1080, 900 frames | 15 | coldOpen30 (1-2), jab30 (3), reveal30 (4-5), sceneA30 (6-8), sceneD30 (9-10), sceneC30 (11-12), stinger30 (13), endCard30 (14-15) | 6 -> 15 -> 17; "You just watched 17 commands." |
+| `Vertical` 1080x1920, 600 frames | 10 | hookV (1: hook + D's spell), splitV (2: collapse into Split this commit), revealV (3), taglineV (4), sceneAV (5-6), stingerV (7: "15 commands."), endCardV (8-10) | 9 -> 15 |
+| `ReadmeGif` 720x405, 600 frames at 30 fps (GIF at 15 fps) | 10 | logoGif (1), sceneAGif (2-3), sceneBGif (4-5), sceneCGif (6-7), sceneEGif (8-9), endCardGif (10) | none |
+
+`Vertical` and `ReadmeGif` crop a window around the action out of the
+landscape feature scenes (1:1 for the vertical, 0.75x for the GIF) and set
+their own titles, so UI text stays readable; all vertical text sits inside
+y 250-1550. The GIF's last frame matches its first (0.37% RMSE, grain only),
+so it loops seamlessly on the logo.
 
 ## Decision log
 

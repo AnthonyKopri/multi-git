@@ -126,11 +126,11 @@ if (mode === 'round') {
     tile(dir, path.join(out, `overview-${s + 1}.jpg`), '10x', '152x86');
   }
 } else if (mode === 'cut') {
-  const id = args[1], n = args[2] ?? '1';
+  const id = args[1];
+  const outDir = path.resolve(PROMO, args[2] ?? 'review/cutdowns');
   const c = await comp(id);
-  const every = id === 'ReadmeGif' ? 15 : 15;
-  const geo = c.width > c.height ? '152x86' : '86x152';
-  await sheet(id, `0-${c.durationInFrames - 1}:${every}`, id === 'ReadmeGif' ? 0.5 : 0.2, path.join(PROMO, 'review', `round-${n}`, `cut-${id}.jpg`), c.width > c.height ? '10x' : '15x', geo);
+  const tall = c.height > c.width;
+  await sheet(id, `0-${c.durationInFrames - 1}:15`, tall ? 0.25 : id === 'ReadmeGif' ? 0.5 : 0.2, path.join(outDir, `cut-${id}.jpg`), '10x', tall ? '144x256' : '152x86');
 } else {
   await sheet(opt('comp', 'Promo'), opt('frames', '0'), Number(opt('scale', '0.5')), path.resolve(PROMO, opt('out', 'review/tmp/sheet.jpg')), opt('tile', '4x'), opt('geometry', '392x220'));
 }

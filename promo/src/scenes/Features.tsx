@@ -66,6 +66,9 @@ const hideAgentRows = (root: HTMLElement) => {
   });
 };
 
+// Cutdowns that crop a window out of the scene render their own titles.
+const wrappedV = (variant?: string) => variant === 'vertical' || variant === 'gif' || variant === 'splitOnly';
+
 // ------------------------------------------------------------------ scene A --
 export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
   const frame = useCurrentFrame();
@@ -135,8 +138,8 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
           if (cb) cb.style.boxShadow = f >= cancel && f < cancel + 6 ? `0 0 0 3px ${c.indigo}` : '';
         }} />}
       </Stage>
-      <HeadlineScrim />
-      <SceneHeadline text={copy.sceneA.headline} at={cu.at('headline')} width={variant === 'vertical' ? 900 : 1000} />
+      {!wrappedV(variant) && <HeadlineScrim />}
+      {!wrappedV(variant) && <SceneHeadline text={copy.sceneA.headline} at={cu.at('headline')} />}
       <SpellStack lines={copy.spells.a} at={spellAt} collapseAt={collapse} box={SPELL_BOX} target={toScreen(keys, land, seg)} />
       <Cursor keys={[
         { at: land, ...(() => { const s = toScreen(keys, land, seg); return { x: s.x + s.w * 0.6, y: s.y + s.h * 0.8 }; })() },
@@ -144,7 +147,7 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
         ...(hasRules ? [{ at: rule, x: 1500, y: 900, dur: 10 }] : []),
         aim(keys, cancel, cancelBtn, 0.5, 0.6),
       ]} clicks={[pick, cancel]} enterAt={land} exitAt={stampAt} />
-      {frame >= keysAt && <KeyCombo keys={['Ctrl', 'Alt', 'U']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: 96, top: 840, opacity: leave(frame, stampAt + 20, 7) }} />}
+      {frame >= keysAt && <KeyCombo keys={['Ctrl', 'Alt', 'U']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: wrappedV(variant) ? 720 : 96, top: 840, opacity: leave(frame, stampAt + 20, 7) }} />}
       <Stamp text={copy.sceneA.stamp} at={stampAt} x={FEATURE_ANCHOR.x} y={560} />
     </AbsoluteFill>
   );
@@ -154,7 +157,7 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
 const LINE = { imp: 'import { expiresSoon }', ifl: 'if (expiresSoon(', ref: 'session.refreshedAt =', log1: "console.log('session'", log2: "console.log('refreshed'" };
 const lineEl = (root: HTMLElement, text: string) => byText(root, '[data-line-id]', text);
 
-export const SceneB: React.FC<SceneProps> = ({ placed }) => {
+export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
   const frame = useCurrentFrame();
   const c = useColors();
   const { copy } = useFilm();
@@ -222,15 +225,15 @@ export const SceneB: React.FC<SceneProps> = ({ placed }) => {
         {frame >= wordDiff && frame < imageDiff && <AppLayer snap="worddiff" at={diffAt} />}
         {showImage && <AppLayer snap="imagediff" at={diffAt} />}
       </Stage>
-      <HeadlineScrim />
-      <SceneHeadline text={copy.sceneB.headline} at={cu.at('headline')} />
+      {!wrappedV(variant) && <HeadlineScrim />}
+      {!wrappedV(variant) && <SceneHeadline text={copy.sceneB.headline} at={cu.at('headline')} />}
       <SpellStack lines={copy.spells.b} at={cu.at('spell')} collapseAt={collapse} box={SPELL_BOX} target={toScreen(keys, land, lr('imp'))} />
       <Cursor keys={[
         { at: land, ...(() => { const s = toScreen(keys, land, lr('imp')); return { x: s.x + 80, y: s.y + 20 }; })() },
         aim(keys, sel[0], lr('imp'), 0.3, 0.5, 5), aim(keys, sel[1], lr('ifl'), 0.3, 0.4, 6), aim(keys, sel[2], lr('ref'), 0.3, 0.5, 7),
         aim(keys, stage, stageBtn, 0.5, 0.5, 7), aim(keys, discardSel, lr('log1'), 0.3, 0.5, 6), aim(keys, discard, discardBtn, 0.5, 0.5, 6),
       ]} clicks={[...sel, stage, discardSel, discard]} enterAt={land} exitAt={keysAt} />
-      <Caption text={copy.sceneB.caption} at={discard} exitAt={keysAt + 20} x={96} y={900} icon="shield" />
+      {!wrappedV(variant) && <Caption text={copy.sceneB.caption} at={discard} exitAt={keysAt + 20} x={96} y={900} icon="shield" />}
       {frame >= keysAt && frame < wordDiff + 5 && <KeyCombo keys={['Ctrl', 'Enter']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: 96, top: 850, opacity: leave(frame, wordDiff, 6) }} />}
     </AbsoluteFill>
   );
@@ -329,7 +332,7 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
         }} />}
         {confirmVis && <AppLayer snap="restore-confirm" />}
       </Stage>
-      {frame < land + 4 && (
+      {frame < land + 4 && !wrappedV(variant) && (
         <div style={{ position: 'absolute', left: 96, top: 110, opacity: leave(frame, land, 6) }}>
           <TerminalWindow title="~/code/acme-api" width={900} height={170}>
             <div style={{ fontFamily: FONT.mono, fontSize: 36, color: c.text, whiteSpace: 'pre' }}>
@@ -338,8 +341,8 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
           </TerminalWindow>
         </div>
       )}
-      <HeadlineScrim />
-      <SceneHeadline text={copy.sceneC.headline} at={landing} />
+      {!wrappedV(variant) && <HeadlineScrim />}
+      {!wrappedV(variant) && <SceneHeadline text={copy.sceneC.headline} at={landing} />}
       {!short && <Sub text={copy.sceneC.sub} at={cu.at('sub', 9999)} y={214} color={c.emerald} size={56} />}
       <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={toScreen(keys, land + 4, recRow)} />
       {!short && <Caption text={copy.sceneC.card} at={card} x={96} y={880} icon="delete_history" />}
@@ -404,7 +407,7 @@ export const SceneD: React.FC<SceneProps> = ({ placed, variant }) => {
       )}
       {!hook && <HeadlineScrim />}
       {!splitOnly && !hook && <SceneHeadline text={copy.sceneD.headline} at={cu.at('headline')} />}
-      {hook && <Kinetic text={copy.vertical.hook} at={cu.at('headline')} style={{ ...TYPE.hero, fontSize: 96, position: 'absolute', left: 90, top: 290, width: width - 180 }} />}
+      {hook && <Kinetic text={copy.vertical.hook} at={cu.at('headline') - 6} style={{ ...TYPE.hero, fontSize: 96, position: 'absolute', left: 90, top: 290, width: width - 180 }} />}
       {!splitOnly && <SpellStack lines={copy.spells.d} at={cu.at('spell')} collapseAt={hook ? undefined : collapse}
         box={vertical ? { x: 60, y: 720, w: width - 120 } : SPELL_BOX} target={hook ? undefined : toScreen(keys, land, rect('planner', '#rebase-plan-list'))} fontSize={vertical ? 30 : 28} />}
       {splitOnly && <SpellStack lines={copy.spells.d} at={-40} collapseAt={0} box={vertical ? { x: 60, y: 720, w: width - 120 } : SPELL_BOX} target={toScreen(keys, 8, splitBtn)} fontSize={vertical ? 30 : 28} />}
@@ -494,11 +497,11 @@ export const SceneE: React.FC<SceneProps> = ({ placed, variant }) => {
         </Stage>
       )}
       {showStage && frame >= windowsAt && frame < launcher && <MiniWindows at={windowsAt} keys={keys} rows={wtRows} />}
-      {frame >= terminals && <AgentTerminals at={terminals} />}
-      <HeadlineScrim />
-      <SceneHeadline text={copy.sceneE.headline} at={cu.at('headline')} size={96} width={1100} />
+      {frame >= terminals && <AgentTerminals at={terminals} compact={wrappedV(variant)} />}
+      {!wrappedV(variant) && <HeadlineScrim />}
+      {!wrappedV(variant) && <SceneHeadline text={copy.sceneE.headline} at={cu.at('headline')} size={96} width={1100} />}
       <SpellStack lines={copy.spells.e} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 330 }} target={toScreen(keys, land, wtAt)} />
-      <Sub text={copy.sceneE.small} at={small} y={variant === 'gif' ? 880 : 868} size={34} width={1700} color={c.text} />
+      {!wrappedV(variant) && <Sub text={copy.sceneE.small} at={small} y={868} size={34} width={1700} color={c.text} />}
     </AbsoluteFill>
   );
 };
@@ -525,7 +528,7 @@ const MiniWindows: React.FC<{ at: number; keys: CamKey[]; rows: R[] }> = ({ at, 
   );
 };
 
-const AgentTerminals: React.FC<{ at: number }> = ({ at }) => {
+const AgentTerminals: React.FC<{ at: number; compact?: boolean }> = ({ at, compact }) => {
   const frame = useCurrentFrame();
   const c = useColors();
   const items = [
@@ -538,8 +541,8 @@ const AgentTerminals: React.FC<{ at: number }> = ({ at }) => {
       {items.map((it, i) => {
         const t = pop(frame, at + i * 2);
         return (
-          <div key={i} style={{ position: 'absolute', left: 96 + i * 586, top: 330, transform: `translateY(${(1 - t) * 60}px)`, opacity: clamp01(t) }}>
-            <TerminalWindow title={it.title} width={556} height={400} accent={it.col}>
+          <div key={i} style={{ position: 'absolute', left: compact ? 716 + i * 318 : 96 + i * 586, top: compact ? 470 : 330, transform: `translateY(${(1 - t) * 60}px)`, opacity: clamp01(t) }}>
+            <TerminalWindow title={compact ? it.title.replace('~/code/', '') : it.title} width={compact ? 300 : 556} height={compact ? 260 : 400} accent={it.col}>
               <div style={{ fontFamily: FONT.mono, fontSize: 40, color: c.text }}><span style={{ color: c.emerald }}>$ </span>{it.cmd}</div>
               <div style={{ marginTop: 14 }}><Caret size={36} /></div>
             </TerminalWindow>

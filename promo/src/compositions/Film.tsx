@@ -9,7 +9,14 @@ import { Grain } from '../primitives/Grain';
 import type { PromoProps } from '../schema';
 import { sceneFor } from '../scenes';
 import { FilmCtx } from '../theme';
-import { placeSections, TIMING, type CompositionId } from '../timing';
+import { cueOf, placeSections, TIMING, type CompositionId } from '../timing';
+import { Kinetic } from '../primitives/Headline';
+import { TYPE, useColors } from '../theme';
+import type { Copy } from '../schema';
+
+const TITLES: Record<string, (c: Copy) => string> = {
+  SceneA: (c) => c.sceneA.headline, SceneB: (c) => c.sceneB.headline, SceneC: (c) => c.sceneC.headline, SceneE: (c) => c.sceneE.headline,
+};
 import { CounterOverlay } from './CounterOverlay';
 import { LaneSweep } from '../scenes/kit';
 
@@ -30,6 +37,27 @@ const Whip: React.FC<{ duration: number; whipIn: boolean; whipOut: boolean; chil
   return active ? <CameraMotionBlur shutterAngle={200} samples={5}>{mover}</CameraMotionBlur> : mover;
 };
 
+// Cutdown framing: Vertical and ReadmeGif crop a window around the action
+// out of the landscape feature scenes (UI stays at a readable scale).
+interface Crop { sx: number; sy: number; w: number; h: number; dx: number; dy: number; scale: number }
+const cropFor = (comp: CompositionId, scene: string, variant?: string): Crop | null => {
+  if (comp === 'Vertical' && ((scene === 'SceneA' && variant === 'vertical') || (scene === 'SceneD' && variant === 'splitOnly'))) return { sx: 600, sy: 80, w: 1080, h: 1000, dx: 0, dy: 550, scale: 1 };
+  if (comp === 'ReadmeGif' && variant === 'gif') return { sx: 700, sy: 360, w: 960, h: 540, dx: 0, dy: 0, scale: 0.75 };
+  return null;
+};
+
+const CutdownTitle: React.FC<{ text: string; at: number; gif: boolean }> = ({ text, at, gif }) => {
+  const c = useColors();
+  return gif ? (
+    <>
+      <div style={{ position: 'absolute', left: 0, top: 0, width: 720, height: 84, background: `linear-gradient(${c.background}f2 30%, transparent)` }} />
+      <Kinetic text={text} at={at} style={{ ...TYPE.hero, fontSize: 30, position: 'absolute', left: 18, top: 14, width: 680 }} />
+    </>
+  ) : (
+    <Kinetic text={text} at={at} style={{ ...TYPE.hero, fontSize: 84, position: 'absolute', left: 60, top: 352, width: 960 }} />
+  );
+};
+
 export const makeFilm = (comp: CompositionId): React.FC<PromoProps> => {
   const Film: React.FC<PromoProps> = (props) => {
     const { width, height } = useVideoConfig();
@@ -46,13 +74,39 @@ export const makeFilm = (comp: CompositionId): React.FC<PromoProps> => {
               const Scene = sceneFor(p.def.scene);
               return (
                 <Sequence key={p.section} from={p.from} durationInFrames={p.duration} name={`${p.section} (bars ${p.fromBar}-${p.toBar})`}>
-                  <AbsoluteFill style={stageScale !== 1 ? { width: 1920, height: 1080, transform: `scale(${stageScale})`, transformOrigin: '0 0' } : undefined}>
-                    <Whip duration={p.duration}
-                      whipIn={i > 0 && !['Stinger', 'Checklist'].includes(p.def.scene)}
-                      whipOut={i < placed.length - 1 && !['Stinger'].includes(p.def.scene) && placed[i + 1].def.scene !== 'Stinger'}>
-                      <Scene placed={p} variant={p.def.variant} />
-                    </Whip>
-                  </AbsoluteFill>
+                  {(() => {
+                    const crop = cropFor(comp, p.def.scene, p.def.variant);
+                    const whip = (node: React.ReactNode) => (
+                      <Whip duration={p.duration}
+                        whipIn={i > 0 && !['Stinger', 'Checklist'].includes(p.def.scene)}
+                        whipOut={i < placed.length - 1 && !['Stinger'].includes(p.def.scene) && placed[i + 1].def.scene !== 'Stinger'}>
+                        {node}
+                      </Whip>
+                    );
+                    if (!crop) {
+                      return (
+                        <FilmCtx.Provider value={stageScale !== 1 ? { ...ctx, width: 1920, height: 1080 } : ctx}>
+                          <AbsoluteFill style={stageScale !== 1 ? { width: 1920, height: 1080, transform: `scale(${stageScale})`, transformOrigin: '0 0' } : undefined}>
+                            {whip(<Scene placed={p} variant={p.def.variant} />)}
+                          </AbsoluteFill>
+                        </FilmCtx.Provider>
+                      );
+                    }
+                    const title = TITLES[p.def.scene]?.(props.copy);
+                    const titleAt = p.def.scene === 'SceneC' ? (cueOf(p.def, 'land') ?? 0) : 0;
+                    return (
+                      <AbsoluteFill>
+                        <FilmCtx.Provider value={{ ...ctx, width: 1920, height: 1080 }}>
+                          <div style={{ position: 'absolute', left: crop.dx, top: crop.dy, width: crop.w * crop.scale, height: crop.h * crop.scale, overflow: 'hidden' }}>
+                            <div style={{ position: 'absolute', left: -crop.sx * crop.scale, top: -crop.sy * crop.scale, width: 1920, height: 1080, transform: `scale(${crop.scale})`, transformOrigin: '0 0' }}>
+                              {whip(<Scene placed={p} variant={p.def.variant} />)}
+                            </div>
+                          </div>
+                        </FilmCtx.Provider>
+                        {title && <CutdownTitle text={title} at={titleAt} gif={comp === 'ReadmeGif'} />}
+                      </AbsoluteFill>
+                    );
+                  })()}
                   {audio && <SfxTrack def={p.def} volume={props.sfxVolume} />}
                 </Sequence>
               );

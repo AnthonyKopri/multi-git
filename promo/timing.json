@@ -199,7 +199,7 @@
     "stinger30": {
       "scene": "Stinger", "bars": 1, "variant": "short",
       "music": { "type": "stinger", "silenceBeats": 2 },
-      "cues": { "cut": [1, 1], "shuffle": [1, 1], "land": [1, 2], "line1": [1, 1, 8], "hit": [1, 3], "line2": [1, 3] },
+      "cues": { "cut": [1, 1], "shuffle": [1, 1], "land": [1, 2], "line1": [1, 2], "hit": [1, 3], "line2": [1, 3] },
       "sfx": [["flip", "shuffle", 2, 0.18, 6, 2], ["flip", "land", 0, 0.3], ["hit", "hit", 0, 0.9]]
     },
     "endCard30": {
@@ -244,7 +244,7 @@
     "stingerV": {
       "scene": "Stinger", "bars": 1, "variant": "vertical",
       "music": { "type": "stinger", "silenceBeats": 2 },
-      "cues": { "cut": [1, 1], "shuffle": [1, 1], "land": [1, 2], "line1": [1, 1, 8], "hit": [1, 3], "line2": [1, 3] },
+      "cues": { "cut": [1, 1], "shuffle": [1, 1], "land": [1, 2], "line1": [1, 2], "hit": [1, 3], "line2": [1, 3] },
       "sfx": [["flip", "shuffle", 2, 0.18, 6, 2], ["flip", "land", 0, 0.3], ["hit", "hit", 0, 0.9]]
     },
     "endCardV": {
