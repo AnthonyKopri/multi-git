@@ -9,7 +9,7 @@
 <p align="center">
   <img
     src="docs/images/multi-git-promo.gif"
-    alt="A tour of Multi-Git Client: following a branch to each feature, switching the SSH identity a repository uses, staging and committing, and recovering through Safety Net"
+    alt="A 20-second tour of Multi-Git Client: a warning before pushing with the wrong account, committing only the lines you meant, undoing a hard reset, and running three coding agents on three branches at once"
     width="720"
   >
 </p>
