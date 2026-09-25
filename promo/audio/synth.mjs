@@ -290,9 +290,21 @@ const SECTIONS = {
       if (jab && bar >= jab) {
         // The switcher jab runs from jabBar to the drop: one snare per question
         // (every beat over one bar, every other beat over two), one riser.
-        const span = ctx.bars - jab + 1, beats = span === 1 ? [1, 2, 3, 4] : [1, 3];
-        beats.forEach((b, i) => snare(ctx, pos(ctx, bar, b), 0.75 + ((bar - jab) * beats.length + i + 1) * (0.32 / (span * beats.length))));
-        if (bar === jab) riser(ctx, at, ctx.end - at, 1.1);
+        // `jabHits` pins the snares to the question cues instead, for a jab
+        // that starts mid-bar or holds after its last question.
+        const hits = p.jabHits;
+        if (hits) {
+          hits.forEach(([hb, hbeat], i) => {
+            if (hb === bar) snare(ctx, pos(ctx, hb, hbeat), 0.75 + (i + 1) * (0.32 / hits.length));
+          });
+        } else {
+          const span = ctx.bars - jab + 1, beats = span === 1 ? [1, 2, 3, 4] : [1, 3];
+          beats.forEach((b, i) => snare(ctx, pos(ctx, bar, b), 0.75 + ((bar - jab) * beats.length + i + 1) * (0.32 / (span * beats.length))));
+        }
+        if (bar === jab) {
+          const from = hits ? pos(ctx, hits[0][0], hits[0][1]) : at;
+          riser(ctx, from, ctx.end - from, 1.1);
+        }
         sub(ctx, at, BAR, CHORDS[ch].sub, 0.5);
       } else {
         for (const [s, n] of PLUCK_MOTIF) pluck(ctx, at + s * STEP, n, 1.45, -0.35);

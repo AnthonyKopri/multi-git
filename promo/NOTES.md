@@ -29,23 +29,57 @@ Earlier sessions: none. This session started from `67963aa` on `promo/video-2`.
 ## Morning checklist
 
 1. Pull `promo/video-2`, then run `cd promo && npm ci && npm run render`.
-   You get `out/promo-1080p.mp4`, the 2:10 master (3,900 frames). This
-   session saw it only as contact sheets (`review/revision-1/`) and one
-   3-second smoke clip.
+   You get `out/promo-1080p.mp4`, the 2:26 master (73 bars, 4,380 frames;
+   see Revision 2).
 2. Watch it start to finish. Look hardest at:
-   - **scene C (0:46-0:58):** the VHS rewind, then bar 4 on the restored
+   - **scene A (0:34-0:46)** and **scene B (0:46-0:56)**, which gained a bar
+     each;
+   - **scene C (0:56-1:10):** the VHS rewind, then bar 4 on the restored
      commits;
-   - **scene D (0:58-1:10):** the cursor on real controls, and the reorder;
-   - **scene E (1:10-1:22):** the Worktrees section, the windows and the
+   - **scene D (1:10-1:24):** the cursor on real controls, and the reorder;
+   - **scene E (1:24-1:38):** the Worktrees section, the windows and the
      Launch modal;
-   - **the end card (2:00-2:10).**
-3. Judge the pacing, especially A and B (see Revision 1's deviations). Retime
-   in `timing.json`, then run `npm run audio`.
+   - **the end card (2:16-2:26).**
+3. Judge the pacing. Retime in `timing.json`, then run `npm run audio`.
 4. Listen for the new tape whir under the rewind and the end chord decaying
    into the fade (`review/mix-preview.mp3` is a quick listen). The knobs are
    `PARAMS` in `audio/synth.mjs` and the SFX volumes in `timing.json`.
 5. Render the cuts (`render:30`, `render:vertical`, `render:gif`). Their
    timing is unchanged, but they share the fixed scene code.
+
+## Revision 2
+
+Made locally, after Revision 1's report. It clears the lines that Revision
+1's deviations table showed below the reading rule, and gives scenes A and B
+the room that report asked for. Timing only: no scene code changed. The
+master is now **73 bars, 4,380 frames, 2:26**. The cutdowns are unchanged.
+
+| Section | Bars | Frames | Change |
+| --- | --- | --- | --- |
+| coldOpen | 1-6 | 0-359 | +1 bar. "It's also a spellbook." moves to [5,3] and holds about 3 s |
+| lanes | 7-13 | 360-779 | +2 bars. The pain pairs sit at bars 1, 2.5 and 3.75, each up about 2.5-3 s. The questions land at [5,3], [6,1], [6,3] and [7,1], and the last holds 2 s |
+| reveal | 14-17 | 780-1019 | Unchanged |
+| sceneA | 18-23 | 1020-1379 | +1 bar. The flipped rows hold 1.5 s, Auto-select rules 2 s and the second repo 1 s. The Account mismatch dialog holds 2.2 s and the stamp 2.4 s |
+| sceneB | 24-28 | 1380-1679 | +1 bar. The word diff ([5,1]) and the image diff ([5,3]) come back, about 1 s each, with soft swishes |
+| sceneC | 29-35 | 1680-2099 | +1 bar. The 24-hour card holds about 3.5 s |
+| sceneD | 36-42 | 2100-2519 | +1 bar. The lease note and the split nodes hold about 3.5 s |
+| sceneE | 43-49 | 2520-2939 | +1 bar. The agents line holds about 5 s |
+| sceneF … endCard | 50-73 | 2940-4379 | Unchanged lengths, shifted by 8 bars |
+
+- **The jab and the synth.** The jab now starts mid-bar and holds after its
+  last question, so `jabHits` (in `lanes.music`) pins its snares to the
+  question cues. `audio/synth.mjs` falls back to the old fixed beats without
+  it.
+- **The mix.** The score is −14.5 LUFS and −2.3 dBTP. The mix preview is
+  −14.3 LUFS and −1.2 dBTP, after B's discard click and Ctrl+Enter thock
+  came down from 0.5 to 0.42. They now land on a full groove bar instead of
+  the old closing fill, which pushed the peak to −0.9.
+- **The thumbnail** (`render:thumbnail`) moved to frame 3810, one second
+  after "You typed zero." lands.
+- **`scripts/review.mjs`** tiles sheets with ffmpeg when ImageMagick's
+  `montage` isn't installed, which is the usual case on Windows. Its sheets
+  are unlabelled and read in frame order. Revision 2's sheets are in
+  `review/revision-2/`.
 
 ## Revision 1
 

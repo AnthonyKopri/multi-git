@@ -68,9 +68,28 @@ function tile(dir, out, tileSpec, geometry) {
   fs.mkdirSync(path.dirname(out), { recursive: true });
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).sort().map((f) => path.join(dir, f));
   const r = spawnSync('montage', [...files, '-tile', tileSpec, '-geometry', `${geometry}+4+4`, '-background', '#0a0c10', '-fill', '#9ca3af', '-pointsize', '12', '-label', '%t', '-quality', '82', out]);
+  if (r.error?.code === 'ENOENT') {
+    // No ImageMagick (the usual case on Windows): tile with ffmpeg instead.
+    // Frames read left to right, top to bottom, in frame order; no labels.
+    tileWithFfmpeg(files, out, tileSpec, geometry);
+    return;
+  }
   if (r.status !== 0) throw new Error(`montage failed: ${r.stderr}`);
   const id = spawnSync('identify', ['-format', '%w x %h', out], { encoding: 'utf8' }).stdout;
   console.log(`${path.relative(PROMO, out)}  ${id}  ${(fs.statSync(out).size / 1024).toFixed(0)} KB`);
+}
+
+function tileWithFfmpeg(files, out, tileSpec, geometry) {
+  const cols = Number(/^(\d+)x/.exec(tileSpec)?.[1] ?? 6);
+  const rowsGiven = Number(/x(\d+)$/.exec(tileSpec)?.[1] ?? 0);
+  const rows = rowsGiven || Math.ceil(files.length / cols);
+  const [w, h] = geometry.split('x').map(Number);
+  const list = path.join(path.dirname(files[0]), 'tile-list.txt');
+  fs.writeFileSync(list, files.map((f) => `file '${f.replace(/\\/g, '/')}'\nduration 1\n`).join(''));
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list,
+    '-vf', `scale=${w}:${h},tile=${cols}x${rows}:padding=8:margin=4:color=0x0a0c10`, '-frames:v', '1', '-q:v', '4', out], { encoding: 'utf8' });
+  if (r.status !== 0) throw new Error(`ffmpeg tile failed: ${r.stderr}`);
+  console.log(`${path.relative(PROMO, out)}  ${cols}x${rows} tiles  ${(fs.statSync(out).size / 1024).toFixed(0)} KB`);
 }
 
 async function sheet(id, spec, scale, out, tileSpec, geometry) {

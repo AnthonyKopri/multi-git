@@ -25,13 +25,13 @@ and whether the counter shows.
 
 | Command | Output | Notes |
 | --- | --- | --- |
-| `npm run render` | `out/promo-1080p.mp4` | The 2:10 master (65 bars, 3,900 frames). Runs `npm run audio` first, then H.264 CRF 18, `yuv420p`, BT.709, AAC 320 kbps |
+| `npm run render` | `out/promo-1080p.mp4` | The 2:26 master (73 bars, 4,380 frames). Runs `npm run audio` first, then H.264 CRF 18, `yuv420p`, BT.709, AAC 320 kbps |
 | `npm run render:prores` | `out/promo-master-prores.mov` | ProRes 422 HQ with PCM audio (the mezzanine) |
 | `npm run render:30` | `out/promo-30s.mp4` | `Promo30`, 30 s, 1920x1080 |
 | `npm run render:vertical` | `out/promo-vertical.mp4` | `Vertical`, 20 s, 1080x1920 |
 | `npm run render:gif` | `out/multi-git-promo.gif` | `ReadmeGif`: renders a 720-wide MP4, then a two-pass ffmpeg palette (`palettegen`/`paletteuse`) at 15 fps, aiming for 10 MB or less |
 | `npm run render:thumbnail` | `out/thumbnail-1280x720.jpg` | The stinger frame, "You typed zero." |
-| `npm run render:review` | `review/revision-1/rlatest-*.jpg` | Rebuilds the Revision 1 contact sheets (needs ImageMagick) |
+| `npm run render:review` | `review/revision-1/rlatest-*.jpg` | Rebuilds the Revision 1 contact sheets. Without ImageMagick, sheets are tiled with ffmpeg, unlabelled |
 | `npm run audio` | `public/audio/` | Re-synthesizes the music (one WAV per composition) and the SFX |
 
 The render commands take extra Remotion flags after `--`, for example:
