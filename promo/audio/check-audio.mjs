@@ -2,7 +2,8 @@
 //  - ebur128 (I, LRA, true peak) of every music file
 //  - review/mix-preview.mp3: the master's music plus every SFX at its event,
 //    mixed in JS exactly as Remotion will (same frames, same volumes)
-//  - review/tmp/mix-wave-spectrum.png: waveform above spectrogram, 45 bar lines
+//  - review/tmp/mix-wave-spectrum.png: waveform above spectrogram, a line per
+//    bar, with the drop, the tape-stop, the stinger and the end card in amber
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -53,11 +54,17 @@ if (!process.argv.includes('--no-png')) {
   const wave = path.join(TMP, 'wave.png'), spec = path.join(TMP, 'spec.png'), out = path.join(TMP, 'mix-wave-spectrum.png');
   spawnSync(ff, ['-hide_banner', '-loglevel', 'error', '-y', '-i', wav, '-filter_complex', `aformat=channel_layouts=mono,showwavespic=s=${W}x220:colors=0x6366f1`, '-frames:v', '1', wave]);
   spawnSync(ff, ['-hide_banner', '-loglevel', 'error', '-y', '-i', wav, '-lavfi', `showspectrumpic=s=${W}x300:legend=0:scale=log`, spec]);
-  const bars = T.compositions.Promo.arrangement.at(-1).toBar;
+  const arr = T.compositions.Promo.arrangement;
+  const bars = arr.at(-1).toBar;
+  const at = (name) => arr.find((a) => a.section === name)?.fromBar - 1;
+  // Bar lines (0-based starts): the drop, the tape-stop bar in scene C and the
+  // landing after it, the stinger and its hit, and the end card.
+  const ts = T.sections.sceneC.music?.tapeStop?.[0] ?? 1;
+  const keys = [0, at('reveal'), at('sceneC') + ts - 1, at('sceneC') + ts, at('stinger'), at('stinger') + 1, at('endCard')];
   const draw = [];
   for (let b = 0; b <= bars; b++) {
     const x = Math.round((b / bars) * (W - 1));
-    const key = [0, 8, 19, 20, 39, 40, 43].includes(b);
+    const key = keys.includes(b);
     draw.push('-stroke', key ? '#f59e0b' : '#9ca3af80', '-draw', `line ${x},0 ${x},520`);
     if (b < bars && (b % 4 === 0 || key)) draw.push('-stroke', 'none', '-fill', '#f3f4f6', '-pointsize', '13', '-draw', `text ${x + 3},14 '${b + 1}'`);
   }

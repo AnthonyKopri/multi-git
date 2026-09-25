@@ -87,7 +87,7 @@
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [1, 4, 10], "pick": [2, 2, 5], "flipRows": [2, 2, 11], "rule": [2, 4, 5], "secondRepo": [3, 2, 5], "keys": [3, 3, 8], "mismatch": [3, 4], "cancel": [5, 1], "stamp": [5, 1, 3] },
       "counter": [["collapse", "a", 11]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["pop", "rule", 0, 0.35], ["swish", "secondRepo", 0, 0.3], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["pop", "rule", 0, 0.35], ["swish", "secondRepo", 0, 0.3], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.5], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
     },
     "sceneB": {
       "scene": "SceneB", "bars": 4,
@@ -121,7 +121,7 @@
       "scene": "SceneF", "bars": 4,
       "music": { "type": "groove", "fill": true, "filterDip": [1, 1] },
       "cues": { "crack": [1, 1], "pour": [1, 1, 6], "noBlackBox": [1, 3], "hover": [2, 1], "copy": [2, 2], "line1": [2, 3], "line2": [3, 1], "glint": [3, 3], "keys": [4, 2] },
-      "sfx": [["crack", "crack", 0, 0.7], ["cascade", "pour", 0, 0.55], ["click", "copy", -2, 0.5], ["swish", "glint", 0, 0.25], ["thock", "keys", 0, 0.7]]
+      "sfx": [["crack", "crack", 0, 0.7], ["cascade", "pour", 0, 0.55], ["click", "copy", -2, 0.5], ["swish", "glint", 0, 0.25], ["thock", "keys", 0, 0.6]]
     },
     "montage": {
       "scene": "Montage", "bars": 6,
