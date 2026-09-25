@@ -76,6 +76,15 @@ master is now **73 bars, 4,380 frames, 2:26**. The cutdowns are unchanged.
   the old closing fill, which pushed the peak to −0.9.
 - **The thumbnail** (`render:thumbnail`) moved to frame 3810, one second
   after "You typed zero." lands.
+- **The README GIF** was 21 MB. The per-frame grain changed every pixel of
+  every frame, so `ReadmeGif` now renders without it (the vignette stays).
+  `render-gif.mjs` also uses 128 colours with Bayer dithering instead of
+  sierra2_4a. Result: 8.98 MB.
+- **Local renders** used the owner's RTX 4090 through `--gl=angle`, about
+  2.2x faster than the default renderer. The output is visually identical
+  (SSIM 0.993, PSNR 46 dB). Render times: master 128 s, both cuts about
+  1 minute. Add `-- --gl=angle` to any render command on a machine with a
+  good GPU.
 - **`scripts/review.mjs`** tiles sheets with ffmpeg when ImageMagick's
   `montage` isn't installed, which is the usual case on Windows. Its sheets
   are unlabelled and read in frame order. Revision 2's sheets are in

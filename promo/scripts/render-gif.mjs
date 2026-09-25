@@ -26,8 +26,10 @@ if (hasFfmpeg) {
   run(npx, ['remotion', 'render', 'src/index.ts', 'ReadmeGif', mp4, '--codec=h264', '--crf=16', '--muted', ...extra]);
   const palette = path.join(OUT, 'readme-palette.png');
   const filters = 'fps=15,scale=720:-1:flags=lanczos';
-  run(ff, ['-hide_banner', '-loglevel', 'error', '-y', '-i', mp4, '-vf', `${filters},palettegen=max_colors=192:stats_mode=diff`, palette]);
-  run(ff, ['-hide_banner', '-loglevel', 'error', '-y', '-i', mp4, '-i', palette, '-lavfi', `${filters}[x];[x][1:v]paletteuse=dither=sierra2_4a:diff_mode=rectangle`, '-loop', '0', gif]);
+  // 128 colours with ordered (Bayer) dithering: about 9.4 MB. Error-diffusion
+  // dithering (sierra2_4a) or 144+ colours land at 10.3-12 MB for this film.
+  run(ff, ['-hide_banner', '-loglevel', 'error', '-y', '-i', mp4, '-vf', `${filters},palettegen=max_colors=128:stats_mode=diff`, palette]);
+  run(ff, ['-hide_banner', '-loglevel', 'error', '-y', '-i', mp4, '-i', palette, '-lavfi', `${filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle`, '-loop', '0', gif]);
 } else {
   console.log('ffmpeg not found: using Remotion\'s GIF encoder (every second frame = 15 fps).');
   run(npx, ['remotion', 'render', 'src/index.ts', 'ReadmeGif', gif, '--codec=gif', '--every-nth-frame=2', '--number-of-gif-loops=0', ...extra]);

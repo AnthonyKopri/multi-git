@@ -123,7 +123,9 @@ export const makeFilm = (comp: CompositionId): React.FC<PromoProps> => {
               <LaneSweep key={`sweep-${p.section}`} at={p.from} color={i % 2 ? props.colors.cyan : props.colors.indigo} width={width} height={height} dir={i % 2 ? 1 : -1} />
             )))}
             <CounterOverlay placed={placed} />
-            <Grain />
+            {/* The grain exists to stop H.264 banding. In the GIF it only changes every
+                pixel of every frame, which doubles the file size, so it's off there. */}
+            <Grain amount={comp === 'ReadmeGif' ? 0 : undefined} />
             {fadeFrames > 0 && <FadeOut from={placed[placed.length - 1].from + placed[placed.length - 1].duration - fadeFrames} frames={fadeFrames} />}
             {audio && <Music comp={comp} volume={props.musicVolume} />}
           </AbsoluteFill>
