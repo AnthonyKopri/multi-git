@@ -101,7 +101,7 @@
       "music": { "type": "groove", "fill": true, "tapeStop": [3, 3] },
       "cues": { "oops": [1, 1], "fall": [1, 2], "spell": [2, 1], "collapse": [2, 3], "pickPoint": [2, 4, 12], "confirm": [3, 1], "restore": [3, 3], "rewind": [3, 3, 6], "land": [4, 1], "back": [4, 2], "headline": [5, 1], "newPoint": [5, 3], "sub": [5, 3], "card": [6, 2] },
       "counter": [["collapse", "c", 11]],
-      "sfx": [["clatter", "oops", 0, 0.35], ["boom", "oops", 0, 0.7], ["glitch", "fall", 0, 0.25], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 2, 2], ["click", "pickPoint", -2, 0.4], ["click", "restore", -2, 0.45], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.4, 3, 4], ["pop", "newPoint", 0, 0.35], ["swish", "card", 0, 0.25]]
+      "sfx": [["clatter", "oops", 0, 0.35], ["boom", "oops", 0, 0.7], ["glitch", "fall", 0, 0.25], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 2, 2], ["click", "pickPoint", -2, 0.4], ["click", "restore", -2, 0.45], ["whir", "restore", 0, 0.5], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.4, 3, 4], ["pop", "newPoint", 0, 0.35], ["swish", "card", 0, 0.25]]
     },
     "sceneD": {
       "scene": "SceneD", "bars": 6,

@@ -1,16 +1,17 @@
 // Shared scene building blocks: the app window made of real captured DOM
 // layers, camera helpers, cues, headline slots and transitions.
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import { measureText } from '@remotion/layout-utils';
 import { useCurrentFrame } from 'remotion';
 import RECTS from '../ui/rects.generated.json';
 import { SNAP } from '../ui/snapshots.generated';
 import { cameraAt, type CamKey } from '../primitives/Camera';
 import { Headline, Kinetic } from '../primitives/Headline';
 import { LaneTrails } from '../primitives/LaneTrails';
-import { useColors, TYPE } from '../theme';
+import { FONT, useColors, TYPE } from '../theme';
 import { cueOf, type SectionDef } from '../timing';
 import type { Apply } from '../ui/AppSnapshot';
-import { clamp01, prog } from '../lib/anim';
+import { clamp01, enter, leave, prog } from '../lib/anim';
 
 export interface R { x: number; y: number; w: number; h: number }
 export const rect = (layer: string, sel: string): R => ((RECTS as Record<string, Record<string, R | null>>)[layer]?.[sel]) ?? { x: 0, y: 0, w: 0, h: 0 };
@@ -70,6 +71,89 @@ export const AppWindow: React.FC<{ children: React.ReactNode; glow?: string }> =
 export const HeadlineScrim: React.FC<{ width?: number; height?: number }> = ({ width = 1250, height = 460 }) => {
   const c = useColors();
   return <div style={{ position: 'absolute', left: 0, top: 0, width, height, background: `radial-gradient(ellipse at 0% 0%, ${c.background}f5 0%, ${c.background}e0 45%, transparent 75%)`, pointerEvents: 'none' }} />;
+};
+
+// ---------------------------------------------------------- headline block --
+/** How many lines `text` wraps to at `size` in `width`, breaking at spaces as the Kinetic spans do. */
+export function wrapLines(text: string, size: number, width: number, weight = '700', letterSpacing = '-0.02em') {
+  const m = (t: string) => measureText({ text: t, fontFamily: FONT.sans, fontSize: size, fontWeight: weight, letterSpacing }).width;
+  const space = m(' ');
+  let lines = 1, x = 0;
+  for (const w of text.replace(/[*`]/g, '').split(/\s+/).filter(Boolean)) {
+    const ww = m(w);
+    if (x > 0 && x + space + ww > width * 0.97) { lines++; x = ww; } else x += (x > 0 ? space : 0) + ww;
+  }
+  return lines;
+}
+
+export interface BlockLine { text: string; at: number; exitAt?: number; kind?: 'headline' | 'sub'; size?: number; color?: string }
+export const HL = { x: 96, top: 70, width: 1100, gap: 28, size: 112 };
+
+/** Lays the lines out: a headline shrinks (4 px at a time) until it takes two lines or fewer. */
+export function blockLayout(lines: BlockLine[], width = HL.width, gap = HL.gap) {
+  let height = 0;
+  const items = lines.map((l, i) => {
+    const kind = l.kind ?? 'headline';
+    let size = l.size ?? (kind === 'headline' ? HL.size : TYPE.sub.fontSize);
+    if (kind === 'headline') while (size > 72 && wrapLines(l.text, size, width) > 2) size -= 4;
+    const n = kind === 'headline' ? wrapLines(l.text, size, width) : wrapLines(l.text, size, width, '500', '0em');
+    const h = n * size * (kind === 'headline' ? TYPE.hero.lineHeight : TYPE.sub.lineHeight);
+    height += h + (i ? gap : 0);
+    return { ...l, kind, size, height: h };
+  });
+  return { items, height };
+}
+/** The y just below a block that starts at `top`. */
+export const blockBottom = (lines: BlockLine[], width = HL.width, gap = HL.gap, top = HL.top) => top + blockLayout(lines, width, gap).height;
+
+/**
+ * A headline and its sub (or a lead line and a headline) stacked in normal
+ * flow, so a sub always sits below the headline's real bottom edge, with the
+ * scrim sized to cover the block.
+ */
+export const HeadlineBlock: React.FC<{ lines: BlockLine[]; x?: number; top?: number; width?: number; gap?: number; scrim?: boolean }> = ({ lines, x = HL.x, top = HL.top, width = HL.width, gap = HL.gap, scrim = true }) => {
+  const c = useColors();
+  const key = JSON.stringify(lines.map((l) => [l.text, l.kind, l.size]));
+  const layout = useMemo(() => blockLayout(lines, width, gap), [key, width, gap]);
+  return (
+    <>
+      {scrim && <HeadlineScrim width={Math.max(1250, x + width + 200)} height={Math.max(460, top + layout.height + 190)} />}
+      <div style={{ position: 'absolute', left: x, top, width, display: 'flex', flexDirection: 'column', gap }}>
+        {layout.items.map((it, i) => (it.kind === 'headline'
+          ? <Headline key={i} text={it.text} at={it.at} exitAt={it.exitAt} size={it.size} color={it.color} />
+          : <Kinetic key={i} text={it.text} at={it.at} exitAt={it.exitAt} color={it.color ?? c.muted} style={{ ...TYPE.sub, fontSize: it.size }} />))}
+      </div>
+    </>
+  );
+};
+
+/** `#rrggbb` at alpha `a`. */
+export const rgba = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1, 7), 16);
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${Math.max(0, Math.min(1, a)).toFixed(3)})`;
+};
+
+/**
+ * A captured modal with the app's treatment: the backdrop dims and blurs in
+ * while the card scales up from 0.96 and fades in, and closing reverses it,
+ * each over `dur` frames. Nothing pops.
+ */
+export const ModalLayer: React.FC<{ snap: string; open: number; close?: number; apply?: Apply; dur?: number; dim?: boolean }> = ({ snap, open, close, apply, dur = 7, dim = true }) => {
+  const frame = useCurrentFrame();
+  if (frame < open || (close !== undefined && frame >= close + dur)) return null;
+  return (
+    <AppLayer snap={snap} apply={(root, f) => {
+      const t = enter(f, open, dur) * (close === undefined ? 1 : leave(f, close, dur));
+      const overlay = q(root, '.modal-overlay') ?? (root.firstElementChild as HTMLElement | null);
+      if (overlay) {
+        overlay.style.backgroundColor = `rgba(0,0,0,${(dim ? 0.6 * t : 0).toFixed(3)})`;
+        overlay.style.backdropFilter = dim ? `blur(${(12 * t).toFixed(2)}px)` : 'none';
+      }
+      const card = q(root, '.modal-card') ?? (overlay?.firstElementChild as HTMLElement | null);
+      if (card) { card.style.opacity = String(t); card.style.transform = `scale(${0.96 + 0.04 * t})`; }
+      apply?.(root, f);
+    }} />
+  );
 };
 
 export const SceneHeadline: React.FC<{ text: string; at: number; exitAt?: number; size?: number; width?: number; top?: number; color?: string }> = ({ text, at, exitAt, size = 112, width = 1000, top = 70, color }) => (

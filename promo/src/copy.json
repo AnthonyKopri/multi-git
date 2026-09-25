@@ -51,6 +51,7 @@
     "oops": "git reset --hard HEAD~3",
     "headline": "Undo the scary stuff.",
     "sub": "Even the undo.",
+    "back": "3 commits. Back.",
     "card": "Discarded files? Kept for 24 hours."
   },
   "sceneD": { "headline": "Rewrite history. Visually.", "small": "Already pushed? It pushes with `--force-with-lease`." },

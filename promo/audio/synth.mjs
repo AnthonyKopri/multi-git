@@ -690,6 +690,20 @@ const SFX = {
     }
     return norm(b, -4);
   },
+  whir(rng) {
+    // A VCR's rewind whir for the tape-stop: a motor tone sliding up under filtered hiss.
+    const b = sfxBuffer(1.0), bp = new D.Biquad('bp', 1200, 1.2);
+    let ph = 0;
+    for (let i = 0; i < b[0].length; i++) {
+      const t = i / SR, u = t / 1.0;
+      const env = Math.min(1, t / 0.05) * Math.min(1, (1 - u) / 0.25);
+      ph += (2 * Math.PI * (180 + 420 * u)) / SR;
+      if ((i & 63) === 0) bp.set('bp', 1200 + 2600 * u, 1.2);
+      const y = (Math.sin(ph) * 0.35 + Math.sin(ph * 2.01) * 0.15 + bp.process(rng() * 2 - 1) * 0.6) * env * (0.8 + 0.2 * Math.sin(2 * Math.PI * 23 * t));
+      add(b, i, y, y * 0.95);
+    }
+    return norm(b, -3);
+  },
   hit(rng) {
     const b = sfxBuffer(2.6), hp = new D.Biquad('hp', 1500), lp = new D.Biquad('lp', 8000);
     let ph = 0;

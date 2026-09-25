@@ -2,3 +2,7 @@
 .mg-app.mg-snap, .mg-app { -webkit-font-smoothing: antialiased; }
 .mg-force-visible .file-actions, .mg-force-visible .branch-actions, .mg-force-visible .stash-actions { opacity: 1 !important; visibility: visible !important; }
 .mg-force-visible li { list-style: none; }
+/* The rebase planner's action select picks up the app's full-width form rule,
+   which pushes each row's subject and Move buttons out of the card. The film
+   sizes it the way .rebase-action intends (NOTES, Revision 1). */
+.mg-app #rebase-plan-list select.rebase-action { width: auto; }

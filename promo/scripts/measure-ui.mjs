@@ -2,7 +2,9 @@
 // film renders it (scoped app CSS, local fonts, 1600x1000 app box), so scenes
 // can aim the camera and the spell collapses at real controls.
 // Output: src/ui/rects.generated.json  { layer: { selector: {x,y,w,h} } }
-// A selector "css::text" means the first match whose text contains `text`.
+// A selector "css::text" means the first match whose text contains `text`;
+// "outer >> inner" measures `inner` inside the element `outer` finds. A layer's
+// `prep` names a DOM edit from src/ui/edits.ts to apply before measuring.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +13,8 @@ import puppeteer from 'puppeteer';
 const PROMO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const snaps = await import(path.join(PROMO, 'src', 'ui', 'snapshots.generated.ts').replace(/\.ts$/, '.ts')).catch(() => null);
 const SNAP = snaps?.SNAP ?? JSON.parse(/export const SNAP: Record<string, string> = (\{[\s\S]*\});/.exec(fs.readFileSync(path.join(PROMO, 'src', 'ui', 'snapshots.generated.ts'), 'utf8'))[1]);
-const css = fs.readFileSync(path.join(PROMO, 'src', 'ui', 'app.scoped.css'), 'utf8');
+const EDITS = await import(path.join(PROMO, 'src', 'ui', 'edits.ts'));
+const css = ['app.scoped.css', 'promo.css'].map((f) => fs.readFileSync(path.join(PROMO, 'src', 'ui', f), 'utf8')).join('\n');
 const f = (p) => `url(data:font/woff2;base64,${fs.readFileSync(path.join(PROMO, p)).toString('base64')})`;
 const FONTS = `
 @font-face{font-family:'Inter';font-weight:100 900;src:${f('public/fonts/InterVariable-latin.woff2')}}
@@ -20,6 +23,7 @@ const FONTS = `
 @font-face{font-family:'Material Symbols Outlined';src:${f('node_modules/material-symbols/material-symbols-outlined.woff2')}}
 .material-symbols-outlined{font-family:'Material Symbols Outlined';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;font-feature-settings:'liga'}`;
 
+const PLAN_ROWS = ['rate limiting', 'token helpers', 'highlight matched', 'fixup!', 'API usage'];
 const LINES = ['import { expiresSoon }', 'if (expiresSoon(', 'session.refreshedAt =', "console.log('session'", "console.log('refreshed'"];
 export const LAYERS = {
   base: { snap: 'workspace-body', place: 'full', measure: ['.navbar', '#repo-segment-wrapper', '#branch-segment-wrapper', '#profile-segment-wrapper', '#profile-segment', '#btn-push', '#sidebar-panel',
@@ -36,11 +40,13 @@ export const LAYERS = {
   diffSelected: { snap: 'filediff-selected', sel: '#diff-view', place: ['base', '#staging-view'], measure: ['#diff-selection-bar', '#btn-diff-stage-selection', '#btn-diff-discard-selection', '#diff-selection-count'] },
   word: { snap: 'worddiff', sel: '#diff-view', place: ['base', '#staging-view'], measure: ['#diff-content', '[data-line-id]::uptime', '.diff-line-deletion', '.diff-line-addition'] },
   image: { snap: 'imagediff', sel: '#diff-view', place: ['base', '#staging-view'], measure: ['#diff-content', 'img'] },
-  planner: { snap: 'rebase-planner', place: 'full', measure: ['.modal-card', '#rebase-plan-list', '#rebase-plan-list li::rate limiting', '#rebase-plan-list li::token helpers', '#rebase-plan-list li::highlight matched', '#rebase-plan-list li::fixup!', '#rebase-plan-list li::API usage', '#rebase-autosquash', '#btn-rebase-start'] },
+  planner: { snap: 'rebase-planner', place: 'full', measure: ['.modal-card', '#rebase-plan-list', ...PLAN_ROWS.flatMap((r) => [`#rebase-plan-list li::${r}`,
+    `#rebase-plan-list li::${r} >> button[title="Move earlier"]`, `#rebase-plan-list li::${r} >> button[title="Move later"]`, `#rebase-plan-list li::${r} >> select.rebase-action`]), '#rebase-autosquash', '#btn-rebase-start'] },
   editStop: { snap: 'rebase-edit-stop', place: 'full', measure: ['.modal-card', '#btn-rebase-split', '#rebase-progress'] },
-  recovery: { snap: 'recovery-after-reset', place: 'full', measure: ['.modal-card', '#recovery-points-list', '#recovery-points-list li', '#recovery-points-list button::Restore'] },
+  recovery: { snap: 'recovery-after-reset', place: 'full', measure: ['.modal-card', '#recovery-points-list', '#recovery-points-list li', '#recovery-points-list li >> button[data-action="restore"]'] },
   safety: { snap: 'safety-net', sel: '.sidebar-section', place: ['base', '.sidebar-section[data-section="safety-net"]'], measure: ['.sidebar-section', '#checkpoint-list', '#trash-list', '#recovery-list', '#recovery-list li'] },
   worktrees: { snap: 'worktrees-section', sel: '.sidebar-section', place: ['base', '.sidebar-section[data-section="worktrees"]'], measure: ['.sidebar-section', '.worktree-item::acme-api', '.worktree-item::login', '.worktree-item::search'] },
+  worktreesOpen: { snap: 'workspace-body', place: 'full', prep: 'openWorktrees', measure: ['#sidebar-panel', '.sidebar-section[data-section="worktrees"]', '#worktree-list', '.worktree-item::acme-api', '.worktree-item::login', '.worktree-item::search', '#branch-segment-wrapper'] },
   agent: { snap: 'agent-launch', place: 'full', measure: ['.modal-card', '[data-agent-id="claude"]', '[data-agent-id="codex"]', '[data-agent-id="gemini"]'] },
   palette: { snap: 'palette', place: 'full', measure: ['#palette-modal .modal-card, #palette-modal > div', '#palette-input', '#palette-list'] },
   terminal: { snap: 'terminal-panel', place: 'bottom', measure: ['#terminal-panel', '#terminal-body', '.terminal-line-cmd', '#terminal-show-reads'] },
@@ -55,7 +61,7 @@ const out = {};
 for (const [name, L] of Object.entries(LAYERS)) {
   let place = { x: 0, y: 0, w: 1600, h: 1000 };
   if (Array.isArray(L.place)) place = out[L.place[0]][L.place[1]] ?? place;
-  out[name] = await page.evaluate(({ html, sel, place, placeMode, measure }) => {
+  out[name] = await page.evaluate(({ html, sel, place, placeMode, measure, prep }) => {
     const stage = document.getElementById('stage');
     stage.innerHTML = '';
     const box = document.createElement('div');
@@ -78,17 +84,23 @@ for (const [name, L] of Object.entries(LAYERS)) {
       box.appendChild(holder);
     }
     stage.appendChild(box);
+    if (prep) new Function(`return (${prep})`)()(box);
+    const find = (scope, m) => {
+      const [css, text] = m.split('::');
+      const els = [...scope.querySelectorAll(css)];
+      return text ? els.find((e) => e.textContent.includes(text)) : els[0];
+    };
     const res = {};
     for (const m of measure) {
-      const [css, text] = m.split('::');
-      const els = [...box.querySelectorAll(css)];
-      const el = text ? els.find((e) => e.textContent.includes(text)) : els[0];
+      const [outer, inner] = m.split(' >> ');
+      const host = find(box, outer);
+      const el = inner && host ? find(host, inner) : host;
       if (!el) { res[m] = null; continue; }
       const r = el.getBoundingClientRect();
       res[m] = { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
     }
     return res;
-  }, { html: SNAP[L.snap], sel: L.sel, place, placeMode: Array.isArray(L.place) ? 'at' : L.place, measure: L.measure });
+  }, { html: SNAP[L.snap], sel: L.sel, place, placeMode: Array.isArray(L.place) ? 'at' : L.place, measure: L.measure, prep: L.prep ? EDITS[L.prep].toString() : null });
 }
 await browser.close();
 const file = path.join(PROMO, 'src', 'ui', 'rects.generated.json');

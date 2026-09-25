@@ -142,33 +142,33 @@
  },
  "dropdownWork": {
   "#profile-dropdown": {
-   "x": 853,
+   "x": 852,
    "y": 45,
-   "w": 340,
+   "w": 341,
    "h": 498
   },
   "[data-profile-id=\"work\"]": {
-   "x": 864,
+   "x": 863,
    "y": 177,
-   "w": 318,
+   "w": 319,
    "h": 45
   },
   "[data-profile-id=\"personal\"]": {
-   "x": 864,
+   "x": 863,
    "y": 129,
-   "w": 318,
+   "w": 319,
    "h": 45
   },
   "#repo-account-block": {
-   "x": 864,
+   "x": 863,
    "y": 239,
-   "w": 318,
+   "w": 319,
    "h": 71
   },
   "#identity-row": {
-   "x": 864,
+   "x": 863,
    "y": 327,
-   "w": 318,
+   "w": 319,
    "h": 36
   },
   "#profile-segment": {
@@ -180,39 +180,39 @@
  },
  "dropdownPersonal": {
   "#profile-dropdown": {
-   "x": 854,
+   "x": 853,
    "y": 45,
-   "w": 339,
+   "w": 340,
    "h": 548
   },
   "[data-profile-id=\"work\"]": {
-   "x": 865,
+   "x": 864,
    "y": 177,
-   "w": 317,
+   "w": 318,
    "h": 45
   },
   "[data-profile-id=\"personal\"]": {
-   "x": 865,
+   "x": 864,
    "y": 129,
-   "w": 317,
+   "w": 318,
    "h": 45
   },
   "#repo-account-block": {
-   "x": 865,
+   "x": 864,
    "y": 239,
-   "w": 317,
+   "w": 318,
    "h": 121
   },
   "#repo-account-note": {
-   "x": 875,
+   "x": 874,
    "y": 307,
-   "w": 297,
+   "w": 298,
    "h": 47
   },
   "#identity-row": {
-   "x": 865,
+   "x": 864,
    "y": 376,
-   "w": 317,
+   "w": 318,
    "h": 36
   }
  },
@@ -284,9 +284,9 @@
    "h": 252
   },
   "#btn-confirm-ok": {
-   "x": 927,
+   "x": 926,
    "y": 212,
-   "w": 64,
+   "w": 65,
    "h": 35
   }
  },
@@ -340,7 +340,7 @@
    "h": 0
   },
   "#btn-diff-layout": {
-   "x": 820,
+   "x": 822,
    "y": 145,
    "w": 95,
    "h": 30
@@ -354,9 +354,9 @@
    "h": 47
   },
   "#btn-diff-stage-selection": {
-   "x": 866,
+   "x": 867,
    "y": 196,
-   "w": 146,
+   "w": 145,
    "h": 30
   },
   "#btn-diff-discard-selection": {
@@ -431,11 +431,47 @@
    "w": 864,
    "h": 55
   },
+  "#rebase-plan-list li::rate limiting >> button[title=\"Move earlier\"]": {
+   "x": 1130,
+   "y": 262,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::rate limiting >> button[title=\"Move later\"]": {
+   "x": 1160,
+   "y": 262,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::rate limiting >> select.rebase-action": {
+   "x": 378,
+   "y": 266,
+   "w": 88,
+   "h": 21
+  },
   "#rebase-plan-list li::token helpers": {
    "x": 366,
    "y": 304,
    "w": 864,
    "h": 55
+  },
+  "#rebase-plan-list li::token helpers >> button[title=\"Move earlier\"]": {
+   "x": 1130,
+   "y": 317,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::token helpers >> button[title=\"Move later\"]": {
+   "x": 1160,
+   "y": 317,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::token helpers >> select.rebase-action": {
+   "x": 378,
+   "y": 321,
+   "w": 88,
+   "h": 21
   },
   "#rebase-plan-list li::highlight matched": {
    "x": 366,
@@ -443,11 +479,47 @@
    "w": 864,
    "h": 55
   },
+  "#rebase-plan-list li::highlight matched >> button[title=\"Move earlier\"]": {
+   "x": 1130,
+   "y": 372,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::highlight matched >> button[title=\"Move later\"]": {
+   "x": 1160,
+   "y": 372,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::highlight matched >> select.rebase-action": {
+   "x": 378,
+   "y": 376,
+   "w": 88,
+   "h": 21
+  },
   "#rebase-plan-list li::fixup!": {
    "x": 366,
    "y": 414,
    "w": 864,
    "h": 55
+  },
+  "#rebase-plan-list li::fixup! >> button[title=\"Move earlier\"]": {
+   "x": 1130,
+   "y": 427,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::fixup! >> button[title=\"Move later\"]": {
+   "x": 1160,
+   "y": 427,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::fixup! >> select.rebase-action": {
+   "x": 378,
+   "y": 431,
+   "w": 88,
+   "h": 21
   },
   "#rebase-plan-list li::API usage": {
    "x": 366,
@@ -455,8 +527,26 @@
    "w": 864,
    "h": 54
   },
+  "#rebase-plan-list li::API usage >> button[title=\"Move earlier\"]": {
+   "x": 1130,
+   "y": 482,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::API usage >> button[title=\"Move later\"]": {
+   "x": 1160,
+   "y": 482,
+   "w": 28,
+   "h": 28
+  },
+  "#rebase-plan-list li::API usage >> select.rebase-action": {
+   "x": 378,
+   "y": 486,
+   "w": 88,
+   "h": 21
+  },
   "#rebase-autosquash": {
-   "x": 1044,
+   "x": 1045,
    "y": 177,
    "w": 13,
    "h": 13
@@ -476,9 +566,9 @@
    "h": 229
   },
   "#btn-rebase-split": {
-   "x": 870,
+   "x": 873,
    "y": 194,
-   "w": 129,
+   "w": 127,
    "h": 30
   },
   "#rebase-progress": {
@@ -507,7 +597,12 @@
    "w": 864,
    "h": 55
   },
-  "#recovery-points-list button::Restore": null
+  "#recovery-points-list li >> button[data-action=\"restore\"]": {
+   "x": 1130,
+   "y": 174,
+   "w": 28,
+   "h": 28
+  }
  },
  "safety": {
   ".sidebar-section": {
@@ -565,6 +660,50 @@
    "y": 1121,
    "w": 240,
    "h": 50
+  }
+ },
+ "worktreesOpen": {
+  "#sidebar-panel": {
+   "x": 0,
+   "y": 64,
+   "w": 280,
+   "h": 866
+  },
+  ".sidebar-section[data-section=\"worktrees\"]": {
+   "x": 20,
+   "y": 456,
+   "w": 240,
+   "h": 339
+  },
+  "#worktree-list": {
+   "x": 20,
+   "y": 521,
+   "w": 240,
+   "h": 274
+  },
+  ".worktree-item::acme-api": {
+   "x": 20,
+   "y": 521,
+   "w": 240,
+   "h": 89
+  },
+  ".worktree-item::login": {
+   "x": 20,
+   "y": 614,
+   "w": 240,
+   "h": 89
+  },
+  ".worktree-item::search": {
+   "x": 20,
+   "y": 707,
+   "w": 240,
+   "h": 88
+  },
+  "#branch-segment-wrapper": {
+   "x": 519,
+   "y": 4,
+   "w": 331,
+   "h": 55
   }
  },
  "agent": {
@@ -633,7 +772,7 @@
    "h": 22
   },
   "#terminal-show-reads": {
-   "x": 1258,
+   "x": 1257,
    "y": 793,
    "w": 13,
    "h": 13

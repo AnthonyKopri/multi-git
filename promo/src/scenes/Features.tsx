@@ -11,13 +11,16 @@ import { KeyCombo } from '../primitives/KeyCap';
 import { LaneTrails } from '../primitives/LaneTrails';
 import { SpellStack, TargetPulse } from '../primitives/SpellStack';
 import { Caret, TerminalWindow, tildify, type LogRecord } from '../primitives/Terminal';
+import { VhsOverlay, VhsStage } from '../primitives/Vhs';
 import { FONT, TYPE, useColors, useFilm } from '../theme';
 import { SNAP } from '../ui/snapshots.generated';
-import { AppLayer, AppWindow, byText, cues, FEATURE_ANCHOR, HeadlineScrim, q, qa, rect, SceneHeadline, setText, Sub, toScreen, type R } from './kit';
+import { AppLayer, AppWindow, blockBottom, byText, cues, FEATURE_ANCHOR, HeadlineBlock, HeadlineScrim, ModalLayer, q, qa, rect, rgba, setText, Sub, toScreen, type R } from './kit';
 import type { SceneProps } from './types';
 
 const W = 1920, H = 1080;
 const SPELL_BOX = { x: FEATURE_ANCHOR.x - 600, y: 250, w: 1200 };
+/** The spell plate sits 40 px below the scene's headline block (cropped cutdowns keep their old spot). */
+const spellBox = (headline: string | null, y = SPELL_BOX.y, size?: number) => ({ ...SPELL_BOX, y: headline ? Math.max(y, blockBottom([{ text: headline, at: 0, size }]) + 40) : y });
 
 const Stage: React.FC<{ keys: CamKey[]; duration: number; shakes?: number[]; children: React.ReactNode }> = ({ keys, duration, shakes, children }) => (
   <Camera keys={keys} width={W} height={H} anchor={FEATURE_ANCHOR} drift={0.015} driftFrames={duration} shakes={shakes}>
@@ -138,9 +141,8 @@ export const SceneA: React.FC<SceneProps> = ({ placed, variant }) => {
           if (cb) cb.style.boxShadow = f >= cancel && f < cancel + 6 ? `0 0 0 3px ${c.indigo}` : '';
         }} />}
       </Stage>
-      {!wrappedV(variant) && <HeadlineScrim />}
-      {!wrappedV(variant) && <SceneHeadline text={copy.sceneA.headline} at={cu.at('headline')} />}
-      <SpellStack lines={copy.spells.a} at={spellAt} collapseAt={collapse} box={SPELL_BOX} target={toScreen(keys, land, seg)} />
+      {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneA.headline, at: cu.at('headline') }]} />}
+      <SpellStack lines={copy.spells.a} at={spellAt} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneA.headline)} target={toScreen(keys, land, seg)} />
       <Cursor keys={[
         { at: land, ...(() => { const s = toScreen(keys, land, seg); return { x: s.x + s.w * 0.6, y: s.y + s.h * 0.8 }; })() },
         aim(keys, pick, workItem, 0.4, 0.55),
@@ -225,16 +227,15 @@ export const SceneB: React.FC<SceneProps> = ({ placed, variant }) => {
         {frame >= wordDiff && frame < imageDiff && <AppLayer snap="worddiff" at={diffAt} />}
         {showImage && <AppLayer snap="imagediff" at={diffAt} />}
       </Stage>
-      {!wrappedV(variant) && <HeadlineScrim />}
-      {!wrappedV(variant) && <SceneHeadline text={copy.sceneB.headline} at={cu.at('headline')} />}
-      <SpellStack lines={copy.spells.b} at={cu.at('spell')} collapseAt={collapse} box={SPELL_BOX} target={toScreen(keys, land, lr('imp'))} />
+      {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneB.headline, at: cu.at('headline') }]} />}
+      <SpellStack lines={copy.spells.b} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneB.headline)} target={toScreen(keys, land, lr('imp'))} />
       <Cursor keys={[
         { at: land, ...(() => { const s = toScreen(keys, land, lr('imp')); return { x: s.x + 80, y: s.y + 20 }; })() },
         aim(keys, sel[0], lr('imp'), 0.3, 0.5, 5), aim(keys, sel[1], lr('ifl'), 0.3, 0.4, 6), aim(keys, sel[2], lr('ref'), 0.3, 0.5, 7),
         aim(keys, stage, stageBtn, 0.5, 0.5, 7), aim(keys, discardSel, lr('log1'), 0.3, 0.5, 6), aim(keys, discard, discardBtn, 0.5, 0.5, 6),
       ]} clicks={[...sel, stage, discardSel, discard]} enterAt={land} exitAt={keysAt} />
-      {!wrappedV(variant) && <Caption text={copy.sceneB.caption} at={discard} exitAt={keysAt + 20} x={96} y={900} icon="shield" />}
-      {frame >= keysAt && frame < wordDiff + 5 && <KeyCombo keys={['Ctrl', 'Enter']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: 96, top: 850, opacity: leave(frame, wordDiff, 6) }} />}
+      {!wrappedV(variant) && <Caption text={copy.sceneB.caption} at={discardSel} x={96} y={900} icon="shield" />}
+      {frame >= keysAt && frame < wordDiff + 5 && <KeyCombo keys={['Ctrl', 'Enter']} enterAt={keysAt} pressAt={keysAt + 6} style={{ position: 'absolute', left: 96, top: 770, opacity: leave(frame, wordDiff, 6) }} />}
     </AbsoluteFill>
   );
 };
@@ -266,25 +267,38 @@ function insertCommitRow(root: HTMLElement, f: number, at: number, glow: string,
 }
 
 // ------------------------------------------------------------------ scene C --
+// The three History rows the reset takes (the new commit is inserted above
+// "docs: add API usage", so they sit at y 325, 371 and 463).
+const RESTORED = { x: 1317, y: 325, w: 246, h: 184 };
+
 export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
   const frame = useCurrentFrame();
   const c = useColors();
   const { copy } = useFilm();
   const cu = cues(placed.def);
   const oops = cu.at('oops'), fall = cu.at('fall'), collapse = cu.at('collapse'), land = collapse + 8, rewind = cu.at('rewind'), landing = cu.at('land');
-  const newPoint = cu.at('newPoint', 9999), card = cu.at('card', 9999);
+  const pickPoint = cu.at('pickPoint', 9999), confirmAt = cu.at('confirm', 9999), restore = cu.at('restore', 9999);
+  const back = cu.at('back', 9999), headAt = cu.at('headline', landing), newPoint = cu.at('newPoint', 9999), card = cu.at('card', 9999);
   const short = variant === 'short' || variant === 'gif';
+  // The master clicks Restore itself, rewinds on tape and gives bar 4 to the restored commits.
+  const full = !short && back < 9999;
   const falls = short ? [fall, fall + 3, fall + 6] : [fall, fall + 15, fall + 30];
   const keys: CamKey[] = [
     { at: 0, x: 1440, y: 360, scale: 1.55 },
     { at: land - 2, x: 800, y: 200, scale: 1.45, dur: 6 },
+    ...(full ? [{ at: confirmAt, x: 800, y: 150, scale: 1.7, dur: 8 }] : []),
     { at: rewind, x: 1440, y: 360, scale: 1.55, dur: 6 },
-    ...(newPoint < 9999 ? [{ at: newPoint - 2, x: 800, y: 230, scale: 1.45, dur: 7 }] : []),
+    ...(full ? [
+      { at: landing + 2, x: RESTORED.x + RESTORED.w / 2, y: RESTORED.y + RESTORED.h / 2, scale: 1.95, dur: 14 },
+      { at: headAt, x: 1250, y: 380, scale: 1.4, dur: 16 },
+    ] : []),
+    ...(newPoint < 9999 ? [{ at: newPoint - 2, x: 800, y: 230, scale: 1.45, dur: 8 }] : []),
   ];
-  const confirmAt = cu.at('confirm', 9999);
-  const recVis = (frame >= land - 2 && frame < Math.min(confirmAt, rewind)) || frame >= newPoint - 2;
-  const confirmVis = !short && frame >= confirmAt && frame < rewind;
+  const screen = (f: number, r: R) => toScreen(keys, f, r, FEATURE_ANCHOR, 0.015, placed.duration);
   const recRow = rect('recovery', '#recovery-points-list li');
+  const recBtn = rect('recovery', '#recovery-points-list li >> button[data-action="restore"]');
+  // The emerald landing holds until the new recovery point opens (>= 2.5 s in the master).
+  const greenEnd = full ? Math.max(landing + 75, newPoint - 2) : landing + 40;
   const nodeState = (root: HTMLElement, f: number) => {
     insertCommitRow(root, f, -1, c.indigo);
     const list = q(root, '#commit-history-list');
@@ -293,45 +307,53 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
     rows.forEach((row, k) => {
       if (!row) return;
       const redAt = falls[k];
-      const back = rewind + (2 - k) * 3;
+      const backAt = rewind + (2 - k) * 3;
       let ty = 0, rot = 0, op = 1;
-      if (f >= redAt && f < back) { const t = expoIn(prog(f, redAt + 4, 12)); ty = 280 * t; rot = 10 * t * (k % 2 ? -1 : 1); op = 1 - t; }
-      if (f >= back && f < landing) { const t = expoOut(prog(f, back, landing - back)); ty = 280 * (1 - t); rot = 0; op = t; }
+      if (f >= redAt && f < backAt) { const t = expoIn(prog(f, redAt + 4, 12)); ty = 280 * t; rot = 10 * t * (k % 2 ? -1 : 1); op = 1 - t; }
+      if (f >= backAt && f < landing) { const t = expoOut(prog(f, backAt, landing - backAt)); ty = 280 * (1 - t); rot = 0; op = t; }
       row.style.transform = `translateY(${ty}px) rotate(${rot}deg)`;
       row.style.opacity = String(op);
-      const red = f >= redAt && f < back;
-      const green = f >= landing && f < landing + 40;
+      const red = f >= redAt && f < backAt;
+      // Green from the landing: one gentle swell, a steady glow, then an 8-frame fade.
+      const g = f >= landing ? clamp01((greenEnd - f) / 8) : 0;
+      const swell = f >= landing ? Math.sin(Math.PI * prog(f, landing + k * 4, 22)) : 0;
       const circle = row.querySelector('circle');
-      if (circle) (circle as SVGCircleElement).style.fill = red ? c.red : green ? c.emerald : '';
-      const flying = f >= back && f < landing;
+      if (circle) (circle as SVGCircleElement).style.fill = red ? c.red : g > 0.5 ? c.emerald : '';
+      const flying = f >= backAt && f < landing;
       row.style.boxShadow = flying ? `0 40px 0 ${c.emerald}33, 0 80px 0 ${c.emerald}1a, 0 120px 0 ${c.emerald}0d`
-        : green ? `inset 3px 0 0 ${c.emerald}, 0 0 26px ${c.emerald}55` : red ? `inset 3px 0 0 ${c.red}` : '';
+        : g > 0 ? `inset 3px 0 0 ${rgba(c.emerald, g)}, 0 0 ${22 + 20 * swell}px ${rgba(c.emerald, (0.3 + 0.25 * swell) * g)}`
+        : red ? `inset 3px 0 0 ${c.red}` : '';
+      row.style.background = g > 0 ? rgba(c.emerald, 0.1 * g) : '';
       row.style.color = red ? c.red : '';
     });
   };
+  const recoveryApply = (root: HTMLElement, f: number) => {
+    const list = q(root, '#recovery-points-list');
+    const first = list?.querySelector<HTMLElement>('li:not(.mg-new)');
+    if (first) first.style.boxShadow = f >= land && f < Math.min(rewind, pickPoint + 8) ? `inset 0 0 0 2px ${c.indigo}, 0 0 30px ${c.indigo}66` : '';
+    if (list && f >= newPoint) {
+      let nr = q(list, 'li.mg-new');
+      if (!nr && first) {
+        nr = first.cloneNode(true) as HTMLElement; nr.classList.add('mg-new');
+        nr.style.boxShadow = '';
+        const lab = nr.querySelector<HTMLElement>('.recovery-label');
+        if (lab) lab.textContent = `Before restoring main to ${RESTORE_TO}`;
+        list.insertBefore(nr, first);
+      }
+      if (nr) { const t = expoOut(prog(f, newPoint, 8)); nr.style.maxHeight = `${56 * t}px`; nr.style.overflow = 'hidden'; nr.style.boxShadow = `inset 0 0 0 2px ${c.emerald}`; }
+    }
+  };
+  const stage = (
+    <Stage keys={keys} duration={placed.duration} shakes={[oops]}>
+      <AppLayer snap="workspace-body" base apply={nodeState} />
+      <ModalLayer snap="recovery-after-reset" open={land - 2} close={full ? pickPoint + 2 : rewind} apply={recoveryApply} />
+      {full && <ModalLayer snap="restore-confirm" open={confirmAt} close={restore + 1} />}
+      {newPoint < 9999 && <ModalLayer snap="recovery-after-reset" open={newPoint - 2} apply={recoveryApply} />}
+    </Stage>
+  );
   return (
     <AbsoluteFill style={{ background: c.background }}>
-      <Stage keys={keys} duration={placed.duration} shakes={[oops]}>
-        <AppLayer snap="workspace-body" base apply={nodeState} />
-        {recVis && <AppLayer snap="recovery-after-reset" apply={(root, f) => {
-          const card0 = q(root, '.modal-card');
-          if (card0) { const t = expoOut(prog(f, frame >= newPoint - 2 ? newPoint - 2 : land - 2, 6)); card0.style.transform = `scale(${1.08 - 0.08 * t})`; card0.style.opacity = String(t); }
-          const list = q(root, '#recovery-points-list');
-          const first = list?.querySelector<HTMLElement>('li');
-          if (first) first.style.boxShadow = f >= land && f < rewind ? `inset 0 0 0 2px ${c.indigo}, 0 0 30px ${c.indigo}66` : '';
-          if (list && f >= newPoint) {
-            let nr = q(list, 'li.mg-new');
-            if (!nr && first) {
-              nr = first.cloneNode(true) as HTMLElement; nr.classList.add('mg-new');
-              const lab = nr.querySelector<HTMLElement>('.recovery-label');
-              if (lab) lab.textContent = `Before restoring main to ${RESTORE_TO}`;
-              list.insertBefore(nr, first);
-            }
-            if (nr) { const t = expoOut(prog(f, newPoint, 8)); nr.style.maxHeight = `${56 * t}px`; nr.style.overflow = 'hidden'; nr.style.boxShadow = `inset 0 0 0 2px ${c.emerald}`; }
-          }
-        }} />}
-        {confirmVis && <AppLayer snap="restore-confirm" />}
-      </Stage>
+      <VhsStage active={full && frame >= restore && frame < landing} stage={stage} />
       {frame < land + 4 && !wrappedV(variant) && (
         <div style={{ position: 'absolute', left: 96, top: 110, opacity: leave(frame, land, 6) }}>
           <TerminalWindow title="~/code/acme-api" width={900} height={170}>
@@ -341,12 +363,19 @@ export const SceneC: React.FC<SceneProps> = ({ placed, variant }) => {
           </TerminalWindow>
         </div>
       )}
-      {!wrappedV(variant) && <HeadlineScrim />}
-      {!wrappedV(variant) && <SceneHeadline text={copy.sceneC.headline} at={cu.at('headline', landing)} />}
-      {!short && <Sub text={copy.sceneC.sub} at={cu.at('sub', 9999)} y={214} color={c.emerald} size={56} />}
-      <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={toScreen(keys, land + 4, recRow)} />
+      {!wrappedV(variant) && <HeadlineBlock lines={[
+        { text: copy.sceneC.headline, at: headAt },
+        ...(short ? [] : [{ kind: 'sub' as const, text: copy.sceneC.sub, at: cu.at('sub', 9999), color: c.emerald, size: 56 }]),
+      ]} />}
+      <SpellStack lines={copy.spells.c} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 360 }} shaky flood={short ? 12 : 15} target={screen(land + 4, recRow)} />
+      {full && <Caption text={copy.sceneC.back} at={back} exitAt={newPoint - 4} x={96} y={560} icon="history" color={c.emerald} />}
       {!short && <Caption text={copy.sceneC.card} at={card} x={96} y={880} icon="delete_history" />}
-      {!short && <Cursor keys={[{ at: land, x: 1500, y: 800 }, aim(keys, confirmAt + 4, rect('restore', '#btn-confirm-ok'), 0.5, 0.55, 6)]} clicks={[confirmAt + 4]} enterAt={land} exitAt={rewind} />}
+      {full && <Cursor keys={[
+        { at: land, ...(() => { const r = screen(land, recBtn); return { x: r.x + r.w * 0.5, y: r.y + r.h * 2.4 }; })() },
+        aim(keys, pickPoint, recBtn, 0.5, 0.55, 10),
+        aim(keys, restore, rect('restore', '#btn-confirm-ok'), 0.5, 0.55, 12),
+      ]} clicks={[pickPoint, restore]} enterAt={land} exitAt={restore + 8} />}
+      {full && <VhsOverlay from={restore} to={landing} width={W} height={H} />}
     </AbsoluteFill>
   );
 };
@@ -405,11 +434,11 @@ export const SceneD: React.FC<SceneProps> = ({ placed, variant }) => {
           {splitVis && <AppLayer snap="split-confirm" apply={(root, f) => { const b = q(root, '#btn-confirm-ok'); if (b) b.style.boxShadow = f >= confirm + 8 && f < confirm + 14 ? `0 0 0 3px ${c.indigo}` : ''; }} />}
         </Stage>
       )}
-      {!hook && <HeadlineScrim />}
-      {!splitOnly && !hook && <SceneHeadline text={copy.sceneD.headline} at={cu.at('headline')} />}
+      {splitOnly && <HeadlineScrim />}
+      {!splitOnly && !hook && <HeadlineBlock lines={[{ text: copy.sceneD.headline, at: cu.at('headline') }]} />}
       {hook && <Kinetic text={copy.vertical.hook} at={cu.at('headline') - 6} style={{ ...TYPE.hero, fontSize: 96, position: 'absolute', left: 90, top: 290, width: width - 180 }} />}
       {!splitOnly && <SpellStack lines={copy.spells.d} at={cu.at('spell')} collapseAt={hook ? undefined : collapse}
-        box={vertical ? { x: 60, y: 720, w: width - 120 } : SPELL_BOX} target={hook ? undefined : toScreen(keys, land, rect('planner', '#rebase-plan-list'))} fontSize={vertical ? 30 : 28} />}
+        box={vertical ? { x: 60, y: 720, w: width - 120 } : spellBox(copy.sceneD.headline)} target={hook ? undefined : toScreen(keys, land, rect('planner', '#rebase-plan-list'))} fontSize={vertical ? 30 : 28} />}
       {splitOnly && <SpellStack lines={copy.spells.d} at={-40} collapseAt={0} box={vertical ? { x: 60, y: 720, w: width - 120 } : SPELL_BOX} target={toScreen(keys, 8, splitBtn)} fontSize={vertical ? 30 : 28} />}
       {frame >= splitPulse && frame < confirm && <TargetPulse rect={toScreen(keys, splitPulse, splitBtn)} at={splitPulse} />}
       {!hook && !splitOnly && (
@@ -498,9 +527,8 @@ export const SceneE: React.FC<SceneProps> = ({ placed, variant }) => {
       )}
       {showStage && frame >= windowsAt && frame < launcher && <MiniWindows at={windowsAt} keys={keys} rows={wtRows} />}
       {frame >= terminals && <AgentTerminals at={terminals} compact={wrappedV(variant)} />}
-      {!wrappedV(variant) && <HeadlineScrim />}
-      {!wrappedV(variant) && <SceneHeadline text={copy.sceneE.headline} at={cu.at('headline')} size={96} width={1100} />}
-      <SpellStack lines={copy.spells.e} at={cu.at('spell')} collapseAt={collapse} box={{ ...SPELL_BOX, y: 330 }} target={toScreen(keys, land, wtAt)} />
+      {!wrappedV(variant) && <HeadlineBlock lines={[{ text: copy.sceneE.headline, at: cu.at('headline'), size: 96 }]} />}
+      <SpellStack lines={copy.spells.e} at={cu.at('spell')} collapseAt={collapse} box={spellBox(wrappedV(variant) ? null : copy.sceneE.headline, 330, 96)} target={toScreen(keys, land, wtAt)} />
       {!wrappedV(variant) && <Sub text={copy.sceneE.small} at={small} y={868} size={34} width={1700} color={c.text} />}
     </AbsoluteFill>
   );
@@ -608,10 +636,8 @@ export const SceneF: React.FC<SceneProps> = ({ placed }) => {
         {paletteVis && <AppLayer snap="palette" apply={(root, f) => { const card0 = q(root, '.modal-card') ?? (q(root, '#palette-modal')?.firstElementChild as HTMLElement | null); if (card0) { const t = expoOut(prog(f, keysAt + 3, 6)); card0.style.transform = `scale(${0.9 + 0.1 * t})`; card0.style.opacity = String(t); } }} />}
       </Stage>
       <CounterCrack at={crack} pour={pour} landT={landT} every={every} target={toScreen(keys, pour + landT, termBody)} />
-      <HeadlineScrim />
-      <SceneHeadline text={copy.sceneF.noBlackBox} at={cu.at('noBlackBox')} exitAt={cu.at('line1')} />
-      <Sub text={copy.sceneF.line1} at={cu.at('line1')} y={78} size={52} color={c.text} />
-      <SceneHeadline text={copy.sceneF.line2} at={cu.at('line2')} top={160} size={96} width={1150} />
+      <HeadlineBlock width={1150} lines={[{ kind: 'sub', text: copy.sceneF.line1, at: cu.at('line1'), size: 52, color: c.text }, { text: copy.sceneF.line2, at: cu.at('line2'), size: 96 }]} />
+      <HeadlineBlock scrim={false} lines={[{ text: copy.sceneF.noBlackBox, at: cu.at('noBlackBox'), exitAt: cu.at('line1') - 8 }]} />
       <Cursor keys={[{ at: hover - 8, x: 1500, y: 560 }, aim(keys, hover + 2, { x: 1500, y: 823 + hoverLine * 22, w: 60, h: 22 }, 0.5, 0.5, 8)]} clicks={[copyAt]} enterAt={hover - 8} exitAt={glint} />
       {rec && frame >= copyAt && frame < glint && <Caption text={`${tildify(rec.cwd)} · exit ${rec.exitCode ?? 0} · ${rec.durationMs ?? 0} ms`} at={copyAt} exitAt={glint - 7} x={96} y={470} icon="content_copy" />}
       {frame >= glint && (
