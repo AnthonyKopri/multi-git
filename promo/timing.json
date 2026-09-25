@@ -5,7 +5,7 @@
   "beatFrames": 15,
   "barFrames": 60,
   "sampleRate": 48000,
-  "notes": "Cues are [bar, beat, frameOffset?] local to their section (bar 1 beat 1 = the section's first frame). sfx rows are [id, cue, frameOffset, volume, count?, everyFrames?]. counter rows are [cue, source]: a spell id (a-e, counted with the spec's rule) or 'card'.",
+  "notes": "Cues are [bar, beat, frameOffset?] local to their section (bar 1 beat 1 = the section's first frame). sfx rows are [id, cue, frameOffset, volume, count?, everyFrames?]. counter rows are [cue, source, delayFrames]: a spell id (a-e, counted with the spec rule: +1 per command line, 2 frames apart), card (+1 per montage card) or viewer (+1).",
   "compositions": {
     "Promo": {
       "width": 1920, "height": 1080, "audio": true, "counterLabel": true,
@@ -86,36 +86,36 @@
       "scene": "SceneA", "bars": 4,
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "pick": [2, 2], "flipRows": [2, 3], "rule": [3, 1], "secondRepo": [3, 3], "keys": [4, 1], "mismatch": [4, 2], "cancel": [4, 3], "stamp": [4, 4] },
-      "counter": [["collapse", "a"]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["flip", "collapse", 3, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["pop", "rule", 0, 0.35], ["swish", "secondRepo", 0, 0.3], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
+      "counter": [["collapse", "a", 11]],
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["pop", "rule", 0, 0.35], ["swish", "secondRepo", 0, 0.3], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
     },
     "sceneB": {
       "scene": "SceneB", "bars": 3,
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "sel1": [2, 1, 6], "sel2": [2, 1, 13], "sel3": [2, 2, 5], "stage": [2, 3], "discardSel": [2, 4], "discard": [2, 4, 9], "keys": [3, 1], "commit": [3, 2], "wordDiff": [3, 3], "imageDiff": [3, 4] },
-      "counter": [["collapse", "b"]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["flip", "collapse", 3, 0.3, 3, 2], ["click", "sel1", 0, 0.45], ["click", "sel2", 0, 0.45], ["click", "sel3", 0, 0.45], ["click", "stage", -2, 0.5], ["click", "discardSel", 0, 0.4], ["click", "discard", -2, 0.5], ["thock", "keys", 0, 0.5], ["pop", "commit", 0, 0.4], ["swish", "wordDiff", 0, 0.25], ["swish", "imageDiff", 0, 0.25]]
+      "counter": [["collapse", "b", 11]],
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 3, 2], ["click", "sel1", 0, 0.45], ["click", "sel2", 0, 0.45], ["click", "sel3", 0, 0.45], ["click", "stage", -2, 0.5], ["click", "discardSel", 0, 0.4], ["click", "discard", -2, 0.5], ["thock", "keys", 0, 0.5], ["pop", "commit", 0, 0.4], ["swish", "wordDiff", 0, 0.25], ["swish", "imageDiff", 0, 0.25]]
     },
     "sceneC": {
       "scene": "SceneC", "bars": 4,
       "music": { "type": "groove", "fill": true, "tapeStop": [2, 3] },
       "cues": { "oops": [1, 1], "fall": [1, 2], "spell": [2, 1], "collapse": [2, 3], "confirm": [2, 3, 5], "rewind": [2, 3, 9], "land": [3, 1], "headline": [3, 1], "newPoint": [4, 1], "sub": [4, 1], "card": [4, 3] },
-      "counter": [["collapse", "c"]],
-      "sfx": [["clatter", "oops", 0, 0.35], ["boom", "oops", 0, 0.7], ["glitch", "fall", 0, 0.25], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["flip", "collapse", 3, 0.3, 2, 2], ["click", "confirm", 0, 0.45], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.55], ["pop", "newPoint", 0, 0.35], ["swish", "card", 0, 0.25]]
+      "counter": [["collapse", "c", 11]],
+      "sfx": [["clatter", "oops", 0, 0.35], ["boom", "oops", 0, 0.7], ["glitch", "fall", 0, 0.25], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 2, 2], ["click", "confirm", 0, 0.45], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.55], ["pop", "newPoint", 0, 0.35], ["swish", "card", 0, 0.25]]
     },
     "sceneD": {
       "scene": "SceneD", "bars": 3,
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "move1": [2, 1, 7], "move2": [2, 2], "squash": [2, 2, 8], "fixup": [2, 3], "drop": [2, 3, 8], "autosquash": [2, 4], "splitPulse": [3, 1], "confirm": [3, 2], "split": [3, 3], "small": [3, 3] },
-      "counter": [["splitPulse", "d"]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["click", "move1", -2, 0.4], ["click", "move2", -2, 0.4], ["click", "squash", -2, 0.4], ["click", "fixup", -2, 0.4], ["click", "drop", -2, 0.4], ["flip", "splitPulse", 3, 0.35, 9, 2], ["click", "confirm", 8, 0.5], ["thunk", "split", 0, 0.45]]
+      "counter": [["splitPulse", "d", 3]],
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["click", "move1", -2, 0.4], ["click", "move2", -2, 0.4], ["click", "squash", -2, 0.4], ["click", "fixup", -2, 0.4], ["click", "drop", -2, 0.4], ["flip", "splitPulse", 3, 0.35, 9, 2], ["click", "confirm", 8, 0.5], ["thunk", "split", 0, 0.45]]
     },
     "sceneE": {
       "scene": "SceneE", "bars": 4,
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "row1": [2, 1], "row2": [2, 2], "row3": [2, 3], "windows": [2, 4], "launcher": [3, 1], "card1": [3, 1], "card2": [3, 2], "card3": [3, 3], "fly": [3, 4], "terminals": [4, 1], "small": [4, 2] },
-      "counter": [["collapse", "e"]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["flip", "collapse", 3, 0.3, 5, 2], ["swish", "row2", 0, 0.25], ["swish", "row3", 0, 0.25], ["pop", "windows", 0, 0.35], ["click", "card1", 0, 0.45], ["click", "card2", 0, 0.45], ["click", "card3", 0, 0.45], ["whoosh", "fly", 0, 0.35], ["clatter", "terminals", 0, 0.25]]
+      "counter": [["collapse", "e", 11]],
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 5, 2], ["swish", "row2", 0, 0.25], ["swish", "row3", 0, 0.25], ["pop", "windows", 0, 0.35], ["click", "card1", 0, 0.45], ["click", "card2", 0, 0.45], ["click", "card3", 0, 0.45], ["whoosh", "fly", 0, 0.35], ["clatter", "terminals", 0, 0.25]]
     },
     "sceneF": {
       "scene": "SceneF", "bars": 3,
@@ -128,7 +128,7 @@
       "music": { "type": "montage", "swellAt": [3, 3] },
       "cues": { "start": [1, 1], "laneSwitch": [3, 3] },
       "cards": { "count": 20, "cue": "start", "everyFrames": 15, "switchAfter": 10 },
-      "counter": [["start", "card"]],
+      "counter": [["start", "card", 3]],
       "sfx": [["swell", "laneSwitch", -15, 0.45]]
     },
     "twoLanes": {
@@ -153,7 +153,7 @@
       "scene": "EndCard", "bars": 2,
       "music": { "type": "end" },
       "cues": { "sweep": [1, 1], "fuse": [1, 1, 10], "arrows": [1, 2], "wordmark": [1, 3], "cta": [1, 4], "click": [2, 3] },
-      "counter": [["click", "viewer"]],
+      "counter": [["click", "viewer", 3]],
       "sfx": [["swish", "sweep", 0, 0.35], ["impact", "fuse", 0, 0.4], ["click", "click", 0, 0.6], ["flip", "click", 3, 0.45]]
     },
 
@@ -179,22 +179,22 @@
       "scene": "SceneA", "bars": 3, "variant": "short",
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "pick": [2, 2], "flipRows": [2, 3], "keys": [3, 1], "mismatch": [3, 2], "cancel": [3, 3], "stamp": [3, 4] },
-      "counter": [["collapse", "a"]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["flip", "collapse", 3, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
+      "counter": [["collapse", "a", 11]],
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
     },
     "sceneD30": {
       "scene": "SceneD", "bars": 2, "variant": "short",
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 2], "collapse": [2, 1], "squash": [2, 1, 6], "fixup": [2, 1, 12], "drop": [2, 2], "splitPulse": [2, 3], "small": [2, 3] },
-      "counter": [["splitPulse", "d"]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["click", "squash", -2, 0.4], ["click", "fixup", -2, 0.4], ["click", "drop", -2, 0.4], ["flip", "splitPulse", 3, 0.35, 9, 2]]
+      "counter": [["splitPulse", "d", 3]],
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["click", "squash", -2, 0.4], ["click", "fixup", -2, 0.4], ["click", "drop", -2, 0.4], ["flip", "splitPulse", 3, 0.35, 9, 2]]
     },
     "sceneC30": {
       "scene": "SceneC", "bars": 2, "variant": "short",
       "music": { "type": "groove", "tapeStop": [1, 3] },
       "cues": { "oops": [1, 1], "fall": [1, 1, 8], "spell": [1, 2], "collapse": [1, 3], "rewind": [1, 3, 8], "land": [2, 1], "headline": [2, 1] },
-      "counter": [["collapse", "c"]],
-      "sfx": [["boom", "oops", 0, 0.7], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["flip", "collapse", 3, 0.3, 2, 2], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.55]]
+      "counter": [["collapse", "c", 11]],
+      "sfx": [["boom", "oops", 0, 0.7], ["clatter", "spell", 0, 0.35], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 2, 2], ["impact", "land", 0, 0.55], ["emerald", "land", 0, 0.55]]
     },
     "stinger30": {
       "scene": "Stinger", "bars": 1, "variant": "short",
@@ -219,8 +219,8 @@
       "scene": "SceneD", "bars": 1, "variant": "splitOnly",
       "music": { "type": "groove", "fill": true },
       "cues": { "collapse": [1, 1], "splitPulse": [1, 1], "confirm": [1, 2], "split": [1, 3] },
-      "counter": [["collapse", "d"]],
-      "sfx": [["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["flip", "collapse", 3, 0.35, 9, 2], ["click", "confirm", 8, 0.5], ["thunk", "split", 0, 0.45]]
+      "counter": [["collapse", "d", 11]],
+      "sfx": [["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.35, 9, 2], ["click", "confirm", 8, 0.5], ["thunk", "split", 0, 0.45]]
     },
     "revealV": {
       "scene": "Reveal", "bars": 1, "variant": "logoOnly",
@@ -238,8 +238,8 @@
       "scene": "SceneA", "bars": 2, "variant": "vertical",
       "music": { "type": "groove", "fill": true },
       "cues": { "headline": [1, 1], "spell": [1, 1, 4], "collapse": [1, 3], "pick": [1, 4], "keys": [2, 1], "mismatch": [2, 2], "cancel": [2, 3], "stamp": [2, 4] },
-      "counter": [["collapse", "a"]],
-      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", -8, 0.5], ["thunk", "collapse", 0, 0.8], ["flip", "collapse", 3, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
+      "counter": [["collapse", "a", 11]],
+      "sfx": [["clatter", "spell", 0, 0.4], ["whoosh", "collapse", 0, 0.5], ["thunk", "collapse", 8, 0.8], ["flip", "collapse", 11, 0.3, 6, 2], ["click", "pick", -2, 0.5], ["thock", "keys", 0, 0.5], ["alarm", "mismatch", 0, 0.55], ["click", "cancel", -2, 0.5], ["chime", "cancel", 0, 0.5], ["thunk", "stamp", 0, 0.35]]
     },
     "stingerV": {
       "scene": "Stinger", "bars": 1, "variant": "vertical",

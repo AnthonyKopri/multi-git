@@ -8,7 +8,7 @@ Session branch: promo/video-2
 - [x] M1 environment — 2026-09-25T02:48Z — `promo: scaffold the Remotion project`
 - [x] M2 demo world and captures — 2026-09-25T03:18Z — `promo: capture the demo world and real UI/CLI output`
 - [x] M3 timing and audio — 2026-09-25T03:33Z — `promo: synthesize the score and sound effects`
-- [ ] M4 scaffold and primitives
+- [x] M4 scaffold and primitives — 2026-09-25T03:46Z — `promo: add the motion primitives` (sheet: `review/m4-primitives.jpg`)
 - [ ] M5 rough cut
 - [ ] M6 review round 1 and hero polish
 - [ ] M7 review round 2
@@ -85,6 +85,14 @@ _(filled in as scenes land)_
 - **The mix preview is mixed in JS** from the same SFX event list Remotion uses
   (identical frames and volumes), then encoded with ffmpeg, instead of a
   100-input `adelay` + `amix` graph.
+- **UI rebuild.** `scripts/build-app-css.mjs` scopes the app's real
+  `public/style.css` under `.mg-app`; `scripts/build-snapshots.mjs` turns the
+  captured DOM into `src/ui/snapshots.generated.ts`. `AppSnapshot` renders a
+  snapshot under that CSS and an `apply(root, frame)` callback sets per-frame
+  state on the real nodes (classes, text, transforms), deterministically.
+- **Counter** values come from `src/counter.ts` (timeline ticks derived from
+  `timing.json` counter rows and the spell copy); `npm run check` recomputes
+  the same totals in plain JS.
 - The session's own branch is `promo/video-2` itself (`git branch --show-current`
   at the start), so the morning fast-forward is a no-op.
 
@@ -110,6 +118,22 @@ _(filled in as scenes land)_
 6. **The rebase planner** rejects `HEAD~5` as a base ("a character Git does
    not allow in a ref"), so captures pass the resolved hash. The spell text
    still shows `git rebase -i HEAD~5`, which is what a user would type.
+8. **Spell timing.** The spec asks for the first line to type at ~45 chars/s,
+   the whole spell within 45 frames, a 1-beat hold, and the collapse on the
+   next downbeat, with the spell on "beats 2-4". That leaves a 30-frame flood,
+   and spell A's first line (62 chars) alone needs 41 frames at 45 chars/s.
+   `SpellStack` types at 45 chars/s for up to 40% of the budget, then the rest
+   of line 1 lands with the flood (gaps shrinking 6 -> 1, scaled to fit). The
+   collapse starts on the downbeat and lands 8 frames later (thunk at +8,
+   counter flips from +11).
+9. **Spell text contrast.** Text dim `#6b7280` is 4.1:1 on `#0a0c10`, under the
+   4.5:1 floor. Spell comments/prompts use `#8b94a3` (6.4:1) and command lines
+   `#b8bfcc`; the dim token stays for non-text.
+10. **The vertical hook** ("Splitting one Git commit takes nine commands.") is
+    7 words, over the 6-word headline rule. It's the spec's verbatim copy, so
+    it stays, set as a two-line hook.
+11. **ReadmeGif runs at 30 fps** so the beat grid holds (a beat would be 7.5
+    frames at 15 fps); `npm run render:gif` samples it at 15 fps.
 7. **Browser mode can't open *Launch a coding agent*** (it needs
    `desktopApi.launchAgent`). The capture stubs only that function for the one
    step, so the real dialog renders; nothing is launched.

@@ -1,0 +1,158 @@
+{
+  "counterLabel": "commands you didn't type:",
+  "coldOpen": {
+    "push": "git push",
+    "pushError": ["ERROR: Permission to acme/api.git denied to jane-personal.", "fatal: Could not read from remote repository."],
+    "reset": "git reset --hard HEAD~3",
+    "resetOut": "HEAD is now at 1a2b3c4 feat(auth): add login form",
+    "wait": "…wait.",
+    "rebase": "git rebase -i HEAD~5",
+    "vim": [
+      "pick 1a2b3c4 feat(auth): add login form",
+      "pick 7c9d2e1 feat(search): index titles",
+      "pick 3f2e1d0 fix(auth): refresh the token",
+      "pick 5b8a6f2 refactor(api): split handlers",
+      "pick 9e4c7a3 test(auth): cover token refresh",
+      "",
+      "# Rebase 0d1e2f3..9e4c7a3 onto 0d1e2f3 (5 commands)",
+      "# Commands:",
+      "# p, pick <commit> = use commit",
+      "# r, reword <commit> = use commit, but edit the commit message",
+      "# e, edit <commit> = use commit, but stop for amending",
+      "# s, squash <commit> = use commit, but meld into previous commit",
+      "# f, fixup [-C | -c] <commit> = like \"squash\" but keep only the previous",
+      "~",
+      "~",
+      "-- INSERT --"
+    ],
+    "conflict": ["error: could not apply 3f2e1d0... fix(auth): refresh the token", "CONFLICT (content): Merge conflict in src/auth.ts"],
+    "line1": "Git is powerful.",
+    "line2": "It's also a spellbook."
+  },
+  "lanes": {
+    "cyanLabel": "NEW TO GIT",
+    "indigoLabel": "BEEN DOING THIS FOR YEARS",
+    "pains": [
+      ["Scared to press *rebase*.", "Pushed as the wrong account. Again."],
+      ["One command from losing a day.", "Nine commands to split one commit."],
+      ["What even is a detached HEAD?", "A `~/.ssh/config` full of host aliases."]
+    ],
+    "questions": ["Paying for a Git GUI?", "One GitHub account at a time?", "No Linux build?", "Can't see what it runs?"]
+  },
+  "reveal": {
+    "wordmark": "Multi-Git",
+    "tag1": "All of Git.",
+    "tag2": "None of the wizardry.",
+    "caption": "Free · Open source · Windows · macOS · Linux"
+  },
+  "sceneA": { "headline": "The right account. Every push.", "stamp": "Caught before it happened." },
+  "sceneB": { "headline": "Commit exactly what you meant.", "caption": "Snapshotted to Safety Net first." },
+  "sceneC": {
+    "oops": "git reset --hard HEAD~3",
+    "headline": "Undo the scary stuff.",
+    "sub": "Even the undo.",
+    "card": "Discarded files? Kept for 24 hours."
+  },
+  "sceneD": { "headline": "Rewrite history. Visually.", "small": "Already pushed? It pushes with `--force-with-lease`." },
+  "sceneE": {
+    "headline": "Three branches. Three agents. Zero stashing.",
+    "small": "Claude Code · Codex · Gemini CLI · Copilot CLI · Aider · Cursor CLI and more. Your agents. Multi-Git stores no API keys."
+  },
+  "sceneF": {
+    "noBlackBox": "No black box.",
+    "line1": "Every command it runs, exactly as it ran.",
+    "line2": "We didn't hide Git. We typed it for you.",
+    "learn": "Learn Git by watching it."
+  },
+  "spells": {
+    "a": [
+      "ssh-keygen -t ed25519 -f ~/.ssh/id_work -C \"jane@acme.example\"",
+      "# ~/.ssh/config",
+      "Host github-work",
+      "  HostName github.com",
+      "  IdentityFile ~/.ssh/id_work",
+      "  IdentitiesOnly yes",
+      "git remote set-url origin git@github-work:acme/api.git",
+      "git config user.name  \"Jane Doe\"",
+      "git config user.email \"jane@acme.example\"",
+      "ssh-add ~/.ssh/id_work",
+      "ssh -T git@github-work"
+    ],
+    "b": [
+      "git add -p src/auth.ts",
+      "(1/3) Stage this hunk [y,n,q,a,d,j,J,g,/,s,e,?]? s",
+      "(1/4) Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? e",
+      "# …hand-edit the hunk in your editor…",
+      "git restore -p src/auth.ts",
+      "git commit -m \"fix(auth): refresh the token before expiry\""
+    ],
+    "c": [
+      "git reflog                  # squint at 40 lines of HEAD@{n}",
+      "git reset --hard HEAD@{1}"
+    ],
+    "d": [
+      "git rebase -i HEAD~5",
+      "# pick → edit, squash, fixup, reorder… in Vim",
+      "git reset HEAD^",
+      "git add -p        # ×3",
+      "git commit        # ×3",
+      "git rebase --continue"
+    ],
+    "e": [
+      "git worktree add ../acme-api.worktrees/login  -b feature/login",
+      "git worktree add ../acme-api.worktrees/search -b feature/search",
+      "cd ../acme-api.worktrees/login  && claude",
+      "cd ../acme-api.worktrees/search && codex",
+      "cd ../acme-api && gemini"
+    ]
+  },
+  "montage": {
+    "chipCyan": "EVERYONE'S FIRST QUESTIONS",
+    "chipIndigo": "POWER MOVES",
+    "cards": [
+      { "q": "Undo my last commit?", "control": "undo", "struck": "git reset --soft HEAD~1" },
+      { "q": "Unstage a file?", "control": "stagedRow", "struck": "git restore --staged app.ts" },
+      { "q": "Throw away changes?", "control": "trash", "struck": "git restore app.ts" },
+      { "q": "Fix my last message?", "control": "amend", "struck": "git commit --amend -m \"…\"" },
+      { "q": "Grab a remote branch?", "control": "remoteBranch", "struck": "git switch -c feature --track origin/feature" },
+      { "q": "Rename a branch?", "control": "rename", "struck": "git branch -m old new" },
+      { "q": "Delete a branch safely?", "control": "deleteBranch", "struck": "git branch -d feature" },
+      { "q": "Ignore this file?", "control": "ignore", "struck": "echo \"debug.log\" >> .gitignore" },
+      { "q": "Fix a merge conflict?", "control": "conflict", "struck": "git checkout --theirs src/auth.ts" },
+      { "q": "Undo a pushed commit?", "control": "revert", "struck": "git revert 3f2e1d0" },
+      { "q": "Pull requests, pre-flighted", "control": "pr", "struck": "gh pr create --base main --draft …" },
+      { "q": "Signed. Verified.", "control": "verified", "struck": "git config gpg.format ssh" },
+      { "q": "Bisect that runs itself", "control": "bisect", "struck": "git bisect run npm test" },
+      { "q": "Fetch a whole group", "control": "fetchAll", "struck": "for d in */; do git -C \"$d\" fetch; done" },
+      { "q": "Clean up merged branches", "control": "deleteMerged", "struck": "git branch --merged main | grep -v main | xargs git branch -d" },
+      { "q": "Find any commit", "control": "search", "struck": "git log --since=1.week -- src/auth.ts" },
+      { "q": "Compare any two refs", "control": "compare", "struck": "git rev-list --left-right --count main...feature" },
+      { "q": "Submodules, untangled", "control": "submodules", "struck": "git submodule update --init" },
+      { "q": "LFS, visible", "control": "lfs", "struck": "git lfs ls-files" },
+      { "q": "Force-push? Only with a lease.", "control": "forceLease", "struck": "git push --force-with-lease" }
+    ]
+  },
+  "twoLanes": {
+    "cyanLabel": "NEW TO GIT?",
+    "indigoLabel": "LIVING IN THE TERMINAL?",
+    "cyanCaption": "Every risky move explains itself first.",
+    "indigoCaption": "Vim keys. JSON CLI. An MCP server for your agents."
+  },
+  "stinger": {
+    "Promo": ["You just watched 45 commands.", "You typed zero."],
+    "Promo30": ["You just watched 17 commands.", "You typed zero."],
+    "Vertical": ["15 commands.", "You typed zero."]
+  },
+  "checklist": {
+    "answers": ["✓ Free. MIT open source.", "✓ Every repo on its own account.", "✓ Windows · macOS · Linux.", "✓ Every command visible."],
+    "extras": ["✓ No sign-up. Local-first.", "✓ Undo for the scary stuff.", "✓ Your repos, your keys. Plain Git underneath."]
+  },
+  "endCard": {
+    "wordmark": "Multi-Git",
+    "tagline": "All of Git. None of the wizardry.",
+    "cta": "Download free",
+    "url": "github.com/AnthonyKopri/multi-git",
+    "platforms": "Windows · macOS · Linux"
+  },
+  "vertical": { "hook": "Splitting one Git commit takes nine commands." }
+}
