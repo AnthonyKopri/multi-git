@@ -35,7 +35,7 @@ function row(source: Commit): HTMLLIElement {
   if (!laid) {
     throw new Error('layoutCommits produced no row');
   }
-  return buildCommitRow(laid, 24);
+  return buildCommitRow(laid);
 }
 
 describe('buildCommitRow', () => {
@@ -44,6 +44,8 @@ describe('buildCommitRow', () => {
 
     expect(tagged.classList.contains('commit-graph-row')).toBe(true);
     expect(tagged.classList.contains('commit-graph-row--tagged')).toBe(true);
+    expect(tagged.querySelector('.commit-ref-row')?.textContent).toBe('mainorigin/main');
+    expect(tagged.querySelector('.commit-message-line .commit-msg')?.textContent).toBe(commit().message);
   });
 
   it('leaves a row with no refs unmarked, so it keeps its author and date', () => {
@@ -68,6 +70,17 @@ describe('buildCommitRow', () => {
     const built = row(commit({ refs: ['HEAD -> main'] }));
 
     expect(built.dataset['hash']).toBe('aa696a17eadd68fd8d98001239dac9feb2075842');
+  });
+
+  it('uses the lanes present in each row for its gutter width', () => {
+    const [wide, , , narrow] = layoutCommits([
+      commit({ hash: 'merge', parents: ['base', 'side'] }),
+      commit({ hash: 'side', parents: ['base'] }),
+      commit({ hash: 'base', parents: [] }),
+      commit({ hash: 'later', parents: [] })
+    ], createLayoutState());
+    expect(wide && buildCommitRow(wide).querySelector('svg')?.getAttribute('width')).toBe('28');
+    expect(narrow && buildCommitRow(narrow).querySelector('svg')?.getAttribute('width')).toBe('14');
   });
 
   it('keeps the message as text, never as markup', () => {

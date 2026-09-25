@@ -93,7 +93,7 @@ export async function refreshCommitHistory(): Promise<void> {
     }
 
     const rows = layoutCommits(data.commits, layout);
-    appendRows(ui.commitHistoryList, rows, layout.maxLanes);
+    appendRows(ui.commitHistoryList, rows);
     attachSentinel();
   } catch (error) {
     if (!isStale(error)) {
@@ -130,7 +130,7 @@ export async function loadMoreCommits(): Promise<void> {
 
     detachSentinel();
     if (fresh.length > 0) {
-      appendRows(ui.commitHistoryList, layoutCommits(fresh, layout), layout.maxLanes);
+      appendRows(ui.commitHistoryList, layoutCommits(fresh, layout));
     }
     attachSentinel();
   } catch (error) {
