@@ -105,3 +105,59 @@ export function formatRelativeTime(timestampMs: number, now = Date.now()): strin
 
   return delta < 0 ? `${count} ${name} ago` : `in ${count} ${name}`;
 }
+
+const BYTE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB'] as const;
+
+/**
+ * "1.2 MiB". Binary units spelled the way git spells them, so the figure on
+ * screen matches the one in the Terminal Log rather than differing by 5%.
+ */
+export function formatByteCount(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return '';
+  }
+
+  let value = bytes;
+  let unit = 0;
+
+  while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+
+  if (unit === 0) {
+    return `${Math.round(value)} B`;
+  }
+
+  // Fewer decimals as the number grows: "1.20 MiB", "12.5 MiB", "123 MiB".
+  const digits = value < 10 ? 2 : value < 100 ? 1 : 0;
+  return `${value.toFixed(digits)} ${BYTE_UNITS[unit]}`;
+}
+
+/**
+ * "about 45s left". Deliberately coarse: it is a guess, and a countdown that
+ * ticks in single seconds would claim a precision it does not have.
+ */
+export function formatRemainingTime(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) {
+    return '';
+  }
+
+  const seconds = Math.round(ms / 1000);
+
+  if (seconds < 5) {
+    return 'a few seconds left';
+  }
+  if (seconds < 55) {
+    return `about ${Math.round(seconds / 5) * 5}s left`;
+  }
+
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) {
+    return `about ${minutes} min left`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `about ${hours} h${rest > 0 ? ` ${rest} min` : ''} left`;
+}

@@ -69,6 +69,8 @@ export interface GitCommandOptions {
   signal?: AbortSignal | undefined;
   /** Collects stdout as bytes. For `cat-file blob` and nothing else so far. */
   binaryStdout?: boolean | undefined;
+  /** Sees stderr as it arrives. How a clone's progress reaches the UI. */
+  onStderr?: ((text: string) => void) | undefined;
 }
 
 /**
@@ -182,7 +184,8 @@ export async function runGitCommand(
     timeoutMs,
     input: options.input,
     signal: options.signal,
-    binaryStdout: options.binaryStdout
+    binaryStdout: options.binaryStdout,
+    onStderr: options.onStderr
   });
 
   recordCommand(repoPath, args, env, {

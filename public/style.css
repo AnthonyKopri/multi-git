@@ -6401,3 +6401,70 @@ tr:hover .profile-star:hover {
 #clone-browser .field-hint {
   margin: 0 0 10px;
 }
+
+/* ============ CLONE PROGRESS ============
+   Lives in the pinned footer of the clone dialog, above the buttons, so it stays
+   in view however far the form has scrolled. The footer is a wrapping row: this
+   takes the full first line and the buttons keep their own beneath it. */
+#clone-form .form-dialog-actions {
+  flex-wrap: wrap;
+}
+.clone-progress {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.clone-progress-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.8125rem;
+}
+.clone-progress-stage {
+  color: var(--text-main);
+  font-weight: 500;
+}
+.clone-progress-percent {
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+.clone-progress-foot {
+  min-height: 1.2em;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.clone-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--border-color);
+  overflow: hidden;
+}
+.clone-progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--color-primary);
+  transition: width 0.25s ease-out;
+}
+/* Nothing to measure yet, so the bar moves instead of sitting empty. */
+.clone-progress-track.is-indeterminate .clone-progress-fill {
+  width: 35%;
+  animation: cloneProgressSlide 1.2s ease-in-out infinite;
+}
+@keyframes cloneProgressSlide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .clone-progress-track.is-indeterminate .clone-progress-fill {
+    width: 100%;
+    opacity: 0.4;
+    animation: none;
+  }
+  .clone-progress-fill {
+    transition: none;
+  }
+}

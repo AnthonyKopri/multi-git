@@ -23,6 +23,30 @@ describe('runProcess', () => {
     expect(result.code).toBe(3);
   });
 
+  it('lets a caller watch stderr as it arrives, and still returns all of it', async () => {
+    const seen: string[] = [];
+    const result = await node(
+      'process.stderr.write("one;"); setTimeout(() => process.stderr.write("two;"), 50)',
+      { onStderr: (text: string) => seen.push(text) }
+    );
+
+    // Separate writes, so it is watching a stream and not being handed the end.
+    expect(seen.join('')).toBe('one;two;');
+    expect(seen.length).toBeGreaterThan(1);
+    expect(result.stderr).toBe('one;two;');
+  });
+
+  it('is not disturbed by a stderr listener that throws', async () => {
+    const result = await node('process.stderr.write("boom"); process.exit(2)', {
+      onStderr: () => {
+        throw new Error('listener failure');
+      }
+    });
+
+    expect(result.stderr).toBe('boom');
+    expect(result.code).toBe(2);
+  });
+
   it('reports a spawn failure instead of throwing', async () => {
     const result = await runProcess('definitely-not-a-real-binary-xyz', []);
 

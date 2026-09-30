@@ -12,6 +12,26 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Added
+
+- **Cloning shows its progress.** The Clone dialog has a progress bar that
+  follows git through counting, downloading, resolving and checking out, with
+  the objects received, the size and speed so far, and a rough estimate of the
+  time left. The estimate follows the speed of the last few seconds, so it
+  shortens when the connection speeds up and lengthens when it slows or stalls.
+  Repositories picked from your GitHub list are compared with the size GitHub
+  reports for them; for a pasted URL git does not say how large the download
+  will be, so the size is guessed from how many objects have arrived, which is
+  rougher. It appears once there is enough to go on. The same clone is listed in
+  the operations bar.
+
+### Changed
+
+- **The clone dialog opens with your GitHub repositories.** When the GitHub CLI
+  is installed and signed in, the repository browser expands and loads your
+  repositories as the dialog opens, so there is nothing to expand or load first.
+  The note about the GitHub CLI is only shown when it is not installed.
+
 ## [5.2.1] - 2026-09-25
 
 ### Changed
