@@ -13,7 +13,7 @@ export async function browseGithubRepositories(
   const limit = 100;
   const result = await runGh([
     'repo', 'list', ...(owner ? [owner] : []), '--limit', String(limit),
-    '--json', 'nameWithOwner,description,url,sshUrl,isPrivate,isArchived'
+    '--json', 'nameWithOwner,description,url,sshUrl,isPrivate,isArchived,diskUsage'
   ], { ...(runner ? { runner } : {}) });
   if (!result.ok) {
     throw new HttpError(result.missing
@@ -31,7 +31,11 @@ export async function browseGithubRepositories(
   }
   const repositories = rows.map((row: HostedRepository) => ({
     nameWithOwner: row.nameWithOwner, description: typeof row.description === 'string' ? row.description : '',
-    url: row.url, sshUrl: row.sshUrl, isPrivate: row.isPrivate, isArchived: row.isArchived
+    url: row.url, sshUrl: row.sshUrl, isPrivate: row.isPrivate, isArchived: row.isArchived,
+    // Optional: a size that is missing or not a number only costs the clone
+    // dialog a better time estimate, so it is dropped rather than rejected.
+    ...(typeof row.diskUsage === 'number' && Number.isFinite(row.diskUsage) && row.diskUsage >= 0
+      ? { diskUsage: row.diskUsage } : {})
   }));
   return { success: true, repositories, limit, atLimit: repositories.length >= limit };
 }

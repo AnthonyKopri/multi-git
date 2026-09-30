@@ -411,6 +411,10 @@ export interface CloneInput {
   parentDir: string;
   folderName?: string;
   profileId?: string;
+  /** Lets the caller find this clone on the operations stream while it runs. */
+  operationId?: string;
+  /** How many bytes the download should be, when known, for a better time estimate. */
+  expectedBytes?: number;
 }
 
 export const clone = (input: CloneInput) =>

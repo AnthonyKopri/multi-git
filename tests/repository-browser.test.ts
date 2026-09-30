@@ -9,7 +9,19 @@ describe('GitHub repository browsing', () => {
     const runner = new FakeRunner();
     runner.otherwise({ stdout: JSON.stringify([row]) });
     expect(await browseGithubRepositories('team', runner)).toEqual({ success: true, repositories: [row], limit: 100, atLimit: false });
-    expect(runner.calls[0]?.args).toEqual(['repo', 'list', 'team', '--limit', '100', '--json', 'nameWithOwner,description,url,sshUrl,isPrivate,isArchived']);
+    expect(runner.calls[0]?.args).toEqual(['repo', 'list', 'team', '--limit', '100', '--json', 'nameWithOwner,description,url,sshUrl,isPrivate,isArchived,diskUsage']);
+  });
+  it('passes the repository size through, for the time estimate when cloning', async () => {
+    const runner = new FakeRunner();
+    runner.otherwise({ stdout: JSON.stringify([{ ...row, diskUsage: 38345 }]) });
+    expect((await browseGithubRepositories('team', runner)).repositories[0]).toEqual({ ...row, diskUsage: 38345 });
+  });
+  it.each([['a string', '38345'], ['negative', -5], ['null', null], ['not finite', 'NaN']])('drops a size that is %s instead of rejecting the list', async (_label, diskUsage) => {
+    const runner = new FakeRunner();
+    runner.otherwise({ stdout: JSON.stringify([{ ...row, diskUsage }]) });
+    const [repository] = (await browseGithubRepositories('team', runner)).repositories;
+    expect(repository).toEqual(row);
+    expect(repository).not.toHaveProperty('diskUsage');
   });
   it('defaults to the signed-in owner and reports truncation', async () => {
     const runner = new FakeRunner();

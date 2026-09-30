@@ -13,7 +13,13 @@ import {
 import { buildTree, indexTree, sortedChildren } from '../src/renderer/features/explorer/file-tree';
 import { diffEntriesFor, findDiffEntry } from '../src/renderer/features/staging/file-list';
 import { pushButtonState } from '../src/renderer/features/sync/push-button';
-import { profileColor, repoBaseName, statusLabel } from '../src/renderer/ui/format';
+import {
+  formatByteCount,
+  formatRemainingTime,
+  profileColor,
+  repoBaseName,
+  statusLabel
+} from '../src/renderer/ui/format';
 import { PANE_SPECS, clampPaneSize } from '../src/renderer/ui/panes';
 import type { OriginResponse, StatusResponse } from '../src/shared/api-types';
 
@@ -277,6 +283,39 @@ describe('format helpers', () => {
     expect(repoBaseName('D:\\code\\my-repo')).toBe('my-repo');
     expect(repoBaseName('D:/code/my-repo/')).toBe('my-repo');
     expect(repoBaseName(null)).toBe('');
+  });
+});
+
+describe('formatByteCount', () => {
+  it('uses the binary units git prints, with fewer decimals as the number grows', () => {
+    expect(formatByteCount(0)).toBe('0 B');
+    expect(formatByteCount(512)).toBe('512 B');
+    expect(formatByteCount(1536)).toBe('1.50 KiB');
+    expect(formatByteCount(1024 ** 2 * 12.5)).toBe('12.5 MiB');
+    expect(formatByteCount(1024 ** 2 * 123)).toBe('123 MiB');
+    expect(formatByteCount(1024 ** 3 * 2)).toBe('2.00 GiB');
+  });
+
+  it('renders nothing for a value that is not a size', () => {
+    expect(formatByteCount(Number.NaN)).toBe('');
+    expect(formatByteCount(-1)).toBe('');
+  });
+});
+
+describe('formatRemainingTime', () => {
+  it('is coarse on purpose, because it is a guess', () => {
+    expect(formatRemainingTime(1_200)).toBe('a few seconds left');
+    expect(formatRemainingTime(12_000)).toBe('about 10s left');
+    expect(formatRemainingTime(47_000)).toBe('about 45s left');
+    expect(formatRemainingTime(58_000)).toBe('about 1 min left');
+    expect(formatRemainingTime(150_000)).toBe('about 3 min left');
+    expect(formatRemainingTime(3_600_000)).toBe('about 1 h left');
+    expect(formatRemainingTime(5_400_000 + 60_000)).toBe('about 1 h 31 min left');
+  });
+
+  it('renders nothing for a value that is not a duration', () => {
+    expect(formatRemainingTime(Number.NaN)).toBe('');
+    expect(formatRemainingTime(-5)).toBe('');
   });
 });
 

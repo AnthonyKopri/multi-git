@@ -1445,7 +1445,7 @@
             </div>
             <details id="clone-browser" class="form-card-details">
               <summary>Browse GitHub repositories</summary>
-              <div class="clone-browser-info" role="note" aria-label="Optional GitHub repository browsing">
+              <div id="clone-browser-info" class="clone-browser-info" role="note" aria-label="Optional GitHub repository browsing">
                 <span class="material-symbols-outlined" aria-hidden="true">info</span>
                 <p id="clone-gh-status" role="status" aria-live="polite">Checking GitHub CLI…</p>
                 <a id="clone-install-gh" class="btn btn-secondary btn-sm hidden" href="https://cli.github.com/" target="_blank" rel="noopener noreferrer">Install GitHub CLI</a>
@@ -1502,6 +1502,22 @@
           </section>
 
           <div class="form-actions form-dialog-actions">
+            <!-- Inside the pinned footer, so it stays in view however far the
+                 form has scrolled. Filled from the clone's operation; see
+                 features/repo/clone-progress.ts. -->
+            <div id="clone-progress" class="clone-progress hidden">
+              <div class="clone-progress-row">
+                <span id="clone-progress-stage" class="clone-progress-stage" role="status">Starting clone…</span>
+                <span id="clone-progress-percent" class="clone-progress-percent"></span>
+              </div>
+              <div id="clone-progress-track" class="clone-progress-track is-indeterminate" role="progressbar" aria-label="Clone progress" aria-valuemin="0" aria-valuemax="100">
+                <div id="clone-progress-bar" class="clone-progress-fill"></div>
+              </div>
+              <div class="clone-progress-row clone-progress-foot">
+                <span id="clone-progress-detail"></span>
+                <span id="clone-progress-remaining"></span>
+              </div>
+            </div>
             <button type="button" id="btn-cancel-clone" class="btn btn-secondary">Cancel</button>
             <button type="submit" id="btn-start-clone" class="btn btn-primary">
               <span class="material-symbols-outlined">cloud_download</span>

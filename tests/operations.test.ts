@@ -66,6 +66,39 @@ describe('the operation registry', () => {
     });
   });
 
+  it('carries transfer detail, replacing it whole on each update', () => {
+    const operations = registry();
+    const handle = operations.begin({ kind: 'git.clone' });
+
+    handle.start();
+    handle.update({
+      transfer: { fraction: 0.25, bytes: 1024, bytesPerSecond: 512, remainingMs: 9000 }
+    });
+    expect(operations.get('op-1')?.transfer).toEqual({
+      fraction: 0.25,
+      bytes: 1024,
+      bytesPerSecond: 512,
+      remainingMs: 9000
+    });
+
+    // A figure that is no longer known goes away rather than lingering stale.
+    handle.update({ transfer: { fraction: 0.3 } });
+    expect(operations.get('op-1')?.transfer).toEqual({ fraction: 0.3 });
+
+    // An update that does not mention it leaves it alone.
+    handle.update({ message: 'Resolving deltas' });
+    expect(operations.get('op-1')?.transfer).toEqual({ fraction: 0.3 });
+  });
+
+  it('uses an id the caller chose, unless it is already taken', () => {
+    const operations = registry();
+
+    expect(operations.begin({ kind: 'git.clone', id: 'chosen-by-caller' }).id).toBe('chosen-by-caller');
+    // A second operation asking for the same id must not shadow the first.
+    expect(operations.begin({ kind: 'git.clone', id: 'chosen-by-caller' }).id).toBe('op-1');
+    expect(operations.list()).toHaveLength(2);
+  });
+
   it('ignores updates after a terminal state', () => {
     const operations = registry();
     const handle = operations.begin({ kind: 'git.fetch' });
@@ -192,6 +225,25 @@ describe('subscribers', () => {
     operations.begin({ kind: 'git.fetch' });
 
     expect(operations.get('op-1')).toMatchObject({ state: 'queued' });
+  });
+
+  it('copies nested transfer detail too', () => {
+    const operations = registry();
+    operations.subscribe((operation) => {
+      if (operation.transfer) {
+        operation.transfer.fraction = 1;
+      }
+    });
+
+    const handle = operations.begin({ kind: 'git.clone' });
+    handle.update({ transfer: { fraction: 0.5 } });
+
+    expect(operations.get('op-1')?.transfer).toEqual({ fraction: 0.5 });
+    const listed = operations.list()[0];
+    if (listed?.transfer) {
+      listed.transfer.fraction = 0;
+    }
+    expect(operations.get('op-1')?.transfer).toEqual({ fraction: 0.5 });
   });
 });
 

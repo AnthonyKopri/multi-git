@@ -382,6 +382,13 @@ export const ELEMENT_MAP = {
   btnCloneBrowse: 'btn-clone-browse',
   cloneFolderNameInput: 'clone-folder-name',
   cloneProfileSelect: 'clone-profile-select',
+  cloneProgress: 'clone-progress',
+  cloneProgressStage: 'clone-progress-stage',
+  cloneProgressPercent: 'clone-progress-percent',
+  cloneProgressTrack: 'clone-progress-track',
+  cloneProgressBar: 'clone-progress-bar',
+  cloneProgressDetail: 'clone-progress-detail',
+  cloneProgressRemaining: 'clone-progress-remaining',
   btnCancelClone: 'btn-cancel-clone',
   btnStartClone: 'btn-start-clone',
 

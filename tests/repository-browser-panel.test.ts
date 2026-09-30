@@ -1,7 +1,12 @@
 // @vitest-environment happy-dom
 import fs from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { initRepositoryBrowser, refreshCloneBrowserAvailability } from '../src/renderer/features/repo/browser';
+import {
+  expectedCloneBytes,
+  initRepositoryBrowser,
+  openCloneBrowser,
+  refreshCloneBrowserAvailability
+} from '../src/renderer/features/repo/browser';
 import { api } from '../src/renderer/api/client';
 
 const repo = { nameWithOwner: 'team/repo', description: '<img src=x>', url: 'https://github.com/team/repo', sshUrl: 'git@github.com:team/repo.git', isPrivate: true, isArchived: false };
@@ -54,6 +59,197 @@ describe('clone repository browser', () => {
       await refreshCloneBrowserAvailability();
       expect(element('clone-gh-status').textContent).toContain('ready');
     } finally { window.desktopApi = previous; }
+  });
+  /** Answers each endpoint the panel talks to, so one mock can serve a whole flow. */
+  function serve(cli: { available: boolean; authenticated: boolean } | Error) {
+    return vi.spyOn(api, 'get').mockImplementation(async (url: string) => {
+      if (url === '/api/github/cli-status') {
+        if (cli instanceof Error) throw cli;
+        return cli;
+      }
+      return { repositories: [repo], atLimit: false };
+    });
+  }
+  const infoBoxHidden = () => element('clone-browser-info').classList.contains('hidden');
+  const browser = () => element<HTMLDetailsElement>('clone-browser');
+
+  it('shows the note about the GitHub CLI only while it is not installed', async () => {
+    const get = serve({ available: false, authenticated: false });
+    await refreshCloneBrowserAvailability();
+    expect(infoBoxHidden()).toBe(false);
+
+    get.mockImplementation(async () => ({ available: true, authenticated: false }));
+    await refreshCloneBrowserAvailability();
+    expect(infoBoxHidden()).toBe(true);
+
+    get.mockImplementation(async () => ({ available: true, authenticated: true }));
+    await refreshCloneBrowserAvailability();
+    expect(infoBoxHidden()).toBe(true);
+  });
+
+  it('keeps the note when the check itself failed, since that proves nothing about the CLI', async () => {
+    serve(new Error('offline'));
+    await refreshCloneBrowserAvailability();
+
+    expect(infoBoxHidden()).toBe(false);
+    expect(element('clone-gh-status').textContent).toContain('Could not check GitHub CLI');
+  });
+
+  it('brings the note back if the CLI goes away between checks', async () => {
+    const get = serve({ available: true, authenticated: true });
+    await refreshCloneBrowserAvailability();
+    expect(infoBoxHidden()).toBe(true);
+
+    get.mockImplementation(async () => ({ available: false, authenticated: false }));
+    await refreshCloneBrowserAvailability();
+    expect(infoBoxHidden()).toBe(false);
+  });
+
+  it('opens the browser and loads your own repositories when the CLI is ready', async () => {
+    const get = serve({ available: true, authenticated: true });
+    expect(browser().open).toBe(false);
+
+    await openCloneBrowser();
+    await vi.waitFor(() => expect(document.querySelector('.clone-repository')).not.toBeNull());
+
+    expect(browser().open).toBe(true);
+    // No owner typed, so gh lists the signed-in user's repositories.
+    expect(get).toHaveBeenCalledWith(
+      '/api/github/repositories',
+      expect.objectContaining({ query: { owner: '' } })
+    );
+    expect(element('clone-browser-status').textContent).toContain('1 matching repositories of 1 loaded');
+  });
+
+  it('loads for the owner already typed, the way pressing Load repositories would', async () => {
+    const get = serve({ available: true, authenticated: true });
+    element<HTMLInputElement>('clone-owner').value = 'my-org';
+
+    await openCloneBrowser();
+
+    await vi.waitFor(() =>
+      expect(get).toHaveBeenCalledWith(
+        '/api/github/repositories',
+        expect.objectContaining({ query: { owner: 'my-org' } })
+      )
+    );
+  });
+
+  it('does not open or load anything when the CLI is missing', async () => {
+    const get = serve({ available: false, authenticated: false });
+
+    await openCloneBrowser();
+
+    expect(browser().open).toBe(false);
+    expect(get).not.toHaveBeenCalledWith('/api/github/repositories', expect.anything());
+  });
+
+  it('does not open or load anything when the CLI is not signed in, and says what to do instead', async () => {
+    const get = serve({ available: true, authenticated: false });
+
+    await openCloneBrowser();
+
+    expect(browser().open).toBe(false);
+    expect(get).not.toHaveBeenCalledWith('/api/github/repositories', expect.anything());
+    // The note is gone, so this line is where the user learns why.
+    expect(infoBoxHidden()).toBe(true);
+    expect(element('clone-browser-status').textContent).toContain('gh auth login');
+    expect(element<HTMLButtonElement>('clone-load-repositories').disabled).toBe(false);
+  });
+
+  it('does not open or load anything when the check fails', async () => {
+    const get = serve(new Error('offline'));
+
+    await openCloneBrowser();
+
+    expect(browser().open).toBe(false);
+    expect(get).not.toHaveBeenCalledWith('/api/github/repositories', expect.anything());
+  });
+
+  it('leaves what the user typed alone when it loads', async () => {
+    serve({ available: true, authenticated: true });
+    element<HTMLInputElement>('clone-url').value = 'https://example.com/team/repo.git';
+
+    await openCloneBrowser();
+    await vi.waitFor(() => expect(document.querySelector('.clone-repository')).not.toBeNull());
+
+    expect(element<HTMLInputElement>('clone-url').value).toBe('https://example.com/team/repo.git');
+  });
+
+  it('does not start a second load while one is already running', async () => {
+    let finish!: (value: unknown) => void;
+    const get = vi.spyOn(api, 'get').mockImplementation((url: string) => {
+      if (url === '/api/github/cli-status') return Promise.resolve({ available: true, authenticated: true });
+      return new Promise((resolve) => { finish = resolve; });
+    });
+
+    await openCloneBrowser();
+    await openCloneBrowser();
+
+    expect(get.mock.calls.filter(([url]) => url === '/api/github/repositories')).toHaveLength(1);
+    finish({ repositories: [repo], atLimit: false });
+  });
+
+  it('browses as soon as Check again finds the CLI, which is what the user installed it for', async () => {
+    const get = serve({ available: false, authenticated: false });
+    await refreshCloneBrowserAvailability();
+    expect(browser().open).toBe(false);
+
+    get.mockImplementation(async (url: string) =>
+      url === '/api/github/cli-status'
+        ? { available: true, authenticated: true }
+        : { repositories: [repo], atLimit: false }
+    );
+    element('clone-check-gh').click();
+
+    await vi.waitFor(() => expect(document.querySelector('.clone-repository')).not.toBeNull());
+    expect(browser().open).toBe(true);
+    expect(infoBoxHidden()).toBe(true);
+  });
+
+  describe('the expected download size', () => {
+    const sized = { ...repo, diskUsage: 38345 };
+
+    async function load(repositories: unknown[]) {
+      vi.spyOn(api, 'get').mockResolvedValue({ repositories, atLimit: false });
+      element('clone-load-repositories').click();
+      await vi.waitFor(() => expect(document.querySelector('.clone-repository')).not.toBeNull());
+    }
+
+    it('is GitHub\'s size for a repository that was loaded, in bytes', async () => {
+      await load([sized]);
+
+      expect(expectedCloneBytes(sized.sshUrl)).toBe(38345 * 1024);
+      expect(expectedCloneBytes(`${sized.url}.git`)).toBe(38345 * 1024);
+      expect(expectedCloneBytes(sized.url)).toBe(38345 * 1024);
+    });
+
+    it('matches however the URL was typed', async () => {
+      await load([sized]);
+
+      expect(expectedCloneBytes(`  ${sized.url.toUpperCase()}.git/  `)).toBe(38345 * 1024);
+    });
+
+    it('is nothing for a URL that is not one of them, since it may be another repository', async () => {
+      await load([sized]);
+
+      expect(expectedCloneBytes('https://github.com/team/other.git')).toBeUndefined();
+      expect(expectedCloneBytes('')).toBeUndefined();
+    });
+
+    it('is nothing when GitHub gave no size, or a size of nothing', async () => {
+      await load([repo, { ...repo, url: 'https://github.com/team/empty', sshUrl: 'git@github.com:team/empty.git', diskUsage: 0 }]);
+
+      expect(expectedCloneBytes(repo.sshUrl)).toBeUndefined();
+      expect(expectedCloneBytes('git@github.com:team/empty.git')).toBeUndefined();
+    });
+
+    it('is forgotten when the list is cleared for another owner', async () => {
+      await load([sized]);
+      element('clone-owner').dispatchEvent(new Event('input'));
+
+      expect(expectedCloneBytes(sized.sshUrl)).toBeUndefined();
+    });
   });
   it('filters safely and selects either protocol without cloning', async () => {
     vi.spyOn(api, 'get').mockResolvedValue({ repositories: [repo], atLimit: false });

@@ -11,7 +11,11 @@
 import { randomUUID } from 'node:crypto';
 
 import { isTerminalOperationState } from '../../shared/operation-types';
-import type { OperationProgress, OperationState } from '../../shared/operation-types';
+import type {
+  OperationProgress,
+  OperationState,
+  TransferProgress
+} from '../../shared/operation-types';
 
 /**
  * How long a finished operation stays listed.
@@ -25,6 +29,12 @@ export const COMPLETED_RETENTION_MS = 60_000;
 export const MAX_COMPLETED_RETAINED = 50;
 
 export interface OperationDescriptor {
+  /**
+   * An id the caller chose, so it can recognise its own operation on the event
+   * stream before the request that started it has answered. Ignored when it is
+   * already in use, in which case the registry picks one as usual.
+   */
+  id?: string;
   kind: string;
   repoPath?: string;
   message?: string;
@@ -38,6 +48,8 @@ export interface OperationUpdate {
   message?: string;
   completed?: number;
   total?: number;
+  /** Replaces the previous transfer detail whole, so a figure that has stopped being known goes away. */
+  transfer?: TransferProgress;
 }
 
 export interface OperationHandle {
@@ -60,6 +72,13 @@ interface Entry {
   finishedAt: number | null;
 }
 
+/** A copy the holder can do what it likes with, nested detail included. */
+function copyOf(progress: OperationProgress): OperationProgress {
+  return progress.transfer
+    ? { ...progress, transfer: { ...progress.transfer } }
+    : { ...progress };
+}
+
 export class OperationRegistry {
   private readonly entries = new Map<string, Entry>();
   private readonly listeners = new Set<Listener>();
@@ -74,7 +93,10 @@ export class OperationRegistry {
   begin(descriptor: OperationDescriptor): OperationHandle {
     this.prune();
 
-    const id = this.newId();
+    const id =
+      descriptor.id !== undefined && !this.entries.has(descriptor.id)
+        ? descriptor.id
+        : this.newId();
     const controller = new AbortController();
 
     const progress: OperationProgress = {
@@ -131,6 +153,9 @@ export class OperationRegistry {
         }
         if (patch.total !== undefined) {
           entry.progress.total = patch.total;
+        }
+        if (patch.transfer !== undefined) {
+          entry.progress.transfer = patch.transfer;
         }
         this.publish(entry);
       },
@@ -195,12 +220,12 @@ export class OperationRegistry {
   /** Every operation currently tracked, oldest first. */
   list(): OperationProgress[] {
     this.prune();
-    return [...this.entries.values()].map((entry) => ({ ...entry.progress }));
+    return [...this.entries.values()].map((entry) => copyOf(entry.progress));
   }
 
   get(id: string): OperationProgress | null {
     const entry = this.entries.get(id);
-    return entry ? { ...entry.progress } : null;
+    return entry ? copyOf(entry.progress) : null;
   }
 
   /** Subscribes to every state change. Returns a disposer. */
@@ -224,7 +249,7 @@ export class OperationRegistry {
   }
 
   private publish(entry: Entry): void {
-    const snapshot = { ...entry.progress };
+    const snapshot = copyOf(entry.progress);
 
     for (const listener of this.listeners) {
       // One broken subscriber — a closed SSE response, say — must not stop

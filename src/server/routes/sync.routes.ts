@@ -4,13 +4,15 @@ import { Router } from 'express';
 
 import { refArg } from '../git/args';
 import { withRepoLock } from '../git/lock';
-import { buildSshCommand, runGitCommand } from '../git/run';
+import { GitError, buildSshCommand, runGitCommand } from '../git/run';
 import type { GitCommandOptions } from '../git/run';
 import { getToggledRemoteUrl, isLikelyHttpRemote, parseRemoteUrl } from '../git/remote';
 import { updateRemote } from '../git/remotes';
 import { getOriginRemoteUrl, runSyncOperationWithProfile } from '../ssh/profiles';
 import { createAskpassBridge } from '../ssh/askpass';
 import { readConfig } from '../config/store';
+import { operations } from '../operations/registry';
+import { CloneProgressTracker, withoutGitProgress } from '../../shared/git-progress';
 import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/vault';
 import { requireRepoPath } from '../middleware/repo-path';
 import { ensureAgentForRepo } from '../ssh/agent-session';
@@ -208,10 +210,40 @@ function deriveRepoNameFromUrl(url: string): string {
   return safe || 'repository';
 }
 
+/**
+ * The id a caller may choose for the operation that tracks its clone.
+ *
+ * Only so that the renderer can find its own clone on the event stream while the
+ * request is still open. Anything that does not look like an id is dropped, and
+ * the registry picks one instead.
+ */
+function requestedOperationId(value: unknown): string | undefined {
+  return typeof value === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(value) ? value : undefined;
+}
+
+/**
+ * How large the caller says the download will be, if that is believable.
+ *
+ * Only ever used to improve the time estimate, so a value that makes no sense
+ * is ignored rather than rejected: the clone is not worth failing over it.
+ */
+function requestedExpectedBytes(value: unknown): number | undefined {
+  const ONE_TIB = 1024 ** 4;
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1024 && value <= ONE_TIB
+    ? value
+    : undefined;
+}
+
+/** How often a running clone's time estimate is worked out again. */
+const PROGRESS_REFRESH_MS = 1000;
+
 cloneRouter.post(
   '/api/git/clone',
   asyncRoute(async (req, res) => {
-    const { url, parentDir, folderName, profileId } = (req.body ?? {}) as Record<string, unknown>;
+    const { url, parentDir, folderName, profileId, operationId, expectedBytes } = (req.body ?? {}) as Record<
+      string,
+      unknown
+    >;
 
     const cloneUrl = typeof url === 'string' ? url.trim() : '';
     if (!cloneUrl) {
@@ -266,13 +298,44 @@ cloneRouter.post(
     }
 
     let bridge: ReturnType<typeof createAskpassBridge> | null = null;
+    let refresher: NodeJS.Timeout | null = null;
+    // Tracked so the renderer can draw progress and the operations bar can show
+    // it. Not cancellable: a killed clone leaves a half-written folder behind
+    // that git would have cleaned up itself, and the next attempt would then be
+    // refused for cloning into a folder that is not empty.
+    const requestedId = requestedOperationId(operationId);
+    const operation = operations.begin({
+      ...(requestedId ? { id: requestedId } : {}),
+      kind: 'git.clone',
+      repoPath: destPath,
+      message: `Cloning ${safeFolder}`,
+      cancellable: false
+    });
+    operation.start();
+
     try {
       // "--" before the URL: a clone URL beginning with "-" would otherwise
-      // be read as an option.
-      const gitArgs = ['clone', '--', cloneUrl, destPath];
-      // Cloning a large repository over a slow link can legitimately take
-      // much longer than an ordinary command.
-      const options: GitCommandOptions = { timeoutMs: 30 * 60 * 1000 };
+      // be read as an option. --progress because git only reports progress to a
+      // terminal, and stderr here is a pipe.
+      const gitArgs = ['clone', '--progress', '--', cloneUrl, destPath];
+      const requestedBytes = requestedExpectedBytes(expectedBytes);
+      const tracker = new CloneProgressTracker({
+        ...(requestedBytes !== undefined ? { expectedBytes: requestedBytes } : {})
+      });
+      const options: GitCommandOptions = {
+        // Cloning a large repository over a slow link can legitimately take
+        // much longer than an ordinary command.
+        timeoutMs: 30 * 60 * 1000,
+        // English, because the progress lines are read by their wording and a
+        // localised git would print them in another language.
+        envOverrides: { LC_ALL: 'C', LANG: 'C' },
+        onStderr: (text) => {
+          const snapshot = tracker.push(text);
+          if (snapshot) {
+            operation.update(snapshot);
+          }
+        }
+      };
 
       if (selectedProfile) {
         options.customSshCommand = buildSshCommand(selectedProfile.privateKeyPath);
@@ -280,20 +343,49 @@ cloneRouter.post(
         const storedPassphrase = isUnlocked() ? getStoredPassphrase(selectedProfile.id) : null;
         if (storedPassphrase) {
           bridge = createAskpassBridge(storedPassphrase);
-          options.envOverrides = bridge.envOverrides;
+          options.envOverrides = { ...options.envOverrides, ...bridge.envOverrides };
         }
       }
 
+      // Git only writes a progress line when an object arrives, so a stalled
+      // connection goes silent. Re-reading the estimate on a timer is what lets
+      // it lengthen then, instead of sitting on the last figure it was given.
+      refresher = setInterval(() => {
+        const snapshot = tracker.refresh();
+        if (snapshot) {
+          operation.update(snapshot);
+        }
+      }, PROGRESS_REFRESH_MS);
+      refresher.unref();
+
       const { stdout, stderr } = await runGitCommand(resolvedParent, gitArgs, null, options);
+
+      operation.succeed(`Cloned ${safeFolder}`);
 
       res.json({
         success: true,
         stdout,
-        stderr,
+        stderr: withoutGitProgress(stderr),
         repoPath: destPath,
         profileLabel: selectedProfile?.label ?? null
       });
+    } catch (error) {
+      operation.fail(error instanceof Error ? error.message : 'Clone failed');
+      // The message a failed clone shows is git's stderr, and with progress on
+      // that is thousands of redraws around the one line that says what went
+      // wrong. Same tidying as a success gets.
+      throw error instanceof GitError
+        ? new GitError(error.message, {
+            stdout: error.stdout,
+            stderr: withoutGitProgress(error.stderr),
+            exitCode: error.exitCode,
+            statusCode: error.statusCode
+          })
+        : error;
     } finally {
+      if (refresher) {
+        clearInterval(refresher);
+      }
       bridge?.cleanup();
     }
   })

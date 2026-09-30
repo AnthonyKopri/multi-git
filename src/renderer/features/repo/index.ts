@@ -1,6 +1,7 @@
 // Opening, remembering, and cloning repositories.
 import * as api from '../../api/endpoints';
 import { ApiError, errorMessage, isStale, setActiveRepo } from '../../api/client';
+import { subscribeToOperations } from '../../api/operations';
 import { asInput, asSelect } from '../../dom/elements';
 import type { Elements } from '../../dom/elements';
 import { setHidden } from '../../dom/create';
@@ -11,7 +12,8 @@ import { logToTerminal } from '../../ui/log';
 import { closeAllDropdowns } from '../../ui/dropdown';
 import { withButtonBusy } from '../../ui/busy';
 import { renderRecentRepos } from './repo-list';
-import { initRepositoryBrowser, refreshCloneBrowserAvailability } from './browser';
+import { expectedCloneBytes, initRepositoryBrowser, openCloneBrowser } from './browser';
+import { hideCloneProgress, newCloneOperationId, renderCloneProgress } from './clone-progress';
 import { applyConfigSnapshot, loadConfig, renderAccounts, restoreProfileForRepo } from '../accounts';
 import { refreshIdentity } from '../accounts/identity';
 import { ensureKeyUsable } from '../accounts/unlock';
@@ -229,7 +231,9 @@ function setCloneFeedback(message: string, type: 'info' | 'error' | 'success' = 
 
 export function openCloneModal(): void {
   closeAllDropdowns();
-  void refreshCloneBrowserAvailability();
+  // Checks for the GitHub CLI and, when it is signed in, opens the list of the
+  // user's repositories so there is nothing to expand or load by hand.
+  void openCloneBrowser();
 
   const select = asSelect(ui.cloneProfileSelect);
   select.replaceChildren();
@@ -273,13 +277,28 @@ export async function startClone(): Promise<void> {
     return;
   }
 
-  setCloneFeedback('Cloning… this can take a while for large repositories.', 'info');
+  setCloneFeedback('');
+
+  // The clone request only answers when the clone is over, so progress arrives
+  // on the operations stream instead. The id is chosen here so this dialog draws
+  // its own clone and not one that another window happens to be running.
+  const operationId = newCloneOperationId();
+  const expectedBytes = expectedCloneBytes(url);
+  renderCloneProgress(ui, null);
+  const stopWatching = subscribeToOperations((operations) => {
+    const operation = operations.find((candidate) => candidate.id === operationId);
+    if (operation) {
+      renderCloneProgress(ui, operation);
+    }
+  });
 
   await withButtonBusy(ui.btnStartClone, async () => {
     try {
       const data = await api.clone({
         url,
         parentDir,
+        operationId,
+        ...(expectedBytes !== undefined ? { expectedBytes } : {}),
         ...(folderName ? { folderName } : {}),
         ...(profileId ? { profileId } : {})
       });
@@ -305,6 +324,9 @@ export async function startClone(): Promise<void> {
       logToTerminal(message, 'error');
       setCloneFeedback(message, 'error');
       showToast('Clone failed.', 'error');
+    } finally {
+      stopWatching();
+      hideCloneProgress(ui);
     }
   });
 }

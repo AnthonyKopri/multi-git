@@ -70,6 +70,15 @@ export interface RunOptions {
    * every invalid sequence replaced, which is not the file any more.
    */
   binaryStdout?: boolean | undefined;
+  /**
+   * Called with each piece of stderr as it arrives, already decoded.
+   *
+   * For work that reports progress while it runs, as `git clone --progress`
+   * does. The full text is still returned at the end; this only lets a caller
+   * watch it go by. A listener that throws is ignored, since it is a sink and
+   * the process is running either way.
+   */
+  onStderr?: ((text: string) => void) | undefined;
 }
 
 export interface RunResult {
@@ -98,7 +107,10 @@ class OutputCollector {
   private bytes = 0;
   private capped = false;
 
-  constructor(private readonly maxBytes: number) {}
+  constructor(
+    private readonly maxBytes: number,
+    private readonly onText?: (text: string) => void
+  ) {}
 
   push(chunk: Buffer): void {
     if (this.capped) {
@@ -112,7 +124,16 @@ class OutputCollector {
       return;
     }
 
-    this.parts.push(this.decoder.write(chunk));
+    const text = this.decoder.write(chunk);
+    this.parts.push(text);
+
+    if (this.onText && text !== '') {
+      try {
+        this.onText(text);
+      } catch {
+        // Ignored deliberately: see `onStderr`.
+      }
+    }
   }
 
   get truncated(): boolean {
@@ -159,7 +180,7 @@ export function runProcess(
     const child = spawn(command, [...args], spawnOptions);
 
     const out = new OutputCollector(maxOutputBytes);
-    const err = new OutputCollector(maxOutputBytes);
+    const err = new OutputCollector(maxOutputBytes, options.onStderr);
     const rawChunks: Buffer[] = [];
     let rawBytes = 0;
     let timedOut = false;
