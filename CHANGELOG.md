@@ -12,6 +12,8 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.2.2] - 2026-09-30
+
 ### Added
 
 - **Cloning shows its progress.** The Clone dialog has a progress bar that
@@ -1047,7 +1049,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.1...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.2...HEAD
+[5.2.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.1...Release_v5.2.2
 [5.2.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.0...Release_v5.2.1
 [5.2.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.4...Release_v5.2.0
 [5.1.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.1.3...Release_v5.1.4
