@@ -63,9 +63,9 @@
     "esbuild": "^0.28.2",
     "happy-dom": "^20.14.5",
     "resedit": "^3.1.0",
-    "supertest": "^7.0.0",
+    "supertest": "^7.3.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.2"
   },
   "build": {
     "appId": "com.multigit.client",
