@@ -12,6 +12,21 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **Updating from the in-app popup no longer fails with "Failed to uninstall
+  old application files".** The background service that Multi-Git runs from its
+  install folder was meant to exit as soon as the app quit for an update, but
+  each open window's live event stream made it look busy, so it kept running
+  for another minute with `app.asar` open. The installer could not move that
+  file, and stopped with error code 2. Open windows no longer count as work in
+  progress; a running operation or another Multi-Git session still keeps the
+  service alive, as before. The service that has to step aside is the one
+  being replaced, so this helps from the update after this one: updating to
+  this version from 5.2.2 or earlier can still stop with that message, and
+  downloading the installer from the release page and running it with
+  Multi-Git closed works around it.
+
 ## [5.2.2] - 2026-09-30
 
 ### Added

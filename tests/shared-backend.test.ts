@@ -132,6 +132,33 @@ describe('shared backend', () => {
     expect(fs.existsSync(path.join(runtimeDir, 'owner.json'))).toBe(false);
   }, 30_000);
 
+  it('leaves at once even while a window still has its event stream open', async () => {
+    // The desktop app releases its lease from `before-quit`, when its windows
+    // are still open and each one is holding /api/operations/stream. A stream is
+    // a subscription, not work in flight; counting it kept the backend alive for
+    // a minute after the app was gone, holding the installed files an update
+    // installer was trying to replace.
+    const connection = await connectBackend({ entry });
+    const { pid, origin } = readBackendRecord()!;
+
+    const controller = new AbortController();
+    const stream = await fetch(`${origin}/api/operations/stream`, {
+      headers: { accept: 'text/event-stream' },
+      signal: controller.signal
+    });
+    expect(stream.headers.get('content-type')).toContain('text/event-stream');
+    // Reading the first event proves the response is open and being served.
+    await stream.body!.getReader().read();
+
+    await connection.close({ exitIfIdle: true });
+    try {
+      await waitFor(() => !isAlive(pid), 5_000);
+    } finally {
+      controller.abort();
+    }
+    expect(fs.existsSync(recordPath())).toBe(false);
+  }, 30_000);
+
   it('refuses a client without the token', async () => {
     const connection = await connectBackend({ entry });
     const reply = await new Promise<string>((resolve, reject) => {
