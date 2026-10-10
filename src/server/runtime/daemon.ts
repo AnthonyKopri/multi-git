@@ -133,16 +133,35 @@ export async function runDaemon(): Promise<void> {
   const leases = new Map<string, number>();
   let lastActive = Date.now();
   let requests = 0;
+  /**
+   * Event streams open right now. Every window holds the operations stream for
+   * as long as it is open, so they are a subscription, not work in flight: counted as requests
+   * they made the backend look busy until the last window closed, which is
+   * after the desktop app has released its lease and quit. `exitIfIdle` then
+   * did nothing, and the backend lingered for the idle minute holding the
+   * installed app.asar open -- the file an update installer moves first.
+   */
+  let streams = 0;
   let controlRequests = 0;
   let closing = false;
   let shutdownScheduled = false;
 
   const app = createApp();
   const http = createServer((req, res) => {
-    requests++;
+    // EventSource, the only client of these streams, always sends this.
+    const stream = (req.headers['accept'] ?? '').includes('text/event-stream');
+    if (stream) {
+      streams++;
+    } else {
+      requests++;
+    }
     lastActive = Date.now();
     res.once('close', () => {
-      requests--;
+      if (stream) {
+        streams--;
+      } else {
+        requests--;
+      }
       lastActive = Date.now();
     });
     app(req, res);
@@ -301,7 +320,9 @@ export async function runDaemon(): Promise<void> {
     }
     if (stopRequested && operationsIdle()) {
       void shutdown();
-    } else if (leases.size > 0 || controlRequests > 0 || busy()) {
+    } else if (leases.size > 0 || controlRequests > 0 || streams > 0 || busy()) {
+      // An open page still keeps the backend up on the idle timer. It just no
+      // longer stops a client that has finished from ending it at once.
       lastActive = now;
     } else if (now - lastActive >= IDLE_EXIT_MS) {
       void shutdown();
