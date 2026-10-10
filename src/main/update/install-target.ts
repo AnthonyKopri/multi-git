@@ -140,12 +140,18 @@ export interface InstallCommand {
  *
  * `/S` runs the NSIS installer silently, reusing the install directory it
  * recorded; `--force-run` is the flag electron-builder's generated script reads
- * to relaunch the app afterwards. The portable exe is simply started, and so
- * is an AppImage, which by then has already replaced the one running.
+ * to relaunch the app afterwards. `--updated` tells that script this is an
+ * update rather than a fresh install, as electron-builder's own updater does:
+ * without it the script kills the app at once instead of giving it a moment to
+ * finish quitting, and, because the install directory can be chosen, deletes
+ * and recreates the shortcuts, which unpins the app from the taskbar. The
+ * relaunched app is passed `--updated` too, and reads no arguments. The
+ * portable exe is simply started, and so is an AppImage, which by then has
+ * already replaced the one running.
  */
 export function installCommand(kind: InstallKind, filePath: string): InstallCommand {
   if (kind === 'installer') {
-    return { file: filePath, args: ['/S', '--force-run'] };
+    return { file: filePath, args: ['/S', '--updated', '--force-run'] };
   }
   if (kind === 'portable' || kind === 'appimage') {
     return { file: filePath, args: [] };

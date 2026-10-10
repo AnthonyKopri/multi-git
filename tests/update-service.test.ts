@@ -303,7 +303,7 @@ describe('installing', () => {
     expect(h.spawned).toEqual([
       {
         file: path.join('C:\\Temp', 'multi-git-update', 'Multi-Git-Client-Setup-3.2.0.exe'),
-        args: ['/S', '--force-run']
+        args: ['/S', '--updated', '--force-run']
       }
     ]);
     expect(h.quits).toBe(1);

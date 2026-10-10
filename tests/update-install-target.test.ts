@@ -131,10 +131,10 @@ describe('detecting how a Linux copy was installed', () => {
 });
 
 describe('starting the downloaded file', () => {
-  it('runs the NSIS installer silently and asks it to relaunch the app', () => {
+  it('runs the NSIS installer silently, as an update, and asks it to relaunch the app', () => {
     expect(installCommand('installer', 'C:\\tmp\\Setup.exe')).toEqual({
       file: 'C:\\tmp\\Setup.exe',
-      args: ['/S', '--force-run']
+      args: ['/S', '--updated', '--force-run']
     });
   });
 
