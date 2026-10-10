@@ -26,6 +26,13 @@ or Security. Remove empty headings when preparing a release.
   this version from 5.2.2 or earlier can still stop with that message, and
   downloading the installer from the release page and running it with
   Multi-Git closed works around it.
+- **Updating from the popup keeps your shortcuts.** The installer was started
+  as if for a fresh install, so it deleted and recreated the desktop and Start
+  menu shortcuts, which unpinned Multi-Git from the taskbar, and it closed the
+  app at once instead of letting it finish quitting. It is now told that it is
+  an update, as electron-builder's own updater does. This takes effect from the
+  update after this one, since the version doing the updating is the one that
+  starts the installer.
 
 ## [5.2.2] - 2026-09-30
 
