@@ -330,8 +330,9 @@ cloneRouter.post(
         // localised git would print them in another language.
         envOverrides: { LC_ALL: 'C', LANG: 'C' },
         onStderr: (text) => {
-          const snapshot = tracker.push(text);
-          if (snapshot) {
+          // In order, so the end of one phase is published before the start of
+          // the next when a chunk holds both.
+          for (const snapshot of tracker.push(text)) {
             operation.update(snapshot);
           }
         }
