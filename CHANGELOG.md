@@ -12,7 +12,7 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
-## [5.2.3] - 2026-10-10
+## [5.2.3] - 2026-10-13
 
 ### Fixed
 
@@ -35,6 +35,18 @@ or Security. Remove empty headings when preparing a release.
   an update, as electron-builder's own updater does. This takes effect from the
   update after this one, since the version doing the updating is the one that
   starts the installer.
+
+### Security
+
+- **Electron is updated to 44.4.5**, which carries the security fixes
+  backported from Chromium, V8, ANGLE, Dawn and PDFium since 44.3.0.
+- **Dependencies with published advisories are updated.** `proxy-addr`, which
+  the app's local server uses through Express, is now 2.0.8. Multi-Git does not
+  trust proxy headers, so the address-spoofing advisory against 2.0.7 did not
+  apply, but the patched version is the one that ships. The build and test
+  tooling is updated as well: `undici`, `brace-expansion`, `source-map-js`,
+  `http-cache-semantics` and `fast-uri`, none of which are part of the
+  installed app.
 
 ## [5.2.2] - 2026-09-30
 
