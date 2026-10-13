@@ -272,24 +272,42 @@ export class CloneProgressTracker {
   }
 
   /**
-   * Returns the latest snapshot the chunk produced, or null when it held no
-   * progress line or nothing had moved enough to be worth publishing.
+   * Returns the snapshots the chunk produced that are worth publishing, oldest
+   * first, to be applied in that order. Empty when it held no progress line or
+   * nothing had moved enough.
+   *
+   * Usually there is at most one: the latest line of the phase git is in, since
+   * the redraws before it in the same chunk are already out of date. The
+   * exception is a chunk that holds the end of one phase and the start of the
+   * next, as a quick local clone's often does when receiving finishes and
+   * resolving begins straight away. The last line of the phase that ended is
+   * offered too, ahead of the newer one, so the finish of a phase is not lost
+   * behind the first line of the next.
    */
-  push(chunk: string): CloneProgressSnapshot | null {
+  push(chunk: string): CloneProgressSnapshot[] {
     const segments = (this.pending + chunk).split(/[\r\n]/);
     // The last piece has no terminator yet. Carried over so a line cut in the
     // middle is read whole rather than as two fragments neither of which parses.
     this.pending = segments.pop() ?? '';
 
+    const published: CloneProgressSnapshot[] = [];
     let latest: CloneProgressSnapshot | null = null;
     for (const segment of segments) {
       const line = parseGitProgress(segment);
-      if (line) {
-        latest = this.observe(line);
+      if (!line) {
+        continue;
       }
+      const snapshot = this.observe(line);
+      if (latest && latest.stage !== snapshot.stage && this.worthPublishing(latest)) {
+        published.push(latest);
+      }
+      latest = snapshot;
     }
 
-    return latest && this.worthPublishing(latest) ? latest : null;
+    if (latest && this.worthPublishing(latest)) {
+      published.push(latest);
+    }
+    return published;
   }
 
   /**

@@ -108,13 +108,16 @@ function harness(options: CloneProgressTrackerOptions = {}) {
   return {
     clock,
     tracker,
-    /** Moves the clock to `seconds` and feeds a receiving line: `mib` received, `done` of `total` objects. */
+    /**
+     * Moves the clock to `seconds` and feeds a receiving line: `mib` received,
+     * `done` of `total` objects. Returns what was published for it, if anything.
+     */
     receive(seconds: number, mib: number, done: number, total = 1000) {
       clock.now = seconds * 1000;
       const percent = Math.floor((done / total) * 100);
-      return tracker.push(
-        `Receiving objects: ${percent}% (${done}/${total}), ${mib.toFixed(2)} MiB | 1.00 MiB/s\r`
-      );
+      return tracker
+        .push(`Receiving objects: ${percent}% (${done}/${total}), ${mib.toFixed(2)} MiB | 1.00 MiB/s\r`)
+        .at(-1);
     }
   };
 }
@@ -123,36 +126,34 @@ describe('CloneProgressTracker', () => {
   it('reads lines split across chunks', () => {
     const { tracker } = harness();
 
-    expect(tracker.push('Receiving objects:  4')).toBeNull();
-    expect(tracker.push('5% (555/1234), 1.2 MiB | 2.5 MiB/s\r')).toMatchObject({
-      message: 'Receiving objects',
-      completed: 555,
-      total: 1234
-    });
+    expect(tracker.push('Receiving objects:  4')).toEqual([]);
+    expect(tracker.push('5% (555/1234), 1.2 MiB | 2.5 MiB/s\r')).toMatchObject([
+      { message: 'Receiving objects', completed: 555, total: 1234 }
+    ]);
   });
 
   it('reports the latest line when a chunk carries several', () => {
     const { tracker } = harness();
 
-    const snapshot = tracker.push(
+    const published = tracker.push(
       'Receiving objects:  10% (10/100)\rReceiving objects:  20% (20/100)\rReceiving objects:  30% (30/100)\r'
     );
 
-    expect(snapshot).toMatchObject({ completed: 30, total: 100 });
+    expect(published).toMatchObject([{ completed: 30, total: 100 }]);
   });
 
   it('ignores output that is not progress', () => {
     const { tracker } = harness();
 
-    expect(tracker.push("Cloning into 'repo'...\nremote: Enumerating objects: 24, done.\n")).toBeNull();
+    expect(tracker.push("Cloning into 'repo'...\nremote: Enumerating objects: 24, done.\n")).toEqual([]);
   });
 
   it('never lets the bar go backwards when a later phase starts from zero', () => {
     const { clock, tracker } = harness();
 
-    const receiving = tracker.push('Receiving objects: 100% (10/10), done.\n');
+    const [receiving] = tracker.push('Receiving objects: 100% (10/10), done.\n');
     clock.now += 1000;
-    const resolving = tracker.push('Resolving deltas:   0% (0/5)\r');
+    const [resolving] = tracker.push('Resolving deltas:   0% (0/5)\r');
 
     expect(resolving?.transfer.fraction).toBeGreaterThanOrEqual(receiving?.transfer.fraction ?? 1);
   });
@@ -161,11 +162,40 @@ describe('CloneProgressTracker', () => {
     it('holds back updates that arrive faster than they can be read, but not the end of a phase', () => {
       const { clock, tracker } = harness();
 
-      expect(tracker.push('Receiving objects:  10% (100/1000)\r')).not.toBeNull();
+      expect(tracker.push('Receiving objects:  10% (100/1000)\r')).toHaveLength(1);
       clock.now = 10;
-      expect(tracker.push('Receiving objects:  10% (101/1000)\r')).toBeNull();
+      expect(tracker.push('Receiving objects:  10% (101/1000)\r')).toEqual([]);
       clock.now = 20;
-      expect(tracker.push('Receiving objects: 100% (1000/1000), done.\n')).not.toBeNull();
+      expect(tracker.push('Receiving objects: 100% (1000/1000), done.\n')).toHaveLength(1);
+    });
+
+    it('sends the end of a phase when the next one starts in the same chunk', () => {
+      const { tracker } = harness({ expectedBytes: 50 * MIB });
+
+      // A quick local clone: the pack is in, and deltas are resolving before
+      // anything has read the pipe.
+      const published = tracker.push(
+        'Receiving objects: 100% (24/24), 161.99 KiB | 1.47 MiB/s, done.\nResolving deltas:  50% (3/6)\r'
+      );
+
+      expect(published).toMatchObject([
+        { message: 'Receiving objects', completed: 24, total: 24, transfer: { expectedBytes: 50 * MIB } },
+        { message: 'Resolving deltas', completed: 3, total: 6 }
+      ]);
+    });
+
+    it('sends only the last line of the phase that ended, not each redraw of it', () => {
+      const { tracker } = harness();
+
+      // Git draws 100% once when the count gets there and again when it says done.
+      const published = tracker.push(
+        'Receiving objects: 100% (24/24)\rReceiving objects: 100% (24/24), done.\nResolving deltas:  50% (3/6)\r'
+      );
+
+      expect(published.map((snapshot) => snapshot.message)).toEqual([
+        'Receiving objects',
+        'Resolving deltas'
+      ]);
     });
 
     it('passes a step the bar visibly moved by, however soon it comes', () => {
@@ -174,7 +204,7 @@ describe('CloneProgressTracker', () => {
       tracker.push('Receiving objects:  10% (100/1000)\r');
       clock.now = 10;
 
-      expect(tracker.push('Receiving objects:  20% (200/1000)\r')).not.toBeNull();
+      expect(tracker.push('Receiving objects:  20% (200/1000)\r')).toHaveLength(1);
     });
 
     it('still learns the pace from lines it does not publish', () => {
@@ -187,7 +217,7 @@ describe('CloneProgressTracker', () => {
         tracker.push(`Receiving objects:  1% (10/1000), ${1 + index * 0.001} MiB | 1.00 MiB/s\r`);
       }
       clock.now = 10_000;
-      const snapshot = tracker.push('Receiving objects:  2% (20/1000), 11.00 MiB | 1.00 MiB/s\r');
+      const [snapshot] = tracker.push('Receiving objects:  2% (20/1000), 11.00 MiB | 1.00 MiB/s\r');
 
       expect(snapshot?.transfer.remainingMs).toBeDefined();
     });
@@ -325,7 +355,7 @@ describe('CloneProgressTracker', () => {
 
       const lineAt = (seconds: number, done: number) => {
         clock.now = seconds * 1000;
-        return tracker.push(`Resolving deltas: ${Math.floor(done / 10)}% (${done}/1000)\r`);
+        return tracker.push(`Resolving deltas: ${Math.floor(done / 10)}% (${done}/1000)\r`).at(-1);
       };
 
       lineAt(0, 100);
@@ -344,7 +374,7 @@ describe('CloneProgressTracker', () => {
       for (let second = 1; second <= 10; second += 1) receive(second, 1 + second, 10 + second);
       receive(11, 90, 1000);
       clock.now = 11_500;
-      const snapshot = tracker.push('Resolving deltas:  50% (50/100)\r');
+      const [snapshot] = tracker.push('Resolving deltas:  50% (50/100)\r');
 
       // Half a second into a new phase is too early to say, however long the
       // download before it took.
