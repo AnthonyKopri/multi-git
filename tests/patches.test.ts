@@ -214,6 +214,30 @@ describe('applying a patch', () => {
     expect(listCheckpoints(repo)).toEqual([]);
   });
 
+  it('accepts a patch larger than the default body limit', async () => {
+    const repo = createRepoWithHistory();
+    // About 2.5mb of patch, over the 1mb every other route is held to. Written
+    // out by hand: `git diff` would overflow the test helper's output buffer.
+    const lines = Array.from({ length: 50_000 }, (_, index) => `+line ${index} of a patch larger than the default limit`);
+    const patch = [
+      'diff --git a/large.txt b/large.txt',
+      'new file mode 100644',
+      '--- /dev/null',
+      '+++ b/large.txt',
+      `@@ -0,0 +1,${lines.length} @@`,
+      ...lines,
+      ''
+    ].join('\n');
+    expect(patch.length).toBeGreaterThan(1024 * 1024);
+
+    const response = await api(repo)
+      .post('/api/patches/apply')
+      .send({ patch, mode: 'working', dryRun: true })
+      .expect(200);
+
+    expect(response.body.outcome.dryRun).toBe(true);
+  });
+
   it('applies for real, and captures a recovery point first', async () => {
     const repo = createRepoWithHistory();
     const patch = readmePatch(repo);

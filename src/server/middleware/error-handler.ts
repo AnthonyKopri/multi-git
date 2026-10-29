@@ -97,11 +97,29 @@ function classify(error: unknown, fallbackMessage: string): ErrorShape {
     return { statusCode: error.statusCode, message: error.message };
   }
 
+  if (isBodyParserError(error)) {
+    return { statusCode: error.status, message: error.message };
+  }
+
   if (error instanceof Error) {
     return { statusCode: 500, message: error.message || fallbackMessage };
   }
 
   return { statusCode: 500, message: fallbackMessage };
+}
+
+/**
+ * A request body the parser refused: too large (413), not valid JSON (400), or
+ * compressed (415). These are the client's mistake, not a server failure.
+ * body-parser raises them as http-errors, which set `expose` on any error
+ * whose message is safe to send back.
+ */
+function isBodyParserError(error: unknown): error is Error & { status: number } {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const { status, expose } = error as { status?: unknown; expose?: unknown };
+  return typeof status === 'number' && status >= 400 && status < 500 && expose === true;
 }
 
 export function errorHandler(
