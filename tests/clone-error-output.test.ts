@@ -6,7 +6,7 @@
 // be made to fail after a long download on demand, so this stands in for it with
 // the output such a failure produces.
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import request from 'supertest';
+import request from './helpers/request';
 
 import { GitError } from '../src/server/git/run';
 import { operations } from '../src/server/operations/registry';

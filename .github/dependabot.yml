@@ -67,7 +67,7 @@ updates:
         patterns:
           - vitest
           - vite
-          - supertest
+          - happy-dom
         update-types:
           - minor
           - patch

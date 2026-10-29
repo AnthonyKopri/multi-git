@@ -7,7 +7,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import request from 'supertest';
+import request from './helpers/request';
 
 import { createApp } from '../src/server/app';
 import { operations } from '../src/server/operations/registry';

@@ -1,6 +1,6 @@
 // The operation endpoints, driven through the real Express app.
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import request from 'supertest';
+import request from './helpers/request';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { Express } from 'express';
