@@ -44,12 +44,13 @@ const OUT = path.join(ROOT, 'out');
 const watch = process.argv.includes('--watch');
 
 /**
- * Node 22.12 is the documented minimum in README.md and the floor Electron 43
- * declares in its own `engines`. Electron 43 itself embeds Node 24, so this is
- * the lower of the two environments the server bundle has to run in.
+ * Node 22.12 is the documented minimum in README.md and the floor Electron
+ * declares in its own `engines` (still 22.12 as of Electron 45). Electron itself
+ * embeds Node 24, so this is the lower of the two environments the server
+ * bundle has to run in.
  */
 const NODE_TARGET = 'node22.12';
-/** Electron 43 ships a very recent Chromium; the browser bundle can be modern. */
+/** Electron ships a very recent Chromium; the browser bundle can be modern. */
 const WEB_TARGET = 'es2022';
 
 const nodeEntries = [
