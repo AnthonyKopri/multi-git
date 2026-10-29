@@ -10,7 +10,7 @@
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { withRepoLock } from '../git/lock';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { applyPatch, controlAm, createPatch, readAmState, validatePatch } from '../git/patches';
@@ -29,7 +29,7 @@ function patchFormat(value: unknown): 'diff' | 'mailbox' {
 
 patchesRouter.post(
   '/api/patches/create',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -48,12 +48,12 @@ patchesRouter.post(
 
     const { preview } = await createPatch(repoPath, request);
     res.json({ success: true, preview });
-  })
+  }
 );
 
 patchesRouter.post(
   '/api/patches/apply',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -87,19 +87,19 @@ patchesRouter.post(
     });
 
     res.json({ success: true, outcome });
-  })
+  }
 );
 
 patchesRouter.get(
   '/api/patches/am-state',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     res.json({ success: true, state: await readAmState(req.repoPath as string) });
-  })
+  }
 );
 
 patchesRouter.post(
   '/api/patches/am',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const action = (req.body ?? {})['action'];
 
@@ -109,5 +109,5 @@ patchesRouter.post(
 
     const state = await withRepoLock(repoPath, () => controlAm(repoPath, action));
     res.json({ success: true, state });
-  })
+  }
 );

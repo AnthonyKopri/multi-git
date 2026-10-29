@@ -7,7 +7,7 @@
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { withRepoLock } from '../git/lock';
 import { ensureAgentForRepo } from '../ssh/agent-session';
 import { operations } from '../operations/registry';
@@ -38,13 +38,13 @@ function requiredCommit(value: unknown): string {
 
 notesRouter.get(
   '/api/notes/refs',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     res.json({
       success: true,
       refs: await listNotesRefs(req.repoPath as string),
       defaultRef: DEFAULT_NOTES_REF
     });
-  })
+  }
 );
 
 /**
@@ -55,15 +55,15 @@ notesRouter.get(
  */
 notesRouter.get(
   '/api/notes/index',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const commits = await commitsWithNotes(req.repoPath as string, notesRef(req.query['ref']));
     res.json({ success: true, commits: [...commits] });
-  })
+  }
 );
 
 notesRouter.get(
   '/api/notes',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const note = await readNote(
       req.repoPath as string,
       requiredCommit(req.query['commit']),
@@ -71,12 +71,12 @@ notesRouter.get(
     );
 
     res.json({ success: true, note });
-  })
+  }
 );
 
 notesRouter.post(
   '/api/notes',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const commit = requiredCommit(body['commit']);
@@ -87,12 +87,12 @@ notesRouter.post(
     );
 
     res.json({ success: true, note });
-  })
+  }
 );
 
 notesRouter.delete(
   '/api/notes',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -101,7 +101,7 @@ notesRouter.delete(
     );
 
     res.json({ success: true });
-  })
+  }
 );
 
 /**
@@ -113,7 +113,7 @@ notesRouter.delete(
  */
 notesRouter.post(
   '/api/notes/sync',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const direction = body['direction'];
@@ -147,5 +147,5 @@ notesRouter.post(
       operation.fail(error instanceof Error ? error.message : 'Could not sync notes');
       throw error;
     }
-  })
+  }
 );

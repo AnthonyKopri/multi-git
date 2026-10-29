@@ -11,7 +11,7 @@
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { purgeWorktrees, surveyMaintenance } from '../git/maintenance';
 import { staleRules } from '../config/store';
 import { operations } from '../operations/registry';
@@ -22,7 +22,7 @@ maintenanceRouter.use('/api/maintenance', requireRepoPath);
 
 maintenanceRouter.get(
   '/api/maintenance/survey',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const rules = staleRules();
 
@@ -46,12 +46,12 @@ maintenanceRouter.get(
       operation.fail(error instanceof Error ? error.message : 'Could not survey the repository');
       throw error;
     }
-  })
+  }
 );
 
 maintenanceRouter.post(
   '/api/maintenance/purge-worktrees',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const paths = body['paths'];
@@ -74,5 +74,5 @@ maintenanceRouter.post(
     });
 
     res.json(result);
-  })
+  }
 );

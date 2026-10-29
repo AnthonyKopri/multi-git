@@ -14,7 +14,7 @@ import { readConfig, writeConfig } from '../config/store';
 import { sanitizeConfigForClient } from '../config/sanitize';
 import { canonicalRepoKey } from '../config/repo-identity';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { readRepoAccountSetup, wouldOverwrite } from '../ssh/repo-setup';
 import { applyProfile, ensureAgentForRepo, profileForRepo, rememberProfileForRepo } from '../ssh/agent-session';
 import { verifyProfileAccount } from '../ssh/verify-profile';
@@ -85,7 +85,7 @@ function profileEmail(profileId: string): string | null {
 /** What switching this repository to a profile would change. Reads only. */
 workflowsRouter.get(
   '/api/workflows/ssh',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const profileId = chosenProfile(repoPath, req.query['profileId']);
     const setup = await readRepoAccountSetup(repoPath);
@@ -99,7 +99,7 @@ workflowsRouter.get(
       keepIdentity: readConfig().repoSettings[canonicalRepoKey(repoPath)]?.identityOptOut === true,
       wouldOverwrite: wouldOverwrite(setup, profileId, profileEmail(profileId))
     });
-  })
+  }
 );
 
 /**
@@ -110,7 +110,7 @@ workflowsRouter.get(
  */
 workflowsRouter.post(
   '/api/workflows/ssh',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { profileId: rawProfile, confirmed, keepIdentity } = (req.body ?? {}) as Record<string, unknown>;
     const profileId = chosenProfile(repoPath, rawProfile);
@@ -148,22 +148,22 @@ workflowsRouter.post(
       ...(result.error ? { error: result.error } : {}),
       ...(result.code ? { code: result.code } : {})
     });
-  })
+  }
 );
 
 workflowsRouter.post(
   '/api/workflows/ssh/verify',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const profileId = chosenProfile(repoPath, (req.body as { profileId?: unknown } | undefined)?.profileId);
     res.json({ success: true, profileId, ...(await verifyProfileAccount(profileId, repoPath)) });
-  })
+  }
 );
 
 /** SSH ↔ HTTPS for origin, after the caller has seen the proposed URL. */
 workflowsRouter.post(
   '/api/workflows/remote',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     if ((req.body as { confirmed?: unknown } | undefined)?.confirmed !== true) {
       throw decisionRequired('review the proposed URL with remote.inspect, then confirm.');
@@ -186,7 +186,7 @@ workflowsRouter.post(
     });
 
     res.json({ success: true, remoteUrl, protocol: parseRemoteUrl(remoteUrl)?.protocol ?? 'other' });
-  })
+  }
 );
 
 /**
@@ -195,7 +195,7 @@ workflowsRouter.post(
  */
 workflowsRouter.post(
   '/api/workflows/pull',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { profileId: rawProfile, confirmed } = (req.body ?? {}) as Record<string, unknown>;
     const profileId = chosenProfile(repoPath, rawProfile);
@@ -249,7 +249,7 @@ workflowsRouter.post(
     );
 
     res.json({ success: true, strategy: preflight.strategy, ...result });
-  })
+  }
 );
 
 /**
@@ -259,7 +259,7 @@ workflowsRouter.post(
  */
 workflowsRouter.post(
   '/api/workflows/push',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { profileId: rawProfile, confirmed } = (req.body ?? {}) as Record<string, unknown>;
     const profileId = chosenProfile(repoPath, rawProfile);
@@ -295,5 +295,5 @@ workflowsRouter.post(
     );
 
     res.json({ success: true, published: publishing, ...result });
-  })
+  }
 );

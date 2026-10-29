@@ -26,7 +26,7 @@ import {
 } from '../ssh/keys';
 import type { SshKeyType } from '../ssh/keys';
 import { openPathInFileExplorer } from '../os/reveal';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import {
   getStoredPassphrase,
   isUnlocked,
@@ -43,7 +43,7 @@ function trimmed(value: unknown): string {
 
 sshRouter.post(
   '/api/config/ssh',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const { id, label, privateKeyPath, keepPassword, passphrase, userName, userEmail } =
       (req.body ?? {}) as Record<string, unknown>;
 
@@ -107,7 +107,7 @@ sshRouter.post(
         : null;
 
     res.json({ success: true, warning, config: sanitizeConfigForClient(config) });
-  })
+  }
 );
 
 sshRouter.delete('/api/config/ssh', (req, res) => {
@@ -125,7 +125,7 @@ sshRouter.delete('/api/config/ssh', (req, res) => {
 
 sshRouter.post(
   '/api/config/ssh/apply-ssh-config',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { profileId, repoPath } = (req.body ?? {}) as { profileId?: unknown; repoPath?: unknown };
     const config = readConfig();
 
@@ -156,12 +156,12 @@ sshRouter.post(
       defaultAccountProfileId: resolveDefaultAccount(config)?.id ?? null,
       warning: result.warning ?? null
     });
-  })
+  }
 );
 
 sshRouter.post(
   '/api/config/ssh/validate-all',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     const profiles = readConfig().sshProfiles;
 
     const results = await Promise.all(
@@ -196,12 +196,12 @@ sshRouter.post(
       results.length > 0 && results.every((result) => result.status === 'unavailable');
 
     res.json({ success: true, unavailable, results: unavailable ? [] : results });
-  })
+  }
 );
 
 sshRouter.post(
   '/api/config/account-rules',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const { match, profileId } = (req.body ?? {}) as { match?: unknown; profileId?: unknown };
     const safeMatch = trimmed(match);
 
@@ -222,7 +222,7 @@ sshRouter.post(
     writeConfig(config);
 
     res.json({ success: true, config: sanitizeConfigForClient(config) });
-  })
+  }
 );
 
 sshRouter.delete('/api/config/account-rules', (req, res) => {
@@ -237,7 +237,7 @@ sshRouter.delete('/api/config/account-rules', (req, res) => {
 
 sshRouter.post(
   '/api/config/ssh/test',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { profileId, privateKeyPath, passphrase } = (req.body ?? {}) as Record<string, unknown>;
     const config = readConfig();
 
@@ -270,12 +270,12 @@ sshRouter.post(
       message: result.message,
       usedSavedPassword: Boolean(profileId && !passphrase && effectivePassphrase)
     });
-  })
+  }
 );
 
 sshRouter.post(
   '/api/config/ssh/generate',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const safeLabel = trimmed(body['label']);
 
@@ -373,12 +373,12 @@ sshRouter.post(
       sshConfigWarning: sshConfigResult.error ?? sshConfigResult.warning ?? null,
       config: sanitizeConfigForClient(readConfig())
     });
-  })
+  }
 );
 
 sshRouter.post(
   '/api/config/ssh/public',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const { profileId, privateKeyPath } = (req.body ?? {}) as Record<string, unknown>;
     const config = readConfig();
 
@@ -419,12 +419,12 @@ sshRouter.post(
       publicKeyPath,
       publicKey: fs.readFileSync(publicKeyPath, 'utf8').trim()
     });
-  })
+  }
 );
 
 sshRouter.post(
   '/api/config/ssh/open-location',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { targetPath } = (req.body ?? {}) as { targetPath?: unknown };
     const resolvedPath = normalizeSshPath(typeof targetPath === 'string' ? targetPath : '');
 
@@ -447,7 +447,7 @@ sshRouter.post(
 
     await openPathInFileExplorer(target);
     res.json({ success: true, openedPath: target });
-  })
+  }
 );
 
 /**
@@ -459,7 +459,7 @@ sshRouter.post(
  */
 sshRouter.post(
   '/api/config/ssh/default-account',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { profileId, setGlobalIdentity } = (req.body ?? {}) as Record<string, unknown>;
     const id = typeof profileId === 'string' && profileId ? profileId : null;
 
@@ -489,7 +489,7 @@ sshRouter.post(
       warning: result.warning ?? null,
       config: sanitizeConfigForClient(readConfig())
     });
-  })
+  }
 );
 
 /**
@@ -500,7 +500,7 @@ sshRouter.post(
  */
 sshRouter.post(
   '/api/config/ssh/verify',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { profileId, repoPath } = (req.body ?? {}) as Record<string, unknown>;
 
     const { host, check } = await verifyProfileAccount(
@@ -509,13 +509,13 @@ sshRouter.post(
     );
 
     res.json({ success: true, host, check, config: sanitizeConfigForClient(readConfig()) });
-  })
+  }
 );
 
 /** What a repository is configured to do right now, before anything changes it. */
 sshRouter.post(
   '/api/config/ssh/repo-setup',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { repoPath, profileId } = (req.body ?? {}) as Record<string, unknown>;
 
     if (typeof repoPath !== 'string' || repoPath === '') {
@@ -534,5 +534,5 @@ sshRouter.post(
         ? wouldOverwrite(setup, target.id, target.userEmail || null)
         : false
     });
-  })
+  }
 );

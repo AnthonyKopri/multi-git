@@ -17,7 +17,7 @@ import {
   writeTrashIndex
 } from '../safety-net/trash';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { isMerging, isRebasing } from './status.routes';
 
 export const safetyNetRouter: Router = Router();
@@ -30,7 +30,7 @@ safetyNetRouter.get('/api/git/checkpoints', (req, res) => {
 
 safetyNetRouter.post(
   '/api/git/undo-operation',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { checkpointId } = (req.body ?? {}) as { checkpointId?: unknown };
 
@@ -58,7 +58,7 @@ safetyNetRouter.post(
     consumeCheckpoint(repoPath, checkpoint.id);
 
     res.json({ success: true, stdout, stderr, restoredHead: checkpoint.head.substring(0, 8) });
-  })
+  }
 );
 
 safetyNetRouter.get('/api/git/trash', (req, res) => {
@@ -84,7 +84,7 @@ safetyNetRouter.get('/api/git/trash', (req, res) => {
 
 safetyNetRouter.post(
   '/api/git/trash/restore',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const repoPath = req.repoPath as string;
     const { id } = (req.body ?? {}) as { id?: unknown };
 
@@ -115,5 +115,5 @@ safetyNetRouter.post(
     );
 
     res.json({ success: true, restoredPath: entry.path });
-  })
+  }
 );

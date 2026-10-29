@@ -11,7 +11,7 @@ import { runSyncOperationWithProfile } from '../ssh/profiles';
 import { findGitignore, findLicense, listGitignores, listLicenses } from '../templates/catalogue';
 import { renderGitignore, renderLicense, sanitizePlaceholderValue } from '../templates/render';
 import { resolveNewRepoTarget } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 
 export const newRepoRouter: Router = Router();
 
@@ -43,16 +43,16 @@ newRepoRouter.get('/api/repo-templates', (_req, res) => {
 
 newRepoRouter.get(
   '/api/github/cli-status',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     // The wizard opens often; detection is cached unless explicitly refreshed.
     const forceRefresh = req.query['refresh'] === '1';
     res.json({ success: true, ...(await detectGithubCli(forceRefresh)) });
-  })
+  }
 );
 
 newRepoRouter.post(
   '/api/git/new-repo/preflight',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const resolved = resolveNewRepoTarget((req.body as { repoPath?: unknown })?.repoPath);
     const exists = fs.existsSync(resolved);
 
@@ -80,7 +80,7 @@ newRepoRouter.post(
       existingLicense: findExistingLicenseFile(resolved),
       existingGitignore: fs.existsSync(path.join(resolved, '.gitignore'))
     });
-  })
+  }
 );
 
 /**
@@ -138,7 +138,7 @@ async function pushInitialBranch(
 
 newRepoRouter.post(
   '/api/git/new-repo',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     const visibility = (body['visibility'] ?? 'private') as RepoVisibility;
@@ -301,5 +301,5 @@ newRepoRouter.post(
       steps,
       warnings
     });
-  })
+  }
 );

@@ -13,7 +13,7 @@
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { withRepoLock } from '../git/lock';
 import { readConfig, writeConfig } from '../config/store';
 import { markCommit, readSession, resetBisect, startBisect } from '../git/bisect';
@@ -25,7 +25,7 @@ bisectRouter.use('/api/bisect', requireRepoPath);
 
 bisectRouter.get(
   '/api/bisect',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     res.json({
@@ -34,12 +34,12 @@ bisectRouter.get(
       // The saved commands, so the panel can offer them without a second call.
       commands: readConfig().bisectCommands ?? []
     });
-  })
+  }
 );
 
 bisectRouter.post(
   '/api/bisect/start',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { goodRef, badRef } = (req.body ?? {}) as { goodRef?: unknown; badRef?: unknown };
 
@@ -49,28 +49,28 @@ bisectRouter.post(
 
     const session = await withRepoLock(repoPath, () => startBisect(repoPath, goodRef, badRef));
     res.json({ success: true, session });
-  })
+  }
 );
 
 bisectRouter.post(
   '/api/bisect/mark',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const verdict = (req.body ?? {})['verdict'] as BisectVerdict;
 
     const session = await withRepoLock(repoPath, () => markCommit(repoPath, verdict));
     res.json({ success: true, session });
-  })
+  }
 );
 
 bisectRouter.post(
   '/api/bisect/reset',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     const session = await withRepoLock(repoPath, () => resetBisect(repoPath));
     res.json({ success: true, session });
-  })
+  }
 );
 
 /**
@@ -81,7 +81,7 @@ bisectRouter.post(
  */
 bisectRouter.post(
   '/api/bisect/commands',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     if (typeof body['executable'] !== 'string' || body['executable'].trim() === '') {
@@ -108,5 +108,5 @@ bisectRouter.post(
     });
 
     res.json({ success: true, commands: readConfig().bisectCommands ?? [] });
-  })
+  }
 );

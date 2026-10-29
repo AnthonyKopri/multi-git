@@ -10,7 +10,7 @@ import { commitish, pathArg, refArg } from '../git/args';
 import { runGitCommand, tryGitCommand } from '../git/run';
 import { unquoteGitPath } from '../git/status';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import type { Commit, CommitFile } from '../../shared/git-types';
 
 export const searchRouter: Router = Router();
@@ -101,7 +101,7 @@ const HEX_PREFIX = /^[0-9a-fA-F]{4,40}$/;
  */
 searchRouter.get(
   '/api/git/search/commits',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const query = req.query;
 
@@ -171,13 +171,13 @@ searchRouter.get(
       skip,
       limit
     });
-  })
+  }
 );
 
 /** Everything one ref has that another does not, in both directions. */
 searchRouter.get(
   '/api/git/compare',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const base = commitish(req.query['base'], 'Base ref');
     const head = commitish(req.query['head'], 'Head ref');
@@ -243,13 +243,13 @@ searchRouter.get(
       behindCommits: parseCommits(behindCommits?.stdout ?? ''),
       files
     });
-  })
+  }
 );
 
 /** The patch between two refs, for the comparison view's diff pane. */
 searchRouter.get(
   '/api/git/compare/diff',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const base = commitish(req.query['base'], 'Base ref');
     const head = commitish(req.query['head'], 'Head ref');
@@ -265,5 +265,5 @@ searchRouter.get(
     ]);
 
     res.json({ success: true, patch: stdout });
-  })
+  }
 );

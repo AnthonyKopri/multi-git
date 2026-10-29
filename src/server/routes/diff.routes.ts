@@ -13,7 +13,7 @@ import { toDisplayDiffFile } from '../git/encoding';
 import { operations } from '../operations/registry';
 import { saveToTrash } from '../safety-net/trash';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import type { DiffSource, PatchAction, PatchSelection } from '../../shared/diff-types';
 
 export const diffRouter: Router = Router();
@@ -66,7 +66,7 @@ function requireIdList(value: unknown, label: string): string[] | undefined {
 
 diffRouter.get(
   '/api/git/diff/structured',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const source = requireSource(req.query['source']);
 
@@ -109,7 +109,7 @@ diffRouter.get(
       sizeBytes: result.sizeBytes,
       limitBytes: LARGE_DIFF_BYTES
     });
-  })
+  }
 );
 
 /**
@@ -120,18 +120,18 @@ diffRouter.get(
  */
 diffRouter.get(
   '/api/git/diff/blobs',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const source = requireSource(req.query['source']);
 
     const comparison = await compareBlobs(repoPath, req.query['path'], source);
     res.json({ success: true, ...comparison });
-  })
+  }
 );
 
 diffRouter.post(
   '/api/git/diff/apply-selection',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as {
       action?: unknown;
@@ -169,5 +169,5 @@ diffRouter.post(
       hunksApplied: result.hunksApplied,
       linesApplied: result.linesApplied
     });
-  })
+  }
 );

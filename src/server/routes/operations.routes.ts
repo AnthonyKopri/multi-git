@@ -9,7 +9,7 @@ import type { Response } from 'express';
 
 import { operations } from '../operations/registry';
 import { executableRunner } from '../process/runner';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import type { OperationProgress } from '../../shared/operation-types';
 
 export const operationsRouter: Router = Router();
@@ -104,7 +104,7 @@ function nodeCommand(): { executable: string; env: NodeJS.ProcessEnv } {
 
 operationsRouter.post(
   '/api/operations/dev/sleep',
-  asyncRoute((req, res) => {
+  (req, res) => {
     if (!devOperationsEnabled()) {
       throw new HttpError('Development operations are not enabled.', 404);
     }
@@ -142,5 +142,5 @@ operationsRouter.post(
       });
 
     res.json({ success: true, id: handle.id });
-  })
+  }
 );

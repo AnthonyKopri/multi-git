@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import { readConfig, writeConfig } from '../config/store';
 import { sanitizeConfigForClient } from '../config/sanitize';
 import { canonicalRepoKey } from '../config/repo-identity';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { operations } from '../operations/registry';
 import { runGitCommand } from '../git/run';
 import { ensureAgentForRepo } from '../ssh/agent-session';
@@ -54,17 +54,17 @@ function resolveMembers(group: RepoGroup): { repoPath: string; missing: boolean 
 
 groupsRouter.get(
   '/api/repo-groups',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     res.json({
       success: true,
       groups: groups().map((group) => ({ ...group, members: resolveMembers(group) }))
     });
-  })
+  }
 );
 
 groupsRouter.post(
   '/api/repo-groups',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { id, label, color, icon, repos, order } = (req.body ?? {}) as Record<string, unknown>;
 
     if (typeof label !== 'string' || label.trim() === '') {
@@ -100,12 +100,12 @@ groupsRouter.post(
     // Round-tripped through validation, so the client is told what was
     // actually stored rather than what it asked for.
     res.json({ success: true, config: sanitizeConfigForClient(readConfig()) });
-  })
+  }
 );
 
 groupsRouter.delete(
   '/api/repo-groups',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { id } = (req.body ?? {}) as { id?: unknown };
 
     const config = readConfig();
@@ -119,7 +119,7 @@ groupsRouter.delete(
     writeConfig(config);
 
     res.json({ success: true, config: sanitizeConfigForClient(readConfig()) });
-  })
+  }
 );
 
 export interface GroupFetchOutcome {
@@ -139,7 +139,7 @@ export interface GroupFetchOutcome {
  */
 groupsRouter.post(
   '/api/repo-groups/fetch',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { id } = (req.body ?? {}) as { id?: unknown };
     const group = requireGroup(id);
     const members = resolveMembers(group);
@@ -209,5 +209,5 @@ groupsRouter.post(
 
     operation.succeed();
     res.json({ success: true, cancelled: false, operationId: operation.id, results });
-  })
+  }
 );

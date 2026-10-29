@@ -7,7 +7,7 @@ import { parseGitDiffText } from '../git/diff';
 import { unquoteGitPath } from '../git/status';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import type { CommitFile } from '../../shared/git-types';
 import type { RecoveryOperation } from '../../shared/recovery-types';
 
@@ -17,7 +17,7 @@ historyRouter.use(requireRepoPath);
 
 historyRouter.get(
   '/api/git/commit/details',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const hash = commitish(req.query['hash']);
 
@@ -57,24 +57,24 @@ historyRouter.get(
       },
       files
     });
-  })
+  }
 );
 
 historyRouter.get(
   '/api/git/commit/diff',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const hash = commitish(req.query['hash']);
     const safePath = pathArg(req.query['path']);
 
     const { stdout } = await runGitCommand(repoPath, ['show', hash, ...pathArgs(safePath)]);
     res.json({ success: true, diff: parseGitDiffText(stdout) });
-  })
+  }
 );
 
 historyRouter.get(
   '/api/git/file/history',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const safePath = pathArg(req.query['path']);
 
@@ -102,7 +102,7 @@ historyRouter.get(
           });
 
     res.json({ success: true, commits });
-  })
+  }
 );
 
 /**
@@ -132,7 +132,7 @@ async function runHistoryOperation(
 
 historyRouter.post(
   '/api/git/cherry-pick',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const hash = commitish((req.body as { hash?: unknown })?.hash);
 
@@ -145,12 +145,12 @@ historyRouter.post(
         'cherry-pick'
       )
     );
-  })
+  }
 );
 
 historyRouter.post(
   '/api/git/revert',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const hash = commitish((req.body as { hash?: unknown })?.hash);
 
@@ -164,12 +164,12 @@ historyRouter.post(
         'revert'
       )
     );
-  })
+  }
 );
 
 historyRouter.post(
   '/api/git/reset',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { hash, mode } = (req.body ?? {}) as { hash?: unknown; mode?: unknown };
 
@@ -186,12 +186,12 @@ historyRouter.post(
     );
 
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 historyRouter.get(
   '/api/git/tags',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     // The hash is the tagged commit's. An annotated tag is an object of its
@@ -216,5 +216,5 @@ historyRouter.get(
       });
 
     res.json({ success: true, tags });
-  })
+  }
 );
