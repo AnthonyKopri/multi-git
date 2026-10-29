@@ -41,6 +41,10 @@ or Security. Remove empty headings when preparing a release.
   one. That closes off the decompression bug in `body-parser`
   (GHSA-27r3-jxmh-p828), which is also updated, to 2.4.0, along with `qs`
   6.16.2 (GHSA-6pq8-jhm2-2vcw).
+- **Express is updated to 5.3.0**, which brings `proxy-addr` 2.0.8
+  (GHSA-jqcg-44mw-7w3h, IP spoofing through a trusted proxy subnet). Multi-Git
+  was not exposed, since its local server trusts no proxy and never reads the
+  client address, but the fixed version is what ships now.
 - **Installing the project's dependencies runs none of their install
   scripts.** The npm worms going around in 2026 spread through those scripts,
   and nothing Multi-Git depends on needs one. The setting lives in `.npmrc`,
