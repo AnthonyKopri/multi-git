@@ -18,7 +18,7 @@ import {
 } from '../safety-net/trash';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError } from '../middleware/error-handler';
-import { isMerging, isRebasing } from './status.routes';
+import { isOperationInProgress } from '../git/operation-state';
 
 export const safetyNetRouter: Router = Router();
 
@@ -36,7 +36,7 @@ safetyNetRouter.post(
 
     // Resetting mid-merge would leave the repository in a state the conflict
     // UI cannot describe.
-    if (isMerging(repoPath) || isRebasing(repoPath)) {
+    if (await isOperationInProgress(repoPath)) {
       throw new HttpError(
         'Finish or abort the in-progress merge/rebase first (use the conflict banner).',
         400

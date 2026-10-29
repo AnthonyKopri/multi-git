@@ -25,6 +25,17 @@ or Security. Remove empty headings when preparing a release.
   lookups of the shared Git folder that overlap now share one answer instead
   of each starting Git. What the app shows is unchanged.
 
+### Fixed
+
+- **A merge or rebase stopped in a linked worktree or a submodule is now
+  recognised.** Git keeps that state in the worktree's own Git folder, which
+  is not `.git` there, and Multi-Git only looked in `.git`. So the MERGE or
+  REBASE badge did not appear. More importantly, the checks that stop **Undo
+  last commit**, **Undo** and **Restore** from moving the branch in the middle
+  of a merge did not stop them, and old recovery points could be cleared
+  while the operation was still unfinished. All of them now find the right
+  folder. Ordinary repositories behave exactly as before.
+
 ## [5.3.0] - 2026-10-29
 
 ### Fixed

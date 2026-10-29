@@ -19,7 +19,7 @@ import {
 } from '../safety-net/recovery';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError } from '../middleware/error-handler';
-import { isMerging, isRebasing } from './status.routes';
+import { isOperationInProgress } from '../git/operation-state';
 
 export const recoveryRouter: Router = Router();
 
@@ -29,7 +29,7 @@ recoveryRouter.get(
   '/api/git/recovery',
   async (req, res) => {
     const repoPath = req.repoPath as string;
-    const operationInProgress = isMerging(repoPath) || isRebasing(repoPath);
+    const operationInProgress = await isOperationInProgress(repoPath);
 
     const [points, reflog] = await Promise.all([
       listRecoveryPoints(repoPath, { skipExpiry: operationInProgress }),
@@ -71,7 +71,7 @@ recoveryRouter.post(
     const repoPath = req.repoPath as string;
     const { pointId, ref } = (req.body ?? {}) as { pointId?: unknown; ref?: unknown };
 
-    if (isMerging(repoPath) || isRebasing(repoPath)) {
+    if (await isOperationInProgress(repoPath)) {
       throw new HttpError(
         'Finish or abort the in-progress merge or rebase before restoring a ref.',
         400
