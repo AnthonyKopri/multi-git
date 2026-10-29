@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import request from 'supertest';
+import request from './helpers/request';
 import type { Express } from 'express';
 
 import { createApp } from '../src/server/app';

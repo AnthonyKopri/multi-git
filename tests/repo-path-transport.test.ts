@@ -9,7 +9,7 @@
 // The encoder lives in the renderer and the decoder in the server, so the
 // round-trip test below is the only place that proves they agree.
 import { afterAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
+import request from './helpers/request';
 import type { Express } from 'express';
 
 import { createApp } from '../src/server/app';

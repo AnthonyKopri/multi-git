@@ -5,7 +5,7 @@
 // question for every row it draws. A per-commit lookup would be a git process
 // per row and would not show up as a failure — only as a slow list.
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import request from 'supertest';
+import request, { type Test } from './helpers/request';
 import type { Express } from 'express';
 
 import { createApp } from '../src/server/app';
@@ -17,7 +17,7 @@ const app: Express = createApp();
 
 function api(repo: string) {
   const agent = request(app);
-  const headers = (req: request.Test): request.Test =>
+  const headers = (req: Test): Test =>
     req.set('Host', '127.0.0.1').set('x-repo-path', repo);
 
   return {

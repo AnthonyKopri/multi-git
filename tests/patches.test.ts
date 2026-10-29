@@ -11,7 +11,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import request from 'supertest';
+import request, { type Test } from './helpers/request';
 import type { Express } from 'express';
 
 import { createApp } from '../src/server/app';
@@ -25,7 +25,7 @@ const app: Express = createApp();
 
 function api(repo: string) {
   const agent = request(app);
-  const headers = (req: request.Test): request.Test =>
+  const headers = (req: Test): Test =>
     req.set('Host', '127.0.0.1').set('x-repo-path', repo);
 
   return {

@@ -11,7 +11,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import request from 'supertest';
+import request from './helpers/request';
 import type { Express } from 'express';
 
 const gh = vi.hoisted(() => ({ remoteUrl: '' }));
