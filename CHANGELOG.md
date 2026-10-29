@@ -23,11 +23,13 @@ or Security. Remove empty headings when preparing a release.
 
 ### Security
 
-- **Electron is updated to 44.10.0**, with Chromium 152.0.7977.169 and Node.js
-  24.22.1. It closes the advisories against earlier 44.x releases: the
-  compromised eMudhra intermediate certificates are no longer trusted
-  (GHSA-jr5w-w6x2-84p9), and pointer-lock permission requests are attributed
-  to the right frame (GHSA-x562-297c-g43g).
+- **Multi-Git now runs on Electron 45.1.0**, with Chromium 156.0.8078.49 and
+  Node.js 24.22.1, up from Electron 44.4.5. Chromium has had several actively
+  exploited V8 and renderer bugs this year, and the newest stable line gets
+  their fixes first. It also closes the advisories against earlier 44.x
+  releases: the compromised eMudhra intermediate certificates are no longer
+  trusted (GHSA-jr5w-w6x2-84p9), and pointer-lock permission requests are
+  attributed to the right frame (GHSA-x562-297c-g43g).
 - **The terminal edition ships Node.js 24.22.2**, up from 24.18.0, which
   includes the July and October 2026 Node.js security releases (fixes in
   HTTP, HTTP/2, TLS, DNS, zlib and Brotli).

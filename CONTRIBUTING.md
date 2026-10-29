@@ -14,7 +14,7 @@ Thank you for taking the time to improve Multi-Git. Contributions can include bu
 
 You will need:
 
-- Node.js 22.12 or newer and npm. This is the floor Electron 43 declares in its own `engines`, and it is what `package.json`, the esbuild target, and CI all use.
+- Node.js 22.12 or newer and npm. This is the floor Electron declares in its own `engines` (as of Electron 45), and it is what `package.json`, the esbuild target, and CI all use.
 - Git available on `PATH`.
 - OpenSSH tools, including `ssh` and `ssh-keygen`.
 - A disposable Git repository for workflow testing.
