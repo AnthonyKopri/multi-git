@@ -19,6 +19,7 @@ import type { Express } from 'express';
 import { createApp } from '../src/server/app';
 import { clearRepoPathCache } from '../src/server/middleware/repo-path';
 import { setLfsRunner } from '../src/server/git/lfs';
+import { CommandSpawnError } from '../src/server/process/runner';
 import { FakeRunner, command } from './helpers/fake-runner';
 import { cleanupRepos, createRepoWithHistory } from './helpers/temp-repo';
 
@@ -110,6 +111,25 @@ describe('when Git LFS is not installed', () => {
     // whether LFS exists at all.
     expect(commands).toEqual(['lfs version']);
   });
+
+  it('drops the object listing it started before knowing, even one that failed', async () => {
+    // A status read lists the objects while it is still asking for the
+    // version, so the listing runs here too. Whatever it says must not reach
+    // the answer, and its failing must not fail the read.
+    setLfsRunner({
+      run: async (executable, args) => {
+        if (args[1] === 'ls-files') {
+          throw new Error('listing failed');
+        }
+        throw new CommandSpawnError(executable, new Error('ENOENT'));
+      }
+    });
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    expect(response.body.status.availability.installed).toBe(false);
+    expect(response.body.status.objects).toEqual([]);
+  });
 });
 
 describe('reading the state', () => {
@@ -193,6 +213,34 @@ describe('what reading the state is allowed to cost', () => {
       .callsTo('git')
       .filter((entry) => entry.args[1] === 'locks')
       .map((entry) => [...entry.args]);
+
+  it('lists the objects without waiting for the version first', async () => {
+    // `git lfs` is slow to start, so the two are asked together. Here the
+    // version answers only once the listing has begun, which a read that
+    // waited for the version before listing would never reach.
+    let listingStarted: () => void = () => undefined;
+    const listing = new Promise<void>((resolve) => {
+      listingStarted = resolve;
+    });
+    const scripted = installedRunner();
+
+    setLfsRunner({
+      run: async (executable, args, options) => {
+        if (args[1] === 'version') {
+          await listing;
+        }
+        if (args[1] === 'ls-files') {
+          listingStarted();
+        }
+        return scripted.run(executable, args, options);
+      }
+    });
+
+    const response = await api().get('/api/lfs/status').expect(200);
+
+    expect(response.body.status.availability.installed).toBe(true);
+    expect(response.body.status.objects).toHaveLength(2);
+  });
 
   it('does not contact the lock server for a repository that routes nothing through LFS', async () => {
     setLfsRunner((runner = unusedRunner()));

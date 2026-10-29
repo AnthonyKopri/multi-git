@@ -12,6 +12,19 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Changed
+
+- **Refreshing a repository is about 30% faster.** A refresh runs after every
+  commit, checkout and branch switch, and whenever the window comes back into
+  focus. On a Windows test repository it took about 670 ms and now takes about
+  470 ms, and starts 30 Git processes instead of 37. Most of the time was the
+  Git LFS check: it asked for the LFS version and only then listed the LFS
+  files, and both are slow to start, so it now runs them at the same time. The
+  signing settings are read with two `git config` calls instead of eight. Each
+  worktree's status and last commit date are read at the same time, and
+  lookups of the shared Git folder that overlap now share one answer instead
+  of each starting Git. What the app shows is unchanged.
+
 ## [5.3.0] - 2026-10-29
 
 ### Fixed
