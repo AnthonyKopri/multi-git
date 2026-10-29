@@ -11,7 +11,12 @@ export async function readStatus(repoPath: string): Promise<StatusResponse> {
     runGitCommand(repoPath, ['rev-parse', '--absolute-git-dir'])
   ]);
   const gitDir = directory.stdout.trim();
-  return { success: true, ...parsePorcelainStatus(status.stdout),
+  return {
+    success: true,
+    ...parsePorcelainStatus(status.stdout),
     isMerging: fs.existsSync(path.join(gitDir, 'MERGE_HEAD')),
-    isRebasing: fs.existsSync(path.join(gitDir, 'rebase-merge')) || fs.existsSync(path.join(gitDir, 'rebase-apply')) };
+    isRebasing:
+      fs.existsSync(path.join(gitDir, 'rebase-merge')) ||
+      fs.existsSync(path.join(gitDir, 'rebase-apply'))
+  };
 }
