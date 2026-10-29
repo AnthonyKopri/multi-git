@@ -245,6 +245,15 @@ function client(
   };
 }
 
+/**
+ * The terminal's size, or 80x24 when the stream does not report one. Ink types
+ * `useStdout()` as any writable stream, so the TTY fields may be absent.
+ */
+function terminalSize(stream: NodeJS.WritableStream): { width: number; height: number } {
+  const tty = stream as Partial<NodeJS.WriteStream>;
+  return { width: tty.columns || 80, height: tty.rows || 24 };
+}
+
 export function Terminal({
   connection,
   initialRepo
@@ -254,7 +263,7 @@ export function Terminal({
 }): React.ReactNode {
   const { exit, suspendTerminal } = useApp();
   const { stdout } = useStdout();
-  const [size, setSize] = useState({ width: stdout.columns || 80, height: stdout.rows || 24 });
+  const [size, setSize] = useState(() => terminalSize(stdout));
   const [repo, setRepo] = useState(initialRepo);
   const repoRef = useRef(repo);
   repoRef.current = repo;
@@ -418,7 +427,7 @@ export function Terminal({
       ]
     });
   useEffect(() => {
-    const resize = (): void => setSize({ width: stdout.columns || 80, height: stdout.rows || 24 });
+    const resize = (): void => setSize(terminalSize(stdout));
     stdout.on('resize', resize);
     void connection
       .call<Preferences>('preferences.read')

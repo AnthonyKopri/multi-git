@@ -12,7 +12,7 @@ import type { AddressInfo } from 'node:net';
 import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
-import { render } from 'ink';
+import { Text, render } from 'ink';
 
 import { createApp } from '../src/server/app';
 import { Terminal, asciiOnly, paletteMatches } from '../src/server/terminal/app';
@@ -220,5 +220,35 @@ describe('ASCII output', () => {
     const text = asciiOnly('Changes · s stage — ↑1 ↓2 › ok… “quoted”');
     expect(text).toBe('Changes | s stage - ^1 v2 > ok... "quoted"');
     expect(/^[\x00-\x7f]*$/.test(text)).toBe(true);
+  });
+});
+
+// terminalText cleans repository text where the UI shows it; Ink is the
+// backstop for any string that reaches a <Text> without passing through it.
+// Ink 7 already dropped escape sequences but wrote carriage returns,
+// backspaces and BEL as they were, so a commit subject could overwrite
+// itself on screen and read as something it is not.
+describe('control characters in rendered text', () => {
+  it('are not written to the terminal', async () => {
+    const stdout = new FakeStdout();
+    const hostile = [
+      'drop all tables\rsafe change', // a carriage return overwrites the start of the line
+      'keep\x08\x08\x08\x08', // backspaces walk the cursor back over it
+      'ring\x07', // BEL
+      'clip\x1b]52;c;aGk=\x07board' // OSC 52 asks the terminal to replace the clipboard
+    ].join(' ');
+    const instance = render(React.createElement(Text, null, hostile), {
+      stdout: stdout as unknown as NodeJS.WriteStream,
+      debug: true,
+      patchConsole: false
+    });
+    mounted.push(instance);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const written = stdout.frames.join('');
+    expect(written).toContain('drop all tables');
+    for (const control of ['\r', '\x08', '\x07', '\x1b]']) {
+      expect(written).not.toContain(control);
+    }
   });
 });

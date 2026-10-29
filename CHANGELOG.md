@@ -33,6 +33,12 @@ or Security. Remove empty headings when preparing a release.
 - **The terminal edition ships Node.js 24.22.2**, up from 24.18.0, which
   includes the July and October 2026 Node.js security releases (fixes in
   HTTP, HTTP/2, TLS, DNS, zlib and Brotli).
+- **The terminal edition draws its screen with Ink 8**, up from Ink 7. Ink 8
+  removes carriage returns, backspaces and BEL from any text it draws, which
+  Ink 7 wrote as they were. Repository text such as commit subjects was
+  already cleaned before display, so this is a second line of defence: a
+  string that reached the screen some other way still cannot overwrite what is
+  shown beside it.
 - **`zod` is updated to 4.6.7.** The MCP server validates agent tool calls
   with it, and earlier versions could exhaust memory on an oversized input
   (GHSA-mrhx-c7xc-m3w5).
