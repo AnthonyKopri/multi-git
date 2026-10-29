@@ -11,7 +11,7 @@ import {
 import { readConfig } from '../config/store';
 import { withRepoLock } from '../git/lock';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import type { SigningMode } from '../../shared/signing-types';
 
 export const signingRouter: Router = Router();
@@ -40,7 +40,7 @@ function sshSigningCandidates(): { profileId: string; label: string; publicKeyPa
 
 signingRouter.get(
   '/api/git/signing/status',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     const config = await readSigningConfig(repoPath);
@@ -54,12 +54,12 @@ signingRouter.get(
       gpgAvailable: gpgVersion !== null,
       gpgVersion
     });
-  })
+  }
 );
 
 signingRouter.post(
   '/api/git/signing/config',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as {
       mode?: unknown;
@@ -99,25 +99,25 @@ signingRouter.post(
       gpgAvailable: gpgVersion !== null,
       gpgVersion
     });
-  })
+  }
 );
 
 signingRouter.get(
   '/api/git/signature/commit',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const signature = await readCommitSignature(repoPath, req.query['hash']);
 
     res.json({ success: true, signature });
-  })
+  }
 );
 
 signingRouter.get(
   '/api/git/signature/tag',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const signature = await readTagSignature(repoPath, req.query['tag']);
 
     res.json({ success: true, signature });
-  })
+  }
 );

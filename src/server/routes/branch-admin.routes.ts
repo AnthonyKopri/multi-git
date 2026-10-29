@@ -12,7 +12,7 @@ import { pinnedBranchesFor, readConfig, staleRules, writeConfig } from '../confi
 import { canonicalRepoKey } from '../config/repo-identity';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 
 export const branchAdminRouter: Router = Router();
 
@@ -44,7 +44,7 @@ function parseTracking(value: string): { ahead: number; behind: number; gone: bo
  */
 branchAdminRouter.get(
   '/api/git/branches/details',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     const [listed, mergedInto] = await Promise.all([
@@ -93,12 +93,12 @@ branchAdminRouter.get(
       });
 
     res.json({ success: true, branches, staleAfterDays });
-  })
+  }
 );
 
 branchAdminRouter.post(
   '/api/git/branch/rename',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { from, to } = (req.body ?? {}) as { from?: unknown; to?: unknown };
 
@@ -124,12 +124,12 @@ branchAdminRouter.post(
     }
 
     res.json({ success: true, from: safeFrom, to: safeTo, stdout, stderr });
-  })
+  }
 );
 
 branchAdminRouter.post(
   '/api/git/branch/upstream',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { branch, upstream } = (req.body ?? {}) as { branch?: unknown; upstream?: unknown };
 
@@ -150,13 +150,13 @@ branchAdminRouter.post(
     );
 
     res.json({ success: true, branch: safeBranch, upstream: safeUpstream, stdout, stderr });
-  })
+  }
 );
 
 /** Pins are the user's own ordering, so they live in config, not in git. */
 branchAdminRouter.post(
   '/api/git/branch/pin',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { branch, pinned } = (req.body ?? {}) as { branch?: unknown; pinned?: unknown };
 
@@ -177,7 +177,7 @@ branchAdminRouter.post(
     writeConfig(config);
 
     res.json({ success: true, pinnedBranches: next });
-  })
+  }
 );
 
 // Pruning used to live here as `/api/git/remote/prune`, hardcoded to origin at
@@ -190,7 +190,7 @@ branchAdminRouter.post(
 /** Deletes several branches, reporting each outcome rather than stopping. */
 branchAdminRouter.post(
   '/api/git/branches/delete-many',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { branches, force } = (req.body ?? {}) as { branches?: unknown; force?: unknown };
 
@@ -228,5 +228,5 @@ branchAdminRouter.post(
       results,
       deleted: results.filter((entry) => entry.deleted).length
     });
-  })
+  }
 );

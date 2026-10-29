@@ -6,7 +6,7 @@ import { GitError, runGitCommand } from '../git/run';
 import { explainSigningFailure } from '../git/signing';
 import { runSyncOperationWithProfile } from '../ssh/profiles';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 
 export const tagsRouter: Router = Router();
 
@@ -19,7 +19,7 @@ function tagName(value: unknown): string {
 
 tagsRouter.post(
   '/api/git/tag',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { name, hash, message, sign } = (req.body ?? {}) as {
       name?: unknown;
@@ -62,12 +62,12 @@ tagsRouter.post(
       }
       throw new HttpError(explained, 400);
     }
-  })
+  }
 );
 
 tagsRouter.delete(
   '/api/git/tag',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const safeName = tagName((req.body as { name?: unknown })?.name);
 
@@ -76,12 +76,12 @@ tagsRouter.delete(
     );
 
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 tagsRouter.post(
   '/api/git/tag/push',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { name, sshKeyPath, profileId } = (req.body ?? {}) as {
       name?: unknown;
@@ -101,5 +101,5 @@ tagsRouter.post(
     );
 
     res.json({ success: true, stdout, stderr, profileLabel });
-  })
+  }
 );

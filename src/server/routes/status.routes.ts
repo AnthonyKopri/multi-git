@@ -5,7 +5,6 @@ import { Router } from 'express';
 import { runGitCommand, tryGitCommand } from '../git/run';
 import { parsePorcelainStatus } from '../git/status';
 import { requireRepoPath } from '../middleware/repo-path';
-import { asyncRoute } from '../middleware/error-handler';
 import type { Commit } from '../../shared/git-types';
 
 export const statusRouter: Router = Router();
@@ -27,7 +26,7 @@ export function isRebasing(repoPath: string): boolean {
 
 statusRouter.get(
   '/api/git/status',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { stdout } = await runGitCommand(repoPath, ['status', '--porcelain', '-b']);
 
@@ -37,12 +36,12 @@ statusRouter.get(
       isMerging: isMerging(repoPath),
       isRebasing: isRebasing(repoPath)
     });
-  })
+  }
 );
 
 statusRouter.get(
   '/api/git/log',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     const limit = Math.min(Math.max(Number.parseInt(String(req.query['limit']), 10) || 50, 1), 500);
@@ -88,12 +87,12 @@ statusRouter.get(
 
     const hasMore = rows.length > limit;
     res.json({ success: true, commits: hasMore ? rows.slice(0, limit) : rows, hasMore });
-  })
+  }
 );
 
 statusRouter.get(
   '/api/git/files',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     // Independent queries: run them together rather than back to back.
@@ -110,7 +109,7 @@ statusRouter.get(
       tracked: toList(tracked.stdout),
       untracked: toList(untracked.stdout)
     });
-  })
+  }
 );
 
 /** Reads one git config key. Unset keys make git exit non-zero, which is not an error here. */
@@ -133,7 +132,7 @@ async function readGitConfigValue(
 // this switches authorship, and the two are independent.
 statusRouter.get(
   '/api/git/identity',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     const [name, email, localName, localEmail] = await Promise.all([
@@ -150,12 +149,12 @@ statusRouter.get(
       email,
       isLocal: Boolean(localName || localEmail)
     });
-  })
+  }
 );
 
 statusRouter.post(
   '/api/git/identity',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { name, email, scope } = (req.body ?? {}) as {
       name?: unknown;
@@ -181,5 +180,5 @@ statusRouter.post(
     await runGitCommand(repoPath, ['config', gitScope, 'user.email', safeEmail]);
 
     res.json({ success: true, name: safeName, email: safeEmail, scope: gitScope.slice(2) });
-  })
+  }
 );

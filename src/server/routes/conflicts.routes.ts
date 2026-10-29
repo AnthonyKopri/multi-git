@@ -7,7 +7,7 @@ import { runGitCommand } from '../git/run';
 import { parseConflictBlocks } from '../git/conflicts';
 import { resolveInsideRepo } from '../fs/paths';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 
 export const conflictsRouter: Router = Router();
 
@@ -15,7 +15,7 @@ conflictsRouter.use(requireRepoPath);
 
 conflictsRouter.get(
   '/api/git/conflict/file',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const repoPath = req.repoPath as string;
     const safePath = pathArg(req.query['path']);
 
@@ -29,12 +29,12 @@ conflictsRouter.get(
 
     const content = fs.readFileSync(fullPath, 'utf8');
     res.json({ success: true, rawContent: content, blocks: parseConflictBlocks(content) });
-  })
+  }
 );
 
 conflictsRouter.post(
   '/api/git/conflict/resolve',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { filePath, resolvedContent } = (req.body ?? {}) as {
       filePath?: unknown;
@@ -62,5 +62,5 @@ conflictsRouter.post(
     );
 
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );

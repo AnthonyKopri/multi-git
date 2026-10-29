@@ -13,7 +13,7 @@ import { resolveInsideRepo } from '../fs/paths';
 import { saveManyToTrash, saveToTrash } from '../safety-net/trash';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { isMerging, isRebasing } from './status.routes';
 import type { DiffLine } from '../../shared/git-types';
 import { reportServerProblem } from '../logs';
@@ -24,7 +24,7 @@ stagingRouter.use(requireRepoPath);
 
 stagingRouter.post(
   '/api/git/stage',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { files } = (req.body ?? {}) as { files?: unknown };
 
@@ -38,12 +38,12 @@ stagingRouter.post(
     const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
 
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 stagingRouter.post(
   '/api/git/unstage',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { files } = (req.body ?? {}) as { files?: unknown };
 
@@ -60,12 +60,12 @@ stagingRouter.post(
     const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
 
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 stagingRouter.post(
   '/api/git/ignore',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { filePath } = (req.body ?? {}) as { filePath?: unknown };
 
@@ -107,12 +107,12 @@ stagingRouter.post(
     }
 
     res.json({ success: true, rule: ignoreRule });
-  })
+  }
 );
 
 stagingRouter.post(
   '/api/git/discard',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { filePath, isUntracked } = (req.body ?? {}) as {
       filePath?: unknown;
@@ -143,12 +143,12 @@ stagingRouter.post(
     );
 
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 stagingRouter.post(
   '/api/git/discard-all',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { deleteUntracked } = (req.body ?? {}) as { deleteUntracked?: unknown };
 
@@ -192,12 +192,12 @@ stagingRouter.post(
     });
 
     res.json({ success: true });
-  })
+  }
 );
 
 stagingRouter.post(
   '/api/git/commit',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { message, amend, sign } = (req.body ?? {}) as {
       message?: unknown;
@@ -239,23 +239,23 @@ stagingRouter.post(
       }
       throw new HttpError(explained, 400);
     }
-  })
+  }
 );
 
 stagingRouter.get(
   '/api/git/last-commit-message',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     // Fails in a repository with no commits, which is not an error.
     const result = await tryGitCommand(repoPath, ['log', '-1', '--pretty=%B']);
     res.json({ success: true, message: result?.stdout.replace(/\r?\n+$/, '') ?? '' });
-  })
+  }
 );
 
 stagingRouter.post(
   '/api/git/undo-commit',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     if (isMerging(repoPath) || isRebasing(repoPath)) {
@@ -276,12 +276,12 @@ stagingRouter.post(
     });
 
     res.json({ success: true, stdout: result.stdout, stderr: result.stderr });
-  })
+  }
 );
 
 stagingRouter.get(
   '/api/git/diff',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const safePath = pathArg(req.query['path']);
     const isStaged = req.query['staged'] === 'true';
@@ -319,5 +319,5 @@ stagingRouter.get(
 
     const { stdout } = await runGitCommand(repoPath, args);
     res.json({ success: true, diff: parseGitDiffText(stdout) });
-  })
+  }
 );

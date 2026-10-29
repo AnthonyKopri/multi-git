@@ -8,7 +8,7 @@ import { parseBlameOutput } from '../git/blame';
 import { resolveInsideRepo } from '../fs/paths';
 import { openPathInDefaultApp, pickFolderWithPowerShell } from '../os/reveal';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 
 /** Repository-scoped file reads. */
 export const filesRouter: Router = Router();
@@ -44,7 +44,7 @@ function looksBinary(fd: number, size: number): boolean {
 
 filesRouter.get(
   '/api/git/file/content',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const repoPath = req.repoPath as string;
     const safePath = pathArg(req.query['path']);
 
@@ -85,12 +85,12 @@ filesRouter.get(
     } finally {
       fs.closeSync(handle);
     }
-  })
+  }
 );
 
 filesRouter.get(
   '/api/git/file/blame',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const safePath = pathArg(req.query['path']);
 
@@ -101,12 +101,12 @@ filesRouter.get(
     ]);
 
     res.json({ success: true, blame: parseBlameOutput(stdout) });
-  })
+  }
 );
 
 filesRouter.post(
   '/api/git/open-in-editor',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { filePath } = (req.body ?? {}) as { filePath?: unknown };
 
@@ -127,12 +127,12 @@ filesRouter.post(
 
     await openPathInDefaultApp(fullPath);
     res.json({ success: true, openedPath: fullPath });
-  })
+  }
 );
 
 folderRouter.get(
   '/api/git/select-folder',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     // Desktop mode uses Electron's native dialog through the preload bridge.
     if (process.versions.electron || process.env['IS_ELECTRON'] === 'true') {
       throw new HttpError('Folder selection is handled by Electron in desktop mode', 400);
@@ -145,5 +145,5 @@ folderRouter.get(
     }
 
     res.json({ success: true, path: await pickFolderWithPowerShell() });
-  })
+  }
 );

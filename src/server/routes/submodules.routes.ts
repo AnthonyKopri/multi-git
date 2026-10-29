@@ -11,7 +11,7 @@
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { withRepoLock } from '../git/lock';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { operations } from '../operations/registry';
@@ -42,26 +42,26 @@ function pathList(value: unknown, label = 'Submodule paths'): string[] | undefin
 
 submodulesRouter.get(
   '/api/submodules',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     res.json({ success: true, submodules: await listSubmodules(repoPath) });
-  })
+  }
 );
 
 submodulesRouter.post(
   '/api/submodules/init',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const paths = pathList((req.body ?? {})['paths']);
 
     const results = await withRepoLock(repoPath, () => initSubmodules(repoPath, paths));
     res.json({ success: true, results, submodules: await listSubmodules(repoPath) });
-  })
+  }
 );
 
 submodulesRouter.post(
   '/api/submodules/update',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const paths = pathList(body['paths']);
@@ -106,12 +106,12 @@ submodulesRouter.post(
       operation.fail(error instanceof Error ? error.message : 'Could not update submodules');
       throw error;
     }
-  })
+  }
 );
 
 submodulesRouter.post(
   '/api/submodules/sync',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -120,12 +120,12 @@ submodulesRouter.post(
     );
 
     res.json({ success: true, results, submodules: await listSubmodules(repoPath) });
-  })
+  }
 );
 
 submodulesRouter.post(
   '/api/submodules/set-branch',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { path: submodulePath, branch } = (req.body ?? {}) as {
       path?: unknown;
@@ -145,12 +145,12 @@ submodulesRouter.post(
     );
 
     res.json({ success: true, submodule, submodules: await listSubmodules(repoPath) });
-  })
+  }
 );
 
 submodulesRouter.post(
   '/api/submodules/deinit',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const paths = pathList(body['paths']);
@@ -167,7 +167,7 @@ submodulesRouter.post(
     });
 
     res.json({ success: true, results, submodules: await listSubmodules(repoPath) });
-  })
+  }
 );
 
 /**
@@ -179,7 +179,7 @@ submodulesRouter.post(
  */
 submodulesRouter.get(
   '/api/submodules/repo-path',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const submodulePath = req.query['path'];
 
@@ -196,5 +196,5 @@ submodulesRouter.get(
     }
 
     res.json({ success: true, path: resolved });
-  })
+  }
 );

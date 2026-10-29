@@ -15,7 +15,6 @@ import {
 } from '../ssh/agent-session';
 import { AGENT_REPAIR_COMMAND } from '../ssh/agent-service';
 import { resolveRepoPath } from '../middleware/repo-path';
-import { asyncRoute } from '../middleware/error-handler';
 
 export const sshAgentRouter: Router = Router();
 
@@ -34,7 +33,7 @@ function asProfileId(raw: unknown): string {
 
 sshAgentRouter.get(
   '/api/ssh/agent/status',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = optionalRepoPath(req.query['repoPath']);
 
     // When the caller names a repository but no profile, answer about the
@@ -46,12 +45,12 @@ sshAgentRouter.get(
         : (repoPath ? profileForRepo(repoPath) : null) ?? undefined;
 
     res.json({ success: true, agent: await agentStatus({ profileId }) });
-  })
+  }
 );
 
 sshAgentRouter.post(
   '/api/ssh/agent/load',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { repoPath, profileId, passphrase, savePassphrase } = (req.body ?? {}) as {
       repoPath?: unknown;
       profileId?: unknown;
@@ -86,7 +85,7 @@ sshAgentRouter.post(
       ...(result.error ? { error: result.error } : {}),
       ...(result.code ? { code: result.code } : {})
     });
-  })
+  }
 );
 
 /**
@@ -99,7 +98,7 @@ sshAgentRouter.post(
  */
 sshAgentRouter.post(
   '/api/ssh/agent/load-all',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     const result = await loadAllProfileKeys();
 
     res.json({
@@ -109,12 +108,12 @@ sshAgentRouter.post(
       ...(result.error ? { error: result.error } : {}),
       ...(result.code ? { code: result.code } : {})
     });
-  })
+  }
 );
 
 sshAgentRouter.post(
   '/api/ssh/agent/unload',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { profileId, force } = (req.body ?? {}) as { profileId?: unknown; force?: unknown };
 
     const result = await unloadProfileKey(asProfileId(profileId), { force: force === true });
@@ -125,7 +124,7 @@ sshAgentRouter.post(
       ...(result.error ? { error: result.error } : {}),
       ...(result.code ? { code: result.code } : {})
     });
-  })
+  }
 );
 
 /**

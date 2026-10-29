@@ -11,7 +11,7 @@
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { withRepoLock } from '../git/lock';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { operations } from '../operations/registry';
@@ -53,7 +53,7 @@ function profileArgs(body: unknown): { profileId?: string; sshKeyPath?: string }
 
 remotesRouter.get(
   '/api/remotes',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const remotes = await listRemotes(repoPath);
     const defaultPush = remotes.find((remote) => remote.isDefaultPush);
@@ -63,12 +63,12 @@ remotesRouter.get(
       remotes,
       ...(defaultPush ? { defaultPushRemote: defaultPush.name } : {})
     });
-  })
+  }
 );
 
 remotesRouter.post(
   '/api/remotes',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -87,12 +87,12 @@ remotesRouter.post(
 
     const remote = await withRepoLock(repoPath, () => addRemote(repoPath, input));
     res.json({ success: true, remote, remotes: await listRemotes(repoPath) });
-  })
+  }
 );
 
 remotesRouter.post(
   '/api/remotes/update',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -112,12 +112,12 @@ remotesRouter.post(
 
     const remote = await withRepoLock(repoPath, () => updateRemote(repoPath, input));
     res.json({ success: true, remote, remotes: await listRemotes(repoPath) });
-  })
+  }
 );
 
 remotesRouter.post(
   '/api/remotes/default-push',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { name } = (req.body ?? {}) as { name?: unknown };
 
@@ -126,12 +126,12 @@ remotesRouter.post(
     );
 
     res.json({ success: true, remotes: await listRemotes(repoPath) });
-  })
+  }
 );
 
 remotesRouter.delete(
   '/api/remotes',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { name } = (req.body ?? {}) as { name?: unknown };
 
@@ -146,22 +146,22 @@ remotesRouter.delete(
     });
 
     res.json({ success: true, removed, remotes: await listRemotes(repoPath) });
-  })
+  }
 );
 
 remotesRouter.get(
   '/api/remotes/prune-preview',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const name = req.query['name'];
 
     res.json({ success: true, preview: await previewRemotePrune(repoPath, name) });
-  })
+  }
 );
 
 remotesRouter.post(
   '/api/remotes/prune',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { name } = (req.body ?? {}) as { name?: unknown };
 
@@ -181,12 +181,12 @@ remotesRouter.post(
     });
 
     res.json({ success: true, pruned: preview.staleRefs });
-  })
+  }
 );
 
 remotesRouter.post(
   '/api/remotes/test',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { name } = (req.body ?? {}) as { name?: unknown };
     const { profileId, sshKeyPath } = profileArgs(req.body);
@@ -215,12 +215,12 @@ remotesRouter.post(
       operation.fail(error instanceof Error ? error.message : 'Could not contact the remote');
       throw error;
     }
-  })
+  }
 );
 
 remotesRouter.post(
   '/api/remotes/fetch-all',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { profileId, sshKeyPath } = profileArgs(req.body);
     const prune = (req.body ?? {})['prune'] === true;
@@ -270,5 +270,5 @@ remotesRouter.post(
 
     operation.succeed(`${results.filter((entry) => entry.ok).length}/${remotes.length} fetched`);
     res.json({ success: true, results, cancelled: operation.cancelled });
-  })
+  }
 );

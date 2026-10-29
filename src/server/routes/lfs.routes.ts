@@ -11,7 +11,7 @@
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { operations } from '../operations/registry';
 import { ensureAgentForRepo } from '../ssh/agent-session';
 import {
@@ -46,7 +46,7 @@ function transferAction(value: unknown): 'fetch' | 'pull' | 'prune' {
 
 lfsRouter.get(
   '/api/lfs/status',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     const operation = operations.begin({
@@ -64,7 +64,7 @@ lfsRouter.get(
       operation.fail(error instanceof Error ? error.message : 'Could not read Git LFS state');
       throw error;
     }
-  })
+  }
 );
 
 /**
@@ -76,7 +76,7 @@ lfsRouter.get(
  */
 lfsRouter.post(
   '/api/lfs/installation',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const action = (req.body ?? {})['action'];
 
@@ -85,42 +85,42 @@ lfsRouter.post(
     }
 
     res.json({ success: true, installation: await setInstallation(repoPath, action) });
-  })
+  }
 );
 
 lfsRouter.post(
   '/api/lfs/track',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const pattern = requiredString((req.body ?? {})['pattern'], 'Pattern');
 
     res.json({ success: true, trackedPatterns: await trackPattern(repoPath, pattern) });
-  })
+  }
 );
 
 lfsRouter.post(
   '/api/lfs/untrack',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const pattern = requiredString((req.body ?? {})['pattern'], 'Pattern');
 
     res.json({ success: true, trackedPatterns: await untrackPattern(repoPath, pattern) });
-  })
+  }
 );
 
 lfsRouter.get(
   '/api/lfs/preview',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const action = transferAction(req.query['action']);
 
     res.json({ success: true, preview: await previewTransfer(repoPath, action) });
-  })
+  }
 );
 
 lfsRouter.post(
   '/api/lfs/transfer',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const action = transferAction(body['action']);
@@ -148,22 +148,22 @@ lfsRouter.post(
       operation.fail(error instanceof Error ? error.message : `git lfs ${action} failed`);
       throw error;
     }
-  })
+  }
 );
 
 lfsRouter.get(
   '/api/lfs/locks',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const state = await listLocks(repoPath);
 
     res.json({ success: true, ...state });
-  })
+  }
 );
 
 lfsRouter.post(
   '/api/lfs/lock',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const filePath = requiredString((req.body ?? {})['path'], 'File path');
 
@@ -171,12 +171,12 @@ lfsRouter.post(
     await createLock(repoPath, filePath);
 
     res.json({ success: true, ...(await listLocks(repoPath)) });
-  })
+  }
 );
 
 lfsRouter.post(
   '/api/lfs/unlock',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const filePath = requiredString(body['path'], 'File path');
@@ -188,5 +188,5 @@ lfsRouter.post(
     await releaseLock(repoPath, filePath, body['force'] === true);
 
     res.json({ success: true, ...(await listLocks(repoPath)) });
-  })
+  }
 );

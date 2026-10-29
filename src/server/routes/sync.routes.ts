@@ -17,7 +17,7 @@ import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/v
 import { requireRepoPath } from '../middleware/repo-path';
 import { ensureAgentForRepo } from '../ssh/agent-session';
 import { asOperation } from '../operations/as-operation';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { fetchWithAutoPull } from '../workflows/sync';
 
 /** Routes that operate on an existing repository. */
@@ -35,13 +35,13 @@ syncRouter.use(requireRepoPath);
  */
 syncRouter.post(
   '/api/workflows/fetch',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { profileId, sshKeyPath } = profileArgs(req.body);
     res.json({
       success: true,
       ...(await fetchWithAutoPull(req.repoPath as string, profileId, sshKeyPath))
     });
-  })
+  }
 );
 
 /**
@@ -71,7 +71,7 @@ function profileArgs(body: unknown): { profileId?: string; sshKeyPath?: string }
 
 syncRouter.post(
   '/api/git/push',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { branch, force } = (req.body ?? {}) as { branch?: unknown; force?: unknown };
     const { profileId, sshKeyPath } = profileArgs(req.body);
@@ -95,12 +95,12 @@ syncRouter.post(
     );
 
     res.json({ success: true, ...result });
-  })
+  }
 );
 
 syncRouter.post(
   '/api/git/pull',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { branch } = (req.body ?? {}) as { branch?: unknown };
     const { profileId, sshKeyPath } = profileArgs(req.body);
@@ -122,12 +122,12 @@ syncRouter.post(
     );
 
     res.json({ success: true, ...result });
-  })
+  }
 );
 
 syncRouter.post(
   '/api/git/fetch',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { profileId, sshKeyPath } = profileArgs(req.body);
 
@@ -141,12 +141,12 @@ syncRouter.post(
     );
 
     res.json({ success: true, ...result });
-  })
+  }
 );
 
 syncRouter.get(
   '/api/git/remote/origin',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const remoteUrl = await getOriginRemoteUrl(repoPath);
 
@@ -165,12 +165,12 @@ syncRouter.get(
       canToggle: Boolean(suggestedUrl),
       suggestedUrl
     });
-  })
+  }
 );
 
 syncRouter.post(
   '/api/git/remote/origin/toggle-protocol',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const remoteUrl = await getOriginRemoteUrl(repoPath);
 
@@ -199,7 +199,7 @@ syncRouter.post(
       remoteUrl: toggledUrl,
       protocol: parseRemoteUrl(toggledUrl)?.protocol ?? 'other'
     });
-  })
+  }
 );
 
 /** Falls back to the last path segment of the clone URL. */
@@ -239,7 +239,7 @@ const PROGRESS_REFRESH_MS = 1000;
 
 cloneRouter.post(
   '/api/git/clone',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { url, parentDir, folderName, profileId, operationId, expectedBytes } = (req.body ?? {}) as Record<
       string,
       unknown
@@ -389,5 +389,5 @@ cloneRouter.post(
       }
       bridge?.cleanup();
     }
-  })
+  }
 );

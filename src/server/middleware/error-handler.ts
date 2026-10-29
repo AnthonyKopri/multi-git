@@ -2,8 +2,9 @@
 //
 // Replaces the `err.stderr || err.error?.message || 'Error doing X'` triad
 // that was repeated in roughly 65 catch blocks. Handlers now let errors
-// propagate and this decides the status and the message.
-import type { NextFunction, Request, RequestHandler, Response } from 'express';
+// propagate and this decides the status and the message. Express 5 passes a
+// rejected promise from an async handler to next(), so they need no wrapper.
+import type { NextFunction, Request, Response } from 'express';
 
 import { GitError } from '../git/run';
 import { InvalidGitArgumentError } from '../git/args';
@@ -30,17 +31,6 @@ export class HttpError extends Error {
     this.statusCode = statusCode;
     this.code = code;
   }
-}
-
-/**
- * Wraps an async handler so a rejected promise reaches the error middleware.
- * Express 4 does not await handlers, so without this an async throw becomes an
- * unhandled rejection and the request hangs until the client gives up.
- */
-export function asyncRoute(handler: RequestHandler): RequestHandler {
-  return (req, res, next) => {
-    void Promise.resolve(handler(req, res, next)).catch(next);
-  };
 }
 
 interface ErrorShape {

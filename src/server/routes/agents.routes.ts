@@ -7,7 +7,7 @@
 // against that line.
 import { Router } from 'express';
 
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { sanitizeConfigForClient } from '../config/sanitize';
 import { readConfig } from '../config/store';
 import {
@@ -36,7 +36,7 @@ function rethrow(error: unknown): never {
 
 agentsRouter.get(
   '/api/agents',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     res.json({
       success: true,
       agents: listAgentDefinitions(),
@@ -47,14 +47,14 @@ agentsRouter.get(
       // /api/agents/detect, which has to run `which` to find out.
       catalogue: AGENT_CATALOGUE
     });
-  })
+  }
 );
 
 agentsRouter.get(
   '/api/agents/detect',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     res.json({ success: true, detected: await detectAgents() });
-  })
+  }
 );
 
 /**
@@ -66,7 +66,7 @@ agentsRouter.get(
  */
 agentsRouter.post(
   '/api/agents/detect',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     const added: ExternalAgentDefinition[] = [];
 
     for (const detected of await detectAgents()) {
@@ -86,12 +86,12 @@ agentsRouter.post(
     }
 
     res.json({ success: true, added, config: sanitizeConfigForClient(readConfig()) });
-  })
+  }
 );
 
 agentsRouter.post(
   '/api/agents',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const body = (req.body ?? {}) as Partial<ExternalAgentDefinition>;
 
     if (typeof body.executable !== 'string' || body.executable.trim() === '') {
@@ -122,12 +122,12 @@ agentsRouter.post(
     } catch (error) {
       rethrow(error);
     }
-  })
+  }
 );
 
 agentsRouter.delete(
   '/api/agents',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const { id } = (req.body ?? {}) as { id?: unknown };
 
     if (!deleteAgentDefinition(String(id))) {
@@ -135,14 +135,14 @@ agentsRouter.delete(
     }
 
     res.json({ success: true, config: sanitizeConfigForClient(readConfig()) });
-  })
+  }
 );
 
 /** Empties the launch history. It holds no prompt text, only what was started. */
 agentsRouter.delete(
   '/api/agents/launches',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     clearLaunches();
     res.json({ success: true, config: sanitizeConfigForClient(readConfig()) });
-  })
+  }
 );

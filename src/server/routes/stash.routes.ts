@@ -10,7 +10,7 @@ import { createStash } from '../git/selective-stash';
 import type { FileSelection } from '../git/selective-stash';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 
 export const stashRouter: Router = Router();
 
@@ -65,7 +65,7 @@ function parseSelections(value: unknown): FileSelection[] | undefined {
 
 stashRouter.get(
   '/api/git/stash',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     // Fails when there is no stash ref yet, which is the normal empty state.
@@ -91,7 +91,7 @@ stashRouter.get(
       });
 
     res.json({ success: true, stashes });
-  })
+  }
 );
 
 /**
@@ -103,7 +103,7 @@ stashRouter.get(
  */
 stashRouter.get(
   '/api/git/stash/search',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const query = typeof req.query['query'] === 'string' ? req.query['query'].trim() : '';
 
@@ -154,12 +154,12 @@ stashRouter.get(
     }
 
     res.json({ success: true, query, stashes: matches });
-  })
+  }
 );
 
 stashRouter.post(
   '/api/git/stash',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as {
       message?: unknown;
@@ -188,7 +188,7 @@ stashRouter.post(
 
     const result = await withRepoLock(repoPath, () => createStash(repoPath, input));
     res.json({ success: true, ...result });
-  })
+  }
 );
 
 /**
@@ -199,7 +199,7 @@ stashRouter.post(
  */
 stashRouter.get(
   '/api/git/stash/show',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const safeRef = stashRef(req.query['ref']);
 
@@ -233,12 +233,12 @@ stashRouter.get(
     const parsed = parseStructuredDiff(bytesToTransport(patch.stdoutBuffer ?? Buffer.alloc(0)));
 
     res.json({ success: true, ref: safeRef, files, diff: toDisplayDiffFiles(parsed) });
-  })
+  }
 );
 
 stashRouter.post(
   '/api/git/stash/apply',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { ref, pop, restoreIndex } = (req.body ?? {}) as {
       ref?: unknown;
@@ -258,7 +258,7 @@ stashRouter.post(
 
     const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 /**
@@ -269,7 +269,7 @@ stashRouter.post(
  */
 stashRouter.post(
   '/api/git/stash/branch',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { ref, branchName } = (req.body ?? {}) as { ref?: unknown; branchName?: unknown };
 
@@ -281,12 +281,12 @@ stashRouter.post(
     );
 
     res.json({ success: true, branch: safeBranch, stdout, stderr });
-  })
+  }
 );
 
 stashRouter.post(
   '/api/git/stash/drop',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const safeRef = stashRef((req.body as { ref?: unknown })?.ref);
 
@@ -306,5 +306,5 @@ stashRouter.post(
     );
 
     res.json({ success: true, stdout, stderr, droppedCommit: stashOid ?? null });
-  })
+  }
 );

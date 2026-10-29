@@ -6,7 +6,7 @@ import { GitError, runGitCommand, tryGitCommand } from '../git/run';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import type { RecoveryOperation } from '../../shared/recovery-types';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { integrationPreflight, targetExists } from '../git/integrate-preflight';
 import type { IntegrationKind } from '../../shared/integrate-types';
 
@@ -16,7 +16,7 @@ branchesRouter.use(requireRepoPath);
 
 branchesRouter.get(
   '/api/git/branches',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     // Full refnames disambiguate local from remote. "%(refname:short)" drops
@@ -45,12 +45,12 @@ branchesRouter.get(
     }
 
     res.json({ success: true, local, remote });
-  })
+  }
 );
 
 branchesRouter.post(
   '/api/git/checkout',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { branch, isRemote } = (req.body ?? {}) as { branch?: unknown; isRemote?: unknown };
 
@@ -83,12 +83,12 @@ branchesRouter.post(
 
     const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 branchesRouter.post(
   '/api/git/create-branch',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { branchName } = (req.body ?? {}) as { branchName?: unknown };
 
@@ -98,12 +98,12 @@ branchesRouter.post(
     );
 
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 branchesRouter.post(
   '/api/git/delete-branch',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { branch, force } = (req.body ?? {}) as { branch?: unknown; force?: unknown };
 
@@ -133,7 +133,7 @@ branchesRouter.post(
         notFullyMerged: /not fully merged/i.test(errorText)
       });
     }
-  })
+  }
 );
 
 /** Merge and rebase report conflicts as a 200 with success:false, not an error. */
@@ -168,7 +168,7 @@ async function runIntegration(
  */
 branchesRouter.get(
   '/api/git/integrate/preflight',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const kind = String(req.query['kind'] ?? '');
     const target = String(req.query['target'] ?? '');
@@ -192,12 +192,12 @@ branchesRouter.get(
         target
       })
     });
-  })
+  }
 );
 
 branchesRouter.post(
   '/api/git/merge',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const safeBranch = refArg((req.body as { branch?: unknown })?.branch, 'Branch name');
 
@@ -210,12 +210,12 @@ branchesRouter.post(
         'merge'
       )
     );
-  })
+  }
 );
 
 branchesRouter.post(
   '/api/git/rebase',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const safeBranch = refArg((req.body as { branch?: unknown })?.branch, 'Branch name');
 
@@ -228,12 +228,12 @@ branchesRouter.post(
         'rebase'
       )
     );
-  })
+  }
 );
 
 branchesRouter.post(
   '/api/git/abort',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { type } = (req.body ?? {}) as { type?: unknown };
 
@@ -241,12 +241,12 @@ branchesRouter.post(
     const { stdout, stderr } = await withRepoLock(repoPath, () => runGitCommand(repoPath, args));
 
     res.json({ success: true, stdout, stderr });
-  })
+  }
 );
 
 branchesRouter.post(
   '/api/git/conflict/continue',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { type } = (req.body ?? {}) as { type?: unknown };
 
@@ -265,5 +265,5 @@ branchesRouter.post(
     });
 
     res.json({ success: true, stdout: result.stdout, stderr: result.stderr });
-  })
+  }
 );

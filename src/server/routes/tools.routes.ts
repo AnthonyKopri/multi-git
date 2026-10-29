@@ -7,7 +7,7 @@
 // that line.
 import { Router } from 'express';
 
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import {
   ToolDefinitionError,
   confirmToolKind,
@@ -34,9 +34,9 @@ export const toolsRouter: Router = Router();
  */
 toolsRouter.get(
   '/api/tools/prerequisites',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     res.json({ success: true, prerequisites: await detectPrerequisites() });
-  })
+  }
 );
 
 function rethrow(error: unknown): never {
@@ -55,20 +55,20 @@ function toolKind(value: unknown): ExternalToolKind {
 
 toolsRouter.get(
   '/api/tools',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     res.json({
       success: true,
       tools: listToolDefinitions(),
       confirmed: readConfig().toolsConfirmed ?? {}
     });
-  })
+  }
 );
 
 toolsRouter.get(
   '/api/tools/detect',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     res.json({ success: true, detected: await detectTools() });
-  })
+  }
 );
 
 /**
@@ -80,7 +80,7 @@ toolsRouter.get(
  */
 toolsRouter.post(
   '/api/tools/detect',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     const detected = await detectTools();
     const added = [];
 
@@ -100,12 +100,12 @@ toolsRouter.post(
     }
 
     res.json({ success: true, added, tools: listToolDefinitions() });
-  })
+  }
 );
 
 toolsRouter.post(
   '/api/tools',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     try {
@@ -124,12 +124,12 @@ toolsRouter.post(
     } catch (error) {
       rethrow(error);
     }
-  })
+  }
 );
 
 toolsRouter.delete(
   '/api/tools',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const id = (req.body ?? {})['id'];
 
     if (typeof id !== 'string' || id === '') {
@@ -138,16 +138,16 @@ toolsRouter.delete(
 
     deleteToolDefinition(id);
     res.json({ success: true, tools: listToolDefinitions() });
-  })
+  }
 );
 
 /** Records that the user has agreed to the definition used for a kind. */
 toolsRouter.post(
   '/api/tools/confirm',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const kind = toolKind((req.body ?? {})['kind']);
 
     confirmToolKind(kind);
     res.json({ success: true, confirmed: isToolKindConfirmed(kind) });
-  })
+  }
 );

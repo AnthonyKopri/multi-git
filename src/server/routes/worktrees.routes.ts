@@ -13,7 +13,7 @@ import { Router } from 'express';
 import path from 'node:path';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { withRepoLock } from '../git/lock';
 import { GitError, runGitCommand } from '../git/run';
 import { captureCheckpoint } from '../safety-net/checkpoints';
@@ -74,7 +74,7 @@ async function requireWorktree(
 
 worktreesRouter.get(
   '/api/worktrees',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     const [worktrees, familyKey] = await Promise.all([
@@ -91,12 +91,12 @@ worktreesRouter.get(
       worktrees,
       suggestedParent: suggestWorktreeParent(main?.path ?? repoPath, configuredParent())
     });
-  })
+  }
 );
 
 worktreesRouter.get(
   '/api/worktrees/status',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const worktrees = await listWorktrees(repoPath);
 
@@ -116,12 +116,12 @@ worktreesRouter.get(
       operation.fail(error instanceof Error ? error.message : 'Could not read worktree status');
       throw error;
     }
-  })
+  }
 );
 
 worktreesRouter.post(
   '/api/worktrees',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Partial<CreateWorktreeInput>;
 
@@ -149,12 +149,12 @@ worktreesRouter.post(
       stdout: created.stdout,
       stderr: created.stderr
     });
-  })
+  }
 );
 
 worktreesRouter.post(
   '/api/worktrees/move',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { from, to } = (req.body ?? {}) as { from?: unknown; to?: unknown };
 
@@ -179,12 +179,12 @@ worktreesRouter.post(
       stdout: result.stdout,
       stderr: result.stderr
     });
-  })
+  }
 );
 
 worktreesRouter.post(
   '/api/worktrees/lock',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { path: target, reason } = (req.body ?? {}) as { path?: unknown; reason?: unknown };
 
@@ -204,12 +204,12 @@ worktreesRouter.post(
       stdout: result.stdout,
       stderr: result.stderr
     });
-  })
+  }
 );
 
 worktreesRouter.post(
   '/api/worktrees/unlock',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { path: target } = (req.body ?? {}) as { path?: unknown };
 
@@ -223,12 +223,12 @@ worktreesRouter.post(
       stdout: result.stdout,
       stderr: result.stderr
     });
-  })
+  }
 );
 
 worktreesRouter.post(
   '/api/worktrees/repair',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { paths } = (req.body ?? {}) as { paths?: unknown };
 
@@ -251,19 +251,19 @@ worktreesRouter.post(
       stdout: result.stdout,
       stderr: result.stderr
     });
-  })
+  }
 );
 
 worktreesRouter.get(
   '/api/worktrees/prune-preview',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     res.json({ success: true, entries: await parsePrunePreview(req.repoPath as string) });
-  })
+  }
 );
 
 worktreesRouter.delete(
   '/api/worktrees',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { path: target, force, confirmName } = (req.body ?? {}) as {
       path?: unknown;
@@ -370,5 +370,5 @@ worktreesRouter.delete(
       worktrees: await listWorktrees(repoPath),
       ...(snapshotRef ? { snapshotRef } : {})
     });
-  })
+  }
 );

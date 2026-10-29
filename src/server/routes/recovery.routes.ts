@@ -18,7 +18,7 @@ import {
   retentionDays
 } from '../safety-net/recovery';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { isMerging, isRebasing } from './status.routes';
 
 export const recoveryRouter: Router = Router();
@@ -27,7 +27,7 @@ recoveryRouter.use(requireRepoPath);
 
 recoveryRouter.get(
   '/api/git/recovery',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const operationInProgress = isMerging(repoPath) || isRebasing(repoPath);
 
@@ -43,12 +43,12 @@ recoveryRouter.get(
       retentionDays: retentionDays(),
       operationInProgress
     });
-  })
+  }
 );
 
 recoveryRouter.post(
   '/api/git/recovery/branch',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { oid, branchName } = (req.body ?? {}) as { oid?: unknown; branchName?: unknown };
 
@@ -62,12 +62,12 @@ recoveryRouter.post(
     );
 
     res.json({ success: true, branch: safeBranch, oid: safeOid, stdout, stderr });
-  })
+  }
 );
 
 recoveryRouter.post(
   '/api/git/recovery/restore',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { pointId, ref } = (req.body ?? {}) as { pointId?: unknown; ref?: unknown };
 
@@ -124,12 +124,12 @@ recoveryRouter.post(
       stdout: result.stdout,
       stderr: result.stderr
     });
-  })
+  }
 );
 
 recoveryRouter.delete(
   '/api/git/recovery',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { id } = (req.body ?? {}) as { id?: unknown };
 
@@ -139,5 +139,5 @@ recoveryRouter.delete(
     }
 
     res.json({ success: true });
-  })
+  }
 );

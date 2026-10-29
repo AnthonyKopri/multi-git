@@ -2,7 +2,7 @@
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
-import { asyncRoute, HttpError } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import {
   createPullRequest,
   preflightPullRequest,
@@ -39,7 +39,7 @@ function nameList(value: unknown, field: string): string[] {
 
 pullRequestsRouter.get(
   '/api/pull-requests/preflight',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     res.json({
@@ -50,12 +50,12 @@ pullRequestsRouter.get(
         baseBranch: optionalString(req.query['baseBranch'])
       })
     });
-  })
+  }
 );
 
 pullRequestsRouter.post(
   '/api/pull-requests',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -125,5 +125,5 @@ pullRequestsRouter.post(
       handle.fail(error instanceof Error ? error.message : String(error));
       throw error;
     }
-  })
+  }
 );

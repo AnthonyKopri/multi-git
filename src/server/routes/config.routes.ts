@@ -7,7 +7,7 @@ import { canonicalRepoKey } from '../config/repo-identity';
 import { sanitizeConfigForClient } from '../config/sanitize';
 import { validateSettings } from '../config/validate';
 import { removeManagedBlock } from '../ssh/config-block';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import { getVaultStatus, lockVault, unlockVault } from '../vault/vault';
 import { unloadSessionKeys } from '../ssh/agent-session';
 
@@ -59,7 +59,7 @@ configRouter.post('/api/secrets/unlock', (req, res) => {
 
 configRouter.post(
   '/api/secrets/lock',
-  asyncRoute(async (_req, res) => {
+  async (_req, res) => {
     lockVault();
 
     // The passphrases that authorised these identities are gone, so the
@@ -73,12 +73,12 @@ configRouter.post(
       unloadedKeys: removed,
       ...(failed.length > 0 ? { unloadFailures: failed } : {})
     });
-  })
+  }
 );
 
 configRouter.post(
   '/api/config/repo',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const resolvedPath = requireExistingRepo((req.body as { repoPath?: unknown })?.repoPath);
     const config = readConfig();
 
@@ -99,12 +99,12 @@ configRouter.post(
       repoKey: canonicalRepoKey(resolvedPath),
       config: sanitizeConfigForClient(config)
     });
-  })
+  }
 );
 
 configRouter.post(
   '/api/config/repo-settings',
-  asyncRoute((req, res) => {
+  (req, res) => {
     const { repoPath, warnBeforeDelete, identityOptOut, intendedAccount } = (req.body ?? {}) as {
       repoPath?: unknown;
       warnBeforeDelete?: unknown;
@@ -134,7 +134,7 @@ configRouter.post(
       repoKey,
       repoSettings: config.repoSettings[repoKey]
     });
-  })
+  }
 );
 
 configRouter.delete('/api/config/repo', (req, res) => {

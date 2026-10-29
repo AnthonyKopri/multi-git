@@ -21,7 +21,7 @@ import {
 import type { RebaseStep } from '../git/rebase';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
-import { HttpError, asyncRoute } from '../middleware/error-handler';
+import { HttpError } from '../middleware/error-handler';
 import type { RebaseAction, RebasePlan, RebaseTodoItem } from '../../shared/rebase-types';
 
 export const rebaseRouter: Router = Router();
@@ -119,7 +119,7 @@ function parsePlan(value: unknown): RebasePlan {
 /** The plan a rebase onto this base would start from. */
 rebaseRouter.get(
   '/api/git/rebase/plan',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const autosquash = req.query['autosquash'] === 'true';
 
@@ -127,23 +127,23 @@ rebaseRouter.get(
     const warning = await publishedWarning(repoPath, plan.onto);
 
     res.json({ success: true, plan, warning });
-  })
+  }
 );
 
 rebaseRouter.get(
   '/api/git/rebase/status',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const status = await rebaseStatus(repoPath);
     const remainder = status.splitInProgress ? await splitRemainder(repoPath) : null;
 
     res.json({ success: true, status, remainder });
-  })
+  }
 );
 
 rebaseRouter.post(
   '/api/git/rebase/start',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const plan = parsePlan((req.body as { plan?: unknown })?.plan);
 
@@ -171,12 +171,12 @@ rebaseRouter.post(
 
     const result = await withRepoLock(repoPath, () => startRebase(repoPath, plan));
     res.json({ success: true, ...result, validation });
-  })
+  }
 );
 
 rebaseRouter.post(
   '/api/git/rebase/step',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
     const { step } = (req.body ?? {}) as { step?: unknown };
 
@@ -191,7 +191,7 @@ rebaseRouter.post(
 
     const result = await withRepoLock(repoPath, () => stepRebase(repoPath, step as RebaseStep));
     res.json({ success: true, ...result });
-  })
+  }
 );
 
 /**
@@ -202,12 +202,12 @@ rebaseRouter.post(
  */
 rebaseRouter.post(
   '/api/git/rebase/split',
-  asyncRoute(async (req, res) => {
+  async (req, res) => {
     const repoPath = req.repoPath as string;
 
     const result = await withRepoLock(repoPath, () => startSplit(repoPath));
     const remainder = await splitRemainder(repoPath);
 
     res.json({ success: true, ...result, remainder });
-  })
+  }
 );
