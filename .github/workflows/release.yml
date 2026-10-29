@@ -38,6 +38,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/release.yml
+      - .npmrc
       - package.json
       - package-lock.json
       - docs/images/multi-git-logo.ico
