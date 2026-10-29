@@ -12,6 +12,19 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **A Git setting written with no value is read the way Git reads it.** In a
+  config file, `[commit] gpgsign` on its own line means "on", but Multi-Git
+  read it as not set. The signing panel then said commits were not signed
+  while Git went on signing them. Pull had the same problem: with `[pull]
+  rebase` it predicted a merge, and once confirmed it ran `git pull
+  --no-rebase`, overriding your setting. Both now follow Git's rules: no value
+  means on, an empty value means off, `Yes`, `ON` and other capitalisations
+  count, and so does any number other than 0. Pull also now recognises the
+  other `pull.rebase` values Git accepts (`m`, `interactive` and `i`) as a
+  rebase.
+
 ## [5.3.1] - 2026-10-29
 
 ### Changed

@@ -12,6 +12,8 @@ import fs from 'node:fs';
 
 import { commitish, refArg } from './args';
 import { runGitCommand, tryGitCommand } from './run';
+import { readConfigValues } from './config-values';
+import { parseGitBoolean } from '../../shared/git-config';
 import { CommandFailedError, CommandTimeoutError, executableRunner } from '../process/runner';
 import type { ExecutableRunner } from '../process/runner';
 import type {
@@ -228,72 +230,51 @@ const SIGNING_KEYS = [
 type SigningKey = (typeof SIGNING_KEYS)[number];
 
 /**
- * Several config values from one `git config` run.
- *
- * This was one `git config --get` per key and scope, eight processes for every
- * refresh. Each value here is still what `--get` would print: the last one set
- * wins, and an unset key or an empty value reads as null. `-z` ends each entry
- * with a NUL and puts the first newline between key and value, so a value with
- * spaces, `=` or a newline of its own comes back whole. A key written with no
- * value at all (`[commit] gpgsign`) has no newline and reads as null, as it did
- * before, because `--get` prints an empty line for it.
- *
- * `--local` keeps the meaning it had with `--get`, includes and all: a single
- * file, without the `include.path` files it names.
+ * A text setting as `git config --get` prints it: unset, empty, and written
+ * with no value all read as null. Git refuses a path or a format with no value,
+ * so there is nothing more to read into the last.
  */
-async function configValues(
-  repoPath: string,
-  scope: 'local' | 'any'
-): Promise<Map<SigningKey, string | null>> {
-  const pattern = `^(${SIGNING_KEYS.map((key) => key.replace(/\./g, '\\.')).join('|')})$`;
-  const args = ['config', '-z'];
-  if (scope === 'local') {
-    args.push('--local');
-  }
-  args.push('--get-regexp', pattern);
-
-  const values = new Map<SigningKey, string | null>(SIGNING_KEYS.map((key) => [key, null]));
-
-  // Exit 1 means no key matched, which is every value unset.
-  const result = await tryGitCommand(repoPath, args);
-
-  for (const entry of (result?.stdout ?? '').split('\0')) {
-    const newline = entry.indexOf('\n');
-    const name = (newline === -1 ? entry : entry.slice(0, newline)) as SigningKey;
-
-    if (values.has(name)) {
-      const value = newline === -1 ? '' : entry.slice(newline + 1);
-      values.set(name, value.trim() || null);
-    }
-  }
-
-  return values;
+function textValue(values: Map<string, string | null>, key: SigningKey): string | null {
+  return values.get(key)?.trim() || null;
 }
 
-function isTrue(value: string | null): boolean {
-  return value === 'true' || value === '1' || value === 'yes' || value === 'on';
+/**
+ * A boolean setting as git reads it, or null when it is not set.
+ *
+ * A key written with no value is true here, because it is true to git: the
+ * commit is signed. This used to read it as unset, so the signing panel said
+ * commits were not signed while git went on signing them.
+ */
+function booleanValue(values: Map<string, string | null>, key: SigningKey): boolean | null {
+  if (!values.has(key)) {
+    return null;
+  }
+
+  // A value git cannot read as a boolean is not treated as true. Git itself
+  // refuses to commit until it is fixed.
+  return parseGitBoolean(values.get(key) ?? null) === true;
 }
 
 export async function readSigningConfig(repoPath: string): Promise<SigningConfig> {
+  // One `git config` run per scope. This was one `git config --get` per key
+  // and scope, eight processes for every refresh.
   const [effective, local] = await Promise.all([
-    configValues(repoPath, 'any'),
-    configValues(repoPath, 'local')
+    readConfigValues(repoPath, SIGNING_KEYS),
+    readConfigValues(repoPath, SIGNING_KEYS, { local: true })
   ]);
 
-  const format = effective.get('gpg.format') ?? null;
-  const key = effective.get('user.signingkey') ?? null;
-  const commitSign = effective.get('commit.gpgsign') ?? null;
-  const tagSign = effective.get('tag.gpgsign') ?? null;
-  const allowedSigners = effective.get('gpg.ssh.allowedsignersfile') ?? null;
-  const localFormat = local.get('gpg.format') ?? null;
-  const localKey = local.get('user.signingkey') ?? null;
-  const localCommitSign = local.get('commit.gpgsign') ?? null;
+  const format = textValue(effective, 'gpg.format');
+  const key = textValue(effective, 'user.signingkey');
+  const allowedSigners = textValue(effective, 'gpg.ssh.allowedsignersfile');
+  const localFormat = textValue(local, 'gpg.format');
+  const localKey = textValue(local, 'user.signingkey');
+  const localCommitSign = booleanValue(local, 'commit.gpgsign');
 
-  const signsCommits = isTrue(commitSign);
+  const signsCommits = booleanValue(effective, 'commit.gpgsign') === true;
   const isRepoLevel = localFormat !== null || localKey !== null || localCommitSign !== null;
 
   let mode: SigningMode;
-  if (localCommitSign !== null && !isTrue(localCommitSign) && localKey === null) {
+  if (localCommitSign === false && localKey === null) {
     mode = 'off';
   } else if (key === null && !signsCommits) {
     mode = 'system';
@@ -304,7 +285,7 @@ export async function readSigningConfig(repoPath: string): Promise<SigningConfig
   return {
     mode,
     signCommitsByDefault: signsCommits,
-    signTagsByDefault: isTrue(tagSign),
+    signTagsByDefault: booleanValue(effective, 'tag.gpgsign') === true,
     signingKey: key,
     allowedSignersFile: allowedSigners,
     isRepoLevel

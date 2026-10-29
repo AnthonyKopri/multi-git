@@ -50,6 +50,20 @@ describe('resolving what a pull will do', () => {
       expect(resolvePullStrategy({ ...diverged, pullRebase: 'merges' })).toBe('rebase');
     });
 
+    it('rebases for pull.rebase written with no value, which git reads as true', () => {
+      // null is how the reader says "the key is there, with no `=`".
+      expect(resolvePullStrategy({ ...diverged, pullRebase: null })).toBe('rebase');
+    });
+
+    it('takes every other value git accepts for pull.rebase', () => {
+      for (const value of ['2', '1k', 'm', 'interactive', 'i']) {
+        expect(resolvePullStrategy({ ...diverged, pullRebase: value }), value).toBe('rebase');
+      }
+      for (const value of ['', '0', 'off', 'No']) {
+        expect(resolvePullStrategy({ ...diverged, pullRebase: value }), value).toBe('merge');
+      }
+    });
+
     it('predicts the refusal when pull.ff is only', () => {
       // git declines rather than choosing. Better to say so before the button
       // is pressed than to report it afterwards as a failure.
