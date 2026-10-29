@@ -14,7 +14,7 @@ import { saveManyToTrash, saveToTrash } from '../safety-net/trash';
 import { captureCheckpoint } from '../safety-net/checkpoints';
 import { requireRepoPath } from '../middleware/repo-path';
 import { HttpError } from '../middleware/error-handler';
-import { isMerging, isRebasing } from './status.routes';
+import { isOperationInProgress } from '../git/operation-state';
 import type { DiffLine } from '../../shared/git-types';
 import { reportServerProblem } from '../logs';
 
@@ -258,7 +258,7 @@ stagingRouter.post(
   async (req, res) => {
     const repoPath = req.repoPath as string;
 
-    if (isMerging(repoPath) || isRebasing(repoPath)) {
+    if (await isOperationInProgress(repoPath)) {
       throw new HttpError('Cannot undo a commit while a merge or rebase is in progress.', 400);
     }
 

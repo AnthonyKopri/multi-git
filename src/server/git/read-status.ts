@@ -1,22 +1,23 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { runGitCommand } from './run';
 import { parsePorcelainStatus } from './status';
+import { readOperationState } from './operation-state';
 import type { StatusResponse } from '../../shared/api-types';
 
-/** Resolves Git's directory rather than assuming .git is a directory (worktrees). */
+/**
+ * The working-tree status, with any merge or rebase stopped part-way.
+ *
+ * The one reading behind `GET /api/git/status` and the sync workflows, so the
+ * header badge and the auto-pull decision cannot disagree about a worktree.
+ */
 export async function readStatus(repoPath: string): Promise<StatusResponse> {
-  const [status, directory] = await Promise.all([
+  const [status, operation] = await Promise.all([
     runGitCommand(repoPath, ['status', '--porcelain', '-b']),
-    runGitCommand(repoPath, ['rev-parse', '--absolute-git-dir'])
+    readOperationState(repoPath)
   ]);
-  const gitDir = directory.stdout.trim();
+
   return {
     success: true,
     ...parsePorcelainStatus(status.stdout),
-    isMerging: fs.existsSync(path.join(gitDir, 'MERGE_HEAD')),
-    isRebasing:
-      fs.existsSync(path.join(gitDir, 'rebase-merge')) ||
-      fs.existsSync(path.join(gitDir, 'rebase-apply'))
+    ...operation
   };
 }

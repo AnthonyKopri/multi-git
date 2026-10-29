@@ -1,9 +1,7 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { Router } from 'express';
 
 import { runGitCommand, tryGitCommand } from '../git/run';
-import { parsePorcelainStatus } from '../git/status';
+import { readStatus } from '../git/read-status';
 import { requireRepoPath } from '../middleware/repo-path';
 import type { Commit } from '../../shared/git-types';
 
@@ -11,31 +9,10 @@ export const statusRouter: Router = Router();
 
 statusRouter.use(requireRepoPath);
 
-/** True when a merge is paused mid-conflict. */
-export function isMerging(repoPath: string): boolean {
-  return fs.existsSync(path.join(repoPath, '.git', 'MERGE_HEAD'));
-}
-
-/** True when a rebase is paused mid-conflict, in either backend. */
-export function isRebasing(repoPath: string): boolean {
-  return (
-    fs.existsSync(path.join(repoPath, '.git', 'rebase-merge')) ||
-    fs.existsSync(path.join(repoPath, '.git', 'rebase-apply'))
-  );
-}
-
 statusRouter.get(
   '/api/git/status',
   async (req, res) => {
-    const repoPath = req.repoPath as string;
-    const { stdout } = await runGitCommand(repoPath, ['status', '--porcelain', '-b']);
-
-    res.json({
-      success: true,
-      ...parsePorcelainStatus(stdout),
-      isMerging: isMerging(repoPath),
-      isRebasing: isRebasing(repoPath)
-    });
+    res.json(await readStatus(req.repoPath as string));
   }
 );
 
