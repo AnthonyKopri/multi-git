@@ -347,8 +347,9 @@ describe('signing configuration', () => {
 
 describe('reading the signing configuration', () => {
   // The values are read with one `git config --get-regexp` per scope rather
-  // than one `git config --get` per key. These pin that each still comes back
-  // exactly as `--get` prints it, which is what the eight separate reads did.
+  // than one `git config --get` per key. A text value comes back exactly as
+  // `--get` prints it; a boolean is read the way git reads it, which `--get`
+  // alone cannot tell for a key written with no value.
   const getValue = (repo: string, ...args: string[]): string | null => {
     try {
       return git(repo, 'config', '--get', ...args).trim() || null;
@@ -392,15 +393,53 @@ describe('reading the signing configuration', () => {
     expect(config.allowedSignersFile).toBe('/signers/camel');
   });
 
-  it('reads a key written with no value the way git config --get prints it', async () => {
+  it('reads a boolean written with no value as true, as git does', async () => {
     const repo = createRepoWithHistory();
     fs.appendFileSync(path.join(repo, '.git', 'config'), '[tag]\n\tgpgsign\n');
 
     const config = await signingConfig(repo);
 
-    // `--get` prints an empty line for it, which has always read as unset.
+    // `--get` prints an empty line for it, the same as for an empty value,
+    // which is how this came to be read as unset. Git reads it as true.
     expect(getValue(repo, 'tag.gpgsign')).toBeNull();
-    expect(config.signTagsByDefault).toBe(false);
+    expect(git(repo, 'config', '--type=bool', '--get', 'tag.gpgsign').trim()).toBe('true');
+    expect(config.signTagsByDefault).toBe(true);
+  });
+
+  it('reports commits as signed for `[commit] gpgsign` with no value', async () => {
+    const repo = createRepoWithHistory();
+    // Last wins: this follows the fixture's own commit.gpgsign=false.
+    fs.appendFileSync(path.join(repo, '.git', 'config'), '[commit]\n\tgpgsign\n');
+
+    const config = await signingConfig(repo);
+
+    expect(config.signCommitsByDefault).toBe(true);
+    expect(config.mode).not.toBe('off');
+    expect(config.isRepoLevel).toBe(true);
+  });
+
+  it('reads an empty value as false, and as this repository switching signing off', async () => {
+    const repo = createRepoWithHistory();
+    fs.appendFileSync(path.join(repo, '.git', 'config'), '[commit]\n\tgpgsign =\n');
+
+    const config = await signingConfig(repo);
+
+    expect(git(repo, 'config', '--type=bool', '--get', 'commit.gpgsign').trim()).toBe('false');
+    expect(config.signCommitsByDefault).toBe(false);
+    expect(config.mode).toBe('off');
+  });
+
+  it('agrees with git about every spelling of a boolean', async () => {
+    const repo = createRepoWithHistory();
+
+    for (const value of ['true', 'YES', 'On', '1', '2', '1k', 'false', 'No', 'OFF', '0', '0m']) {
+      git(repo, 'config', 'tag.gpgsign', value);
+      const gitSays = git(repo, 'config', '--type=bool', '--get', 'tag.gpgsign').trim();
+
+      const config = await signingConfig(repo);
+
+      expect(config.signTagsByDefault, value).toBe(gitSays === 'true');
+    }
   });
 
   it('ignores keys that only share a prefix with the ones it reads', async () => {

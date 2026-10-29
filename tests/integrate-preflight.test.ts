@@ -5,6 +5,8 @@
 // button. Discarding a single file asked you to confirm; rewriting the branch
 // did not. These assertions are the corrected half of that inversion.
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import { integrationPreflight, targetExists } from '../src/server/git/integrate-preflight';
 import { cleanupRepos, createRepoWithHistory, git, writeFile } from './helpers/temp-repo';
@@ -86,6 +88,38 @@ describe('before a merge', () => {
 
     expect(preflight.incoming).toHaveLength(0);
     expect(preflight.warnings.join(' ')).toMatch(/nothing to bring in/i);
+  });
+});
+
+describe('before a pull', () => {
+  /** Both sides moved, so pull.rebase decides between merge and rebase. */
+  async function divergedPull(): Promise<string | undefined> {
+    branchWith('upstream', 2, 'theirs');
+
+    writeFile(repo, 'mine.txt', 'my work\n');
+    git(repo, 'add', 'mine.txt');
+    git(repo, 'commit', '-m', 'feat: mine');
+
+    return (await integrationPreflight({ repoPath: repo, kind: 'pull', target: 'upstream' })).strategy;
+  }
+
+  it('merges when pull.rebase is not set', async () => {
+    expect(await divergedPull()).toBe('merge');
+  });
+
+  it('rebases for `[pull] rebase` written with no value, as git does', async () => {
+    // `git config --get` prints the same empty line for this as for an unset
+    // key, which is how it came to be predicted as a merge. Git rebases.
+    fs.appendFileSync(path.join(repo, '.git', 'config'), '[pull]\n\trebase\n');
+
+    expect(git(repo, 'config', '--type=bool', '--get', 'pull.rebase').trim()).toBe('true');
+    expect(await divergedPull()).toBe('rebase');
+  });
+
+  it('merges for an empty pull.rebase, which git reads as false', async () => {
+    fs.appendFileSync(path.join(repo, '.git', 'config'), '[pull]\n\trebase =\n');
+
+    expect(await divergedPull()).toBe('merge');
   });
 });
 

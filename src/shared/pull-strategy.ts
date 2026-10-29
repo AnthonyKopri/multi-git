@@ -13,6 +13,7 @@
 //
 // Pure on purpose: the configuration and the counts are read by the caller, so
 // the rule itself can be proved without a repository on disk.
+import { parseGitBoolean } from './git-config';
 import type { PullStrategy } from './integrate-types';
 
 export interface PullSituation {
@@ -20,16 +21,32 @@ export interface PullSituation {
   behind: number;
   /** Commits here that are not upstream. */
   ahead: number;
-  /** `pull.rebase`, as git reports it. Absent when unset. */
-  pullRebase?: string | undefined;
+  /**
+   * `pull.rebase`, as git reports it. Absent when unset, and null when it is
+   * written with no value (`[pull] rebase`), which git reads as true.
+   */
+  pullRebase?: string | null | undefined;
   /** `pull.ff`, as git reports it. Absent when unset. */
   pullFf?: string | undefined;
 }
 
-/** git's own truthiness for a configuration value. */
-function isTrue(value: string | undefined): boolean {
-  const normalized = value?.trim().toLowerCase();
-  return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
+/**
+ * Whether `pull.rebase` makes git rebase, as git's own parser decides it.
+ *
+ * Anything git reads as true rebases, a key written with no value included.
+ * Besides the booleans it takes `merges` and `interactive`, and their short
+ * forms `m` and `i`, and both of those rebase too.
+ */
+function rebases(value: string | null | undefined): boolean {
+  if (value === undefined) {
+    return false;
+  }
+
+  if (parseGitBoolean(value) === true) {
+    return true;
+  }
+
+  return ['merges', 'm', 'interactive', 'i'].includes((value ?? '').trim().toLowerCase());
 }
 
 /**
@@ -54,7 +71,7 @@ export function resolvePullStrategy(situation: PullSituation): PullStrategy {
 
   // Diverged: this is where the configuration decides, and where the three
   // outcomes actually differ.
-  if (isTrue(situation.pullRebase) || situation.pullRebase?.trim().toLowerCase() === 'merges') {
+  if (rebases(situation.pullRebase)) {
     return 'rebase';
   }
 

@@ -11,6 +11,7 @@
 // something.
 import { refArg } from './args';
 import { runGitCommand, tryGitCommand } from './run';
+import { readConfigValues } from './config-values';
 import { resolvePullStrategy } from '../../shared/pull-strategy';
 import type {
   IntegrationCommit,
@@ -79,12 +80,6 @@ async function isAncestor(repoPath: string, ancestor: string, descendant: string
 
   // tryGitCommand answers null on a non-zero exit, which here means "no".
   return result !== null;
-}
-
-async function readConfigValue(repoPath: string, key: string): Promise<string | undefined> {
-  const result = await tryGitCommand(repoPath, ['config', '--get', key]);
-  const value = result?.stdout.trim();
-  return value ? value : undefined;
 }
 
 /** The working tree state that should stop or warn about an integration. */
@@ -166,16 +161,16 @@ export async function integrationPreflight(input: PreflightInput): Promise<Integ
   };
 
   if (kind === 'pull') {
-    const [pullRebase, pullFf] = await Promise.all([
-      readConfigValue(repoPath, 'pull.rebase'),
-      readConfigValue(repoPath, 'pull.ff')
-    ]);
+    // Read so that `[pull] rebase` with no value stays apart from an unset
+    // key: git rebases for the first, and `git config --get` prints the same
+    // empty line for both.
+    const config = await readConfigValues(repoPath, ['pull.rebase', 'pull.ff']);
 
     preflight.strategy = resolvePullStrategy({
       behind: incomingCount,
       ahead: outgoingCount,
-      pullRebase,
-      pullFf
+      pullRebase: config.has('pull.rebase') ? config.get('pull.rebase') : undefined,
+      pullFf: config.get('pull.ff') ?? undefined
     });
 
     // A rebase pull rewrites local commits, which is the one outcome of the
