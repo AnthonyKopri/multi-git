@@ -23,6 +23,12 @@ concurrency:
 permissions:
   contents: read
 
+# Supply chain. Every action is pinned to a commit SHA, with its version in a
+# comment, and Dependabot keeps both current: a tag can be moved to other
+# code, a SHA cannot. Checkouts keep no token on disk (persist-credentials:
+# false), since nothing here pushes, and every later step runs code from npm
+# packages. Dependency install scripts are off through .npmrc, and npx only
+# runs packages the lockfile already installed (--no).
 jobs:
   verify:
     name: test (${{ matrix.os }}, node ${{ matrix.node }})
@@ -31,13 +37,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest]
-        # The floor declared in package.json engines, and the version Electron
-        # 43 actually embeds. A break in either is a break for real users.
+        # The floor declared in package.json engines, and the Node major
+        # Electron embeds (24, as of Electron 45). A break in either is a
+        # break for real users.
         node: ['22.12', '24']
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -58,9 +67,11 @@ jobs:
     name: test without gh or an ssh agent
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.12'
           cache: npm
@@ -89,12 +100,13 @@ jobs:
     name: docs and whitespace
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Needed so the whitespace check below can find a merge base.
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.12'
           cache: npm
@@ -123,9 +135,11 @@ jobs:
     name: packaging smoke
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.12'
           cache: npm
@@ -149,7 +163,7 @@ jobs:
           $asar = Get-ChildItem -Path dist -Recurse -Filter app.asar | Select-Object -First 1
           if (-not $asar) { throw 'electron-builder produced no app.asar' }
 
-          $listing = npx --yes @electron/asar list $asar.FullName
+          $listing = npx --no @electron/asar list $asar.FullName
           if (-not ($listing | Select-String -Pattern 'main\.js' -SimpleMatch:$false -Quiet)) {
             throw 'app.asar does not contain out/node/main/main.js'
           }

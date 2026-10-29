@@ -15,12 +15,20 @@
 #     majors each need a migration pass — Electron 43 changed how the runtime
 #     is installed, TypeScript 7 dropped the legacy module resolver — and that
 #     belongs in a PR of its own with a human reading the migration guide.
+#
+#   * Version updates wait a week after a release (cooldown). The npm worms of
+#     2025 and 2026 published poisoned patch releases of popular packages that
+#     were caught and pulled within hours to days; a week keeps those out of a
+#     routine bump. Security updates are not held back by it.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     # Enough for the groups below plus a major or two, without burying the
     # pull request list.
     open-pull-requests-limit: 5
@@ -64,17 +72,39 @@ updates:
           - minor
           - patch
 
+      # What ships inside the app and the terminal edition.
       runtime:
         applies-to: version-updates
         patterns:
           - express
+          - zod
+          - react
+          - ink
+          - tar
+          - yauzl
+          - "@modelcontextprotocol/*"
         update-types:
           - minor
           - patch
 
     ignore:
       # @types/node tracks the Node major that Electron embeds, not the newest
-      # published. Electron 43 embeds Node 24, so 25 and 26 would describe
+      # published. Electron 45 embeds Node 24, so 25 and 26 would describe
       # APIs the runtime does not have. Raise this with the Electron major.
       - dependency-name: "@types/node"
         versions: [">=25"]
+
+  # The workflows' actions, pinned to commit SHAs. Dependabot moves the SHA and
+  # the version comment beside it together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns:
+          - "*"
