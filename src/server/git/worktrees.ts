@@ -299,14 +299,35 @@ export function isUsableTargetFolder(targetPath: string): boolean {
 
 // ---------- git-backed queries ----------
 
+/** `readGitCommonDir` calls still waiting on git, by repository path. */
+const commonDirReads = new Map<string, Promise<string>>();
+
 /**
  * The shared git directory, which is what makes a set of worktrees one family.
  *
  * `--path-format=absolute` is asked for first because plain `--git-common-dir`
  * answers relatively when run at the top of a repository, and a relative
  * `.git` is not a usable identity.
+ *
+ * Calls that overlap share one `git rev-parse`. A refresh asks for the
+ * worktree list and its status at the same moment, and the list route asks
+ * twice itself, so this ran three times for one answer. Nothing is kept once
+ * the answer is in: a call made afterwards asks git again.
  */
-export async function readGitCommonDir(repoPath: string): Promise<string> {
+export function readGitCommonDir(repoPath: string): Promise<string> {
+  const pending = commonDirReads.get(repoPath);
+  if (pending) {
+    return pending;
+  }
+
+  const read = queryGitCommonDir(repoPath).finally(() => {
+    commonDirReads.delete(repoPath);
+  });
+  commonDirReads.set(repoPath, read);
+  return read;
+}
+
+async function queryGitCommonDir(repoPath: string): Promise<string> {
   const absolute = await tryGitCommand(repoPath, [
     'rev-parse',
     '--path-format=absolute',
@@ -461,7 +482,12 @@ export function findWorktree(
 export async function readWorktreeStatus(
   worktreePath: string
 ): Promise<WorktreeStatusSummary | null> {
-  const status = await tryGitCommand(worktreePath, ['status', '--porcelain', '-b']);
+  // Asked together: the date does not depend on the status, and waiting for
+  // one before starting the other doubled the time each worktree took.
+  const [status, lastCommit] = await Promise.all([
+    tryGitCommand(worktreePath, ['status', '--porcelain', '-b']),
+    tryGitCommand(worktreePath, ['log', '-1', '--format=%cI'])
+  ]);
   if (status === null) {
     return null;
   }
@@ -484,7 +510,6 @@ export async function readWorktreeStatus(
     tracking: parsed.tracking
   };
 
-  const lastCommit = await tryGitCommand(worktreePath, ['log', '-1', '--format=%cI']);
   const timestamp = lastCommit?.stdout.trim();
   if (timestamp) {
     summary.lastActivity = timestamp;
@@ -496,9 +521,9 @@ export async function readWorktreeStatus(
 /**
  * Fills in status for every worktree that is still on disk.
  *
- * Bounded concurrency, because this is one or two git processes per worktree
- * and a family of twenty would otherwise start forty at once and make the
- * machine unusable for the second it takes.
+ * Bounded concurrency, because this is two git processes per worktree and a
+ * family of twenty would otherwise start forty at once and make the machine
+ * unusable for the second it takes. Four worktrees at a time is eight.
  */
 export async function attachWorktreeStatus(
   worktrees: readonly WorktreeInfo[],

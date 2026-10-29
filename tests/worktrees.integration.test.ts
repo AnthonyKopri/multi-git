@@ -11,7 +11,8 @@ import type { Express } from 'express';
 
 import { createApp } from '../src/server/app';
 import { clearRepoPathCache } from '../src/server/middleware/repo-path';
-import { clearWorktreeCaches } from '../src/server/git/worktrees';
+import { clearWorktreeCaches, readFamilyKey, readGitCommonDir } from '../src/server/git/worktrees';
+import { clearLogBuffer, logBuffer } from '../src/server/logs';
 import { clearRecoveryCache } from '../src/server/safety-net/recovery';
 import { clearCheckpoints } from '../src/server/safety-net/checkpoints';
 import {
@@ -285,6 +286,54 @@ describe('worktree status', () => {
     const { body } = await api(repo).get('/api/worktrees/status').expect(200);
 
     expect(body.worktrees[0].status.lastActivity).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('still reports the counts for a worktree with no commit to date', async () => {
+    // The date is read alongside the status now, so a log that fails must cost
+    // only the date and never the counts.
+    const repo = createTempDir('multi-git-unborn-');
+    git(repo, 'init', '-q');
+    writeFile(repo, 'first.txt', 'not committed\n');
+
+    const { body } = await api(repo).get('/api/worktrees/status').expect(200);
+
+    expect(body.worktrees[0].status).toMatchObject({ untracked: 1 });
+    expect(body.worktrees[0].status.lastActivity).toBeUndefined();
+  });
+});
+
+describe('reading the shared git directory', () => {
+  it('asks git once for reads that overlap, and again for one that comes later', async () => {
+    const repo = createRepoWithHistory();
+    clearLogBuffer();
+
+    const [first, second, third] = await Promise.all([
+      readGitCommonDir(repo),
+      readGitCommonDir(repo),
+      readFamilyKey(repo)
+    ]);
+    const later = await readGitCommonDir(repo);
+
+    const reads = logBuffer().filter(
+      (entry) => entry.command?.cwd === repo && entry.command.argv.includes('--git-common-dir')
+    );
+
+    expect(second).toBe(first);
+    expect(later).toBe(first);
+    expect(third).not.toBe('');
+    // Nothing is kept once git has answered, so a repository moved or deleted
+    // since is seen as it is now.
+    expect(reads).toHaveLength(2);
+  });
+
+  it('gives every overlapping read the same failure', async () => {
+    const folder = createTempDir('multi-git-not-a-repo-');
+
+    const reads = await Promise.allSettled([readGitCommonDir(folder), readGitCommonDir(folder)]);
+
+    expect(reads.map((read) => read.status)).toEqual(['rejected', 'rejected']);
+    // And the failure is not remembered either.
+    await expect(readGitCommonDir(folder)).rejects.toThrow();
   });
 });
 

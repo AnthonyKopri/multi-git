@@ -19,6 +19,7 @@ import type { Express } from 'express';
 import { createApp } from '../src/server/app';
 import { clearRepoPathCache } from '../src/server/middleware/repo-path';
 import { explainSigningFailure } from '../src/server/git/signing';
+import { clearLogBuffer, logBuffer } from '../src/server/logs';
 import type { SignatureInfo, SigningConfig } from '../src/shared/signing-types';
 import { cleanupRepos, createRepoWithHistory, git, writeFile } from './helpers/temp-repo';
 
@@ -341,6 +342,87 @@ describe('signing configuration', () => {
     expect(
       body.diagnostics.some((entry: { code: string }) => entry.code === 'no-signing-key')
     ).toBe(true);
+  });
+});
+
+describe('reading the signing configuration', () => {
+  // The values are read with one `git config --get-regexp` per scope rather
+  // than one `git config --get` per key. These pin that each still comes back
+  // exactly as `--get` prints it, which is what the eight separate reads did.
+  const getValue = (repo: string, ...args: string[]): string | null => {
+    try {
+      return git(repo, 'config', '--get', ...args).trim() || null;
+    } catch {
+      return null;
+    }
+  };
+
+  it('takes the last of several values, as git config --get does', async () => {
+    const repo = createRepoWithHistory();
+    git(repo, 'config', 'user.signingkey', '/keys/first.pub');
+    git(repo, 'config', '--add', 'user.signingkey', '/keys/second.pub');
+
+    const config = await signingConfig(repo);
+
+    expect(config.signingKey).toBe('/keys/second.pub');
+    expect(config.signingKey).toBe(getValue(repo, 'user.signingkey'));
+  });
+
+  it('keeps a value with spaces, an equals sign and a newline whole', async () => {
+    const repo = createRepoWithHistory();
+    const awkward = '/keys/a folder/key=1.pub';
+    git(repo, 'config', 'user.signingkey', awkward);
+    git(repo, 'config', 'gpg.ssh.allowedsignersfile', '/signers/line one\nline two');
+
+    const config = await signingConfig(repo);
+
+    expect(config.signingKey).toBe(awkward);
+    expect(config.allowedSignersFile).toBe('/signers/line one\nline two');
+    expect(config.allowedSignersFile).toBe(getValue(repo, 'gpg.ssh.allowedsignersfile'));
+  });
+
+  it('matches the key whatever case it was written in', async () => {
+    const repo = createRepoWithHistory();
+    git(repo, 'config', 'user.signingKey', '/keys/camel.pub');
+    git(repo, 'config', 'gpg.ssh.allowedSignersFile', '/signers/camel');
+
+    const config = await signingConfig(repo);
+
+    expect(config.signingKey).toBe('/keys/camel.pub');
+    expect(config.allowedSignersFile).toBe('/signers/camel');
+  });
+
+  it('reads a key written with no value the way git config --get prints it', async () => {
+    const repo = createRepoWithHistory();
+    fs.appendFileSync(path.join(repo, '.git', 'config'), '[tag]\n\tgpgsign\n');
+
+    const config = await signingConfig(repo);
+
+    // `--get` prints an empty line for it, which has always read as unset.
+    expect(getValue(repo, 'tag.gpgsign')).toBeNull();
+    expect(config.signTagsByDefault).toBe(false);
+  });
+
+  it('ignores keys that only share a prefix with the ones it reads', async () => {
+    const repo = createRepoWithHistory();
+    git(repo, 'config', 'gpg.formatting', 'ssh');
+    git(repo, 'config', 'user.signingkeyfile', '/keys/not-this.pub');
+
+    const config = await signingConfig(repo);
+
+    expect(config.signingKey).toBeNull();
+  });
+
+  it('asks git twice however many keys it reads', async () => {
+    const repo = createRepoWithHistory();
+    clearLogBuffer();
+
+    await signingConfig(repo);
+
+    const reads = logBuffer().filter(
+      (entry) => entry.command?.cwd === repo && entry.command.argv[1] === 'config'
+    );
+    expect(reads).toHaveLength(2);
   });
 });
 
