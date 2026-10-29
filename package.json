@@ -57,7 +57,7 @@
     "@types/node": "^24.19.0",
     "@types/react": "^19.3.0",
     "electron": "^45.1.0",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "happy-dom": "^21.0.4",
     "resedit": "^3.1.0",
