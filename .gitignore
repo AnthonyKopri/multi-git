@@ -32,7 +32,8 @@ report.*.json
 .env.*
 !.env.example
 !.env.sample
-.npmrc
+# .npmrc is tracked: it holds the project's install policy and nothing else.
+# Registry tokens go in the user-level ~/.npmrc (tests/npmrc.test.ts checks).
 .multi-git-client-config.json
 .multi-git-client-secrets.json
 *.pem

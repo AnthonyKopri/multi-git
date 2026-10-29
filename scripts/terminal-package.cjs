@@ -15,7 +15,7 @@ const zlib = require('node:zlib');
 const { pipeline } = require('node:stream/promises');
 
 /** The runtime the terminal edition ships, verified against nodejs.org's SHASUMS256.txt. */
-const NODE_VERSION = '24.18.0';
+const NODE_VERSION = '24.22.2';
 const ROOT = path.resolve(__dirname, '..');
 const PLATFORMS = ['win32', 'darwin', 'linux'];
 const ARCHES = ['x64', 'arm64'];

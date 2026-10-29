@@ -12,6 +12,41 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **Applying a patch larger than 1 MB works.** The Apply Patch route was
+  meant to accept up to 20 MB, but the 1 MB limit every other route has was
+  checked first, so a large patch failed with "Unexpected server error".
+- **A request the server refuses says why.** A request body that was too
+  large or not valid JSON was reported as a server error (500) and logged as a
+  failure. It is now answered 413 or 400 with the reason.
+
+### Security
+
+- **Electron is updated to 44.10.0**, with Chromium 152.0.7977.169 and Node.js
+  24.22.1. It closes the advisories against earlier 44.x releases: the
+  compromised eMudhra intermediate certificates are no longer trusted
+  (GHSA-jr5w-w6x2-84p9), and pointer-lock permission requests are attributed
+  to the right frame (GHSA-x562-297c-g43g).
+- **The terminal edition ships Node.js 24.22.2**, up from 24.18.0, which
+  includes the July and October 2026 Node.js security releases (fixes in
+  HTTP, HTTP/2, TLS, DNS, zlib and Brotli).
+- **`zod` is updated to 4.6.7.** The MCP server validates agent tool calls
+  with it, and earlier versions could exhaust memory on an oversized input
+  (GHSA-mrhx-c7xc-m3w5).
+- **The local server no longer accepts compressed request bodies.** Nothing
+  Multi-Git sends is compressed, so it now answers 415 rather than inflating
+  one. That closes off the decompression bug in `body-parser`
+  (GHSA-27r3-jxmh-p828), which is also updated, to 2.4.0, along with `qs`
+  6.16.2 (GHSA-6pq8-jhm2-2vcw).
+- **Installing the project's dependencies runs none of their install
+  scripts.** The npm worms going around in 2026 spread through those scripts,
+  and nothing Multi-Git depends on needs one. The setting lives in `.npmrc`,
+  so it covers developer machines as well as the release builds.
+- The build and test tooling is updated for its advisories as well: Vitest
+  5.0.5, happy-dom 21.0.4, `undici`, and `fast-uri`. None of them are part of
+  the installed app.
+
 ## [5.2.3] - 2026-10-13
 
 ### Fixed
