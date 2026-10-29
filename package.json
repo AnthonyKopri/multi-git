@@ -45,19 +45,19 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/server": "^2.3.1",
-    "express": "^5.2.1",
+    "express": "^5.3.0",
     "ink": "^7.1.1",
-    "react": "^19.3.0",
+    "react": "^19.3.1",
     "tar": "^7.5.22",
     "yauzl": "^3.4.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "electron": "^45.1.0",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "happy-dom": "^21.0.4",
     "resedit": "^3.1.0",
