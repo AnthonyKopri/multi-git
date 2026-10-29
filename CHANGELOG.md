@@ -12,6 +12,8 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.3.2] - 2026-10-29
+
 ### Fixed
 
 - **A Git setting written with no value is read the way Git reads it.** In a
@@ -1173,7 +1175,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.1...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.2...HEAD
+[5.3.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.1...Release_v5.3.2
 [5.3.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.0...Release_v5.3.1
 [5.3.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.3...Release_v5.3.0
 [5.2.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.2.2...Release_v5.2.3
