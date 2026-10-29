@@ -4,10 +4,9 @@
 // working tree, so it captures a recovery point first and holds the repository
 // lock while it runs.
 //
-// The body limit is raised for the apply route alone: a patch is legitimately
-// large, and the 1mb default would refuse a real one — but raising it globally
-// would raise it for every route that has no reason to accept a large body.
-import express from 'express';
+// The apply route accepts a larger body than the 1mb default, since a real
+// patch can exceed it. That limit is set in app.ts, next to the default
+// parser, because a parser registered here would run after it.
 import { Router } from 'express';
 
 import { requireRepoPath } from '../middleware/repo-path';
@@ -19,10 +18,6 @@ import type { ApplyPatchRequest, PatchRequest } from '../../shared/patch-types';
 
 export const patchesRouter: Router = Router();
 
-/** Patches are large by nature; 20mb covers a big series without being a hole. */
-const PATCH_BODY_LIMIT = '20mb';
-
-patchesRouter.use('/api/patches/apply', express.json({ limit: PATCH_BODY_LIMIT }));
 patchesRouter.use('/api/patches', requireRepoPath);
 
 function patchFormat(value: unknown): 'diff' | 'mailbox' {

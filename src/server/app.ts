@@ -4,7 +4,7 @@
 //   1. localhostOnly   rejects anything not from this machine, before any
 //                      body is parsed or any handler runs
 //   2. securityHeaders applies to static assets as well as API responses
-//   3. body parsers    with a small default limit
+//   3. body parsers    with a small default limit, raised per route below
 //   4. static assets
 //   5. routers
 //   6. errorHandler    last, so it sees everything the routers throw
@@ -61,8 +61,31 @@ import { workflowsRouter } from './routes/workflows.routes';
  */
 const DEFAULT_BODY_LIMIT = '1mb';
 
-/** Conflict resolution legitimately carries the whole file being resolved. */
-const CONFLICT_BODY_LIMIT = '25mb';
+/**
+ * The routes that legitimately carry more than the default.
+ *
+ * These have to be registered here, ahead of the default parser: a parser in
+ * a router runs after it, by which point the default has already refused the
+ * body. That is how the patch limit came to have no effect.
+ */
+const LARGE_BODY_LIMITS: Readonly<Record<string, string>> = {
+  // Conflict resolution carries the whole file being resolved.
+  '/api/git/conflict/resolve': '25mb',
+  // Patches are large by nature; 20mb covers a big series without being a hole.
+  '/api/patches/apply': '20mb'
+};
+
+/**
+ * JSON bodies, never compressed ones.
+ *
+ * Neither the page nor the CLI compresses what it sends, so inflating gzip or
+ * deflate bodies would only ever serve some other client, and decompression is
+ * where body-parser's denial-of-service bugs live (GHSA-27r3-jxmh-p828). A
+ * compressed body is answered 415 instead.
+ */
+function jsonBody(limit: string) {
+  return express.json({ limit, inflate: false });
+}
 
 export function createApp(): Express {
   const app = express();
@@ -70,8 +93,10 @@ export function createApp(): Express {
   app.use(localhostOnly);
   app.use(securityHeaders);
 
-  app.use('/api/git/conflict/resolve', express.json({ limit: CONFLICT_BODY_LIMIT }));
-  app.use(express.json({ limit: DEFAULT_BODY_LIMIT }));
+  for (const [route, limit] of Object.entries(LARGE_BODY_LIMITS)) {
+    app.use(route, jsonBody(limit));
+  }
+  app.use(jsonBody(DEFAULT_BODY_LIMIT));
 
   app.use(express.static(staticDir()));
 

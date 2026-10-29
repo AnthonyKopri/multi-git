@@ -2,6 +2,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import request from 'supertest';
 import type { Express } from 'express';
 
@@ -81,6 +82,34 @@ describe('the localhost guard', () => {
       // An inline <script> would silently stop working under script-src 'self'.
       expect(text, `${page} contains an inline script`).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/i);
     }
+  });
+});
+
+describe('request bodies', () => {
+  it('refuses a compressed body instead of inflating it', async () => {
+    const response = await api(createEmptyRepo())
+      .post('/api/git/commit')
+      .set('Content-Type', 'application/json')
+      .set('Content-Encoding', 'gzip')
+      .send(zlib.gzipSync(JSON.stringify({ message: 'compressed' })))
+      .expect(415);
+
+    expect(response.body.error).toMatch(/encoding/i);
+  });
+
+  it('answers an oversized body as too large, not as a server error', async () => {
+    await api(createEmptyRepo())
+      .post('/api/git/commit')
+      .send({ message: 'x'.repeat(2 * 1024 * 1024) })
+      .expect(413);
+  });
+
+  it('answers malformed JSON as a bad request', async () => {
+    await api(createEmptyRepo())
+      .post('/api/git/commit')
+      .set('Content-Type', 'application/json')
+      .send('{"message": ')
+      .expect(400);
   });
 });
 
