@@ -50,7 +50,7 @@
     "react": "^19.3.0",
     "tar": "^7.5.22",
     "yauzl": "^3.4.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
@@ -58,14 +58,14 @@
     "@types/react": "^19.3.0",
     "@types/supertest": "^7.2.1",
     "@types/yauzl": "^2.10.3",
-    "electron": "^44.4.5",
+    "electron": "^44.9.1",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
-    "happy-dom": "^20.14.5",
+    "happy-dom": "^21.0.4",
     "resedit": "^3.1.0",
     "supertest": "^7.3.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.5"
   },
   "build": {
     "appId": "com.multigit.client",
