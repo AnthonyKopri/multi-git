@@ -12,6 +12,30 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Changed
+
+- **The build and test toolchain moved up to its latest patch releases.**
+  Electron 45.1.0 to 45.2.3, Vitest 5.0.5 to 5.1.0, electron-builder 26.18.0
+  to 26.18.1, and the Model Context Protocol server library 2.3.1 to 2.4.0.
+  These are all patch or minor releases inside the majors the project already
+  tracks, and nothing about how the app behaves or how it is packaged changes
+  with them.
+
+### Fixed
+
+- **The test suite no longer fails on a machine that rewrites Git URLs.** Git
+  reads configuration from three places, and the fixture helper was only
+  shielding the test repositories from two of them: it redirected the global
+  and system config files but not the settings git takes straight from the
+  environment, which override both. A cloud development container or a
+  corporate workstation that routes SSH to HTTPS there, with
+  `url.https://github.com/.insteadOf git@github.com:`, made a fixture report
+  an HTTPS remote where the test had written an SSH one, so one test failed on
+  that machine and nowhere else. Fixture repositories now ignore that channel
+  too. This is a contributor-facing change; the application reads your real
+  Git configuration exactly as before, and the behaviour the failing test
+  covers was never broken.
+
 ## [5.3.2] - 2026-10-29
 
 ### Fixed
