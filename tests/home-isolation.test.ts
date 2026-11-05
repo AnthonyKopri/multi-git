@@ -12,10 +12,11 @@
 // a named failing test instead.
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { CONFIG_FILE } from '../src/server/config/store';
 import { SECRETS_FILE } from '../src/server/vault/vault';
+import { cleanupRepos, createEmptyRepo, git } from './helpers/temp-repo';
 
 /** Whether `child` is inside `parent`, comparing resolved paths. */
 function isInside(child: string, parent: string): boolean {
@@ -36,5 +37,36 @@ describe('the suite runs against a home directory of its own', () => {
 
   it('resolves the passphrase vault inside it', () => {
     expect(isInside(SECRETS_FILE, os.homedir())).toBe(true);
+  });
+});
+
+/**
+ * The same guard for git's own configuration.
+ *
+ * `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` cover the two config *files*,
+ * but git also reads configuration straight out of the environment through
+ * `GIT_CONFIG_COUNT` and a `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` pair per
+ * entry, and those win over both files. A container or workstation that sets
+ * `url.<base>.insteadOf` there changes what git reports back for a remote, so
+ * a fixture built on an SSH remote read as HTTPS and the assertion failed on
+ * that machine only.
+ */
+describe('fixture repositories ignore git configuration from the environment', () => {
+  afterEach(() => {
+    delete process.env['GIT_CONFIG_COUNT'];
+    delete process.env['GIT_CONFIG_KEY_0'];
+    delete process.env['GIT_CONFIG_VALUE_0'];
+    cleanupRepos();
+  });
+
+  it('reports the remote URL as written, not as an insteadOf rule rewrites it', () => {
+    process.env['GIT_CONFIG_COUNT'] = '1';
+    process.env['GIT_CONFIG_KEY_0'] = 'url.https://github.com/.insteadOf';
+    process.env['GIT_CONFIG_VALUE_0'] = 'git@github.com:';
+
+    const repo = createEmptyRepo();
+    git(repo, 'remote', 'add', 'origin', 'git@github.com:owner/repo.git');
+
+    expect(git(repo, 'remote', 'get-url', 'origin').trim()).toBe('git@github.com:owner/repo.git');
   });
 });
