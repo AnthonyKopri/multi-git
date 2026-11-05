@@ -17,6 +17,16 @@ export function git(cwd: string, ...args: string[]): string {
       // Keep the developer's own config and hooks out of the fixtures.
       GIT_CONFIG_GLOBAL: path.join(os.tmpdir(), 'multi-git-test-gitconfig'),
       GIT_CONFIG_SYSTEM: path.join(os.tmpdir(), 'multi-git-test-gitconfig'),
+      // Redirecting the two files above is not enough on its own: git also
+      // takes configuration straight from the environment, as GIT_CONFIG_COUNT
+      // with a GIT_CONFIG_KEY_n/GIT_CONFIG_VALUE_n pair per entry, and that
+      // channel overrides both files. Cloud development containers and
+      // corporate setups commonly use it to add
+      // `url.https://github.com/.insteadOf git@github.com:`, which silently
+      // rewrites what `git remote get-url` reports, so a fixture asserting on
+      // an SSH remote failed there and nowhere else. Count 0 means git reads no
+      // entries, whatever the surrounding environment set.
+      GIT_CONFIG_COUNT: '0',
       GIT_TERMINAL_PROMPT: '0'
     }
   });
