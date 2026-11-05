@@ -56,13 +56,13 @@
     "@types/express": "^5.0.6",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
-    "electron": "^45.1.0",
-    "electron-builder": "^26.18.0",
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.1",
     "esbuild": "^0.28.2",
     "happy-dom": "^21.0.4",
     "resedit": "^3.1.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "build": {
     "appId": "com.multigit.client",
