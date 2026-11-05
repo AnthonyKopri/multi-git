@@ -16,12 +16,12 @@ or Security. Remove empty headings when preparing a release.
 
 ### Changed
 
-- **The build and test toolchain moved up to its latest patch releases.**
-  Electron 45.1.0 to 45.2.3, Vitest 5.0.5 to 5.1.0, electron-builder 26.18.0
-  to 26.18.1, and the Model Context Protocol server library 2.3.1 to 2.4.0.
-  These are all patch or minor releases inside the majors the project already
-  tracks, and nothing about how the app behaves or how it is packaged changes
-  with them.
+- **Electron and the libraries around it moved up to newer patch and minor
+  releases.** Two of these ship inside the app: Electron 45.1.0 to 45.2.3 in the
+  desktop edition, and the Model Context Protocol server library 2.3.1 to 2.4.0.
+  The other two build and test it: electron-builder 26.18.0 to 26.18.1 and
+  Vitest 5.0.5 to 5.1.0. All four stay inside the major versions the project
+  already tracks, and the full test suite and every packaged build pass on them.
 
 ### Fixed
 
