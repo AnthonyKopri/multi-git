@@ -13,8 +13,24 @@ import { getStoredPassphrase, hasStoredPassphrase, isUnlocked } from '../vault/v
 import { HttpError } from '../middleware/error-handler';
 import type { SshProfile } from '../../shared/config-types';
 
+/**
+ * Origin as git will connect to it, after any `url.<base>.insteadOf` rewrite.
+ * Right for anything that reasons about the connection: which host, which SSH
+ * identity, whether it is an HTTP remote.
+ */
 export async function getOriginRemoteUrl(repoPath: string): Promise<string> {
   const result = await tryGitCommand(repoPath, ['remote', 'get-url', 'origin']);
+  return result?.stdout.trim() ?? '';
+}
+
+/**
+ * Origin as written in the repository's config, before any `insteadOf`
+ * rewrite. Use this to show the user their remote and to edit it: a protocol
+ * toggle computed from the rewritten URL writes back a value that was never in
+ * their config, often the opposite of what they asked for.
+ */
+export async function getStoredOriginRemoteUrl(repoPath: string): Promise<string> {
+  const result = await tryGitCommand(repoPath, ['config', '--get', 'remote.origin.url']);
   return result?.stdout.trim() ?? '';
 }
 
