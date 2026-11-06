@@ -12,6 +12,28 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+### Fixed
+
+- **Switching origin between SSH and HTTPS changes the URL you actually
+  stored.** Git can rewrite a remote on the fly with a `url.<base>.insteadOf`
+  rule, which corporate setups and some cloud development containers use to
+  send SSH remotes over HTTPS. Multi-Git read origin after that rewrite, so a
+  remote saved as `git@github.com:…` showed up as HTTPS, and the protocol
+  toggle then wrote an SSH URL back: the opposite of what you asked for. The
+  remote inspector and the toggle now go by the URL in your repository's
+  config. Which host and SSH identity a fetch or push uses is decided exactly
+  as before, from the address Git will really connect to.
+
+### Security
+
+- **The packaging toolchain no longer carries a vulnerable minimatch.**
+  electron-builder reached minimatch 9.0.9 and 10.2.6, both affected by
+  [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), a
+  denial of service through a crafted glob pattern, and no electron-builder 26
+  release moves them. Both copies are now held at the patched 11.0.3. This
+  only ever affected building the app, from patterns in this project's own
+  configuration; nothing that ships inside Multi-Git used it.
+
 ## [5.3.3] - 2026-11-05
 
 ### Changed
