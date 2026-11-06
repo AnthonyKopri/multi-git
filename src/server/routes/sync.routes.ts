@@ -8,7 +8,7 @@ import { GitError, buildSshCommand, runGitCommand } from '../git/run';
 import type { GitCommandOptions } from '../git/run';
 import { getToggledRemoteUrl, isLikelyHttpRemote, parseRemoteUrl } from '../git/remote';
 import { updateRemote } from '../git/remotes';
-import { getOriginRemoteUrl, runSyncOperationWithProfile } from '../ssh/profiles';
+import { getStoredOriginRemoteUrl, runSyncOperationWithProfile } from '../ssh/profiles';
 import { createAskpassBridge } from '../ssh/askpass';
 import { readConfig } from '../config/store';
 import { operations } from '../operations/registry';
@@ -148,7 +148,7 @@ syncRouter.get(
   '/api/git/remote/origin',
   async (req, res) => {
     const repoPath = req.repoPath as string;
-    const remoteUrl = await getOriginRemoteUrl(repoPath);
+    const remoteUrl = await getStoredOriginRemoteUrl(repoPath);
 
     if (!remoteUrl) {
       throw new HttpError('Origin remote not found.', 404);
@@ -172,7 +172,7 @@ syncRouter.post(
   '/api/git/remote/origin/toggle-protocol',
   async (req, res) => {
     const repoPath = req.repoPath as string;
-    const remoteUrl = await getOriginRemoteUrl(repoPath);
+    const remoteUrl = await getStoredOriginRemoteUrl(repoPath);
 
     if (!remoteUrl) {
       throw new HttpError('Origin remote not found.', 404);

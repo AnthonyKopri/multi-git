@@ -18,7 +18,7 @@ import { HttpError } from '../middleware/error-handler';
 import { readRepoAccountSetup, wouldOverwrite } from '../ssh/repo-setup';
 import { applyProfile, ensureAgentForRepo, profileForRepo, rememberProfileForRepo } from '../ssh/agent-session';
 import { verifyProfileAccount } from '../ssh/verify-profile';
-import { getOriginRemoteUrl, runSyncOperationWithProfile } from '../ssh/profiles';
+import { getStoredOriginRemoteUrl, runSyncOperationWithProfile } from '../ssh/profiles';
 import { getToggledRemoteUrl, parseRemoteUrl } from '../git/remote';
 import { updateRemote } from '../git/remotes';
 import { withRepoLock } from '../git/lock';
@@ -170,7 +170,7 @@ workflowsRouter.post(
     }
 
     const remoteUrl = await withRepoLock(repoPath, async () => {
-      const current = await getOriginRemoteUrl(repoPath);
+      const current = await getStoredOriginRemoteUrl(repoPath);
       if (!current) {
         throw new HttpError('Origin remote not found.', 404);
       }

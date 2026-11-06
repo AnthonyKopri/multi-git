@@ -382,3 +382,55 @@ describe('the SSH/HTTPS pill', () => {
     expect(origin?.fetchUrl).toBe('git@github.com:owner/repo.git');
   });
 });
+
+// `git remote get-url` applies `url.<base>.insteadOf`, so a repository whose
+// config says SSH can read back as HTTPS. Showing and editing the remote must
+// go by what the config says, or a toggle writes back the opposite of what the
+// user asked for. The rule is set in the repository's own config, which the
+// fixture isolation leaves alone.
+describe('origin behind an insteadOf rewrite', () => {
+  function rewrittenRepo(): string {
+    const repo = createRepoWithHistory();
+    git(repo, 'remote', 'add', 'origin', 'git@github.com:owner/repo.git');
+    git(repo, 'config', 'url.https://github.com/.insteadOf', 'git@github.com:');
+    // The premise: git itself reports the rewritten URL.
+    expect(git(repo, 'remote', 'get-url', 'origin').trim()).toBe('https://github.com/owner/repo.git');
+    return repo;
+  }
+
+  it('inspects the URL as stored, not as rewritten', async () => {
+    const repo = rewrittenRepo();
+
+    const response = await api(repo).get('/api/git/remote/origin').expect(200);
+
+    expect(response.body.remoteUrl).toBe('git@github.com:owner/repo.git');
+    expect(response.body.protocol).toBe('ssh');
+    expect(response.body.suggestedUrl).toBe('https://github.com/owner/repo.git');
+  });
+
+  it('toggles the stored SSH remote to HTTPS', async () => {
+    const repo = rewrittenRepo();
+
+    const response = await api(repo)
+      .post('/api/git/remote/origin/toggle-protocol')
+      .send({})
+      .expect(200);
+
+    expect(response.body.remoteUrl).toBe('https://github.com/owner/repo.git');
+    const [origin] = (await listRemotes(repo)) as RemoteInfo[];
+    expect(origin?.fetchUrl).toBe('https://github.com/owner/repo.git');
+  });
+
+  it('toggles the stored remote through the confirmed workflow too', async () => {
+    const repo = rewrittenRepo();
+
+    const response = await api(repo)
+      .post('/api/workflows/remote')
+      .send({ confirmed: true })
+      .expect(200);
+
+    expect(response.body.remoteUrl).toBe('https://github.com/owner/repo.git');
+    const [origin] = (await listRemotes(repo)) as RemoteInfo[];
+    expect(origin?.fetchUrl).toBe('https://github.com/owner/repo.git');
+  });
+});
