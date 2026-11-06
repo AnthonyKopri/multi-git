@@ -12,6 +12,8 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [5.3.4] - 2026-11-06
+
 ### Fixed
 
 - **Switching origin between SSH and HTTPS changes the URL you actually
@@ -1223,7 +1225,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.3...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.4...HEAD
+[5.3.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.3...Release_v5.3.4
 [5.3.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.2...Release_v5.3.3
 [5.3.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.1...Release_v5.3.2
 [5.3.1]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.0...Release_v5.3.1
