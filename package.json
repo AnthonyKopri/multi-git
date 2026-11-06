@@ -184,5 +184,19 @@
         "to": "terminal"
       }
     ]
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "minimatch": "11.0.3",
+      "glob": {
+        "minimatch": "3.1.5"
+      }
+    },
+    "@electron/universal": {
+      "minimatch": "11.0.3",
+      "dir-compare": {
+        "minimatch": "3.1.5"
+      }
+    }
   }
 }
