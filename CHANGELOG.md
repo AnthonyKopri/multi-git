@@ -12,6 +12,31 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [6.0.0] - 2026-11-11
+
+### Highlights
+
+Multi-Git 6 is a new interface and a new first day. The window has been redrawn
+from the ground up, with a dark and a light theme and a Simple mode for people
+who only want to commit. Setting up a computer is now three short screens, with
+the SSH agent one press away on every platform and a key you can validate
+before you ever push. Agents you send out now have a panel of their own, with
+the task you gave them and a Stop button. And auto-pull finally does what its
+name says, without waiting for you to press Fetch.
+
+### Upgrading from 5.x
+
+- Your repositories, keys, vault and settings carry over; there is nothing to
+  migrate.
+- The setup guide appears once after updating. **Skip setup** closes it for
+  good, and **Settings → Setup guide** brings it back.
+- **The task you give an agent is now saved** in Multi-Git's configuration file
+  so the Agents panel can show it. Earlier versions kept it nowhere. To keep the
+  old behaviour, turn off **Settings → Worktrees and agents → Keep the task I
+  give each agent**.
+- **With auto-pull on, Multi-Git now contacts origin by itself** every few
+  minutes. With it off, nothing is fetched until you press Fetch, as before.
+
 ### Added
 
 - **A first-run guide of three short screens.** The first time Multi-Git opens
@@ -1314,7 +1339,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.4...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v6.0.0...HEAD
+[6.0.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.4...Release_v6.0.0
 [5.3.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.3...Release_v5.3.4
 [5.3.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.2...Release_v5.3.3
 [5.3.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.1...Release_v5.3.2

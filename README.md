@@ -749,15 +749,16 @@ Several further protections apply, on the principle that a repository's contents
 - Reading a public key is limited to keys registered to a profile or living under `~/.ssh`.
 - The local API can invoke fixed-purpose helpers such as Git, `gh`, and OpenSSH. It may validate and store user-configured executable definitions, but it never directly executes an arbitrary command supplied by a request; desktop IPC launches saved agents and tools by id after validating their context.
 - A launched tool gets an allowlisted environment, not a copy of Multi-Git's — in particular it never inherits the askpass bridge that would answer with a stored passphrase.
-- Agent launch history records what was started and where, but never the prompt.
+- Agent launch history records what was started and where, and the task you typed, on this machine only. A switch in Settings stops it keeping the task.
 
 ## Releases
 
 See [GitHub Releases](https://github.com/AnthonyKopri/multi-git/releases) for installers, portable builds, and release notes.
 
-The running version is in the window title — `Multi-Git Client v3.0.0` — and in
+The running version is in the window title — `Multi-Git Client v6.0.0` — and in
 the browser tab in browser mode, so a bug report can name it without digging.
 
+- **v6.0.0:** new interface with dark and light themes and Simple mode, a guided first-run setup with one-press SSH agent and key validation, an Agents panel with Stop, custom commit types, background fetching for auto-pull, and bundled fonts.
 - **v3.0.0:** major workflow expansion with native SSH-agent management, GitHub pull-request creation, precision staging and selective stashing, richer diffs, interactive rebase, commit signing, search and branch maintenance, durable recovery, worktrees and multi-window groups, coding-agent launchers, repository-wide remotes/submodules/LFS/patches/bisect/notes, external-tool definitions and Explorer integration, cancellable operations, responsive panes, Unicode repository paths, configuration migrations, and cross-platform CI.
 - **v2.2.1:** TypeScript application migration, modular server and renderer, hardened process and path handling, build fixes, dependency updates, and SSH/vault UI polish.
 - **v1.0.6:** new-repository wizard, first-run SSH setup, and release tooling.
