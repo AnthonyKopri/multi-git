@@ -2,9 +2,9 @@
 //
 // What this feature will not do is as much a part of it as what it will. It
 // starts a program the user configured and records that the launch happened.
-// It does not watch the tool, report what it is doing, or claim a session is
-// "running" — nothing here can know that, and a status that is guessed is worse
-// than no status at all.
+// It does not watch the tool or report what it is doing. The one thing said
+// about a launch afterwards is whether its process still exists, which is read
+// from the machine rather than guessed; see ./panel.ts.
 //
 // Launching is available only in the desktop app. The server deliberately has
 // no route for it: a loopback port is reachable by anything on the machine, and
@@ -13,8 +13,9 @@
 // The launch window is built around one question the old one left unanswered:
 // what is actually about to run. A tool, a model and a prompt each change the
 // command line, so the command line is shown, assembled from the same pieces
-// the launcher will use. The prompt is still never stored — it is left out of
-// the preview for the same reason it is left out of the history.
+// the launcher will use. The prompt is left out of that preview, which also
+// goes to the Terminal Log; it is kept with the launch in the history instead,
+// unless Settings says not to, so the Agents panel can show what was asked.
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
@@ -35,6 +36,7 @@ import type { AgentCatalogueEntry, AgentModelPreset } from '../../../shared/agen
 import type { DetectedAgent } from '../../../shared/agent-types';
 import { focusFirst } from '../../ui/focus';
 import { warnNoRepo } from '../../ui/no-repo';
+import { noteAgentLaunched } from './panel';
 
 let ui: Elements;
 let nav: SectionNav;
@@ -351,7 +353,6 @@ function renderHistory(): void {
               text: [
                 formatRelativeTime(Date.parse(launch.at)),
                 launch.commandPreview,
-                launch.pid === undefined ? '' : `pid ${launch.pid}`,
                 launch.error ?? ''
               ]
                 .filter((part) => part !== '')
@@ -594,7 +595,7 @@ export async function clearLaunchHistory(): Promise<void> {
   }
 
   const { confirmed } = await confirmDialog(
-    'Clear the launch history?\n\nIt records what was started and where, and nothing else — no prompt text was ever kept.',
+    'Clear the launch history?\n\nEverything that has finished is removed, along with the task typed for it. Agents still running keep their entries.',
     { title: 'Clear launch history', confirmLabel: 'Clear' }
   );
 
@@ -605,6 +606,7 @@ export async function clearLaunchHistory(): Promise<void> {
   try {
     await api.clearAgentLaunches();
     await refreshAgents();
+    noteAgentLaunched();
   } catch (error) {
     showToast(errorMessage(error, 'Could not clear the history.'), 'error');
   }
@@ -1036,6 +1038,7 @@ export async function submitLaunch(): Promise<void> {
       );
 
       await refreshAgents();
+      noteAgentLaunched();
     } catch (error) {
       const message = errorMessage(error, 'The agent could not be launched.');
       logToTerminal(message, 'error');

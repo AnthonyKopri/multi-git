@@ -89,6 +89,12 @@ The `.rpm` is not GPG-signed yet, which is why openSUSE needs `--allow-unsigned-
 
 ## Five-Minute Guide
 
+The first time Multi-Git opens, it shows a guide of three short screens. Each one can be skipped, and **Settings → Setup guide** opens it again.
+
+1. **How much do you want on screen?** The full workspace, or **Simple mode**: your changes, the history, the message box and the Commit button, with everything else one switch away in Settings.
+2. **Is this computer ready?** Git, and a running SSH agent. If the agent is off, one button turns it on.
+3. **Your key for GitHub.** Type your name and email and press **Create my key**. The public key is copied to your clipboard at once, **Copy public key** copies it again, the three steps for adding it on GitHub are written out beside a button that opens the right page, and **Validate key** asks GitHub who the key belongs to and tells you the account name, or what is still missing.
+
 ### 1. Open your first repository
 
 The welcome screen offers three starting points:
@@ -152,7 +158,7 @@ neither can offer something the other does not.
 
 Ahead and behind badges appear in the branch header and on the push/pull controls. If a normal push is rejected as non-fast-forward, Multi-Git explains the risk and can retry using `--force-with-lease`; it does not silently force-push.
 
-**Auto-pull** is off until you turn it on, and it only ever fast-forwards. After a fetch, it pulls only when every one of these holds: the branch tracks an upstream, it is behind, it has no commits of its own, HEAD is not detached, no merge or rebase is in progress, nothing is conflicted, and no tracked file has uncommitted edits. Untracked files do not block it — they are not changes to the branch, and git refuses on its own in the one case where an incoming file would land on top of one. Nothing is ever merged or rebased without you asking, and a fetch is the only thing that can trigger it, so a pull cannot set off another. When it is on but a condition is not met, the chip's tooltip names the one holding it back.
+**Auto-pull** is off until you turn it on, and it only ever fast-forwards. After a fetch, it pulls only when every one of these holds: the branch tracks an upstream, it is behind, it has no commits of its own, HEAD is not detached, no merge or rebase is in progress, nothing is conflicted, and no tracked file has uncommitted edits. Untracked files do not block it — they are not changes to the branch, and git refuses on its own in the one case where an incoming file would land on top of one. Nothing is ever merged or rebased without you asking, and a fetch is the only thing that can trigger it, so a pull cannot set off another. While auto-pull is on, Multi-Git also fetches by itself: a few seconds after a repository opens, when you come back to the window, and every five minutes while it is in front. That fetch never asks for anything. It is skipped when the selected key would need a passphrase typed, it tells Git's credential helper not to prompt, and it waits while another sync is running. With auto-pull off, nothing is fetched until you press **Fetch**. When it is on but a condition is not met, the chip's tooltip names the one holding it back.
 
 A branch that has no upstream yet is a different action from the pushes that follow it: it creates the branch on the remote. The Push button says **Publish** and takes a labelled pill shape while that is true, and goes back to the plain Push icon once the branch is tracking one. It stays disabled, saying why, on a branch with no commits — git has no refspec to send there. Publish only appears when there is an `origin` to publish to.
 
@@ -283,7 +289,7 @@ fix(history): keep graph lanes aligned
 docs: update portable installation steps
 ```
 
-Enter an optional scope, then click one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, or `perf`. The helper inserts or replaces the prefix; it never blocks a non-conventional message.
+Enter an optional scope, then click one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, or `perf`. The helper inserts or replaces the prefix; it never blocks a non-conventional message. The pills sit in one row that scrolls sideways, with the mouse wheel or the arrows at its edges. The **+** at the end adds a type of your own, such as `art` or `release`: lowercase letters only, 2 to 16 of them, so it can be read back as a prefix. A type you added has a small **×** to remove it.
 
 ### Creating GitHub pull requests
 
@@ -495,7 +501,9 @@ The accounts menu distinguishes a working agent with no identities from a stoppe
 
 Selecting or unlocking a profile loads that key into the machine's native SSH agent after obtaining its passphrase from the unlocked vault or a one-time prompt. This makes the same identity available to terminals, editors, and coding agents launched for the repository; in-app Git operations still have their per-operation `GIT_SSH_COMMAND` routing if the agent is unavailable.
 
-On Windows, **Repair and start** can set the OpenSSH Authentication Agent service to start automatically and start it now. The desktop app shows the operating-system elevation prompt because changing a disabled service needs administrator approval; browser mode only explains the manual command.
+On macOS and Linux, when no agent is reachable, **Start the SSH agent** starts one that belongs to Multi-Git. It needs no password, the app and everything it opens use it, and it ends when the app closes; an agent your desktop already provides is always used in preference. The first-run guide offers the same button.
+
+On Windows, **Turn on the SSH agent** can set the OpenSSH Authentication Agent service to start automatically and start it now. The desktop app shows the operating-system elevation prompt because changing a disabled service needs administrator approval; browser mode only explains the manual command.
 
 **Load all keys** puts every configured profile's key into the machine's agent in one press, rather than one repository at a time. Keys with no passphrase, and keys whose passphrase is in an unlocked vault, load without a prompt; anything still locked is listed afterwards and asked for one at a time. Unlocking the vault does the same pass automatically, since that is the moment every saved passphrase becomes available at once. Neither path changes any repository's `core.sshCommand` — loading a key is a machine-level act, and which identity a repository uses stays that repository's setting.
 
@@ -603,7 +611,7 @@ Multi-Git can start a tool you configure in the worktree you choose. The **Codin
 
 Every entry is listed whether or not it is installed, with a link to where it lives — a tool left out of the list only raises the question of whether it is supported. What this machine has sorts to the top, so the list reads as "yours first" without a filter to switch on. **Add** seeds an editable definition from one of them; **Add everything installed** does it for every tool found on your PATH at once. The seeded definition carries that tool's own prompt convention rather than a guess: Claude Code and Codex take the prompt as a bare first argument, Gemini and Qwen want `-i` in front of it, and several take no interactive prompt at all and are configured not to be handed one.
 
-**Add or edit by hand** takes any executable, with its own arguments, launch mode and prompt convention; the prompt-flag field appears only for the one mode that uses one. **Launch history** records what was started, where, with which model, and whether it started, and can be cleared.
+**Add or edit by hand** takes any executable, with its own arguments, launch mode and prompt convention; the prompt-flag field appears only for the one mode that uses one. **Launch history** records what was started, where, with which model, the task it was given, and whether it started, and can be cleared.
 
 #### Which model
 
@@ -613,13 +621,21 @@ The same list is how **DeepSeek**, **Kimi K2** and **GLM** are reached. Each of 
 
 #### Launching
 
-The launch window shows the folder and its branch, the account that folder will push as, a card for each agent, the models it offers, and a prompt box. Along the bottom, **What will run** carries the command line on one line; opening it adds the environment the launch gets and the window it opens in. Neither ever carries the prompt, for the same reason the history does not: a prompt is passed as one argument and is recorded nowhere. Ctrl+Enter launches.
+The launch window shows the folder and its branch, the account that folder will push as, a card for each agent, the models it offers, and a prompt box. Along the bottom, **What will run** carries the command line on one line; opening it adds the environment the launch gets and the window it opens in. Neither ever carries the prompt, which is passed as one argument and never appears in a command line that is displayed or logged. The prompt is kept with the launch itself so the Agents panel can show it; see below for where, and how to turn that off. Ctrl+Enter launches.
 
 A launch sets the worktree as the working directory and passes arguments as separate values with no shell anywhere in the path. **Open in** decides where it appears: your terminal (Windows Terminal, Terminal.app, or whichever emulator this Linux desktop has), a window of its own, or a named Windows host. Your terminal is the default off Windows, because a detached process there has no console at all and an interactive agent started that way has nowhere to print. On macOS the terminal is opened through a fixed bridge script that reads the folder, the command and the environment out of two NUL-separated files beside it, so nothing from a branch name or a prompt is ever part of a string a shell parses.
 
 Before launching, Multi-Git tries to prepare the account that worktree uses and reports its routing state; declining or failing an unlock does not block launch, so the tool may still need authentication before it can push.
 
 What it does not do: install hooks, read the tool's session state, or claim to know what it is doing. **Launched** means the process started. Agent definitions can be managed in either mode, but no HTTP route launches one; launch is desktop IPC only.
+
+#### The Agents panel
+
+The **Agents** row in the side panel opens a panel listing every agent you sent out, newest first: the tool and model, the folder, the task you typed, and one of five states. **Running** means the program the launch started still exists, and nothing more; **Finished** means it has gone; **Stopped** means you ended it from here; **Did not start** carries the reason; and **Started** is what a launch says when Multi-Git could not find its program afterwards, in which case the only way to end it is to close its window. The row shows the number running without opening the panel.
+
+**Stop**, in the desktop app, ends a running agent's program straight away, after asking. A terminal launch returns the id of the terminal rather than of the tool, so Multi-Git looks at the process table a moment after launching and takes the oldest process that was created after the launch and is the configured executable, or a script host running it. Before stopping, it reads the table again and ends the process only if both its id and its start time still match, so an id the system has since handed to something else is left alone. Like launching, stopping is desktop IPC only: no HTTP route ends a program.
+
+The task is stored in `~/.multi-git-client-config.json`, cut to 4,000 characters, and is removed by **Clear finished**. **Settings → Worktrees and agents → Keep the task I give each agent** turns it off; a launch then records the tool and the folder only. Do not paste secrets into a task you would not want kept in that file.
 
 ### The Repository hub
 
@@ -653,12 +669,13 @@ On Windows, the same tab can add **Open in Multi-Git** to the File Explorer righ
 
 ### Settings
 
-**Settings** in the toolbar menu holds what is true of Multi-Git whatever repository is open, as opposed to the Repository window, which is everything that acts on one repository. Several of these had no interface at all before and could only be changed by closing the app and editing `~/.multi-git-client-config.json`.
+**Settings**, the gear beside the toolbar menu, holds what is true of Multi-Git whatever repository is open, as opposed to the Repository window, which is everything that acts on one repository. Several of these had no interface at all before and could only be changed by closing the app and editing `~/.multi-git-client-config.json`.
 
+- **Look and layout** — the Dark, Light or System theme, **Simple mode**, and a button that opens the first-run guide again.
 - **Syncing** — auto-pull, and whether Multi-Git keeps its managed block in `~/.ssh/config`. Turning the second off still asks whether to remove the block it already wrote.
 - **What counts as a stale branch** — the same control the Maintenance tab shows, because it is the same setting; changing it in either place changes it in both.
 - **Safety Net** — how many days a recovery point is kept. 0 keeps them until you remove them by hand, and an empty box changes nothing rather than being read as 0.
-- **Worktrees and agents** — the folder new worktrees are suggested in. The text of an agent prompt is never recorded: launch history keeps the command and the folder, and nothing else.
+- **Worktrees and agents** — the folder new worktrees are suggested in. Whether the task you give each agent is kept with the launch, which is what lets the Agents panel show it; turned off, launch history keeps the command and the folder, and nothing else.
 - **Application** — window restoration, the GitHub update check, and a **Check now** button for asking on demand.
 - **Integrations** — check whether Git and GitHub CLI are ready. When GitHub CLI is missing, install it from the desktop app where supported or open its official installation page.
 
@@ -705,9 +722,9 @@ The panel is a record, not an interactive shell — you read it here and type in
 
 ## Local Data, Privacy, And Security
 
-Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when the current UI loads its fonts and Material Symbols from Google Fonts, when a window you opened asks `gh` about this repository's pull requests — the pull-request preflight and the Maintenance tab's survey both do — and, on packaged Windows, macOS and Linux builds, when the app asks GitHub whether a newer release exists.
+Multi-Git has no required cloud account. Application state stays on your machine. Network traffic occurs when Git contacts the remotes you configured, when auto-pull is on and Multi-Git fetches origin in the background, when a window you opened asks `gh` about this repository's pull requests — the pull-request preflight and the Maintenance tab's survey both do — and, on packaged Windows, macOS and Linux builds, when the app asks GitHub whether a newer release exists.
 
-The update check is the only request Multi-Git makes that you did not start. It is an unauthenticated `GET` to `api.github.com` for this project's public release list, made once about ten seconds after launch and every six hours after that. It sends no account, no repository, and no identifying information beyond what any HTTPS request carries. Nothing is downloaded until you ask for it. Set `settings.checkForUpdates` to `false` in the configuration file to turn it off entirely.
+The interface's fonts and icons ship inside the app and are not fetched from anywhere. The update check and, only while auto-pull is on, the background fetch are the only requests Multi-Git makes that you did not start. It is an unauthenticated `GET` to `api.github.com` for this project's public release list, made once about ten seconds after launch and every six hours after that. It sends no account, no repository, and no identifying information beyond what any HTTPS request carries. Nothing is downloaded until you ask for it. Set `settings.checkForUpdates` to `false` in the configuration file to turn it off entirely.
 
 ```text
 ~/.multi-git-client-config.json   recent repositories, profiles, rules, settings,
@@ -732,15 +749,16 @@ Several further protections apply, on the principle that a repository's contents
 - Reading a public key is limited to keys registered to a profile or living under `~/.ssh`.
 - The local API can invoke fixed-purpose helpers such as Git, `gh`, and OpenSSH. It may validate and store user-configured executable definitions, but it never directly executes an arbitrary command supplied by a request; desktop IPC launches saved agents and tools by id after validating their context.
 - A launched tool gets an allowlisted environment, not a copy of Multi-Git's — in particular it never inherits the askpass bridge that would answer with a stored passphrase.
-- Agent launch history records what was started and where, but never the prompt.
+- Agent launch history records what was started and where, and the task you typed, on this machine only. A switch in Settings stops it keeping the task.
 
 ## Releases
 
 See [GitHub Releases](https://github.com/AnthonyKopri/multi-git/releases) for installers, portable builds, and release notes.
 
-The running version is in the window title — `Multi-Git Client v3.0.0` — and in
+The running version is in the window title — `Multi-Git Client v6.0.0` — and in
 the browser tab in browser mode, so a bug report can name it without digging.
 
+- **v6.0.0:** new interface with dark and light themes and Simple mode, a guided first-run setup with one-press SSH agent and key validation, an Agents panel with Stop, custom commit types, background fetching for auto-pull, and bundled fonts.
 - **v3.0.0:** major workflow expansion with native SSH-agent management, GitHub pull-request creation, precision staging and selective stashing, richer diffs, interactive rebase, commit signing, search and branch maintenance, durable recovery, worktrees and multi-window groups, coding-agent launchers, repository-wide remotes/submodules/LFS/patches/bisect/notes, external-tool definitions and Explorer integration, cancellable operations, responsive panes, Unicode repository paths, configuration migrations, and cross-platform CI.
 - **v2.2.1:** TypeScript application migration, modular server and renderer, hardened process and path handling, build fixes, dependency updates, and SSH/vault UI polish.
 - **v1.0.6:** new-repository wizard, first-run SSH setup, and release tooling.

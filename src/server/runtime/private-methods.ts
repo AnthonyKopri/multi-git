@@ -17,7 +17,8 @@ import {
   launchAgent,
   openEditorAt,
   openShellAt,
-  openTerminalAt
+  openTerminalAt,
+  stopLaunch
 } from '../agents/service';
 import { launchTool } from '../tools/launch';
 import { runBisect } from '../git/bisect';
@@ -112,6 +113,9 @@ export async function privateMethod(method: string, input: Record<string, unknow
         ...(typeof input['modelId'] === 'string' ? { modelId: input['modelId'] } : {})
       });
     }
+    case 'agent.stop':
+      // By history id. Which process that is was decided when it was launched.
+      return stopLaunch(String(input['launchId'] ?? ''));
     case 'tool': {
       const placeholders =
         input['placeholders'] && typeof input['placeholders'] === 'object'

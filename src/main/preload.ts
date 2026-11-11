@@ -8,7 +8,7 @@ import type { IpcRendererEvent } from 'electron';
 
 import { IPC_CHANNELS } from '../shared/desktop-api';
 import type { DesktopApi, Unsubscribe } from '../shared/desktop-api';
-import type { AgentLaunchInput, AgentLaunchResult } from '../shared/agent-types';
+import type { AgentLaunchInput, AgentLaunchResult, AgentStopResult } from '../shared/agent-types';
 import type { UpdateState } from '../shared/update-types';
 
 /**
@@ -75,6 +75,10 @@ const desktopApi: DesktopApi = {
   // program to run.
   launchAgent: (input: AgentLaunchInput) =>
     ipcRenderer.invoke(IPC_CHANNELS.launchAgent, input) as Promise<AgentLaunchResult>,
+  // A launch-history id and nothing else. Which process that names was settled
+  // by the backend when the agent was started.
+  stopAgent: (launchId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.stopAgent, String(launchId)) as Promise<AgentStopResult>,
 
   // Same shape as launchAgent, for the same reason: a saved definition's id,
   // never a command line.

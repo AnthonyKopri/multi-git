@@ -1,18 +1,19 @@
 // External agent definitions over HTTP.
 //
-// There is deliberately no launch route here. Reading, writing and detecting
-// definitions is safe to answer on a loopback port; starting a program is not,
-// so that lives behind the Electron IPC bridge in src/main/main.ts and is
-// unavailable in browser mode. Anything added to this file should be checked
-// against that line.
+// There is deliberately no launch route here, and no stop route. Reading,
+// writing and detecting definitions is safe to answer on a loopback port, and
+// so is saying which launches are still running; starting or ending a program
+// is not, so both live behind the Electron IPC bridge in src/main/main.ts and
+// are unavailable in browser mode. Anything added to this file should be
+// checked against that line.
 import { Router } from 'express';
 
 import { HttpError } from '../middleware/error-handler';
 import { sanitizeConfigForClient } from '../config/sanitize';
 import { readConfig } from '../config/store';
+import { clearFinishedLaunches, readLaunchStates } from '../agents/service';
 import {
   AgentDefinitionError,
-  clearLaunches,
   definitionFromDetected,
   deleteAgentDefinition,
   detectAgents,
@@ -138,11 +139,24 @@ agentsRouter.delete(
   }
 );
 
-/** Empties the launch history. It holds no prompt text, only what was started. */
+/**
+ * The launch history, with what is still running read from the machine.
+ *
+ * Read-only as far as the machine goes: it looks processes up, and the one
+ * thing it writes is that a launch it found gone has ended.
+ */
+agentsRouter.get(
+  '/api/agents/launches',
+  async (_req, res) => {
+    res.json({ success: true, launches: await readLaunchStates() });
+  }
+);
+
+/** Empties the launch history of everything that has finished. */
 agentsRouter.delete(
   '/api/agents/launches',
   async (_req, res) => {
-    clearLaunches();
+    await clearFinishedLaunches();
     res.json({ success: true, config: sanitizeConfigForClient(readConfig()) });
   }
 );

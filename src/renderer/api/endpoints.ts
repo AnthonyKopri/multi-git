@@ -87,10 +87,11 @@ import type {
   RepoGroup
 } from '../../shared/config-types';
 import type { DetectedTool } from '../../shared/tool-types';
-import type { DetectedAgent } from '../../shared/agent-types';
+import type { AgentLaunchView, DetectedAgent } from '../../shared/agent-types';
 import type { AgentCatalogueEntry } from '../../shared/agent-catalogue';
 import type { IntegrationKind, IntegrationPreflight } from '../../shared/integrate-types';
 import type { PrerequisiteReport } from '../../shared/prerequisite-types';
+import type { ThemeChoice } from '../../shared/commit-types';
 
 /** Requests that are not about the open repository. */
 const global = { repoScoped: false, ignoreRepoGeneration: true } as const;
@@ -153,6 +154,12 @@ export interface AppSettingsInput {
   checkForUpdates?: boolean;
   /** Folder new worktrees are suggested in. Empty restores the default. */
   worktreeParentDir?: string;
+  theme?: ThemeChoice;
+  simpleMode?: boolean;
+  experienceChosen?: boolean;
+  /** The whole list: adding or removing a type sends what should remain. */
+  customCommitTypes?: string[];
+  keepAgentPrompts?: boolean;
 }
 
 export const saveAppSettings = (input: AppSettingsInput) =>
@@ -390,6 +397,8 @@ export interface SyncInput {
   sshKeyPath?: string;
   branch?: string;
   force?: boolean;
+  /** Fetch only: nobody asked for this one, so nothing may prompt. */
+  quiet?: boolean;
 }
 
 export const push = (input: SyncInput) =>
@@ -735,6 +744,13 @@ export const unloadSshAgentKey = (profileId: string, force = false) =>
     body: { profileId, force }
   });
 
+/** macOS and Linux: starts an agent for this session. No administrator needed. */
+export const startSshAgent = () =>
+  api.post<{ success: boolean; message: string; agent: SshAgentStatusResponse['agent'] }>(
+    '/api/ssh/agent/start',
+    { ...global, body: {} }
+  );
+
 /** Loads every profile's key into the machine's agent. Never prompts. */
 export const loadAllSshAgentKeys = () =>
   api.post<SshAgentBulkLoadResponse>('/api/ssh/agent/load-all', { ...global, body: {} });
@@ -855,6 +871,9 @@ export const saveAgent = (agent: Partial<ExternalAgentDefinition>) =>
 
 export const deleteAgent = (id: string) =>
   api.delete<Api.ConfigMutationResponse>('/api/agents', { ...global, body: { id } });
+
+export const getAgentLaunches = () =>
+  api.get<{ success: true; launches: AgentLaunchView[] }>('/api/agents/launches', global);
 
 export const clearAgentLaunches = () =>
   api.delete<Api.ConfigMutationResponse>('/api/agents/launches', { ...global, body: {} });

@@ -2,65 +2,190 @@
    MULTI-GIT CLIENT - PREMIUM CSS DESIGN SYSTEM
    ========================================================================== */
 
-/* Theme Variables (HSL tailored) */
-:root {
-  --bg-app: #0a0c10;
-  --bg-panel: #11141a;
-  --bg-card: #171b26;
-  --bg-card-hover: #1e2433;
-  --bg-input: #0e1117;
-  --bg-input-focus: #151922;
-  
-  --border-color: #262e3d;
-  --border-color-hover: #3b475c;
-  
-  /* Brand Accents */
-  --color-primary: #6366f1; /* Indigo */
-  --color-primary-hover: #4f46e5;
-  --color-primary-glow: rgba(99, 102, 241, 0.25);
-  
-  --color-secondary: #4b5563; /* Cool Grey */
-  --color-secondary-hover: #374151;
-  
-  /* Status Colors */
-  --color-success: #10b981; /* Emerald */
-  --color-success-bg: rgba(16, 185, 129, 0.1);
-  --color-success-border: rgba(16, 185, 129, 0.25);
-  
-  --color-danger: #ef4444; /* Rose Red */
-  --color-danger-bg: rgba(239, 68, 68, 0.1);
-  --color-danger-border: rgba(239, 68, 68, 0.25);
-  
-  --color-warning: #f59e0b; /* Amber */
-  --color-warning-bg: rgba(245, 158, 11, 0.1);
-  --color-warning-border: rgba(245, 158, 11, 0.3);
+/* Theme tokens.
 
-  --color-info: #06b6d4; /* Cyan */
-  
-  /* Typography */
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-  --text-dim: #6b7280;
-  
-  /* Shadow & Blur */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-  --shadow-glow: 0 0 20px 0 rgba(99, 102, 241, 0.15);
-  --glass-backdrop: blur(12px);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+   Two themes, one set of names. Dark is the default and lives on :root; light
+   redefines the same names under [data-theme="light"]. theme.js sets that
+   attribute before the first paint, from the Appearance setting.
+
+   Components read tokens and nothing else, so a colour cannot exist in one
+   theme and be missing from the other. The look is flat on purpose: depth comes
+   from three fill steps (canvas, card, raised), not from borders, glows or
+   blur. */
+:root {
+  color-scheme: dark;
+
+  --font-body: 'DM Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Bricolage Grotesque', 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+
+  /* Fill steps. --bg-panel is the canvas: there are no panels any more, only
+     cards sitting on it. */
+  --bg-app: #17151c;
+  --bg-panel: #17151c;
+  --bg-card: #211f29;
+  --bg-card-hover: #2c2936;
+  --bg-raised: #2c2936;
+  --bg-input: #2c2936;
+  --bg-input-focus: #353141;
+  --bg-overlay: rgba(12, 10, 16, 0.72);
+  --hover-veil: rgba(255, 255, 255, 0.04);
+
+  --border-color: #322e3e;
+  --border-color-hover: #4a4459;
+  /* Inputs carry no outline on dark, where the raised fill is enough. */
+  --input-border: transparent;
+
+  /* The brand purple, as drawn in the logo, and the lighter step of it that
+     stays readable as text and as a button on a dark card. */
+  --brand: #6a69eb;
+  --brand-deep: #3b3e8d;
+  --color-primary: #b7a8ff;
+  --color-primary-hover: #cbc0ff;
+  --color-primary-glow: rgba(183, 168, 255, 0.16);
+  --on-primary: #1b1530;
+
+  --color-secondary: #3d3949;
+  --color-secondary-hover: #4a4459;
+
+  --color-success: #7ee2b8;
+  --color-success-bg: rgba(126, 226, 184, 0.12);
+  --color-success-border: rgba(126, 226, 184, 0.28);
+  --on-success: #0f2a1f;
+
+  --color-danger: #ff8fa3;
+  --color-danger-bg: rgba(255, 143, 163, 0.12);
+  --color-danger-border: rgba(255, 143, 163, 0.3);
+  --on-danger: #33101a;
+
+  --color-warning: #f2c96b;
+  --color-warning-bg: rgba(242, 201, 107, 0.12);
+  --color-warning-border: rgba(242, 201, 107, 0.3);
+
+  --color-info: #8ecbff;
+
+  --text-main: #f1eef7;
+  --text-muted: #a9a3b8;
+  --text-dim: #8f89a0;
+  /* For the moment something is under the pointer. */
+  --text-strong: #ffffff;
+
+  /* Eight tints. A section, a commit type or a file status picks one and keeps
+     it, which is what lets the eye find "the green one" without reading. */
+  --tint-violet-bg: rgba(183, 168, 255, 0.16);
+  --tint-violet-fg: #b7a8ff;
+  --tint-green-bg: rgba(126, 226, 184, 0.15);
+  --tint-green-fg: #7ee2b8;
+  --tint-amber-bg: rgba(242, 214, 107, 0.15);
+  --tint-amber-fg: #f2d66b;
+  --tint-blue-bg: rgba(142, 203, 255, 0.15);
+  --tint-blue-fg: #8ecbff;
+  --tint-pink-bg: rgba(255, 159, 186, 0.15);
+  --tint-pink-fg: #ff9fba;
+  --tint-teal-bg: rgba(127, 227, 224, 0.15);
+  --tint-teal-fg: #7fe3e0;
+  --tint-orange-bg: rgba(255, 180, 138, 0.15);
+  --tint-orange-fg: #ffb48a;
+  --tint-gray-bg: rgba(201, 196, 214, 0.13);
+  --tint-gray-fg: #c9c4d6;
+
+  --shadow-sm: none;
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.45);
+  --shadow-glow: none;
+  --shadow-card: none;
+  --glass-backdrop: none;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
 
   /* Commit graph lane colors (auto-assigned per branch lane) */
-  --graph-lane-0: #6366f1; /* indigo */
-  --graph-lane-1: #10b981; /* emerald */
-  --graph-lane-2: #f59e0b; /* amber */
-  --graph-lane-3: #06b6d4; /* cyan */
-  --graph-lane-4: #ec4899; /* pink */
-  --graph-lane-5: #84cc16; /* lime */
-  --graph-lane-6: #a855f7; /* purple */
-  --graph-lane-7: #f97316; /* orange */
+  --graph-lane-0: #b7a8ff;
+  --graph-lane-1: #7ee2b8;
+  --graph-lane-2: #f2d66b;
+  --graph-lane-3: #8ecbff;
+  --graph-lane-4: #ff9fba;
+  --graph-lane-5: #7fe3e0;
+  --graph-lane-6: #ffb48a;
+  --graph-lane-7: #c9c4d6;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg-app: #eceef3;
+  --bg-panel: #eceef3;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f3f4f8;
+  --bg-raised: #f3f4f8;
+  --bg-input: #f3f4f8;
+  --bg-input-focus: #ffffff;
+  --bg-overlay: rgba(26, 29, 43, 0.4);
+  --hover-veil: rgba(26, 29, 43, 0.04);
+
+  --border-color: #dcdfe8;
+  --border-color-hover: #c3c8d6;
+  --input-border: #dcdfe8;
+
+  --color-primary: #5b5ae0;
+  --color-primary-hover: #4947c8;
+  --color-primary-glow: rgba(91, 90, 224, 0.12);
+  --on-primary: #ffffff;
+
+  --color-secondary: #dcdfe8;
+  --color-secondary-hover: #c3c8d6;
+
+  --color-success: #0b6b43;
+  --color-success-bg: #ddf5e8;
+  --color-success-border: #b3e3cb;
+  --on-success: #ffffff;
+
+  --color-danger: #b4233c;
+  --color-danger-bg: #ffe4e9;
+  --color-danger-border: #f4bcc7;
+  --on-danger: #ffffff;
+
+  --color-warning: #7a4e00;
+  --color-warning-bg: #ffefc9;
+  --color-warning-border: #efd28a;
+
+  --color-info: #0f5aa8;
+
+  --text-main: #1a1d2b;
+  --text-muted: #5b6072;
+  --text-dim: #7b8194;
+  --text-strong: #05060b;
+
+  --tint-violet-bg: #e9e8ff;
+  --tint-violet-fg: #3f3cc4;
+  --tint-green-bg: #ddf5e8;
+  --tint-green-fg: #0b6b43;
+  --tint-amber-bg: #ffefc9;
+  --tint-amber-fg: #7a4e00;
+  --tint-blue-bg: #dceeff;
+  --tint-blue-fg: #0f5aa8;
+  --tint-pink-bg: #ffe1ec;
+  --tint-pink-fg: #a3184f;
+  --tint-teal-bg: #d6f3f1;
+  --tint-teal-fg: #0a6661;
+  --tint-orange-bg: #ffe5d3;
+  --tint-orange-fg: #9a3d00;
+  --tint-gray-bg: #e9ebf0;
+  --tint-gray-fg: #3d4254;
+
+  --shadow-sm: 0 1px 2px rgba(26, 29, 43, 0.06);
+  --shadow-md: 0 6px 18px rgba(26, 29, 43, 0.1);
+  --shadow-lg: 0 18px 44px rgba(26, 29, 43, 0.18);
+  --shadow-card: 0 1px 2px rgba(26, 29, 43, 0.05);
+
+  --graph-lane-0: #5b5ae0;
+  --graph-lane-1: #0b8a57;
+  --graph-lane-2: #b37400;
+  --graph-lane-3: #1470cc;
+  --graph-lane-4: #c2256a;
+  --graph-lane-5: #0c8079;
+  --graph-lane-6: #c2540a;
+  --graph-lane-7: #6a7088;
 }
 
 /* Global Reset & Base */
@@ -71,7 +196,7 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
   background-color: var(--bg-app);
   color: var(--text-main);
   height: 100vh;
@@ -149,13 +274,13 @@ a:hover {
 
 .btn-primary {
   background-color: var(--color-primary);
-  color: white;
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+  color: var(--on-primary);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 .btn-primary:active {
   transform: translateY(0);
@@ -178,26 +303,26 @@ a:hover {
 .btn-secondary:hover {
   background-color: var(--bg-card-hover);
   border-color: var(--border-color-hover);
-  color: white;
+  color: var(--text-strong);
 }
 
 .btn-danger {
   background-color: var(--color-danger);
-  color: white;
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+  color: var(--on-danger);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--color-danger) 20%, transparent);
 }
 .btn-danger:hover {
-  background-color: #dc2626;
+  background-color: color-mix(in srgb, var(--color-danger) 86%, black);
   transform: translateY(-1px);
 }
 
 .btn-success {
   background-color: var(--color-success);
-  color: white;
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+  color: var(--on-success);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--color-success) 20%, transparent);
 }
 .btn-success:hover {
-  background-color: #059669;
+  background-color: color-mix(in srgb, var(--color-success) 86%, black);
   transform: translateY(-1px);
 }
 
@@ -215,7 +340,7 @@ a:hover {
   transition: all 0.2s ease;
 }
 .btn-icon:hover {
-  color: white;
+  color: var(--text-strong);
   border-color: var(--text-muted);
   background: var(--bg-card-hover);
 }
@@ -243,7 +368,7 @@ a:hover {
 }
 .btn-text:hover {
   color: var(--color-primary);
-  background: rgba(99, 102, 241, 0.1);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .btn-sm {
@@ -403,7 +528,7 @@ select {
 }
 .alert-warning {
   background-color: var(--color-warning-bg);
-  color: #fbbf24;
+  color: var(--color-warning);
   border: 1px solid var(--color-warning-border);
 }
 .alert-warning .material-symbols-outlined {
@@ -503,7 +628,7 @@ select {
   background: var(--color-primary-glow);
 }
 .global-actions .btn-icon.btn-publish:hover:not(:disabled) {
-  color: white;
+  color: var(--on-primary);
   border-color: var(--color-primary-hover);
   background: var(--color-primary);
 }
@@ -536,7 +661,7 @@ select {
   font-size: 15px;
 }
 .btn-chip:hover:not(:disabled) {
-  color: white;
+  color: var(--text-strong);
   border-color: var(--text-muted);
   background: var(--bg-card-hover);
 }
@@ -552,7 +677,7 @@ select {
   opacity: 1;
   color: var(--color-info);
   border-color: var(--color-info);
-  background: rgba(6, 182, 212, 0.12);
+  background: color-mix(in srgb, var(--color-info) 12%, transparent);
 }
 
 .btn-chip.protocol-ssh {
@@ -738,7 +863,7 @@ body.pane-resizing-y * {
 }
 .branch-item.active {
   background-color: var(--color-primary-glow);
-  color: #a5b4fc;
+  color: var(--color-primary);
   font-weight: 600;
   border-left: 3px solid var(--color-primary);
 }
@@ -931,7 +1056,7 @@ body.pane-resizing-y * {
 }
 .file-item.active {
   border-color: var(--color-primary);
-  background-color: rgba(99, 102, 241, 0.05);
+  background-color: color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 
 .file-info {
@@ -1074,7 +1199,7 @@ body.pane-resizing-y * {
   flex: 1;
   background-color: var(--bg-input);
   overflow: auto;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
   padding: 10px 0;
@@ -1127,19 +1252,19 @@ body.pane-resizing-y * {
 
 /* Line modifications styling */
 .diff-line-hunk {
-  background-color: rgba(99, 102, 241, 0.08);
-  color: #a5b4fc;
+  background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
 }
 .diff-line-addition {
   background-color: var(--color-success-bg);
-  color: #34d399;
+  color: var(--color-success);
 }
 .diff-line-addition .diff-line-nums {
   border-right-color: var(--color-success-border);
 }
 .diff-line-deletion {
   background-color: var(--color-danger-bg);
-  color: #f87171;
+  color: var(--color-danger);
 }
 .diff-line-deletion .diff-line-nums {
   border-right-color: var(--color-danger-border);
@@ -1179,12 +1304,12 @@ body.pane-resizing-y * {
   outline-offset: -1px;
 }
 .diff-line-selectable:focus-visible {
-  outline: 2px solid var(--color-accent, #6366f1);
+  outline: 2px solid var(--color-accent, var(--color-primary));
   outline-offset: -2px;
 }
 .diff-line-selected {
-  box-shadow: inset 3px 0 0 0 #6366f1;
-  background-color: rgba(99, 102, 241, 0.16);
+  box-shadow: inset 3px 0 0 0 var(--color-primary);
+  background-color: color-mix(in srgb, var(--color-primary) 16%, transparent);
 }
 .diff-line-selected .diff-line-content {
   font-weight: 600;
@@ -1204,7 +1329,7 @@ body.pane-resizing-y * {
   gap: 12px;
   flex-wrap: wrap;
   padding: 8px 14px;
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
   border-bottom: 1px solid var(--border-color);
 }
 .diff-selection-count {
@@ -1254,7 +1379,7 @@ body.pane-resizing-y * {
 .recovery-meta {
   font-size: 0.6875rem;
   color: var(--text-dim);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1311,7 +1436,7 @@ body.pane-resizing-y * {
 }
 .palette-item:hover,
 .palette-item-active {
-  background-color: rgba(99, 102, 241, 0.16);
+  background-color: color-mix(in srgb, var(--color-primary) 16%, transparent);
 }
 .palette-group {
   font-size: 0.6875rem;
@@ -1381,14 +1506,14 @@ body.pane-resizing-y * {
 .diff-word-changed {
   border-radius: 2px;
   padding: 0 1px;
-  background-color: rgba(99, 102, 241, 0.28);
+  background-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
   font-weight: 600;
 }
 .diff-line-addition .diff-word-changed {
-  background-color: rgba(52, 211, 153, 0.3);
+  background-color: color-mix(in srgb, var(--color-success) 30%, transparent);
 }
 .diff-line-deletion .diff-word-changed {
-  background-color: rgba(248, 113, 113, 0.3);
+  background-color: color-mix(in srgb, var(--color-danger) 30%, transparent);
 }
 
 /* Side by side. Two columns of one grid rather than two scrollers, so the
@@ -1494,15 +1619,15 @@ body.pane-resizing-y * {
 }
 .signature-good {
   background-color: var(--color-success-bg);
-  color: #34d399;
+  color: var(--color-success);
 }
 .signature-bad {
   background-color: var(--color-danger-bg);
-  color: #f87171;
+  color: var(--color-danger);
 }
 .signature-unknown {
   background-color: var(--color-warning-bg, rgba(234, 179, 8, 0.12));
-  color: #eab308;
+  color: var(--color-warning);
 }
 .signature-unsigned {
   color: var(--text-dim);
@@ -1640,7 +1765,7 @@ body.pane-resizing-y * {
   font-size: 0.8125rem;
 }
 .ssh-health-item-path {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: var(--text-muted);
   word-break: break-all;
@@ -1754,10 +1879,10 @@ body.pane-resizing-y * {
   border-radius: var(--radius-sm);
   padding: 10px;
   flex: 1;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   overflow-y: auto;
-  color: #38bdf8;
+  color: var(--color-info);
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -1768,7 +1893,7 @@ body.pane-resizing-y * {
   color: var(--color-success);
 }
 .logger-line-cmd {
-  color: #c084fc;
+  color: var(--color-primary);
   font-weight: bold;
 }
 
@@ -1783,7 +1908,7 @@ body.pane-resizing-y * {
   /* 100vw ignores the scrollbar and would add a horizontal one of its own. */
   width: 100%;
   height: 100%;
-  background-color: rgba(6, 8, 12, 0.85);
+  background-color: var(--bg-overlay);
   backdrop-filter: var(--glass-backdrop);
   display: flex;
   justify-content: center;
@@ -1955,7 +2080,7 @@ body.pane-resizing-y * {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: var(--bg-overlay);
   backdrop-filter: var(--glass-backdrop);
   display: flex;
   align-items: flex-start;
@@ -2015,7 +2140,7 @@ body.pane-resizing-y * {
   display: flex;
 }
 .btn-close:hover {
-  color: white;
+  color: var(--text-strong);
 }
 
 .modal-desc {
@@ -2118,7 +2243,7 @@ body.pane-resizing-y * {
   margin-bottom: 20px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--hover-veil);
 }
 
 .ssh-key-form-header {
@@ -2172,7 +2297,7 @@ body.pane-resizing-y * {
 }
 
 .generator-section {
-  border-color: rgba(99, 102, 241, 0.45);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
   margin-top: 0;
   padding-top: 18px;
 }
@@ -2191,34 +2316,34 @@ body.pane-resizing-y * {
 }
 
 .inline-feedback.info {
-  border-color: rgba(6, 182, 212, 0.35);
-  background: rgba(6, 182, 212, 0.08);
-  color: #67e8f9;
+  border-color: color-mix(in srgb, var(--color-info) 35%, transparent);
+  background: color-mix(in srgb, var(--color-info) 8%, transparent);
+  color: var(--color-info);
 }
 
 .inline-feedback.success {
   border-color: var(--color-success-border);
   background: var(--color-success-bg);
-  color: #6ee7b7;
+  color: var(--color-success);
 }
 
 .inline-feedback.error {
   border-color: var(--color-danger-border);
   background: var(--color-danger-bg);
-  color: #fda4af;
+  color: var(--color-danger);
 }
 
 .inline-feedback.warn {
   border-color: var(--color-warning-border);
   background: var(--color-warning-bg);
-  color: #fcd34d;
+  color: var(--color-warning);
 }
 
 .generated-result {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--hover-veil);
 }
 
 .generated-result h4 {
@@ -2273,7 +2398,7 @@ body.pane-resizing-y * {
   white-space: nowrap;
 }
 .ssh-profiles-table td.col-key-path {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
 }
 
@@ -2281,7 +2406,7 @@ body.pane-resizing-y * {
   border-bottom: none;
 }
 .ssh-profiles-table tr:hover td {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--hover-veil);
 }
 
 /* The row overflow is positioned against this cell. */
@@ -2338,7 +2463,7 @@ body.pane-resizing-y * {
 #conflict-textarea {
   flex: 1;
   height: 100%;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
   background: transparent;
@@ -2371,10 +2496,10 @@ body.pane-resizing-y * {
 /* Animations */
 @keyframes pulse-glow {
   0% {
-    box-shadow: 0 0 10px 0 rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 10px 0 color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
   100% {
-    box-shadow: 0 0 25px 8px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 25px 8px color-mix(in srgb, var(--color-primary) 40%, transparent);
   }
 }
 
@@ -2419,14 +2544,14 @@ body.pane-resizing-y * {
   transition: all 0.2s ease;
 }
 .tab-btn:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.02);
+  color: var(--text-strong);
+  background-color: var(--hover-veil);
 }
 .tab-btn.active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
   font-weight: 600;
-  background-color: rgba(99, 102, 241, 0.04);
+  background-color: color-mix(in srgb, var(--color-primary) 4%, transparent);
 }
 
 .view-pane {
@@ -2502,11 +2627,11 @@ body.pane-resizing-y * {
 }
 .tree-item:hover {
   background-color: var(--bg-card);
-  color: white;
+  color: var(--text-strong);
 }
 .tree-item.active {
   background-color: var(--color-primary-glow);
-  color: #a5b4fc;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -2532,7 +2657,7 @@ body.pane-resizing-y * {
   font-size: 18px;
   flex-shrink: 0;
 }
-.folder-icon { color: #fbbf24; }
+.folder-icon { color: var(--color-warning); }
 .file-icon { color: var(--text-muted); }
 
 /* File viewer (right side) */
@@ -2554,7 +2679,7 @@ body.pane-resizing-y * {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   overflow: auto;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   padding: 16px;
   white-space: pre-wrap;
@@ -2577,12 +2702,12 @@ body.pane-resizing-y * {
 /* Blame annotations */
 .blame-line {
   display: flex;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--hover-veil);
   min-height: 20px;
   align-items: center;
 }
 .blame-line:hover {
-  background-color: rgba(255, 255, 255, 0.01);
+  background-color: var(--hover-veil);
 }
 .blame-meta {
   display: flex;
@@ -2666,7 +2791,7 @@ body.pane-resizing-y * {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--hover-veil);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -2715,7 +2840,7 @@ body.pane-resizing-y * {
 }
 .changed-file-item:hover {
   border-color: var(--color-primary);
-  background-color: rgba(99, 102, 241, 0.03);
+  background-color: color-mix(in srgb, var(--color-primary) 3%, transparent);
 }
 .changed-file-path {
   overflow: hidden;
@@ -3232,7 +3357,7 @@ body.pane-resizing-y * {
   line-height: 16px;
   background-color: var(--color-primary-glow);
   color: var(--color-primary);
-  border: 1px solid rgba(99, 102, 241, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3425,7 +3550,7 @@ body.pane-resizing-y * {
   flex-shrink: 0;
 }
 .rule-match {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3535,7 +3660,7 @@ body.pane-resizing-y * {
   border: 1px solid var(--border-color);
   background-color: var(--bg-card);
   color: var(--text-muted);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -3801,7 +3926,7 @@ body.pane-resizing-y * {
 .group-count {
   font-size: 0.6875rem;
   color: var(--text-dim);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3829,7 +3954,7 @@ body.pane-resizing-y * {
 }
 
 .agent-launch-target {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   word-break: break-all;
 }
@@ -4170,7 +4295,7 @@ body.pane-resizing-y * {
 
 /* The absolute path is always shown before anything is created. */
 .worktree-path-preview {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   word-break: break-all;
 }
@@ -4410,13 +4535,13 @@ body.pane-resizing-y * {
   align-self: center;
   background: var(--color-primary-glow);
   border-color: var(--color-primary);
-  color: #a5b4fc;
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.12);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 .pane-toggle-reveal:hover {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: white;
+  color: var(--on-primary);
 }
 .pane-reveal-left {
   margin-right: 2px;
@@ -4791,7 +4916,7 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 
 .operations-elapsed {
   flex-shrink: 0;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: var(--text-dim);
 }
@@ -4821,7 +4946,7 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 .operation-state {
   flex-shrink: 0;
   font-size: 0.6875rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--text-dim);
   white-space: nowrap;
 }
@@ -4867,7 +4992,7 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   background-color: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   white-space: pre;
   color: var(--text-muted);
@@ -4876,7 +5001,7 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
 .patch-input {
   width: 100%;
   resize: vertical;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   margin: 8px 0;
 }
@@ -4914,7 +5039,7 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   padding: 2px 0;
 }
 .placeholder-help code {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--color-primary);
 }
 
@@ -4946,7 +5071,7 @@ body.history-collapsed .pane-toggle-reveal.pane-reveal-right {
   border-radius: var(--radius-sm);
   background-color: var(--bg-tertiary, rgba(0, 0, 0, 0.2));
   color: var(--text-muted);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -6465,6 +6590,1444 @@ tr:hover .profile-star:hover {
     animation: none;
   }
   .clone-progress-fill {
+    transition: none;
+  }
+}
+
+
+/* ==========================================================================
+   THE 5.4 LOOK
+
+   Everything above this line was written for a layout of bordered panels: a
+   navbar strip, a sidebar strip, a history strip, each a different shade with a
+   rule between them. This section replaces that shell with cards on one
+   canvas. It is last in the file on purpose, so the shell reads top to bottom
+   in one place instead of as forty edits scattered through the sections above;
+   the component rules it does not mention are unchanged and already read the
+   tokens.
+
+   Three ideas, and each rule here serves one of them:
+     1. No panels. A region is a card (--bg-card, --radius-lg) on the canvas,
+        and the gaps between cards are the only dividers.
+     2. No outlines for decoration. A border appears where it carries meaning
+        (focus, selection, a warning), not around every box.
+     3. Colour is assigned, not sprinkled. A sidebar section, a commit type and
+        a file status each own one tint and keep it.
+   ========================================================================== */
+
+:root {
+  --navbar-height: 60px;
+  --shell-gap: 8px;
+}
+
+body {
+  font-family: var(--font-body);
+}
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color-hover);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+
+/* --- Controls ------------------------------------------------------------ */
+
+.btn {
+  border-radius: 12px;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.btn-primary,
+.btn-primary:hover,
+.btn-danger,
+.btn-danger:hover,
+.btn-success,
+.btn-success:hover {
+  box-shadow: none;
+  transform: none;
+}
+.btn-secondary {
+  background-color: var(--bg-raised);
+  border-color: var(--input-border);
+}
+.btn-secondary:hover {
+  background-color: var(--color-secondary);
+  border-color: var(--input-border);
+}
+.btn-icon {
+  border-radius: 12px;
+  border-color: transparent;
+  background: var(--bg-card);
+}
+.btn-icon:hover {
+  border-color: transparent;
+  background: var(--bg-raised);
+}
+.btn-icon.btn-sm {
+  border-radius: 9px;
+  background: transparent;
+}
+.btn-icon.btn-sm:hover {
+  background: var(--bg-raised);
+}
+.btn-text {
+  border-radius: 9px;
+}
+.btn:focus-visible,
+.tab-btn:focus-visible,
+.header-segment:focus-visible,
+.section-toggle:focus-visible,
+.sidebar-launcher:focus-visible,
+.template-chip:focus-visible,
+.chip-scroll-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+input[type='text'],
+input[type='password'],
+input[type='email'],
+input[type='number'],
+select,
+textarea,
+:where(input[type='search']) {
+  border-color: var(--input-border);
+  border-radius: 12px;
+}
+
+/* The switch. One control for every yes-or-no in the app: Settings rows, the
+   commit box, the staging list and the terminal line all draw this, so none of
+   them is a browser-default checkbox. */
+.settings-switch,
+.settings-group .maintenance-rules input[type='checkbox'] {
+  background: var(--color-secondary-hover);
+}
+.settings-switch::before,
+.settings-group .maintenance-rules input[type='checkbox']::before {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.settings-switch:checked::before,
+.settings-group .maintenance-rules input[type='checkbox']:checked::before {
+  background: var(--on-primary);
+}
+:root[data-theme='light'] .settings-switch:checked::before {
+  background: #ffffff;
+}
+/* The compact size, for a switch that sits in a row of other controls. */
+.settings-switch.switch-sm {
+  width: 30px;
+  height: 18px;
+}
+.settings-switch.switch-sm::before {
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+}
+.settings-switch.switch-sm:checked::before {
+  transform: translateX(12px);
+}
+
+.badge {
+  border-color: transparent;
+  background-color: var(--bg-raised);
+}
+
+/* --- Top bar ------------------------------------------------------------- */
+
+.navbar {
+  padding: 0 14px;
+  background-color: transparent;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.brand {
+  gap: 10px;
+}
+.logo-mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+}
+.logo-disc {
+  fill: var(--brand-deep);
+}
+.logo-arm {
+  fill: var(--brand);
+}
+/* On the light canvas the disc is the bright purple and the arms are white,
+   which keeps the mark as strong as it is on dark. */
+:root[data-theme='light'] .logo-disc {
+  fill: var(--brand);
+}
+:root[data-theme='light'] .logo-arm {
+  fill: #ffffff;
+}
+.brand h1 {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.header-segments {
+  margin: 0 16px;
+}
+.header-segment {
+  border: 0;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.15s ease;
+}
+.header-segment:hover {
+  background-color: var(--bg-raised);
+}
+.header-segment.open {
+  background-color: var(--bg-raised);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+/* Each segment's icon keeps one tint, so the three are told apart by colour
+   before any of them is read. */
+#repo-segment .segment-icon {
+  color: var(--tint-blue-fg);
+}
+#branch-segment .segment-icon {
+  color: var(--tint-green-fg);
+}
+.segment-profile .segment-icon {
+  color: var(--tint-amber-fg);
+}
+.segment-icon-stack .profile-dot {
+  border-color: var(--bg-card);
+}
+.segment-label {
+  letter-spacing: 0.02em;
+}
+
+.global-actions {
+  gap: 8px;
+}
+.global-actions .btn-icon {
+  box-shadow: var(--shadow-card);
+}
+.btn-chip {
+  border-color: transparent;
+  box-shadow: var(--shadow-card);
+}
+.btn-chip:hover:not(:disabled) {
+  border-color: transparent;
+}
+.btn-chip.chip-on {
+  border-color: transparent;
+  color: var(--tint-blue-fg);
+  background: var(--tint-blue-bg);
+}
+.global-actions .btn-icon.btn-publish {
+  border-color: transparent;
+}
+/* Only Simple mode spells Pull out; see SIMPLE MODE below. */
+.btn-simple-label {
+  display: none;
+}
+
+.header-dropdown {
+  border: 1px solid var(--input-border);
+  border-radius: 16px;
+  background-color: var(--bg-card);
+}
+:root:not([data-theme='light']) .header-dropdown {
+  background-color: var(--bg-raised);
+}
+:root:not([data-theme='light']) .header-dropdown input,
+:root:not([data-theme='light']) .header-dropdown .btn-secondary {
+  background-color: var(--color-secondary);
+}
+:root:not([data-theme='light']) .header-dropdown .dropdown-item:hover {
+  background-color: var(--color-secondary);
+}
+
+/* --- The three columns ---------------------------------------------------- */
+
+.main-body {
+  padding: 0 var(--shell-gap) var(--shell-gap);
+  background-color: transparent;
+}
+.app-layout {
+  background-color: var(--bg-app);
+}
+
+/* A drag handle is a gap between cards, not a line. It shows itself when it is
+   about to be used. */
+.pane-resizer::after {
+  background-color: transparent;
+  border-radius: 999px;
+}
+.pane-resizer-col {
+  width: var(--shell-gap);
+}
+.pane-resizer-row {
+  height: var(--shell-gap);
+}
+.pane-resizer-col::after {
+  top: 12px;
+  bottom: 12px;
+}
+.pane-resizer-row::after {
+  left: 12px;
+  right: 12px;
+}
+
+/* 1. The side column: a stack of cards, one per section. */
+.sidebar {
+  padding: 0;
+  gap: var(--shell-gap);
+  background-color: transparent;
+  scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  gap: var(--shell-gap);
+  flex: 0 0 auto;
+}
+.sidebar-section,
+.sidebar-launcher {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+.sidebar-section {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+}
+.sidebar-section:not(.collapsed) {
+  padding-bottom: 14px;
+}
+
+/* The round bullet that gives a section its colour. `data-tint` names one of
+   the eight tints; the bullet and nothing else in the card wears it, so eight
+   cards do not become eight coloured boxes. */
+[data-tint='violet'] { --tint-bg: var(--tint-violet-bg); --tint-fg: var(--tint-violet-fg); }
+[data-tint='green']  { --tint-bg: var(--tint-green-bg);  --tint-fg: var(--tint-green-fg); }
+[data-tint='amber']  { --tint-bg: var(--tint-amber-bg);  --tint-fg: var(--tint-amber-fg); }
+[data-tint='blue']   { --tint-bg: var(--tint-blue-bg);   --tint-fg: var(--tint-blue-fg); }
+[data-tint='pink']   { --tint-bg: var(--tint-pink-bg);   --tint-fg: var(--tint-pink-fg); }
+[data-tint='teal']   { --tint-bg: var(--tint-teal-bg);   --tint-fg: var(--tint-teal-fg); }
+[data-tint='orange'] { --tint-bg: var(--tint-orange-bg); --tint-fg: var(--tint-orange-fg); }
+[data-tint='gray']   { --tint-bg: var(--tint-gray-bg);   --tint-fg: var(--tint-gray-fg); }
+
+.section-bullet {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--tint-bg, var(--bg-raised));
+  color: var(--tint-fg, var(--text-muted));
+}
+.section-bullet .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.section-toggle {
+  gap: 10px;
+  min-height: 32px;
+  border-radius: 12px;
+}
+.sidebar-section h3 {
+  flex: 1 1 auto;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-chevron {
+  margin-left: auto;
+}
+/* A collapsed card is one row: bullet, name, count, chevron. Its action
+   button comes back when the card is open and there is something to act on. */
+.sidebar-section.collapsed .section-header > :not(.section-toggle) {
+  display: none;
+}
+.section-header:has(.section-toggle) {
+  margin-bottom: 10px;
+}
+.branch-lists h4 {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.branch-item.active {
+  border-left: 0;
+  background-color: var(--color-primary-glow);
+  color: var(--color-primary);
+}
+.branch-create-box input,
+.stash-search {
+  border-radius: 999px;
+  padding-left: 14px;
+}
+
+/* The way into the agents panel. Drawn as a collapsed card so it belongs to
+   the stack, with an "opens elsewhere" glyph where the others have a chevron. */
+.sidebar-launcher {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  color: var(--text-main);
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.sidebar-launcher:hover {
+  background-color: var(--bg-raised);
+}
+.sidebar-launcher-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-launcher-caret {
+  font-size: 16px;
+  color: var(--text-dim);
+}
+.sidebar-top .pane-toggle {
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+.sidebar-top .pane-toggle:hover {
+  background: var(--bg-raised);
+}
+
+.pane-toggle {
+  border-color: transparent;
+  border-radius: 10px;
+}
+.pane-toggle-reveal {
+  box-shadow: none;
+  border-color: transparent;
+  color: var(--color-primary);
+}
+
+/* 2. The centre column. */
+.center-panel {
+  background-color: transparent;
+}
+.view-tabs {
+  height: auto;
+  padding: 0 0 var(--shell-gap);
+  gap: 6px;
+  align-items: center;
+  background-color: transparent;
+  border-bottom: 0;
+}
+.tab-btn {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.tab-btn:hover {
+  background-color: var(--bg-raised);
+}
+.tab-btn.active {
+  background-color: var(--color-primary);
+  color: var(--on-primary);
+}
+
+.conflict-banner {
+  margin-bottom: var(--shell-gap);
+  border: 0;
+  border-radius: var(--radius-lg);
+}
+
+.staging-workspace {
+  padding: 0;
+  gap: var(--shell-gap);
+}
+/* The wrap switch lives on the tab row, at its trailing edge, and belongs to
+   the Staging Area only. */
+.view-tabs .filename-wrap-option {
+  display: none;
+  margin-left: auto;
+  padding: 0 6px;
+}
+.view-tabs:has(#tab-staging.active) .filename-wrap-option {
+  display: inline-flex;
+}
+.view-tabs .filename-wrap-option + .pane-reveal-right {
+  margin-left: 0;
+}
+.view-tabs:not(:has(#tab-staging.active)) .pane-reveal-right {
+  margin-left: auto;
+}
+.files-lists-container {
+  gap: var(--shell-gap);
+}
+.file-list-card,
+.diff-viewer-card,
+.diff-files-pane,
+.tree-pane,
+.file-view-pane {
+  background-color: var(--bg-card);
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+.card-header h3 {
+  font-size: 1rem;
+}
+.file-item {
+  background-color: transparent;
+  border-color: transparent;
+}
+.file-item:hover {
+  background-color: var(--bg-raised);
+  border-color: transparent;
+}
+.file-item.active {
+  border-color: transparent;
+  background-color: var(--color-primary-glow);
+}
+
+/* File status letters wear the tints rather than solid traffic-light blocks. */
+.status-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 7px;
+}
+.status-m { background-color: var(--tint-blue-bg); color: var(--tint-blue-fg); }
+.status-a { background-color: var(--tint-green-bg); color: var(--tint-green-fg); }
+.status-d { background-color: var(--tint-pink-bg); color: var(--tint-pink-fg); }
+.status-r { background-color: var(--tint-violet-bg); color: var(--tint-violet-fg); }
+.status-u { background-color: var(--tint-amber-bg); color: var(--tint-amber-fg); }
+.status-q { background-color: var(--tint-gray-bg); color: var(--tint-gray-fg); }
+
+/* The commit box: a card of its own under the file lists. */
+.commit-panel {
+  padding: 12px 14px 14px;
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+.commit-template-row {
+  gap: 8px;
+}
+.commit-template-row input {
+  width: 96px;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+/* The type pills scroll sideways inside this. The arrows sit on top of the
+   faded edges and only exist while there is somewhere to go that way. */
+.chip-scroller {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+.template-chips {
+  gap: 6px;
+  padding: 2px 0;
+  scroll-behavior: smooth;
+}
+.template-chips.is-scrollable:not(.at-start):not(.at-end) {
+  mask-image: linear-gradient(to right, transparent 0, black 34px, black calc(100% - 34px), transparent 100%);
+}
+.template-chips.is-scrollable.at-start:not(.at-end) {
+  mask-image: linear-gradient(to right, black calc(100% - 34px), transparent 100%);
+}
+.template-chips.is-scrollable.at-end:not(.at-start) {
+  mask-image: linear-gradient(to right, transparent 0, black 34px);
+}
+.chip-scroll-btn {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-raised);
+  color: var(--text-main);
+  cursor: pointer;
+  transform: translateY(-50%);
+  box-shadow: var(--shadow-md);
+}
+.chip-scroll-btn:hover {
+  background: var(--color-secondary);
+}
+.chip-scroll-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+.chip-scroll-left {
+  left: 0;
+}
+.chip-scroll-right {
+  right: 0;
+}
+.chip-scroller:has(.template-chips.is-scrollable:not(.at-start)) .chip-scroll-left,
+.chip-scroller:has(.template-chips.is-scrollable:not(.at-end)) .chip-scroll-right {
+  display: inline-flex;
+}
+
+.template-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px 5px 9px;
+  border: 0;
+  background-color: var(--tint-bg, var(--bg-raised));
+  color: var(--tint-fg, var(--text-main));
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: filter 0.15s ease;
+}
+.template-chip .material-symbols-outlined {
+  font-size: 15px;
+}
+.template-chip:hover {
+  border-color: transparent;
+  background-color: var(--tint-bg, var(--bg-raised));
+  color: var(--tint-fg, var(--text-main));
+  filter: brightness(1.12) saturate(1.1);
+}
+:root[data-theme='light'] .template-chip:hover {
+  filter: brightness(0.96) saturate(1.15);
+}
+/* A type the user added carries a small remove control inside the pill. */
+.template-chip-remove {
+  display: inline-flex;
+  margin: 0 -6px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+}
+.template-chip-remove:hover {
+  opacity: 1;
+}
+.template-chip-remove .material-symbols-outlined {
+  font-size: 14px;
+}
+/* "Add your own": dashed, because it is an empty slot rather than a type. */
+.template-chip-add {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px dashed var(--border-color-hover);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.template-chip-add:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.template-chip-add .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.commit-input-wrapper textarea {
+  border-radius: 14px;
+}
+.commit-input-wrapper .commit-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.commit-input-wrapper .commit-buttons > button {
+  height: 44px;
+  border-radius: 14px;
+}
+.commit-toggles {
+  gap: 10px;
+}
+.amend-row {
+  font-size: 0.8125rem;
+}
+
+/* 3. History: one card, standing by itself. The column around it is gone. */
+.sync-panel {
+  padding: 0;
+  gap: 0;
+  background-color: transparent;
+  overflow: visible;
+}
+.history-card {
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 14px 10px 10px 14px;
+}
+.commit-details-drawer {
+  border-radius: var(--radius-lg);
+}
+
+/* --- Terminal line and status ------------------------------------------- */
+
+.terminal-panel {
+  margin: 0 var(--shell-gap);
+  border-top: 0;
+  border-radius: var(--radius-lg);
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.terminal-header {
+  padding: 5px 10px;
+}
+/* Git Bash, a plain terminal and the Multi-Git CLI: three icons, set apart
+   from the log's own view controls by a gap. */
+.terminal-launch {
+  color: var(--text-muted);
+}
+.terminal-launch .material-symbols-outlined {
+  font-size: 17px;
+}
+.terminal-launch:hover {
+  color: var(--color-primary);
+}
+.terminal-actions .terminal-launch + .terminal-filter-toggle {
+  margin-left: 10px;
+}
+.terminal-filter-toggle {
+  gap: 6px;
+}
+.terminal-find {
+  border-color: var(--input-border);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+.operations-bar {
+  border-top: 0;
+  background-color: transparent;
+}
+.operations-summary {
+  padding: 4px 22px;
+}
+.operations-panel {
+  margin: 0 var(--shell-gap) var(--shell-gap);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg-card);
+}
+
+/* --- Dialogs -------------------------------------------------------------- */
+
+.modal-card,
+.overlay-card {
+  border: 0;
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+}
+.toast {
+  border-radius: 14px;
+}
+
+/* --- Narrow columns -------------------------------------------------------- */
+
+/* Below this the switch label has nowhere to sit beside three tabs. */
+.center-panel {
+  container-type: inline-size;
+  container-name: centrecolumn;
+}
+@container centrecolumn (max-width: 620px) {
+  .view-tabs .filename-wrap-option > span {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   SIMPLE MODE
+
+   Changes, a message, a commit button and History. Chosen in Settings (and
+   offered once at first run), not toggled from the top bar: it is a way of
+   using the app, not a view to flick between.
+
+   Everything here hides or rearranges what is already on the page. Nothing is
+   removed from the document, so every command still works from the menu and
+   the palette, and switching back needs no reload.
+   ========================================================================== */
+
+.simple-only {
+  display: none;
+}
+body.simple-mode .simple-only:not(.hidden) {
+  display: inline-flex;
+}
+
+/* The side column and both ways of bringing it back. */
+body.simple-mode .sidebar,
+body.simple-mode .pane-resizer[data-pane='sidebar'],
+body.simple-mode .pane-toggle-reveal.pane-reveal-left {
+  display: none;
+}
+
+/* The top bar keeps Fetch as an icon, Pull and Push with their words, the menu
+   and Settings. */
+body.simple-mode #btn-auto-pull,
+body.simple-mode #btn-create-pr {
+  display: none;
+}
+body.simple-mode #btn-pull,
+body.simple-mode #btn-push {
+  width: auto;
+  gap: 6px;
+  padding: 0 14px;
+}
+body.simple-mode .btn-simple-label {
+  display: inline;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+body.simple-mode #btn-push.btn-publish .btn-simple-label {
+  display: none;
+}
+
+/* The message goes above the file lists: you say what you did, then check
+   what is going in. The box is a fixed size here, so its drag handle goes. */
+body.simple-mode #staging-view .commit-panel {
+  order: -1;
+  height: auto;
+  min-height: 0;
+  margin-bottom: var(--shell-gap);
+}
+body.simple-mode #staging-view .pane-resizer[data-pane='commit'] {
+  display: none;
+}
+body.simple-mode .commit-template-row,
+body.simple-mode .commit-toggles {
+  display: none;
+}
+body.simple-mode .commit-input-wrapper textarea {
+  min-height: 64px;
+}
+
+/* One fewer tab, no wrap switch, no terminal line. */
+body.simple-mode #tab-explorer,
+body.simple-mode .view-tabs .filename-wrap-option,
+body.simple-mode .terminal-panel {
+  display: none;
+}
+
+/* ==========================================================================
+   AGENTS PANEL
+   A drawer from the right edge rather than a centred window: it is a list to
+   glance at and leave, and the workspace stays visible beside it.
+   ========================================================================== */
+.agents-panel-overlay {
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: var(--shell-gap);
+  overflow: hidden;
+}
+
+.agents-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(440px, 100%);
+  min-height: 0;
+  padding: 18px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+  animation: agents-panel-in 0.18s ease-out;
+}
+
+@keyframes agents-panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agents-panel {
+    animation: none;
+  }
+}
+
+.agents-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agents-panel-header .section-bullet {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+.agents-panel-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.agents-panel-heading h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.agents-panel-summary {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.agents-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agents-panel-clear {
+  margin-left: auto;
+}
+
+.agent-run-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0 2px 2px 0;
+  list-style: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-run {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  --run-color: var(--text-dim);
+}
+
+.agent-run[data-state='running'] {
+  --run-color: var(--color-success);
+}
+
+.agent-run[data-state='failed'] {
+  --run-color: var(--color-danger);
+}
+
+.agent-run[data-state='stopped'] {
+  --run-color: var(--color-warning);
+}
+
+.agent-run[data-state='untracked'] {
+  --run-color: var(--color-info);
+}
+
+.agent-run-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.agent-run-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--run-color);
+}
+
+.agent-run-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--run-color);
+}
+
+.agent-run[data-state='running'] .agent-run-dot {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--run-color) 22%, transparent);
+}
+
+.agent-run-time {
+  color: var(--text-dim);
+}
+
+.agent-run-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.agent-run-folder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.agent-run-folder > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-run-task-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.agent-run-task {
+  margin: 0;
+  padding: 10px 12px;
+  align-self: stretch;
+  background: var(--bg-raised);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.agent-run-task.is-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.agent-run-task-empty {
+  background: none;
+  padding: 0;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.agent-run-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.agent-run-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.agent-run-actions:empty {
+  display: none;
+}
+
+.agent-run-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 44px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.agent-run-empty strong {
+  color: var(--text-strong);
+  font-size: 15px;
+}
+
+.agent-run-empty .material-symbols-outlined {
+  color: var(--tint-violet-fg);
+}
+
+/* ==========================================================================
+   SMALL PIECES THE 5.4 LOOK NEEDS
+   ========================================================================== */
+
+/* A type the user added is two buttons in one pill: the type, and its remove. */
+.template-chip.template-chip-custom {
+  padding: 0 7px 0 0;
+  gap: 2px;
+  cursor: default;
+}
+
+.template-chip-custom .template-chip-remove {
+  margin: 0;
+}
+
+.template-chip-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 2px 5px 9px;
+  background: none;
+  border: 0;
+  border-radius: inherit;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Two or three choices side by side, one of them filled. */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-input);
+  border-radius: 999px;
+}
+
+.segmented-option {
+  padding: 6px 14px;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.segmented-option:hover {
+  color: var(--text-strong);
+}
+
+.segmented-option.active {
+  background: var(--color-primary);
+  color: var(--on-primary);
+}
+
+/* ==========================================================================
+   FIRST-RUN GUIDE
+   One question per screen, on the welcome card. Left-aligned and roomy: the
+   people reading it most carefully are the ones who have not done this before.
+   ========================================================================== */
+.overlay-card {
+  width: 560px;
+  padding: 32px;
+  border-radius: 28px;
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.welcome-home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.setup-wizard {
+  width: 100%;
+  text-align: left;
+}
+
+.wizard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.wizard-progress {
+  display: flex;
+  gap: 6px;
+}
+
+.wizard-dot {
+  width: 22px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-raised);
+  transition: background-color 0.2s ease, width 0.2s ease;
+}
+
+.wizard-dot.is-done {
+  background: var(--tint-violet-fg);
+}
+
+.wizard-dot.is-current {
+  width: 40px;
+  background: var(--color-primary);
+}
+
+.setup-wizard h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.overlay-card .wizard-lead {
+  margin: 0 0 22px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.wizard-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.wizard-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px;
+  background: var(--bg-raised);
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.wizard-choice:hover,
+.wizard-choice:focus-visible {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.wizard-choice strong {
+  font-size: 1.0625rem;
+  color: var(--text-strong);
+}
+
+.wizard-choice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  background: var(--tint-bg);
+  color: var(--tint-fg);
+}
+
+.wizard-choice-icon[data-tint='green'] {
+  --tint-bg: var(--tint-green-bg);
+  --tint-fg: var(--tint-green-fg);
+}
+
+.wizard-choice-icon[data-tint='violet'] {
+  --tint-bg: var(--tint-violet-bg);
+  --tint-fg: var(--tint-violet-fg);
+}
+
+.overlay-card .wizard-foot {
+  margin: 16px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+}
+
+.setup-wizard .setup-list {
+  margin-bottom: 0;
+}
+
+.wizard-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.wizard-actions-gap {
+  flex: 1;
+}
+
+.wizard-key-form,
+.wizard-key-ready {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wizard-key-form.hidden,
+.wizard-key-ready.hidden {
+  display: none;
+}
+
+.wizard-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.wizard-field input {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 0.9375rem;
+}
+
+.wizard-big-btn {
+  justify-content: center;
+  width: 100%;
+  padding: 13px 18px;
+  font-size: 1rem;
+  border-radius: var(--radius-md);
+}
+
+.overlay-card .wizard-key-status {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--color-success-bg);
+  border-radius: var(--radius-sm);
+  color: var(--color-success);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.wizard-howto {
+  margin: 4px 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+.wizard-howto li::marker {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.wizard-howto .btn {
+  display: inline-flex;
+  margin: 6px 0 0;
+}
+
+.wizard-howto li > .btn {
+  display: flex;
+  width: fit-content;
+}
+
+.overlay-card .wizard-feedback,
+.overlay-card .wizard-validate-result {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.overlay-card .wizard-feedback {
+  margin-top: 10px;
+}
+
+.wizard-feedback[data-tone='error'] {
+  color: var(--color-danger);
+}
+
+.overlay-card .wizard-validate-result[data-tone='ok'],
+.overlay-card .wizard-validate-result[data-tone='fail'] {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.overlay-card .wizard-validate-result[data-tone='ok'] {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.overlay-card .wizard-validate-result[data-tone='fail'] {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+@media (max-width: 560px) {
+  .wizard-choices {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-choice,
+  .wizard-dot {
     transition: none;
   }
 }

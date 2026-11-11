@@ -167,12 +167,22 @@ describe('the controls that moved out of the toolbar', () => {
   it('keeps them as the same elements, inside the menu', async () => {
     await mount();
 
-    for (const id of ['btn-repo-hub', 'btn-open-logs', 'btn-refresh', 'btn-remote-protocol', 'btn-settings']) {
+    for (const id of ['btn-repo-hub', 'btn-open-logs', 'btn-refresh', 'btn-remote-protocol']) {
       const button = $(id);
       // Same id, same element, same handlers — only the shape changed. A
       // reshuffle that recreated these would silently drop their listeners.
       expect(button.closest('#app-menu-dropdown')).not.toBeNull();
     }
+  });
+
+  it('puts Settings beside the menu rather than inside it', async () => {
+    await mount();
+
+    // One click from anywhere since 5.4: it is where the theme and Simple mode
+    // live, and neither is worth opening a menu to reach.
+    const settings = $('btn-settings');
+    expect(settings.closest('#app-menu-dropdown')).toBeNull();
+    expect(settings.previousElementSibling?.id).toBe('app-menu-wrapper');
   });
 
   it('leaves the five that stay in the strip alone', async () => {

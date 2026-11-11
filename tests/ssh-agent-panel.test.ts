@@ -187,8 +187,23 @@ describe('status rendering', () => {
     const panel = await mount();
     await panel.refreshAgent();
 
-    expect(hidden('btn-repair-agent')).toBe(true);
+    // Since 5.4 there is something it can do off Windows: start an agent of
+    // its own, which needs no administrator and changes no system setting.
+    expect(hidden('btn-repair-agent')).toBe(false);
+    expect($('btn-repair-agent').textContent).toBe('Start the SSH agent');
     expect($('agent-diagnostic').textContent).toContain('ssh-agent');
+  });
+
+  it('offers nothing where OpenSSH is not installed at all', async () => {
+    endpoints.getSshAgentStatus.mockResolvedValue({
+      success: true,
+      agent: agentState({ platform: 'linux', availability: 'missing', socketPresent: false })
+    });
+
+    const panel = await mount();
+    await panel.refreshAgent();
+
+    expect(hidden('btn-repair-agent')).toBe(true);
   });
 
   it('falls back to a neutral chip when the status cannot be read', async () => {

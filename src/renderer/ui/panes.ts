@@ -147,8 +147,8 @@ const COLLAPSE_SPECS: Record<CollapsibleSide, CollapseSpec> = {
     bodyClass: 'sidebar-collapsed',
     revealId: 'sidebar-reveal',
     toggleId: 'btn-toggle-sidebar',
-    showLabel: 'Show branches panel',
-    hideLabel: 'Hide branches panel',
+    showLabel: 'Show side panel',
+    hideLabel: 'Hide side panel',
     shortcut: 'Ctrl+B'
   },
   history: {

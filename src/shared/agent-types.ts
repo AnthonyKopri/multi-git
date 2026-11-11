@@ -6,7 +6,7 @@
 // report what the tool is doing. `launched` means the process started — no
 // more is claimed anywhere in this application.
 
-import type { ExternalAgentDefinition } from './config-types';
+import type { AgentLaunchRecord, ExternalAgentDefinition } from './config-types';
 
 export type { ExternalAgentDefinition };
 
@@ -15,7 +15,7 @@ export interface AgentLaunchInput {
   worktreePath: string;
   agentId: string;
   /** Optional first instruction. Passed as one argv element, never a string
-   *  the shell would parse. Not written to launch history. */
+   *  the shell would parse. Kept in the launch history unless that is off. */
   initialPrompt?: string;
   /**
    * A model preset from the definition's catalogue entry.
@@ -31,12 +31,35 @@ export interface AgentLaunchInput {
 
 export interface AgentLaunchResult {
   launched: boolean;
+  /** The history entry this launch became. */
+  launchId?: string;
   processId?: number;
   /** The command as it would read in the Terminal Log. Never includes the prompt. */
   commandPreview: string;
   error?: string;
   /** Why pushing from the launched agent might not work, when it might not. */
   sshWarning?: string;
+}
+
+/**
+ * Where a launch stands, as far as this application can tell.
+ *
+ * `running` and `finished` are about the process and nothing else: whether
+ * the program that was started still exists. `untracked` is a launch whose
+ * process could not be picked out of the process table, so nothing is claimed
+ * about it either way.
+ */
+export type AgentLaunchState = 'running' | 'finished' | 'stopped' | 'failed' | 'untracked';
+
+/** A launch record with its state read from the machine just now. */
+export interface AgentLaunchView extends AgentLaunchRecord {
+  state: AgentLaunchState;
+}
+
+export interface AgentStopResult {
+  stopped: boolean;
+  /** Why not, in words for the person who pressed Stop. */
+  error?: string;
 }
 
 /**

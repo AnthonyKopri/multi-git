@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Replaced at startup with the same name plus the running version. -->
   <title>Multi-Git Client</title>
-  <!-- Modern Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <!-- Icons -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <!-- Sets data-theme before the first paint, so a light-theme window does
+       not open dark and then flip. -->
+  <script src="theme.js"></script>
+  <!-- Typefaces and icons, shipped with the app: see public/fonts/fonts.css. -->
+  <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,7 +20,11 @@
     <!-- TOP NAVBAR -->
     <header class="navbar">
       <div class="brand">
-        <span class="material-symbols-outlined logo-icon">alt_route</span>
+        <svg class="logo-mark" viewBox="205 205 1638 1638" aria-hidden="true" focusable="false">
+          <circle class="logo-disc" cx="1024" cy="1024" r="819"/>
+          <path class="logo-arm" d="M787 531 594 724l74 73 60-59 2 2c0 81 7 131 29 185 16 37 39 63 56 84 20 25 45 49 67 67 33 29 60 56 71 76 9-33 30-78 60-122l-34-36c-31-28-59-51-87-78-31-30-45-69-45-115v-61l2-2 61 58 72-73Z"/>
+          <path class="logo-arm" d="m1260 530-195 192 74 75 60-59 2 2c-1 49-3 84-14 125-10 36-25 54-41 68l-94 93c-36 35-61 69-72 139-6 25-8 38-8 52v301h118v-296c0-37 9-63 36-100l12-14 94-93c53-53 76-120 85-210v-65l3-2 61 59 72-73-1-3Z"/>
+        </svg>
         <h1>Multi-Git</h1>
       </div>
 
@@ -140,11 +143,10 @@
               <button id="btn-edit-identity" class="btn btn-text btn-sm" title="Edit commit name/email for this repo">Edit</button>
             </div>
             <div class="dropdown-divider"></div>
-            <div class="dropdown-divider"></div>
             <div class="agent-row">
               <span id="agent-status-chip" class="agent-chip" title="Native SSH agent status">Agent: —</span>
-              <button id="btn-repair-agent" class="btn btn-secondary btn-sm hidden" title="Enable and start the OpenSSH Authentication Agent service">
-                Repair and start
+              <button id="btn-repair-agent" class="btn btn-secondary btn-sm hidden" title="Start the SSH agent, so a key you unlock here also works in your terminals and editors">
+                Turn on the SSH agent
               </button>
               <button id="btn-unlock-key" class="btn btn-secondary btn-sm hidden" title="Load this key into the SSH agent, asking for its passphrase if it needs one">
                 Unlock key
@@ -187,10 +189,12 @@
         </button>
         <button id="btn-pull" class="btn btn-icon" title="Pull (Ctrl+Alt+P)" aria-label="Pull">
           <span class="material-symbols-outlined" aria-hidden="true">download</span>
+          <span class="btn-simple-label">Pull</span>
           <span id="pull-count-badge" class="count-badge count-behind hidden"></span>
         </button>
         <button id="btn-push" class="btn btn-icon" title="Push (Ctrl+Alt+U)" aria-label="Push">
           <span class="material-symbols-outlined" aria-hidden="true">upload</span>
+          <span class="btn-simple-label">Push</span>
           <span id="push-label" class="btn-push-label hidden"></span>
           <span id="push-count-badge" class="count-badge count-ahead hidden"></span>
         </button>
@@ -232,13 +236,14 @@
                 <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
                 <span>Refresh</span>
               </button>
-              <button id="btn-settings" class="btn btn-menu-row" type="button" title="Application settings">
-                <span class="material-symbols-outlined" aria-hidden="true">settings</span>
-                <span>Settings</span>
-              </button>
             </div>
           </div>
         </div>
+        <!-- Beside the menu rather than inside it: Simple mode and the theme
+             live in Settings, so it has to be one click away at all times. -->
+        <button id="btn-settings" class="btn btn-icon" type="button" title="Settings" aria-label="Settings">
+          <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+        </button>
       </div>
     </header>
 
@@ -247,47 +252,30 @@
 
       <!-- SIDEBAR (BRANCHES & MERGING) -->
       <aside id="sidebar-panel" class="sidebar">
-        <div class="sidebar-section" data-section="branches">
-          <div class="section-header">
-            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-branches">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
-              <h3>Branches</h3>
-            </button>
-            <button id="btn-toggle-sidebar" class="pane-toggle pane-toggle-expanded" type="button" aria-expanded="true" aria-controls="sidebar-panel" title="Hide branches panel (Ctrl+B)" aria-label="Hide branches panel">
-              <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
-            </button>
-          </div>
-
-          <div class="section-body" id="section-branches">
-            <!-- Branch Creation -->
-            <div class="branch-create-box">
-              <input type="text" id="new-branch-input" placeholder="New branch name...">
-              <button id="btn-create-branch" class="btn btn-primary btn-sm" title="Create and checkout branch">
-                <span class="material-symbols-outlined">add</span>
-              </button>
-            </div>
-
-            <!-- Branch Lists -->
-            <div class="branch-lists">
-              <h4>Local Branches</h4>
-              <ul id="local-branches-list" class="branch-list-ul">
-                <!-- Rendered dynamically -->
-              </ul>
-
-              <h4 class="mt-4">Remote Branches</h4>
-              <ul id="remote-branches-list" class="branch-list-ul">
-                <!-- Rendered dynamically -->
-              </ul>
-            </div>
-          </div>
+        <!-- The column's own row: the way into the agents panel, and the control
+             that hides the column. Agents opens a panel of its own rather than
+             expanding in place, because a list of started tools with what each
+             was asked to do does not fit in a 280px card. -->
+        <div class="sidebar-top">
+          <button type="button" id="btn-open-agents" class="sidebar-launcher" data-tint="violet" title="The coding agents you have started, what each was asked to do, and a way to stop one">
+            <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">smart_toy</span></span>
+            <span class="sidebar-launcher-name">Agents</span>
+            <span id="agents-running-count" class="count-badge hidden"></span>
+            <span class="material-symbols-outlined sidebar-launcher-caret" aria-hidden="true">open_in_new</span>
+          </button>
+          <button id="btn-toggle-sidebar" class="pane-toggle pane-toggle-expanded" type="button" aria-expanded="true" aria-controls="sidebar-panel" title="Hide side panel (Ctrl+B)" aria-label="Hide side panel">
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+          </button>
         </div>
 
-        <!-- Merge / Rebase section -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="integrate">
+        <!-- Merge / Rebase leads. Switching branch is one click away in the top
+             bar already; bringing another branch in is not. -->
+        <div class="sidebar-section" data-tint="pink" data-section="integrate">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-integrate">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">call_merge</span></span>
               <h3>Merge / Rebase</h3>
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
             </button>
           </div>
           <div class="section-body" id="section-integrate">
@@ -315,12 +303,47 @@
           </div>
         </div>
 
-        <!-- Stashes section -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="stashes" data-default="collapsed">
+        <!-- Branches -->
+        <div class="sidebar-section" data-tint="violet" data-section="branches">
+          <div class="section-header">
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-branches">
+              <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">call_split</span></span>
+              <h3>Branches</h3>
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+            </button>
+          </div>
+
+          <div class="section-body" id="section-branches">
+            <!-- Branch Creation -->
+            <div class="branch-create-box">
+              <input type="text" id="new-branch-input" placeholder="New branch name...">
+              <button id="btn-create-branch" class="btn btn-primary btn-sm" title="Create and checkout branch">
+                <span class="material-symbols-outlined">add</span>
+              </button>
+            </div>
+
+            <!-- Branch Lists -->
+            <div class="branch-lists">
+              <h4>Local Branches</h4>
+              <ul id="local-branches-list" class="branch-list-ul">
+                <!-- Rendered dynamically -->
+              </ul>
+
+              <h4 class="mt-4">Remote Branches</h4>
+              <ul id="remote-branches-list" class="branch-list-ul">
+                <!-- Rendered dynamically -->
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stashes -->
+        <div class="sidebar-section" data-tint="amber" data-section="stashes" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-stashes">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">inventory_2</span></span>
               <h3>Stashes</h3>
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
             </button>
             <button id="btn-stash-save" class="btn btn-text btn-sm" title="Stash all current changes">
               <span class="material-symbols-outlined" style="font-size: 16px;">archive</span>
@@ -335,29 +358,14 @@
           </div>
         </div>
 
-        <!-- Tags section -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="tags" data-default="collapsed">
-          <div class="section-header">
-            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-tags">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
-              <h3>Tags</h3>
-            </button>
-          </div>
-          <div class="section-body" id="section-tags">
-            <ul id="tag-list" class="stash-list-ul">
-              <li class="empty-state">No tags</li>
-            </ul>
-          </div>
-        </div>
-
         <!-- Safety Net: operation checkpoints + recoverable discards -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="safety-net" data-default="collapsed">
+        <div class="sidebar-section" data-tint="green" data-section="safety-net" data-default="collapsed">
           <div class="section-header">
-            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-safety-net">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-safety-net" title="Risky operations save a checkpoint here so they can be undone. Discarded files can be restored for 24 hours.">
+              <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">health_and_safety</span></span>
               <h3>Safety Net</h3>
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
             </button>
-            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-dim);" title="Risky operations save a checkpoint here so they can be undone. Discarded files can be restored for 24 hours.">health_and_safety</span>
           </div>
           <div class="section-body" id="section-safety-net">
             <div class="branch-lists">
@@ -382,12 +390,29 @@
           </div>
         </div>
 
+        <!-- Tags -->
+        <div class="sidebar-section" data-tint="blue" data-section="tags" data-default="collapsed">
+          <div class="section-header">
+            <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-tags">
+              <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">sell</span></span>
+              <h3>Tags</h3>
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+            </button>
+          </div>
+          <div class="section-body" id="section-tags">
+            <ul id="tag-list" class="stash-list-ul">
+              <li class="empty-state">No tags</li>
+            </ul>
+          </div>
+        </div>
+
         <!-- Worktrees: the other working folders of this repository family -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="worktrees" data-default="collapsed">
+        <div class="sidebar-section" data-tint="teal" data-section="worktrees" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-worktrees">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">account_tree</span></span>
               <h3>Worktrees <span id="worktree-count" class="count-badge hidden"></span></h3>
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
             </button>
             <button id="btn-worktree-manage" class="btn btn-text btn-sm" title="Create, move, lock and remove worktrees">
               <span>Manage</span>
@@ -415,11 +440,12 @@
              say. A count is worth seeing without opening anything, and so is a
              warning: LFS hooks left installed but unused run on every pull, and
              finding that out requires opening a tab you had no reason to open. -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="repo-tools" data-default="collapsed">
+        <div class="sidebar-section" data-tint="orange" data-section="repo-tools" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-repo-tools">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">handyman</span></span>
               <h3>Repository tools</h3>
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
             </button>
           </div>
           <div class="section-body" id="section-repo-tools">
@@ -484,11 +510,12 @@
         </div>
 
         <!-- Repository groups -->
-        <div class="sidebar-section border-t mt-4 pt-4" data-section="groups" data-default="collapsed">
+        <div class="sidebar-section" data-tint="gray" data-section="groups" data-default="collapsed">
           <div class="section-header">
             <button type="button" class="section-toggle" aria-expanded="true" aria-controls="section-groups">
-              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
+              <span class="section-bullet" aria-hidden="true"><span class="material-symbols-outlined">folder_copy</span></span>
               <h3>Groups</h3>
+              <span class="material-symbols-outlined section-chevron" aria-hidden="true">expand_more</span>
             </button>
             <button id="btn-group-create" class="btn btn-text btn-sm" title="Group related repositories so they can be fetched together">
               <span>New</span>
@@ -510,7 +537,7 @@
         <!-- View Tabs -->
         <div class="view-tabs">
           <!-- When the left panel is hidden, its control moves next to the first tab. -->
-          <button type="button" id="sidebar-reveal" class="pane-toggle pane-toggle-reveal pane-reveal-left" aria-expanded="false" aria-controls="sidebar-panel" title="Show branches panel (Ctrl+B)" aria-label="Show branches panel">
+          <button type="button" id="sidebar-reveal" class="pane-toggle pane-toggle-reveal pane-reveal-left" aria-expanded="false" aria-controls="sidebar-panel" title="Show side panel (Ctrl+B)" aria-label="Show side panel">
             <span class="material-symbols-outlined" aria-hidden="true">left_panel_open</span>
           </button>
           <button id="tab-staging" class="tab-btn active" title="Staging Area (Ctrl+1)">
@@ -525,6 +552,13 @@
             <span class="material-symbols-outlined" style="font-size: 16px;">folder_zip</span>
             <span>Workspace Explorer</span>
           </button>
+          <!-- A view setting of the Staging Area, kept on the tab row so the two
+               file cards start directly under the tabs. Shown only while that
+               tab is the open one. -->
+          <label class="filename-wrap-option" for="filename-wrap-toggle" title="Wrap long file names in both lists">
+            <span>Wrap file names</span>
+            <input id="filename-wrap-toggle" class="settings-switch switch-sm" type="checkbox" role="switch">
+          </label>
           <!-- The matching right-side restore control appears only when needed. -->
           <button type="button" id="history-reveal" class="pane-toggle pane-toggle-reveal pane-reveal-right" aria-expanded="false" aria-controls="history-panel" title="Show commit history (Ctrl+Shift+B)" aria-label="Show commit history">
             <span class="material-symbols-outlined" aria-hidden="true">right_panel_open</span>
@@ -549,13 +583,6 @@
         <!-- STAGING WORKSPACE VIEW -->
         <div id="staging-view" class="view-pane">
           <div class="staging-workspace">
-            <div class="staging-display-options">
-              <label class="filename-wrap-option" for="filename-wrap-toggle" title="Wrap long file names in both lists">
-                <input id="filename-wrap-toggle" type="checkbox">
-                <span>Wrap file names</span>
-              </label>
-            </div>
-            
             <!-- Staging Files List -->
             <div class="files-lists-container">
               <!-- Unstaged Files -->
@@ -563,6 +590,16 @@
                 <div class="card-header">
                   <h3>Unstaged Changes</h3>
                   <div class="card-header-actions">
+                    <!-- Simple mode only. The side panel is where stashes live,
+                         and Simple mode has no side panel. -->
+                    <button id="btn-simple-stash" class="btn btn-text btn-sm simple-only" type="button" title="Put all current changes aside for later">
+                      <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+                      <span>Stash</span>
+                    </button>
+                    <button id="btn-simple-unstash" class="btn btn-text btn-sm simple-only hidden" type="button" title="Bring back the changes you stashed last">
+                      <span class="material-symbols-outlined" aria-hidden="true">unarchive</span>
+                      <span id="simple-unstash-label">Restore stash</span>
+                    </button>
                     <button id="btn-discard-all" class="btn btn-text btn-sm btn-text-danger" title="Discard all unstaged changes">Discard All</button>
                     <button id="btn-stage-all" class="btn btn-text btn-sm">Stage All</button>
                   </div>
@@ -594,16 +631,27 @@
 
           <!-- Commit Panel -->
           <div class="commit-panel">
-            <!-- Conventional-commit quick templates -->
+            <!-- Conventional-commit quick types.
+                 One row that scrolls sideways: a wheel over it moves it, the
+                 edges fade where there is more, and the arrows are there for
+                 anyone who would rather click. -->
             <div class="commit-template-row">
               <input type="text" id="commit-scope-input" placeholder="scope" title="Optional scope, e.g. api, ui — used as type(scope): ..." autocomplete="off">
-              <div id="commit-template-chips" class="template-chips">
-                <!-- Chips rendered dynamically -->
+              <div class="chip-scroller">
+                <button type="button" class="chip-scroll-btn chip-scroll-left" data-scroll="-1" tabindex="-1" aria-label="Scroll the commit types left" title="Scroll left">
+                  <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                </button>
+                <div id="commit-template-chips" class="template-chips">
+                  <!-- Chips rendered dynamically -->
+                </div>
+                <button type="button" class="chip-scroll-btn chip-scroll-right" data-scroll="1" tabindex="-1" aria-label="Scroll the commit types right" title="Scroll right">
+                  <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                </button>
               </div>
               <span id="commit-format-hint" class="commit-format-hint hidden" title="Conventional format: type(scope): summary">not conventional</span>
             </div>
             <div class="commit-input-wrapper">
-              <textarea id="commit-msg-input" placeholder="Type commit message (Ctrl+Enter to commit)..." rows="2"></textarea>
+              <textarea id="commit-msg-input" placeholder="What did you change? (Ctrl+Enter to commit)" rows="2"></textarea>
               <div class="commit-buttons">
                 <button id="btn-commit" class="btn btn-primary" disabled title="Stage changes before committing">
                   <span class="material-symbols-outlined">done_all</span>
@@ -611,11 +659,11 @@
                 </button>
                 <div class="commit-toggles">
                   <label class="amend-row" title="Replace the last commit with the staged changes and this message">
-                    <input type="checkbox" id="commit-amend-checkbox">
+                    <input type="checkbox" id="commit-amend-checkbox" class="settings-switch switch-sm" role="switch">
                     <span>Amend</span>
                   </label>
                   <label class="amend-row" id="commit-sign-row" title="Sign this commit">
-                    <input type="checkbox" id="commit-sign-checkbox">
+                    <input type="checkbox" id="commit-sign-checkbox" class="settings-switch switch-sm" role="switch">
                     <span>Sign</span>
                   </label>
                   <button id="btn-signing-settings" type="button" class="btn btn-icon btn-sm" title="Signing settings" aria-label="Signing settings">
@@ -878,28 +926,25 @@
         <div class="terminal-actions">
           <!-- Hidden until the bridge says the machine has them; a button that
                cannot work is worse than no button. -->
-          <button type="button" id="btn-open-git-bash" class="btn btn-text btn-sm hidden"
+          <button type="button" id="btn-open-git-bash" class="btn btn-icon btn-sm terminal-launch hidden" aria-label="Git Bash"
                   title="Open Git Bash here, using this repository's SSH key">
             <span class="material-symbols-outlined" aria-hidden="true">code</span>
-            <span>Git Bash</span>
           </button>
-          <button type="button" id="btn-open-shell" class="btn btn-text btn-sm hidden"
+          <button type="button" id="btn-open-shell" class="btn btn-icon btn-sm terminal-launch hidden" aria-label="Terminal"
                   title="Open a terminal here for gh and anything else, using this repository's SSH key">
             <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
-            <span>Terminal</span>
           </button>
-          <button type="button" id="btn-open-tui" class="btn btn-text btn-sm hidden"
+          <button type="button" id="btn-open-tui" class="btn btn-icon btn-sm terminal-launch hidden" aria-label="Multi-Git CLI"
                   title="Open the Multi-Git terminal UI on this repository, in a new terminal window">
             <span class="material-symbols-outlined" aria-hidden="true">keyboard_command_key</span>
-            <span>Multi-Git CLI</span>
           </button>
 
           <label class="terminal-filter-toggle" title="Show the queries the app runs to read the repository">
-            <input type="checkbox" id="terminal-show-reads">
+            <input type="checkbox" id="terminal-show-reads" class="settings-switch switch-sm" role="switch">
             <span>Reads</span>
           </label>
           <label class="terminal-filter-toggle" title="Show lines from every repository, not just this one">
-            <input type="checkbox" id="terminal-all-repos">
+            <input type="checkbox" id="terminal-all-repos" class="settings-switch switch-sm" role="switch">
             <span>All repos</span>
           </label>
 
@@ -944,9 +989,107 @@
   <!-- NO REPO STATE OVERLAY -->
   <div id="no-repo-overlay" class="fullscreen-overlay">
     <div class="overlay-card">
+      <!-- FIRST-RUN GUIDE
+           Three short screens, one question each. Shown once, and again from
+           Settings on request. Everything in it can be skipped. -->
+      <div id="setup-wizard" class="setup-wizard hidden">
+        <div class="wizard-top">
+          <div class="wizard-progress" aria-hidden="true">
+            <span class="wizard-dot"></span><span class="wizard-dot"></span><span class="wizard-dot"></span>
+          </div>
+          <button type="button" id="btn-wizard-skip" class="btn btn-text btn-sm">Skip setup</button>
+        </div>
+
+        <section class="wizard-step" data-wizard-step="look" aria-labelledby="wizard-look-title">
+          <h2 id="wizard-look-title">Welcome to Multi-Git</h2>
+          <p class="wizard-lead">Let’s get you set up. First, how much do you want on screen?</p>
+          <div class="wizard-choices">
+            <button type="button" class="wizard-choice" data-wizard-look="simple">
+              <span class="wizard-choice-icon" data-tint="green"><span class="material-symbols-outlined">spa</span></span>
+              <strong>Keep it simple</strong>
+              <span>Your changes, a message box and your history. A good start if Git is new to you.</span>
+            </button>
+            <button type="button" class="wizard-choice" data-wizard-look="full">
+              <span class="wizard-choice-icon" data-tint="violet"><span class="material-symbols-outlined">dashboard</span></span>
+              <strong>Show everything</strong>
+              <span>Branches, stashes, tags, worktrees and agents, always within reach.</span>
+            </button>
+          </div>
+          <p class="wizard-foot">You can switch whenever you like, in Settings.</p>
+        </section>
+
+        <section class="wizard-step hidden" data-wizard-step="check" aria-labelledby="wizard-check-title">
+          <h2 id="wizard-check-title">Checking your computer</h2>
+          <p id="wizard-check-lead" class="wizard-lead">Looking for what Multi-Git needs…</p>
+          <ul id="wizard-check-list" class="setup-list"></ul>
+          <div class="wizard-actions">
+            <button type="button" id="btn-wizard-check-back" class="btn btn-text">Back</button>
+            <span class="wizard-actions-gap"></span>
+            <button type="button" id="btn-wizard-recheck" class="btn btn-secondary">
+              <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+              <span>Check again</span>
+            </button>
+            <button type="button" id="btn-wizard-check-next" class="btn btn-primary">Continue</button>
+          </div>
+        </section>
+
+        <section class="wizard-step hidden" data-wizard-step="key" aria-labelledby="wizard-key-title">
+          <h2 id="wizard-key-title">Your key for GitHub</h2>
+          <p class="wizard-lead">A key is how GitHub knows it is you, so you never type a password to send your work.</p>
+
+          <form id="wizard-key-form" class="wizard-key-form">
+            <label class="wizard-field">
+              <span>Your name</span>
+              <input type="text" id="wizard-key-name" autocomplete="name" placeholder="Ada Lovelace">
+            </label>
+            <label class="wizard-field">
+              <span>Your email</span>
+              <input type="email" id="wizard-key-email" autocomplete="email" placeholder="The one on your GitHub account">
+            </label>
+            <button type="submit" id="btn-wizard-create-key" class="btn btn-primary wizard-big-btn">
+              <span class="material-symbols-outlined" aria-hidden="true">key</span>
+              <span>Create my key</span>
+            </button>
+          </form>
+          <p id="wizard-key-feedback" class="wizard-feedback hidden" role="status"></p>
+
+          <div id="wizard-key-ready" class="wizard-key-ready hidden">
+            <p id="wizard-key-status" class="wizard-key-status" role="status"></p>
+            <button type="button" id="btn-wizard-copy-key" class="btn btn-primary wizard-big-btn">
+              <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+              <span>Copy public key</span>
+            </button>
+            <ol class="wizard-howto">
+              <li>
+                Open GitHub’s “Add new SSH key” page and sign in.
+                <button type="button" id="btn-wizard-open-github" class="btn btn-secondary btn-sm">
+                  <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+                  <span>Open that page</span>
+                </button>
+              </li>
+              <li>Click in the big box labelled <strong>Key</strong> and paste. Give it any title you like.</li>
+              <li>Press <strong>Add SSH key</strong>, then come back here.</li>
+            </ol>
+            <button type="button" id="btn-wizard-validate-key" class="btn btn-secondary wizard-big-btn">
+              <span class="material-symbols-outlined" aria-hidden="true">verified</span>
+              <span>Validate key</span>
+            </button>
+            <p id="wizard-validate-result" class="wizard-validate-result hidden" role="status"></p>
+          </div>
+
+          <div class="wizard-actions">
+            <button type="button" id="btn-wizard-key-back" class="btn btn-text">Back</button>
+            <button type="button" id="btn-wizard-existing-key" class="btn btn-text" title="Use a key that is already on this computer, add a passphrase, or set up a second account">I already have a key</button>
+            <span class="wizard-actions-gap"></span>
+            <button type="button" id="btn-wizard-finish" class="btn btn-secondary">Skip for now</button>
+          </div>
+        </section>
+      </div>
+
+      <div id="welcome-home" class="welcome-home">
       <span class="material-symbols-outlined main-icon">source</span>
-      <h2>Welcome to Multi-Git Client</h2>
-      <p>Select or enter a local Git repository path to start managing your commits, branches, and pushing with custom SSH profiles.</p>
+      <h2>Welcome to Multi-Git</h2>
+      <p>Open a folder you already work in, start a new project, or bring one down from GitHub.</p>
       
       <div class="overlay-form" style="display: flex; flex-direction: row; gap: 12px; width: 100%;">
         <button id="btn-overlay-open" class="btn btn-primary" style="flex: 1;">
@@ -1022,6 +1165,7 @@
         <ul id="overlay-recent-list" class="recent-ul">
           <li class="empty-state">No recently opened repositories</li>
         </ul>
+      </div>
       </div>
     </div>
   </div>
@@ -2308,7 +2452,7 @@
               <span class="settings-section-icon"><span class="material-symbols-outlined">history</span></span>
               <div>
                 <h3 id="agents-section-history">Launch history</h3>
-                <p class="settings-section-subtitle">What was started, where, and whether it started. Prompt text is never recorded.</p>
+                <p class="settings-section-subtitle">What was started, where, and whether it started. The Agents panel shows the same list with each task and a Stop button.</p>
               </div>
             </header>
             <div class="agent-catalogue-toolbar">
@@ -2326,6 +2470,39 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- AGENTS PANEL: everything sent out from here, newest first -->
+  <div id="agents-panel" class="modal-overlay agents-panel-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="agents-panel-title">
+    <aside class="agents-panel">
+      <header class="agents-panel-header">
+        <span class="section-bullet" data-tint="violet"><span class="material-symbols-outlined">smart_toy</span></span>
+        <div class="agents-panel-heading">
+          <h2 id="agents-panel-title">Agents</h2>
+          <p id="agents-panel-summary" class="agents-panel-summary">Nothing running right now</p>
+        </div>
+        <button type="button" id="btn-close-agents-panel" class="btn-close" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="agents-panel-actions">
+        <button type="button" id="btn-agents-panel-launch" class="btn btn-primary btn-sm">
+          <span class="material-symbols-outlined">add</span>
+          <span>New agent</span>
+        </button>
+        <button type="button" id="btn-agents-panel-manage" class="btn btn-secondary btn-sm" title="Choose which tools can be started, and how">
+          <span class="material-symbols-outlined">tune</span>
+          <span>Set up</span>
+        </button>
+        <button type="button" id="btn-agents-panel-clear" class="btn btn-text btn-sm agents-panel-clear" title="Remove everything that has finished from this list">
+          <span>Clear finished</span>
+        </button>
+      </div>
+      <p id="agents-panel-note" class="inline-warning hidden">
+        Starting and stopping agents needs the desktop app. This list still shows what was sent out.
+      </p>
+      <ul id="agents-panel-list" class="agent-run-list"></ul>
+    </aside>
   </div>
 
   <!-- LAUNCH AN AGENT -->
@@ -2369,7 +2546,7 @@
 
           <section class="launch-section" id="agent-launch-prompt-row">
             <h4 class="launch-heading">Starting prompt <span class="launch-heading-hint">optional</span></h4>
-            <textarea id="agent-launch-prompt" class="settings-field agent-launch-prompt" rows="3" placeholder="What should it start on? Passed as one argument, and never recorded." aria-label="Starting prompt"></textarea>
+            <textarea id="agent-launch-prompt" class="settings-field agent-launch-prompt" rows="3" placeholder="What should it start on? You can read it back later in the Agents panel." aria-label="Starting prompt"></textarea>
           </section>
 
           <details class="launch-details">

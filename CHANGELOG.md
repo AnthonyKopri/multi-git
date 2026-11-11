@@ -12,6 +12,120 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
+## [6.0.0] - 2026-11-11
+
+### Highlights
+
+Multi-Git 6 is a new interface and a new first day. The window has been redrawn
+from the ground up, with a dark and a light theme and a Simple mode for people
+who only want to commit. Setting up a computer is now three short screens, with
+the SSH agent one press away on every platform and a key you can validate
+before you ever push. Agents you send out now have a panel of their own, with
+the task you gave them and a Stop button. And auto-pull finally does what its
+name says, without waiting for you to press Fetch.
+
+### Upgrading from 5.x
+
+- Your repositories, keys, vault and settings carry over; there is nothing to
+  migrate.
+- The setup guide appears once after updating. **Skip setup** closes it for
+  good, and **Settings → Setup guide** brings it back.
+- **The task you give an agent is now saved** in Multi-Git's configuration file
+  so the Agents panel can show it. Earlier versions kept it nowhere. To keep the
+  old behaviour, turn off **Settings → Worktrees and agents → Keep the task I
+  give each agent**.
+- **With auto-pull on, Multi-Git now contacts origin by itself** every few
+  minutes. With it off, nothing is fetched until you press Fetch, as before.
+
+### Added
+
+- **A first-run guide of three short screens.** The first time Multi-Git opens
+  it asks one thing at a time: whether you want the full workspace or Simple
+  mode, whether this computer has what the app needs, and for a key to sign in
+  to GitHub with. Every screen can be skipped, and **Settings → Setup guide**
+  opens it again. If you are updating, you will see it once too; **Skip setup**
+  closes it for good.
+- **Making a key now ends with knowing it works.** The guide creates the key in
+  one press, puts its public half on your clipboard straight away, and keeps a
+  large **Copy public key** button on screen. Below it are the three steps for
+  adding the key on GitHub, in plain words, a button that opens GitHub on the
+  right page, and **Validate key**, which asks GitHub who the key belongs to
+  and answers "Validated as *your account*", or says what is still missing.
+- **The SSH agent can be turned on with one press on every platform.** The
+  guide and the accounts menu both check whether an agent is running. On
+  Windows, **Turn on the SSH agent** enables and starts the OpenSSH service
+  behind a single administrator prompt. On macOS and Linux, where there is no
+  service to switch on and no password is needed, **Start the SSH agent**
+  starts one that belongs to Multi-Git and lasts until the app closes.
+- **A light theme, and a choice to follow the system.** **Settings → Look and
+  layout** picks Dark, Light or System. The choice is applied before the page
+  draws, so a light window does not open dark first.
+- **Simple mode.** Also under **Look and layout**: only your changes, the
+  history, the message box and the Commit button stay on screen, with Stash and
+  Discard beside the changes, Fetch as an icon, and Pull, Push, the menu and
+  Settings in the toolbar. Nothing is removed from the app; the rest is one
+  switch away.
+- **An Agents panel.** The side panel's **Agents** row opens a panel listing
+  every agent you sent out: which tool and model, in which folder, the task you
+  typed, and whether its program is still running, has finished, was stopped,
+  or never started. The row shows how many are running without opening it.
+- **Stop for a running agent.** Each running agent has a **Stop** button, in
+  the desktop app. Multi-Git finds the program a launch started by looking at
+  the process table afterwards, and before ending it checks that the process
+  with that id is still the one it found, by its start time, so a reused id
+  can never end something else. When it could not find the program it says so
+  and offers no button.
+- **Commit types of your own.** The **+** at the end of the commit type pills
+  adds a type, such as `art` or `release`, which then behaves like the
+  built-in ones and can be removed again. Up to 24 are kept.
+
+### Changed
+
+- **A new look.** The window is redrawn around the same purple: softer rounded
+  panels, pill-shaped tabs and buttons, checkboxes drawn to match, History as a
+  panel of its own, and a side panel where each section is a card with its own
+  colour that folds away. **Integrate** now sits above **Branches**, since the
+  current branch is already one click away in the toolbar. The history graph
+  keeps its lanes and the arms between them.
+- **Commit type pills carry a symbol and a colour each.** They sit below the
+  Safety Net line in one row that scrolls sideways: with the mouse wheel while
+  the pointer is over it, or with the arrows that appear at a faded edge.
+- **Settings sits beside the menu button** in the toolbar instead of inside the
+  menu.
+- **Git Bash and the Multi-Git command line are icons on the terminal line**
+  at the bottom of the window, next to the button that opens a terminal.
+- **Fonts ship inside the app.** The interface no longer loads its typefaces
+  and icons from Google Fonts, so it looks the same offline and makes one less
+  kind of network request. The licences are in `public/fonts`.
+- **The task you give an agent is now kept with the launch**, because the
+  Agents panel shows it. It is stored in Multi-Git's own configuration file on
+  your machine, cut to 4,000 characters, and removed when you clear the list.
+  **Settings → Worktrees and agents → Keep the task I give each agent** turns
+  this off, after which a launch records the tool and the folder as before.
+  The command preview and the Terminal Log still never contain it.
+
+### Fixed
+
+- **Auto-pull now works without pressing Fetch.** It only ever acted after a
+  fetch, and nothing fetched unless you did, so with the chip on a branch could
+  sit behind indefinitely. While auto-pull is on, Multi-Git now fetches by
+  itself shortly after a repository opens, when you come back to the window,
+  and every five minutes while it is in front. That fetch never asks for
+  anything: it is skipped when the selected key would need a passphrase typed,
+  it tells Git's credential helper not to prompt, and it waits while another
+  sync is running. A toast says when commits were brought in, and says once
+  why not when something is holding it back. The rules for when a fast-forward
+  is safe are unchanged.
+- **Amend works with nothing staged.** Ticking **Amend** to reword the last
+  commit left the button disabled until an unrelated change was staged.
+- **Unticking Amend no longer empties the message box.** It removes only the
+  message it filled in itself, and ticking it leaves a message you had already
+  typed alone.
+- **A freshly generated key shows its public key in the SSH manager.** The
+  boxes meant to hold it were left empty.
+- **The GitHub CLI sign-in hint no longer promises a terminal** in browser
+  mode, where none can be opened.
+
 ## [5.3.4] - 2026-11-06
 
 ### Fixed
@@ -1225,7 +1339,8 @@ or Security. Remove empty headings when preparing a release.
 
 - Initial release.
 
-[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.4...HEAD
+[Unreleased]: https://github.com/AnthonyKopri/multi-git/compare/Release_v6.0.0...HEAD
+[6.0.0]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.4...Release_v6.0.0
 [5.3.4]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.3...Release_v5.3.4
 [5.3.3]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.2...Release_v5.3.3
 [5.3.2]: https://github.com/AnthonyKopri/multi-git/compare/Release_v5.3.1...Release_v5.3.2

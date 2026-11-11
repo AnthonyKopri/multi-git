@@ -44,10 +44,12 @@ import * as shelf from './features/shelf';
 import * as ssh from './features/ssh-manager';
 import * as staging from './features/staging';
 import * as sync from './features/sync';
+import { initBackgroundFetch } from './features/sync/background';
 import * as workspace from './features/workspace';
 import * as worktrees from './features/worktrees';
 import * as groups from './features/groups';
 import * as agents from './features/agents';
+import * as agentsPanel from './features/agents/panel';
 import * as repoHub from './features/repo-hub';
 import * as remotes from './features/remotes';
 import * as submodules from './features/submodules';
@@ -63,6 +65,7 @@ import * as appMenu from './features/app-menu';
 import * as updates from './features/updates';
 import * as terminal from './features/terminal';
 import * as setup from './features/setup';
+import * as wizard from './features/setup/wizard';
 import * as terminalEdition from './features/terminal-edition';
 import { openRepoInNewWindow } from './features/windows';
 import { unlockSelectedKey } from './features/accounts/unlock';
@@ -174,6 +177,8 @@ function closeTopmostLayer(): void {
     ui.agentLaunchModal,
     ui.groupEditorModal,
     ui.agentsModal,
+    // Behind the two above, which it opens: New agent and Set up both sit on it.
+    ui.agentsPanel,
     ui.worktreeModal,
     ui.repoHubModal,
     ui.settingsModal,
@@ -437,6 +442,13 @@ function wireCommitBox(): void {
   ui.commitScopeInput.addEventListener('input', () => staging.renderCommitTemplateChips());
   ui.commitAmendCheckbox.addEventListener('change', () => void staging.onAmendToggle());
 
+  delegate(ui.commitTemplateChips, 'click', '[data-add-type]', () => void staging.addCommitType());
+  delegate(ui.commitTemplateChips, 'click', '[data-remove-type]', (target) => {
+    void staging.removeCommitType(target.dataset['removeType'] ?? '');
+  });
+  for (const arrow of document.querySelectorAll<HTMLElement>('.chip-scroll-btn')) {
+    arrow.addEventListener('click', () => staging.scrollCommitTypes(Number(arrow.dataset['scroll'] ?? '1')));
+  }
   delegate(ui.commitTemplateChips, 'click', '[data-commit-type]', (target) => {
     staging.insertCommitTemplate(target.dataset['commitType'] as CommitType);
   });
@@ -480,6 +492,8 @@ function wireBranchPanel(): void {
 
 function wireShelves(): void {
   ui.btnStashSave.addEventListener('click', () => void shelf.stashChanges());
+  ui.btnSimpleStash.addEventListener('click', () => void shelf.stashChanges());
+  ui.btnSimpleUnstash.addEventListener('click', () => void shelf.restoreLatestStash());
 
   let stashFilterTimer: ReturnType<typeof setTimeout> | null = null;
   ui.stashSearch.addEventListener('input', (event) => {
@@ -529,6 +543,23 @@ function wireGroups(): void {
 }
 
 function wireAgents(): void {
+  ui.btnOpenAgents.addEventListener('click', () => agentsPanel.openAgentsPanel());
+  ui.btnCloseAgentsPanel.addEventListener('click', () => agentsPanel.closeAgentsPanel());
+  ui.btnAgentsPanelLaunch.addEventListener('click', () => void agents.launchAgentForActiveRepo());
+  ui.btnAgentsPanelManage.addEventListener('click', () => agents.openAgentManager());
+  ui.btnAgentsPanelClear.addEventListener('click', () => void agentsPanel.clearFinishedRuns());
+  ui.agentsPanelList.addEventListener('click', agentsPanel.handleAgentsPanelClick);
+  // The dimmed area beside the panel closes it, as it would a drawer.
+  ui.agentsPanel.addEventListener('click', (event) => {
+    if (event.target === ui.agentsPanel) {
+      agentsPanel.closeAgentsPanel();
+    }
+  });
+  // The count on the side panel is read once at start and again whenever the
+  // window comes back, which is when an agent is most likely to have finished.
+  void agentsPanel.refreshAgentRuns();
+  window.addEventListener('focus', () => void agentsPanel.refreshAgentRuns());
+
   ui.btnCloseAgentsModal.addEventListener('click', () => agents.closeAgentManager());
   ui.btnDetectAgents.addEventListener('click', () => void agents.detectInstalledAgents());
   ui.btnClearAgentHistory.addEventListener('click', () => void agents.clearLaunchHistory());
@@ -846,6 +877,8 @@ function buildCommands(): palette.Command[] {
     { id: 'new-window', needsRepo: true, group: 'Worktrees', title: 'Open this repository in a new window', keywords: 'window split', run: () => void openRepoInNewWindow(getState().activeRepo ?? '') },
     { id: 'agent-launch', needsRepo: true, menu: 'Repository', icon: 'smart_toy', group: 'Worktrees', title: 'Launch a coding agent here', keywords: 'claude codex tool', run: () => void agents.launchAgentForActiveRepo() },
     { id: 'agent-settings', group: 'Worktrees', title: 'Coding agent settings', keywords: 'claude codex configure', run: () => agents.openAgentManager() },
+    { id: 'setup-guide', group: 'View', icon: 'waving_hand', title: 'Open the setup guide', keywords: 'first run welcome wizard ssh key simple mode onboarding', run: () => wizard.startWizard() },
+    { id: 'agent-panel', group: 'Worktrees', icon: 'smart_toy', title: 'Agents: what is running', keywords: 'claude codex stop kill task history dispatched', run: () => agentsPanel.openAgentsPanel() },
     { id: 'group-new', menu: 'Repository', icon: 'folder_copy', group: 'Repository', title: 'Create a repository group', keywords: 'group fetch all', run: () => void groups.createGroup() },
     { id: 'remotes', needsRepo: true, group: 'Repository', title: 'Manage remotes', keywords: 'origin url fetch push refspec prune', run: () => repoHub.openRepoHub('remotes') },
     { id: 'submodules', needsRepo: true, group: 'Repository', title: 'Manage submodules', keywords: 'gitmodules init update sync', run: () => repoHub.openRepoHub('submodules') },
@@ -1016,6 +1049,7 @@ async function start(): Promise<void> {
   rebase.initRebase(ui, refreshAll);
   signing.initSigning(ui);
   sync.initSync(ui, refreshAll);
+  initBackgroundFetch({ refreshAll, isSyncing: sync.isSyncing });
   diff.initDiff(ui, { refreshAll });
   staging.initStaging(ui, { refreshAll, refreshStatus, clearDiffView: diff.clearDiffView });
   conflicts.initConflicts(ui, refreshStatus);
@@ -1027,6 +1061,7 @@ async function start(): Promise<void> {
   worktrees.initWorktrees(ui, refreshAll);
   groups.initGroups(ui);
   agents.initAgents(ui);
+  agentsPanel.initAgentsPanel(ui);
   repoHub.initRepoHub(ui);
   remotes.initRemotes(ui);
   submodules.initSubmodules(ui, { openRepository: repo.openRepository });
@@ -1037,6 +1072,8 @@ async function start(): Promise<void> {
   // during startup by the time anyone opens it.
   terminal.initTerminal(ui);
   setup.initSetup(ui);
+  wizard.initWizard(ui, { openSshManager: () => ssh.openSshManagerForSetup() });
+  document.addEventListener('multi-git:open-setup-guide', () => wizard.startWizard());
   terminalEdition.initTerminalEdition(ui);
   patches.initPatches();
   bisect.initBisect({ refreshAll });
@@ -1087,6 +1124,14 @@ async function start(): Promise<void> {
   void applyAppTitle();
   void groups.refreshGroups();
 
+  await openInitialRepository();
+
+  // After the repository, not before: opening one puts the welcome card away,
+  // and the guide lives on that card.
+  wizard.maybeStartWizard(getState().experienceChosen);
+}
+
+async function openInitialRepository(): Promise<void> {
   // A window opened for a specific repository says so in its URL. That wins
   // over the most recent one, which is what stops every restored window from
   // briefly loading the same repository and then switching.
