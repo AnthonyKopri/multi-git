@@ -53,7 +53,7 @@ export function renderAutoPullChip(): void {
 
   if (!autoPull) {
     button.title =
-      'Auto-pull is off. Turn it on to fast-forward automatically when a fetch finds this branch purely behind.';
+      'Auto-pull is off. Turn it on and Multi-Git checks for new commits every few minutes, and brings them in when this branch has nothing of its own in the way.';
     return;
   }
 
@@ -62,7 +62,7 @@ export function renderAutoPullChip(): void {
   const blocked = autoPullBlockedReason(status);
   button.title = blocked
     ? `Auto-pull is on, but would not act right now: ${blocked}`
-    : 'Auto-pull is on. The next fetch will fast-forward this branch.';
+    : 'Auto-pull is on. New commits are checked for every few minutes and brought in on their own.';
 }
 
 /** Turns the setting on or off and remembers it. */
@@ -76,7 +76,7 @@ export async function toggleAutoPull(): Promise<void> {
     logToTerminal(`Auto-pull ${next ? 'enabled' : 'disabled'}.`, 'info');
     showToast(
       next
-        ? 'Auto-pull on: a fetch will fast-forward this branch when it is purely behind.'
+        ? 'Auto-pull on. New commits are checked for every few minutes, and brought in when nothing of yours is in the way.'
         : 'Auto-pull off.',
       'info'
     );
@@ -353,10 +353,27 @@ function syncSummary(action: SyncAction, data: SyncResponse): string {
   return summary ?? `${titleCase(action)} completed.`;
 }
 
+/** How many fetches, pulls and pushes the user started are still running. */
+let activeSyncs = 0;
+
+/** Whether a sync the user asked for is in flight. The background fetch waits for it. */
+export function isSyncing(): boolean {
+  return activeSyncs > 0;
+}
+
 export async function performSync(
   action: SyncAction,
   options: { force?: boolean } = {}
 ): Promise<void> {
+  activeSyncs += 1;
+  try {
+    await runSync(action, options);
+  } finally {
+    activeSyncs -= 1;
+  }
+}
+
+async function runSync(action: SyncAction, options: { force?: boolean }): Promise<void> {
   const profile = activeProfile();
 
   // "Publish failed" is what the user was told they were doing, so it is what

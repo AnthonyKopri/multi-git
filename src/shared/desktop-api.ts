@@ -12,7 +12,7 @@
 // launcher only ever runs a definition already saved in the configuration.
 
 import type { SshAgentRepairResult } from './ssh-agent-types';
-import type { AgentLaunchInput, AgentLaunchResult } from './agent-types';
+import type { AgentLaunchInput, AgentLaunchResult, AgentStopResult } from './agent-types';
 import type { BisectRunOutcome } from './bisect-types';
 import type { ExternalToolKind } from './config-types';
 import type { UpdateState } from './update-types';
@@ -75,6 +75,13 @@ export interface DesktopApi {
   openEditor: (repoPath: string) => Promise<boolean>;
   /** Starts a configured external agent in a worktree. */
   launchAgent: (input: AgentLaunchInput) => Promise<AgentLaunchResult>;
+  /**
+   * Ends an agent started from here, named by its launch-history id.
+   *
+   * Beside launchAgent rather than on the HTTP API for the same reason: it
+   * acts on a program. The page names a history entry, never a process.
+   */
+  stopAgent: (launchId: string) => Promise<AgentStopResult>;
 
   /**
    * Runs a saved bisect test command until git reaches a verdict.
@@ -185,6 +192,7 @@ export const IPC_CHANNELS = {
   installPrerequisite: 'tool:install-prerequisite',
   openEditor: 'tool:open-editor',
   launchAgent: 'agent:launch',
+  stopAgent: 'agent:stop',
   runBisect: 'bisect:run',
   selectSaveFile: 'app:select-save-file',
   writeTextFile: 'app:write-text-file',

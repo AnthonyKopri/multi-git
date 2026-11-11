@@ -603,7 +603,46 @@ export const ELEMENT_MAP = {
   btnLaunchAgent: 'btn-launch-agent',
 
   // Loading a locked key on demand
-  btnUnlockKey: 'btn-unlock-key'
+  btnUnlockKey: 'btn-unlock-key',
+
+  // Simple mode's own controls, and the way into the agents panel.
+  btnSimpleStash: 'btn-simple-stash',
+  btnSimpleUnstash: 'btn-simple-unstash',
+  simpleUnstashLabel: 'simple-unstash-label',
+  btnOpenAgents: 'btn-open-agents',
+  agentsRunningCount: 'agents-running-count',
+  agentsPanel: 'agents-panel',
+  agentsPanelSummary: 'agents-panel-summary',
+  agentsPanelNote: 'agents-panel-note',
+  agentsPanelList: 'agents-panel-list',
+  btnCloseAgentsPanel: 'btn-close-agents-panel',
+  btnAgentsPanelLaunch: 'btn-agents-panel-launch',
+  btnAgentsPanelManage: 'btn-agents-panel-manage',
+  btnAgentsPanelClear: 'btn-agents-panel-clear',
+
+  // The first-run guide on the welcome card.
+  setupWizard: 'setup-wizard',
+  welcomeHome: 'welcome-home',
+  btnWizardSkip: 'btn-wizard-skip',
+  wizardCheckLead: 'wizard-check-lead',
+  wizardCheckList: 'wizard-check-list',
+  btnWizardCheckBack: 'btn-wizard-check-back',
+  btnWizardRecheck: 'btn-wizard-recheck',
+  btnWizardCheckNext: 'btn-wizard-check-next',
+  wizardKeyForm: 'wizard-key-form',
+  wizardKeyName: 'wizard-key-name',
+  wizardKeyEmail: 'wizard-key-email',
+  btnWizardCreateKey: 'btn-wizard-create-key',
+  wizardKeyFeedback: 'wizard-key-feedback',
+  wizardKeyReady: 'wizard-key-ready',
+  wizardKeyStatus: 'wizard-key-status',
+  btnWizardCopyKey: 'btn-wizard-copy-key',
+  btnWizardOpenGithub: 'btn-wizard-open-github',
+  btnWizardValidateKey: 'btn-wizard-validate-key',
+  wizardValidateResult: 'wizard-validate-result',
+  btnWizardKeyBack: 'btn-wizard-key-back',
+  btnWizardExistingKey: 'btn-wizard-existing-key',
+  btnWizardFinish: 'btn-wizard-finish'
 } as const;
 
 export type ElementKey = keyof typeof ELEMENT_MAP;

@@ -53,6 +53,12 @@ export interface AppState {
   manageSshConfig: boolean;
   /** Whether a fetch that leaves the branch purely behind pulls on its own. */
   autoPull: boolean;
+  /** Simple mode: the side panel and advanced commit options are put away. */
+  simpleMode: boolean;
+  /** False until the first-run guide has been finished or skipped. */
+  experienceChosen: boolean;
+  /** Commit types the user added beside the built-in ones. */
+  customCommitTypes: string[];
 
   // Repository state
   status: StatusResponse | null;
@@ -100,6 +106,11 @@ function initialState(): AppState {
     defaultAccountProfileId: '',
     manageSshConfig: true,
     autoPull: false,
+    simpleMode: false,
+    // True until the configuration says otherwise, so a slow first request
+    // cannot flash the guide at someone who finished it long ago.
+    experienceChosen: true,
+    customCommitTypes: [],
 
     status: null,
     branches: { local: [], remote: [] },

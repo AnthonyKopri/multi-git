@@ -41,11 +41,15 @@ import {
   MIN_INACTIVE_DAYS
 } from '../../shared/maintenance-types';
 import type { StaleRules } from '../../shared/maintenance-types';
+import { isThemeChoice, sanitizeCustomCommitTypes } from '../../shared/commit-types';
 
 import { canonicalRepoKey } from './repo-identity';
 
 /** Launch history entries kept. Old enough to be useful, bounded enough to read. */
 export const MAX_AGENT_LAUNCHES = 50;
+
+/** Longest task kept with a launch. A prompt can be pages; the list is not. */
+export const MAX_AGENT_PROMPT_CHARS = 4000;
 
 /**
  * Longest retention the Settings window offers, and the ceiling it is held to.
@@ -347,6 +351,30 @@ export function validateSettings(raw: unknown): Partial<AppSettings> | undefined
   const rules = validateStaleRules(source['staleRules']);
   if (rules !== undefined) {
     settings.staleRules = rules;
+  }
+
+  // Becomes an attribute value on <html>, so only the three known words count.
+  if (isThemeChoice(source['theme'])) {
+    settings.theme = source['theme'];
+  }
+
+  if (typeof source['simpleMode'] === 'boolean') {
+    settings.simpleMode = source['simpleMode'];
+  }
+
+  if (typeof source['keepAgentPrompts'] === 'boolean') {
+    settings.keepAgentPrompts = source['keepAgentPrompts'];
+  }
+
+  if (typeof source['experienceChosen'] === 'boolean') {
+    settings.experienceChosen = source['experienceChosen'];
+  }
+
+  // Typed into a commit message, and drawn as a pill. Anything that is not a
+  // short lowercase word is dropped rather than stored and repaired on display.
+  const customTypes = sanitizeCustomCommitTypes(source['customCommitTypes']);
+  if (customTypes !== undefined) {
+    settings.customCommitTypes = customTypes;
   }
 
   return settings;
@@ -766,6 +794,29 @@ function validateAgentLaunches(raw: unknown): AgentLaunchRecord[] | undefined {
       }
       if (isNonEmptyString(record['error'])) {
         launch.error = record['error'];
+      }
+      if (isNonEmptyString(record['id']) && record['id'].length <= 64) {
+        launch.id = record['id'];
+      }
+      if (isNonEmptyString(record['prompt'])) {
+        launch.prompt = record['prompt'].slice(0, MAX_AGENT_PROMPT_CHARS);
+      }
+
+      const tracked = asRecord(record['tracked']);
+      if (
+        typeof tracked['pid'] === 'number' &&
+        Number.isInteger(tracked['pid']) &&
+        tracked['pid'] > 0 &&
+        typeof tracked['startedAt'] === 'number' &&
+        Number.isFinite(tracked['startedAt'])
+      ) {
+        launch.tracked = { pid: tracked['pid'], startedAt: tracked['startedAt'] };
+      }
+      if (isNonEmptyString(record['endedAt'])) {
+        launch.endedAt = record['endedAt'];
+      }
+      if (record['stopped'] === true) {
+        launch.stopped = true;
       }
 
       return [launch];

@@ -3,7 +3,7 @@
 //   src/main/*.ts     -> out/node/main/*.js     CommonJS, Electron externals
 //   src/server/cli.ts -> out/node/server/cli.js CommonJS, node_modules external
 //   src/renderer/*.ts -> out/web/app.js         IIFE, self-contained
-//   public/*          -> out/web/               copied verbatim
+//   public/**         -> out/web/               copied verbatim
 //
 // templates/ is deliberately NOT copied. src/server/app-root.ts locates it by
 // walking up to the package.json that identifies this app, which lands on the
@@ -98,10 +98,16 @@ async function buildEntry(build, entry, options) {
   return { built: entry.out };
 }
 
-function copyStaticAssets() {
-  const source = path.join(ROOT, 'public');
-  const destination = path.join(OUT, 'web');
-
+/**
+ * Copies public/ into out/web/, folders included.
+ *
+ * Recursive since the typefaces moved into public/fonts: a flat copy shipped
+ * the page that links fonts/fonts.css without the folder it points at.
+ */
+function copyStaticAssets(
+  source = path.join(ROOT, 'public'),
+  destination = path.join(OUT, 'web')
+) {
   if (!fs.existsSync(source)) {
     return 0;
   }
@@ -111,11 +117,15 @@ function copyStaticAssets() {
   let copied = 0;
 
   for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
-    if (!entry.isFile()) {
-      continue;
+    const from = path.join(source, entry.name);
+    const to = path.join(destination, entry.name);
+
+    if (entry.isDirectory()) {
+      copied += copyStaticAssets(from, to);
+    } else if (entry.isFile()) {
+      fs.copyFileSync(from, to);
+      copied += 1;
     }
-    fs.copyFileSync(path.join(source, entry.name), path.join(destination, entry.name));
-    copied += 1;
   }
 
   return copied;

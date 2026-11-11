@@ -194,7 +194,7 @@ function classify(
       availability: probe.toolMissing ? 'missing' : 'unreachable',
       diagnostic: probe.toolMissing
         ? 'ssh-add was not found on PATH. Install the OpenSSH client to use agent-backed profiles.'
-        : 'No SSH agent is reachable. Start one (for example `eval $(ssh-agent)`) and make sure SSH_AUTH_SOCK is set for this session.'
+        : 'No SSH agent is running for this session. Multi-Git can start one for itself: press Start the SSH agent.'
     };
   }
 
@@ -210,7 +210,7 @@ function classify(
     return {
       availability: 'disabled',
       diagnostic:
-        'The OpenSSH Authentication Agent service is disabled, so it cannot be started until its start type changes. Repair and start SSH agent will do both.'
+        'The OpenSSH Authentication Agent service is disabled, so it cannot be started until its start type changes. Turn on the SSH agent will do both.'
     };
   }
 
@@ -218,7 +218,7 @@ function classify(
     return {
       availability: 'stopped',
       diagnostic:
-        'The OpenSSH Authentication Agent service is installed but not running. Repair and start SSH agent will start it.'
+        'The OpenSSH Authentication Agent service is installed but not running. Turn on the SSH agent will start it.'
     };
   }
 
