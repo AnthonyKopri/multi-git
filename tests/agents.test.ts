@@ -1105,8 +1105,27 @@ describe('launching, end to end against a fake launcher', () => {
 
     const [entry] = definitions.listLaunches();
     expect(entry).toMatchObject({ agentLabel: 'Claude Code', ok: true, pid: 99 });
-    // The prompt is the most sensitive part of a launch and is not kept.
-    expect(JSON.stringify(entry)).not.toContain('hello');
+    // Kept since 5.4, so the Agents panel can show what each one was sent to
+    // do. It is still not part of the command that goes to the Terminal Log.
+    expect(entry?.prompt).toBe('hello');
+    expect(entry?.commandPreview).not.toContain('hello');
+    expect(entry?.id).toBe(result.launchId);
+  });
+
+  it('leaves the task out of the history when keeping it is turned off', async () => {
+    const worktree = createTempDir('multi-git-agent-wt-');
+    const { service, definitions } = await serviceWithHome([definition()]);
+    const { readConfig, writeConfig } = await import('../src/server/config/store');
+    const config = readConfig();
+    config.settings = { ...(config.settings ?? { manageSshConfig: false }), keepAgentPrompts: false };
+    writeConfig(config);
+
+    await service.launchAgent(
+      { repoPath: worktree, worktreePath: worktree, agentId: 'claude', initialPrompt: 'a private task' },
+      { runner: new FakeRunner().otherwise({ stdout: '/usr/bin/claude' }), launcher: launcherRecording({}) }
+    );
+
+    expect(JSON.stringify(definitions.listLaunches())).not.toContain('a private task');
   });
 
   it('refuses an agent that is not configured', async () => {

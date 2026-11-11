@@ -233,13 +233,49 @@ export function deleteAgentDefinition(agentId: string): boolean {
 /**
  * Adds a launch to the history.
  *
- * The prompt is not a parameter here, and that is the whole design: there is
- * no path by which prompt text reaches this function, so it cannot be written
- * by accident when someone adds a field later.
+ * Whether the record carries the task that was typed is the caller's decision,
+ * made from `settings.keepAgentPrompts`. This function writes what it is given.
  */
 export function recordLaunch(record: AgentLaunchRecord): void {
   const config = readConfig();
   config.agentLaunches = [record, ...(config.agentLaunches ?? [])].slice(0, MAX_AGENT_LAUNCHES);
+  writeConfig(config);
+}
+
+/**
+ * Changes fields on launches that are already in the history.
+ *
+ * By id, and several at once, because the usual caller has just read the
+ * process table and learned that more than one of them has finished.
+ */
+export function updateLaunches(
+  ids: readonly string[],
+  change: Partial<Pick<AgentLaunchRecord, 'tracked' | 'endedAt' | 'stopped'>>
+): void {
+  if (ids.length === 0) {
+    return;
+  }
+
+  const config = readConfig();
+  let touched = false;
+
+  config.agentLaunches = (config.agentLaunches ?? []).map((launch) => {
+    if (launch.id === undefined || !ids.includes(launch.id)) {
+      return launch;
+    }
+    touched = true;
+    return { ...launch, ...change };
+  });
+
+  if (touched) {
+    writeConfig(config);
+  }
+}
+
+/** Replaces the history with the entries worth keeping. */
+export function keepLaunches(keep: (launch: AgentLaunchRecord) => boolean): void {
+  const config = readConfig();
+  config.agentLaunches = (config.agentLaunches ?? []).filter(keep);
   writeConfig(config);
 }
 

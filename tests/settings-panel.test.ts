@@ -121,7 +121,7 @@ describe('what the window shows', () => {
   it('draws every setting from the stored configuration', async () => {
     await mount({ autoPull: true, checkForUpdates: false, recoveryRetentionDays: 30 });
 
-    expect(toggle('Pull automatically').checked).toBe(true);
+    expect(toggle('Bring in new commits').checked).toBe(true);
     expect(toggle('Check GitHub').checked).toBe(false);
     expect(field('Keep recovery points').value).toBe('30');
   });
@@ -157,7 +157,7 @@ describe('writing a setting', () => {
     endpoints.saveAppSettings.mockResolvedValue({ success: true, config: config({ autoPull: true }) });
     await mount();
 
-    change(toggle('Pull automatically'), true);
+    change(toggle('Bring in new commits'), true);
     await vi.waitFor(() => expect(store.update).toHaveBeenCalled());
 
     // The chip renders from the store, not from this window's copy.

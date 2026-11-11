@@ -3,14 +3,25 @@ import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import { asInput, asTextArea } from '../../dom/elements';
 import type { Elements } from '../../dom/elements';
-import { fragment, setHidden } from '../../dom/create';
-import { getState, shouldWarnBeforeDelete, update } from '../../state/store';
-import { confirmDialog } from '../../ui/dialogs';
+import { fragment, icon, setHidden } from '../../dom/create';
+import { getState, shouldWarnBeforeDelete, subscribeTo, update } from '../../state/store';
+import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import { updateScrollEdges } from '../../ui/wheel-scroll';
-import { applyCommitType, COMMIT_TYPES, chipTitle, shouldShowFormatHint } from '../commit/conventional';
+import {
+  allCommitTypes,
+  applyCommitType,
+  chipTitle,
+  commitTypeStyle,
+  shouldShowFormatHint
+} from '../commit/conventional';
 import type { CommitType } from '../commit/conventional';
+import {
+  isBuiltInCommitType,
+  MAX_CUSTOM_COMMIT_TYPES,
+  normalizeCommitType
+} from '../../../shared/commit-types';
 import { buildDiffPickerRow, buildFileRow, diffEntriesFor, findDiffEntry, renderRows } from './file-list';
 import { applyProfileIdentity, getAccountMismatch } from '../accounts/identity';
 import * as signing from '../signing';
@@ -33,6 +44,10 @@ export function initStaging(
   refreshAll = hooks.refreshAll;
   refreshStatus = hooks.refreshStatus;
   onDiffCleared = hooks.clearDiffView;
+
+  // The pills include the user's own types, which arrive with the config and
+  // change when one is added or removed, here or in another window.
+  subscribeTo(['customCommitTypes'], renderCommitTemplateChips);
 }
 
 /** Redraws both staging lists and the File Diff picker. */
@@ -81,10 +96,21 @@ export function renderStaging(): void {
 
 export function updateCommitAvailability(): void {
   const hasStaged = (getState().status?.staged.length ?? 0) > 0;
+  const amend = asInput(ui.commitAmendCheckbox).checked;
   const button = ui.btnCommit as HTMLButtonElement;
 
-  button.disabled = !hasStaged;
-  button.title = hasStaged ? 'Commit staged changes' : 'Stage changes before committing';
+  // Amend is the one commit that needs nothing staged: rewording the last
+  // message is the commonest reason to tick the box, and the button used to
+  // stay disabled for it until something unrelated was staged.
+  button.disabled = !hasStaged && !amend;
+
+  if (hasStaged) {
+    button.title = amend
+      ? 'Replace the last commit with the staged changes and this message'
+      : 'Commit staged changes';
+  } else {
+    button.title = amend ? 'Change the message of the last commit' : 'Stage changes before committing';
+  }
 }
 
 export function setFilenameWrapping(enabled: boolean): void {
@@ -244,26 +270,123 @@ export async function discardAllChanges(): Promise<void> {
 
 // ---------- commit ----------
 
+/**
+ * One type's pill: its symbol, its name, and its own tint.
+ *
+ * A type the user added also carries a remove control. That makes the pill two
+ * buttons, so it is drawn as a span holding both rather than as one button
+ * with another nested inside it.
+ */
+function buildTypeChip(type: CommitType, scope: string): HTMLElement {
+  const style = commitTypeStyle(type);
+  const main = el('button', {
+    className: 'template-chip-main',
+    title: chipTitle(type, scope),
+    attrs: { type: 'button' },
+    data: { commitType: type },
+    children: [icon(style.icon, 15), el('span', { text: type })]
+  });
+
+  if (isBuiltInCommitType(type)) {
+    main.className = 'template-chip';
+    main.dataset['tint'] = style.tint;
+    return main;
+  }
+
+  return el('span', {
+    className: 'template-chip template-chip-custom',
+    data: { tint: style.tint },
+    children: [
+      main,
+      el('button', {
+        className: 'template-chip-remove',
+        title: `Remove "${type}" from your commit types`,
+        attrs: { type: 'button', 'aria-label': `Remove ${type}` },
+        data: { removeType: type },
+        children: [icon('close', 14)]
+      })
+    ]
+  });
+}
+
 export function renderCommitTemplateChips(): void {
   const scope = asInput(ui.commitScopeInput).value;
+  const types = allCommitTypes(getState().customCommitTypes);
 
   ui.commitTemplateChips.replaceChildren(
-    fragment(
-      COMMIT_TYPES.map((type) =>
-        el('button', {
-          className: 'template-chip',
-          text: type,
-          title: chipTitle(type, scope),
-          attrs: { type: 'button' },
-          data: { commitType: type }
-        })
-      )
-    )
+    fragment([
+      ...types.map((type) => buildTypeChip(type, scope)),
+      el('button', {
+        className: 'template-chip-add',
+        title: 'Add your own commit type',
+        attrs: { type: 'button', 'aria-label': 'Add your own commit type' },
+        data: { addType: '' },
+        children: [icon('add', 17)]
+      })
+    ])
   );
 
   // Replacing the chips changes how far the row can scroll, and that is not a
   // scroll event, so the edge fades have to be told.
   updateScrollEdges(ui.commitTemplateChips);
+}
+
+/** Stores the user's own types and redraws from what the server kept. */
+async function saveCustomTypes(next: string[]): Promise<boolean> {
+  try {
+    const { config } = await api.saveAppSettings({ customCommitTypes: next });
+    update({ customCommitTypes: config.settings.customCommitTypes ?? [] });
+    return true;
+  } catch (error) {
+    showToast(errorMessage(error, 'Could not save your commit types.'), 'error', 6000);
+    return false;
+  }
+}
+
+/** The "+" at the end of the row: asks for a word and adds it as a type. */
+export async function addCommitType(): Promise<void> {
+  const current = getState().customCommitTypes;
+
+  if (current.length >= MAX_CUSTOM_COMMIT_TYPES) {
+    showToast(`That is the limit of ${MAX_CUSTOM_COMMIT_TYPES} types of your own. Remove one first.`, 'warn', 6000);
+    return;
+  }
+
+  const typed = await promptDialog({
+    title: 'Add a commit type',
+    label: 'One short word, such as art, build or release',
+    type: 'text'
+  });
+  if (typed === null || typed.trim() === '') {
+    return;
+  }
+
+  const type = normalizeCommitType(typed);
+  if (type === null) {
+    showToast('A commit type is one word of 2 to 16 lowercase letters.', 'warn', 6000);
+    return;
+  }
+  if (isBuiltInCommitType(type) || current.includes(type)) {
+    showToast(`"${type}" is already one of your commit types.`, 'info');
+    return;
+  }
+
+  if (await saveCustomTypes([...current, type])) {
+    // Scrolled into view, because a new pill lands at the far end of a row
+    // that may already be wider than its box.
+    ui.commitTemplateChips.scrollLeft = ui.commitTemplateChips.scrollWidth;
+    updateScrollEdges(ui.commitTemplateChips);
+  }
+}
+
+export async function removeCommitType(type: string): Promise<void> {
+  await saveCustomTypes(getState().customCommitTypes.filter((entry) => entry !== type));
+}
+
+/** An arrow at either end of the type row: moves it most of its own width. */
+export function scrollCommitTypes(direction: number): void {
+  const row = ui.commitTemplateChips;
+  row.scrollBy({ left: direction * Math.max(120, row.clientWidth * 0.7), behavior: 'smooth' });
 }
 
 export function insertCommitTemplate(type: CommitType): void {
@@ -281,24 +404,47 @@ export function updateCommitFormatHint(): void {
   setHidden(ui.commitFormatHint, !shouldShowFormatHint(asTextArea(ui.commitMsgInput).value));
 }
 
-/** Prefills the message when Amend is ticked, and clears it when unticked. */
+/** The last commit's message as Amend put it in the box, if it did. */
+let amendPrefill: string | null = null;
+
+/**
+ * Prefills the message when Amend is ticked, and takes it back when unticked.
+ *
+ * Only ever its own text. Ticking the box with a message already typed keeps
+ * that message, and unticking removes the prefill only if it is still exactly
+ * what was put there: the box used to be emptied on every untick, which threw
+ * away whatever had been written in it.
+ */
 export async function onAmendToggle(): Promise<void> {
   const amend = asInput(ui.commitAmendCheckbox).checked;
   const input = asTextArea(ui.commitMsgInput);
 
   ui.btnCommitLabel.textContent = amend ? 'Amend' : 'Commit';
+  updateCommitAvailability();
 
   if (!amend) {
-    input.value = '';
+    if (amendPrefill !== null && input.value === amendPrefill) {
+      input.value = '';
+    }
+    amendPrefill = null;
     updateCommitFormatHint();
+    return;
+  }
+
+  if (input.value.trim() !== '') {
+    amendPrefill = null;
     return;
   }
 
   try {
     const { message } = await api.getLastCommitMessage();
-    input.value = message;
-    input.focus();
-    updateCommitFormatHint();
+    // The box may have been unticked, or typed into, while this was in flight.
+    if (asInput(ui.commitAmendCheckbox).checked && input.value.trim() === '') {
+      input.value = message;
+      amendPrefill = message;
+      input.focus();
+      updateCommitFormatHint();
+    }
   } catch {
     // A repository with no commits has nothing to amend; leave it empty.
   }
@@ -340,7 +486,7 @@ export async function commitChanges(): Promise<void> {
   const amend = asInput(ui.commitAmendCheckbox).checked;
   const status = getState().status;
 
-  if (!status || status.staged.length === 0) {
+  if (!status || (status.staged.length === 0 && !amend)) {
     showToast('Stage at least one change before committing.', 'warn');
     updateCommitAvailability();
     return;
@@ -359,7 +505,9 @@ export async function commitChanges(): Promise<void> {
     const { confirmed } = await confirmDialog(
       likelyPushed
         ? 'The last commit appears to already be pushed. Amending rewrites history and will require a force push. Continue?'
-        : 'Replace the last commit with the staged changes and this message?',
+        : status.staged.length === 0
+          ? 'Change the message of the last commit? Nothing is staged, so its contents stay as they are.'
+          : 'Replace the last commit with the staged changes and this message?',
       { title: 'Amend last commit', confirmLabel: 'Amend', danger: likelyPushed }
     );
     if (!confirmed) {
@@ -382,6 +530,7 @@ export async function commitChanges(): Promise<void> {
 
     input.value = '';
     asInput(ui.commitAmendCheckbox).checked = false;
+    amendPrefill = null;
     ui.btnCommitLabel.textContent = 'Commit';
     updateCommitFormatHint();
     onDiffCleared();

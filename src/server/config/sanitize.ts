@@ -35,6 +35,13 @@ export function sanitizeConfigForClient(config: AppConfig): ClientConfig {
       // on every launch — so nothing pulled automatically however the file
       // read.
       autoPull: config.settings?.autoPull === true,
+      // Always sent with their defaults, so the client never has to decide
+      // what an absent appearance setting means.
+      theme: config.settings?.theme ?? 'dark',
+      simpleMode: config.settings?.simpleMode === true,
+      experienceChosen: config.settings?.experienceChosen === true,
+      keepAgentPrompts: config.settings?.keepAgentPrompts !== false,
+      customCommitTypes: config.settings?.customCommitTypes ?? [],
       ...(config.settings?.recoveryRetentionDays !== undefined
         ? { recoveryRetentionDays: config.settings.recoveryRetentionDays }
         : {}),

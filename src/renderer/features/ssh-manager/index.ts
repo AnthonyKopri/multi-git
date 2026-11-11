@@ -105,13 +105,15 @@ export function showKeyForm(type: 'existing' | 'generate'): void {
 
 function clearGeneratedResult(): void {
   setHidden(ui.sshGeneratedResult, true);
-  ui.sshGeneratedPrivate.textContent = '';
-  ui.sshGeneratedPublic.textContent = '';
+  asInput(ui.sshGeneratedPrivate).value = '';
+  asInput(ui.sshGeneratedPublic).value = '';
 }
 
 function renderGeneratedResult(data: GenerateKeyResponse): void {
-  ui.sshGeneratedPrivate.textContent = data.privateKeyPath;
-  ui.sshGeneratedPublic.textContent = data.publicKey;
+  // Both are <input> elements. Their text content is not what they display,
+  // so setting it left two empty boxes under "Last Generated Key".
+  asInput(ui.sshGeneratedPrivate).value = data.privateKeyPath;
+  asInput(ui.sshGeneratedPublic).value = data.publicKey;
   setHidden(ui.sshGeneratedResult, false);
 }
 
@@ -330,7 +332,7 @@ export async function generateSshKeyAndProfile(): Promise<void> {
       }
 
       setGenerateFeedback(
-        `Key created successfully. Profile "${label}" is now available in Registered Profiles.`,
+        `Key created. "${label}" is now under Profiles, above. Copy the public key below and add it to your Git host.`,
         'success'
       );
 
@@ -387,8 +389,8 @@ export async function openProfileKeyFolder(profile: ClientSshProfile): Promise<v
 }
 
 export async function copyGeneratedValue(kind: 'private' | 'public' | 'key'): Promise<void> {
-  const privatePath = ui.sshGeneratedPrivate.textContent ?? '';
-  const publicKey = ui.sshGeneratedPublic.textContent ?? '';
+  const privatePath = asInput(ui.sshGeneratedPrivate).value;
+  const publicKey = asInput(ui.sshGeneratedPublic).value;
 
   if (kind === 'private') {
     await copyToClipboard(privatePath, 'Private key path');
@@ -403,7 +405,7 @@ export async function copyGeneratedValue(kind: 'private' | 'public' | 'key'): Pr
 }
 
 export async function openGeneratedLocation(): Promise<void> {
-  const privatePath = ui.sshGeneratedPrivate.textContent ?? '';
+  const privatePath = asInput(ui.sshGeneratedPrivate).value;
   if (!privatePath) {
     return;
   }

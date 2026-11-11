@@ -14,6 +14,7 @@ import {
   unloadProfileKey
 } from '../ssh/agent-session';
 import { AGENT_REPAIR_COMMAND } from '../ssh/agent-service';
+import { startSessionAgent } from '../ssh/session-agent';
 import { resolveRepoPath } from '../middleware/repo-path';
 
 export const sshAgentRouter: Router = Router();
@@ -96,6 +97,21 @@ sshAgentRouter.post(
  * `core.sshCommand`. Which identity a repository uses stays that repository's
  * setting; this only makes the keys available.
  */
+/**
+ * Starts an SSH agent for this session, on macOS and Linux.
+ *
+ * Safe to answer here in a way the Windows repair is not: it runs one fixed
+ * program with no arguments from the request, needs no elevation, and changes
+ * no system setting. See ssh/session-agent.ts.
+ */
+sshAgentRouter.post(
+  '/api/ssh/agent/start',
+  async (_req, res) => {
+    const result = await startSessionAgent();
+    res.json({ success: result.started, message: result.message, agent: await agentStatus() });
+  }
+);
+
 sshAgentRouter.post(
   '/api/ssh/agent/load-all',
   async (_req, res) => {

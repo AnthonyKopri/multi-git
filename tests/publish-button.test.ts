@@ -263,7 +263,7 @@ describe('the auto-pull chip', () => {
       status: status({ tracking: 'origin/main', behind: 3 })
     });
 
-    expect(chip().title).toMatch(/will fast-forward/);
+    expect(chip().title).toMatch(/brought in on their own/);
   });
 
   it('saves the setting when clicked', async () => {

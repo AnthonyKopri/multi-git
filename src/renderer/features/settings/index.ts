@@ -30,9 +30,11 @@ import { DEFAULT_STALE_RULES } from '../../../shared/maintenance-types';
 import type { Elements } from '../../dom/elements';
 import type { AppSettings } from '../../../shared/config-types';
 import type { StaleRules } from '../../../shared/maintenance-types';
-import { sectionHeading, settingGroup, settingItem, settingNote, switchInput } from '../../ui/setting-rows';
+import { sectionHeading, settingGroup, settingItem, switchInput } from '../../ui/setting-rows';
 import { createSectionNav } from '../../ui/section-nav';
 import type { SectionNav } from '../../ui/section-nav';
+import { THEME_CHOICES } from '../../../shared/commit-types';
+import type { ThemeChoice } from '../../../shared/commit-types';
 
 let ui: Elements;
 let settings: AppSettings | null = null;
@@ -170,6 +172,7 @@ interface SectionInfo {
 }
 
 const SECTIONS = {
+  appearance: { key: 'appearance', icon: 'palette', title: 'Look and layout', subtitle: 'The theme, and how much of the app is on screen.' },
   integrations: { key: 'integrations', icon: 'hub', title: 'Git and GitHub', subtitle: 'The tools Multi-Git runs.' },
   terminal: { key: 'terminal', icon: 'terminal', title: 'Terminal and agents', subtitle: 'The multi-git command, its guided terminal UI, and the MCP server for AI agents.' },
   sync: { key: 'sync', icon: 'sync', title: 'Syncing', subtitle: 'What happens after a fetch, and which key your other tools use.' },
@@ -192,6 +195,86 @@ function section(info: SectionInfo, children: (Node | null)[]): HTMLElement {
 }
 
 // ---------- the panel ----------
+
+const THEME_LABELS: Record<ThemeChoice, string> = {
+  dark: 'Dark',
+  light: 'Light',
+  system: 'Match system'
+};
+
+/**
+ * A row of mutually exclusive buttons, for a choice with three answers.
+ *
+ * Buttons rather than a dropdown, because all three fit and seeing the two you
+ * did not pick is most of what makes a theme switch feel safe to try.
+ */
+function segmented<T extends string>(
+  label: string,
+  options: readonly T[],
+  labels: Record<T, string>,
+  current: T,
+  onPick: (value: T) => void
+): HTMLElement {
+  return el('div', {
+    className: 'segmented',
+    attrs: { role: 'group', 'aria-label': label },
+    children: options.map((option) => {
+      const button = el('button', {
+        className: option === current ? 'segmented-option active' : 'segmented-option',
+        text: labels[option],
+        attrs: { type: 'button', 'aria-pressed': String(option === current) }
+      });
+      button.addEventListener('click', () => {
+        if (option !== current) {
+          onPick(option);
+        }
+      });
+      return button;
+    })
+  });
+}
+
+function buildAppearance(current: AppSettings): HTMLElement {
+  return section(SECTIONS.appearance, [
+    settingGroup([
+      settingItem({
+        label: 'Theme',
+        description: 'Dark is the default. Match system follows your computer, and changes with it.',
+        control: segmented('Theme', THEME_CHOICES, THEME_LABELS, current.theme ?? 'dark', (value) => void save({ theme: value }))
+      }),
+      toggle(
+        'Simple mode',
+        'Shows your changes, a message box, the Commit button and History, and puts the side panel and the advanced commit options away. Fetch, Pull and Push stay in the top bar, and everything else is still in the menu.',
+        current.simpleMode === true,
+        (value) => void save({ simpleMode: value, experienceChosen: true })
+      ),
+      settingItem({
+        label: 'Setup guide',
+        description: 'The three first-run screens: how the app looks, what this computer has, and your key for GitHub.',
+        control: guideButton()
+      })
+    ])
+  ]);
+}
+
+/**
+ * Reopens the first-run guide.
+ *
+ * Announced as an event rather than imported, because the guide draws on the
+ * accounts and setup features and Settings is imported by both.
+ */
+function guideButton(): HTMLElement {
+  const button = el('button', {
+    className: 'btn btn-secondary btn-sm',
+    text: 'Open the guide',
+    attrs: { type: 'button' }
+  });
+  button.addEventListener('click', () => {
+    closeSettings();
+    document.dispatchEvent(new CustomEvent('multi-git:open-setup-guide'));
+  });
+  return button;
+}
 
 function buildAgentAddress(): HTMLElement {
   const address = window.location.origin;
@@ -295,8 +378,8 @@ function buildSync(current: AppSettings): HTMLElement {
   return section(SECTIONS.sync, [
     settingGroup([
       toggle(
-        'Pull automatically after a fetch',
-        'Only ever a fast-forward. Local commits, a dirty tree, a detached HEAD or an operation in progress all hold it back.',
+        'Bring in new commits automatically',
+        'Checks the open repository every few minutes and takes what is new. Only ever a fast-forward: commits of your own, uncommitted changes, a detached HEAD or an operation in progress all hold it back, and you are told when they do.',
         current.autoPull === true,
         (value) => void save({ autoPull: value })
       ),
@@ -366,14 +449,15 @@ function buildWorktrees(current: AppSettings): HTMLElement {
         { type: 'text', placeholder: 'D:\\work' },
         (value) => void save({ worktreeParentDir: value })
       ),
-      // There is deliberately no control for keeping agent prompt text. Nothing
-      // records it: buildLaunchPlan builds the launch history entry from the
-      // arguments without the prompt, and recordLaunch takes no prompt parameter
-      // at all, so there is no path by which one could be written. A switch here
-      // could only have promised something the design refuses to do.
-      settingNote(
-        'lock',
-        'The text of an agent prompt is never recorded. Launch history keeps the command and the folder, and nothing else.'
+      // On by default since 5.4, because the Agents panel is a list of what
+      // each agent was sent to do and is not much use without it. Off restores
+      // the old behaviour exactly: the service drops the text before the record
+      // is built, so there is nothing to find in the file afterwards.
+      toggle(
+        'Keep the task I give each agent',
+        'The Agents panel shows it next to the agent, so you can see what each one was sent to do. It is stored in the settings file on this computer and removed when you clear the list. Turn this off and only the tool and the folder are kept.',
+        current.keepAgentPrompts !== false,
+        (value) => void save({ keepAgentPrompts: value })
       )
     ])
   ]);
@@ -451,6 +535,7 @@ function render(): void {
   }
 
   ui.settingsBody.replaceChildren(
+    buildAppearance(current),
     buildIntegrations(),
     buildTerminal(),
     buildSync(current),

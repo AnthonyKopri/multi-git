@@ -37,9 +37,10 @@ syncRouter.post(
   '/api/workflows/fetch',
   async (req, res) => {
     const { profileId, sshKeyPath } = profileArgs(req.body);
+    const quiet = (req.body as { quiet?: unknown } | undefined)?.quiet === true;
     res.json({
       success: true,
-      ...(await fetchWithAutoPull(req.repoPath as string, profileId, sshKeyPath))
+      ...(await fetchWithAutoPull(req.repoPath as string, profileId, sshKeyPath, { quiet }))
     });
   }
 );

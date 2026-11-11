@@ -234,7 +234,7 @@ async function reportAgentUnavailable(
       context,
       state.diagnostic ?? 'No SSH agent is reachable on this machine.',
       repairable
-        ? 'Repair and start, in the SSH key menu, will enable and start the service.'
+        ? 'Turn on the SSH agent, in the SSH key menu, will enable and start the service.'
         : '',
       'Multi-Git can still authenticate this operation on its own. Anything you run outside the app — a terminal, an external coding agent — will not be able to until the agent is working.'
     ]

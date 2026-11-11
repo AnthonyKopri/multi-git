@@ -170,10 +170,17 @@ async function install(tool: PrerequisiteState): Promise<void> {
 async function openSignIn(): Promise<void> {
   // `gh auth login` is interactive, so it needs a real terminal rather than
   // something this application drives.
+  // Only the desktop app can open a terminal. Saying one is opening when it is
+  // not sends people looking for a window that never appears.
+  if (!window.desktopApi?.openShell) {
+    showToast('Open a terminal, run "gh auth login", then press Check again.', 'info', 9000);
+    return;
+  }
+
   showToast('Run "gh auth login" in the terminal that opens, then press Check again.', 'info', 9000);
 
   try {
-    await window.desktopApi?.openShell?.(
+    await window.desktopApi.openShell(
       // No repository is needed to sign in, and the home directory is a
       // sensible place to land.
       '',
@@ -184,7 +191,8 @@ async function openSignIn(): Promise<void> {
   }
 }
 
-function row(tool: PrerequisiteState): HTMLLIElement {
+/** One tool's line: its state, a sentence about it, and a button when one helps. */
+export function prerequisiteRow(tool: PrerequisiteState): HTMLLIElement {
   const action = prerequisiteAction(tool);
 
   return el('li', {
@@ -227,7 +235,7 @@ function render(): void {
     ? 'Multi-Git runs Git for everything it does. Install it to continue.'
     : 'Everything required is here. These are optional.';
 
-  ui.setupList.replaceChildren(...report.tools.map(row));
+  ui.setupList.replaceChildren(...report.tools.map(prerequisiteRow));
 
   // Opening, creating or cloning would each fail at the first command, so they
   // are shut rather than left to disappoint.

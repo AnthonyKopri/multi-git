@@ -19,6 +19,7 @@ import { getState } from '../../state/store';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
 import type { SshAgentState } from '../../../shared/ssh-agent-types';
+import { agentIsStartable } from '../setup/wizard-text';
 
 let ui: Elements;
 let latest: SshAgentState | null = null;
@@ -137,7 +138,37 @@ export async function loadSelectedKey(profileId: string): Promise<void> {
   }
 }
 
+/**
+ * Turns the agent on, whichever way this platform needs.
+ *
+ * Returns whether it is usable afterwards, so the first-run screen can move on
+ * without reading the toast.
+ */
+export async function startAgent(): Promise<boolean> {
+  if (latest && latest.platform !== 'win32') {
+    try {
+      const result = await api.startSshAgent();
+      latest = result.agent;
+      render(result.agent);
+      logToTerminal(result.message, result.success ? 'success' : 'error');
+      showToast(result.message, result.success ? 'success' : 'error', 7000);
+      return result.agent.availability === 'ready';
+    } catch (error) {
+      showToast(errorMessage(error, 'The SSH agent could not be started.'), 'error', 7000);
+      return false;
+    }
+  }
+
+  await repair();
+  return latest?.availability === 'ready';
+}
+
 async function repair(): Promise<void> {
+  if (latest && latest.platform !== 'win32') {
+    await startAgent();
+    return;
+  }
+
   if (!window.desktopApi?.repairSshAgent) {
     showToast(
       'Starting the agent service needs the desktop app. In a browser, start it yourself with: Set-Service ssh-agent -StartupType Automatic; Start-Service ssh-agent',
@@ -286,10 +317,12 @@ function render(state: SshAgentState | null): void {
 
   // Only offered when it would actually help: a running agent has nothing to
   // repair, and on a platform this cannot mutate the button would be a lie.
-  const repairable =
-    state.platform === 'win32' &&
-    (state.availability === 'stopped' || state.availability === 'disabled');
-  setHidden(ui.btnRepairAgent, !repairable);
+  setHidden(ui.btnRepairAgent, !agentIsStartable(state));
+  ui.btnRepairAgent.textContent = state.platform === 'win32' ? 'Turn on the SSH agent' : 'Start the SSH agent';
+  ui.btnRepairAgent.title =
+    state.platform === 'win32'
+      ? 'Sets the OpenSSH Authentication Agent service to start automatically and starts it. Windows asks for permission once.'
+      : 'Starts an SSH agent for Multi-Git. No administrator rights needed.';
 
   // Offered exactly when it can work: a profile is selected, the agent is
   // reachable, and its key is not in there yet. That is the state a window

@@ -19,10 +19,25 @@ export interface FetchWorkflowResult extends SyncOutcome {
   autoPull: AutoPullOutcome;
 }
 
+export interface FetchWorkflowOptions {
+  /**
+   * Set for a fetch nobody pressed a button for.
+   *
+   * Such a fetch must never put a window on screen, so the credential helper is
+   * told not to ask: with nothing saved it fails, quietly, where a fetch the
+   * user started would be right to open a sign-in.
+   */
+  quiet?: boolean;
+}
+
+/** Git options that stop a credential helper from prompting. */
+export const QUIET_FETCH_OPTIONS: readonly string[] = ['-c', 'credential.interactive=never'];
+
 export async function fetchWithAutoPull(
   repoPath: string,
   profileId?: string,
-  sshKeyPath?: string
+  sshKeyPath?: string,
+  options: FetchWorkflowOptions = {}
 ): Promise<FetchWorkflowResult> {
   const operation = operations.begin({ kind: 'git.fetch', repoPath, message: 'Fetching origin' });
   operation.start();
@@ -33,7 +48,7 @@ export async function fetchWithAutoPull(
       // --prune drops remote-tracking refs whose branches were deleted upstream.
       const fetched = await runSyncOperationWithProfile(
         repoPath,
-        ['fetch', '--prune', 'origin'],
+        [...(options.quiet ? QUIET_FETCH_OPTIONS : []), 'fetch', '--prune', 'origin'],
         profileId,
         sshKeyPath,
         { signal: operation.signal }

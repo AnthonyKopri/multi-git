@@ -273,6 +273,12 @@ function registerIpcHandlers(): void {
     });
   });
 
+  ipcMain.handle(IPC_CHANNELS.stopAgent, (_event, launchId: unknown) =>
+    // The backend looks the id up in its own history and checks the process is
+    // still the one it started before ending anything.
+    backendCall('agent.stop', { launchId: String(launchId ?? '') })
+  );
+
   ipcMain.handle(
     IPC_CHANNELS.runBisect,
     async (_event, input: { repoPath?: unknown; commandId?: unknown }) => {

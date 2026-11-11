@@ -2,6 +2,7 @@
 // client. Secrets never appear in either: passphrases live in the separate
 // vault file, and the client only learns whether one is stored.
 import type { StaleRules } from './maintenance-types';
+import type { ThemeChoice } from './commit-types';
 
 export interface SshProfile {
   id: string;
@@ -119,6 +120,32 @@ export interface AppSettings {
    * Absent means the shipped defaults.
    */
   staleRules?: StaleRules;
+  /**
+   * Which theme to draw: dark, light, or whichever the operating system is
+   * using. Absent means dark, the look the app has always had.
+   */
+  theme?: ThemeChoice;
+  /**
+   * Simple mode: changes, a message, a commit button and History, with the
+   * side panel and the advanced commit options out of the way. Defaults to
+   * false. Nothing is disabled by it; every command stays in the menu.
+   */
+  simpleMode?: boolean;
+  /**
+   * Whether the first-run question "how do you want to work?" was answered.
+   * Asked once; after that the choice lives in Settings.
+   */
+  experienceChosen?: boolean;
+  /**
+   * Commit types added beside the built-in ones, in the order they were added.
+   * Lowercase letters only; see shared/commit-types.ts.
+   */
+  customCommitTypes?: string[];
+  /**
+   * Whether the task typed at launch is kept in the launch history. On unless
+   * turned off; off means the Agents panel shows what ran and where, only.
+   */
+  keepAgentPrompts?: boolean;
 }
 
 /** A user-defined set of repositories that are fetched and opened together. */
@@ -280,8 +307,19 @@ export interface WindowState {
   windows: WindowRecord[];
 }
 
-/** One entry in the agent launch history. Prompt text is never included. */
+/**
+ * One entry in the agent launch history.
+ *
+ * The task typed at launch is kept with it unless `settings.keepAgentPrompts`
+ * is off, because the Agents panel exists to answer "what did I send that one
+ * to do". The command preview still never contains it.
+ */
 export interface AgentLaunchRecord {
+  /**
+   * Names this launch, so the page can ask for it to be stopped without ever
+   * naming a process. Absent on records written before 5.4.
+   */
+  id?: string;
   /** ISO 8601. */
   at: string;
   agentId: string;
@@ -294,8 +332,21 @@ export interface AgentLaunchRecord {
   /** The model preset the launch used, when one was chosen. */
   modelId?: string;
   modelLabel?: string;
+  /** What the launcher returned. Often a stub that has already exited. */
   pid?: number;
   error?: string;
+  /** The task typed into the launch window, when one was and it is kept. */
+  prompt?: string;
+  /**
+   * The process this launch turned out to be, found in the process table just
+   * afterwards. The creation time is stored with the id because ids are
+   * reused: the two together are what Stop checks before it ends anything.
+   */
+  tracked?: { pid: number; startedAt: number };
+  /** ISO 8601. When the process was first seen to be gone, or was stopped. */
+  endedAt?: string;
+  /** True when it ended because Stop was pressed here. */
+  stopped?: boolean;
 }
 
 export interface AppConfig {

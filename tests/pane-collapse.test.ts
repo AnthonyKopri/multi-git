@@ -57,7 +57,7 @@ describe('collapsing a side panel', () => {
     // it does and look different from the expanded-state control.
     const reveal = $('sidebar-reveal');
     expect(reveal.getAttribute('aria-expanded')).toBe('false');
-    expect(reveal.title).toContain('Show branches panel');
+    expect(reveal.title).toContain('Show side panel');
     expect(reveal.title).toContain('Ctrl+B');
     expect(reveal.classList.contains('pane-toggle-reveal')).toBe(true);
     expect(reveal.textContent).toContain('left_panel_open');
@@ -72,11 +72,11 @@ describe('collapsing a side panel', () => {
     await mount();
     const toggle = $('btn-toggle-sidebar');
 
-    expect(toggle.title).toContain('Hide branches panel');
+    expect(toggle.title).toContain('Hide side panel');
 
     toggle.click();
-    expect(toggle.title).toContain('Show branches panel');
-    expect(toggle.getAttribute('aria-label')).toBe('Show branches panel');
+    expect(toggle.title).toContain('Show side panel');
+    expect(toggle.getAttribute('aria-label')).toBe('Show side panel');
   });
 
   it('keeps the two sides independent', async () => {

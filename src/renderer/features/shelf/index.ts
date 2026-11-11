@@ -4,7 +4,7 @@
 import * as api from '../../api/endpoints';
 import { errorMessage, isStale } from '../../api/client';
 import type { Elements } from '../../dom/elements';
-import { delegate, el, fragment, icon } from '../../dom/create';
+import { delegate, el, fragment, icon, setHidden } from '../../dom/create';
 import { confirmDialog, promptDialog } from '../../ui/dialogs';
 import { showToast } from '../../ui/toast';
 import { logToTerminal } from '../../ui/log';
@@ -153,6 +153,14 @@ export async function refreshStashList(): Promise<void> {
       ? await api.getStashes()
       : await api.searchStashes(stashQuery);
 
+    // Simple mode has no side panel, so the newest stash is offered back from
+    // the changes card. Counted only from the unfiltered list.
+    if (stashQuery === '') {
+      setHidden(ui.btnSimpleUnstash, stashes.length === 0);
+      ui.simpleUnstashLabel.textContent =
+        stashes.length > 1 ? `Restore stash (${stashes.length})` : 'Restore stash';
+    }
+
     renderList(
       ui.stashList,
       stashes.map((stash) =>
@@ -252,6 +260,23 @@ export async function stashChanges(): Promise<void> {
       }
     }
   });
+}
+
+/**
+ * Brings back the newest stash, for Simple mode's one-button version.
+ *
+ * Asked first, because it changes files in the folder and the button sits
+ * beside Stash, which does the opposite.
+ */
+export async function restoreLatestStash(): Promise<void> {
+  const { confirmed } = await confirmDialog(
+    'Bring back the changes you stashed last?\n\nThey are put back into your files and the stash is removed. If they clash with what you have changed since, nothing is lost: the stash is kept and you are told.',
+    { title: 'Restore stash', confirmLabel: 'Restore' }
+  );
+
+  if (confirmed) {
+    await applyStash('stash@{0}', true);
+  }
 }
 
 export async function applyStash(ref: string, pop: boolean, restoreIndex = false): Promise<void> {

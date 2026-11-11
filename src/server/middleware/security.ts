@@ -20,14 +20,16 @@ import type { NextFunction, Request, Response } from 'express';
  * CSS is not a script-execution vector. Removing them is a UI change rather
  * than a security one, and is tracked separately.
  *
- * The font hosts are here because the UI loads Inter, JetBrains Mono, and
- * Material Symbols from Google Fonts.
+ * Fonts are 'self' and nothing else: the typefaces and the icon font ship in
+ * public/fonts, so no page of this app asks another host for anything. They
+ * used to come from Google Fonts, which is why the first launch without a
+ * network drew every icon as its own name.
  */
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'none'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data:",
   "connect-src 'self'",
   "base-uri 'none'",

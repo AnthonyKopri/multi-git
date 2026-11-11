@@ -92,7 +92,9 @@ describe('collapsible sidebar sections', () => {
       .filter((element) => !sections.isSectionCollapsed(element))
       .map((element) => element.dataset['section']);
 
-    expect(open).toEqual(['branches', 'integrate']);
+    // Merge sits above Branches: the branch is already one click away in the
+    // top bar, so the section that needs the room comes first.
+    expect(open).toEqual(['integrate', 'branches']);
   });
 
   it('lets a remembered choice beat the declared default, in both directions', async () => {

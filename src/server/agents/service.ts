@@ -5,15 +5,25 @@
 // with respect to what runs, but never this — a loopback port is reachable by
 // anything on the machine, and "start this program" is not a capability worth
 // putting behind one.
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import {
   assertUsableDefinition,
   findAgentDefinition,
+  keepLaunches,
+  listLaunches,
   recordLaunch,
-  resolveExecutable
+  resolveExecutable,
+  updateLaunches
 } from './definitions';
+import { findLaunchedProcess, stillRunning, systemProcessProbe } from './tracking';
+import type { PickInput, ProcessProbe } from './tracking';
+import { readConfig } from '../config/store';
+import { MAX_AGENT_PROMPT_CHARS } from '../config/validate';
+import { appendLog } from '../logs';
+import type { AgentLaunchRecord } from '../../shared/config-types';
 import {
   AgentLaunchError,
   buildLaunchPlans,
@@ -30,7 +40,14 @@ import type { DetachedLauncher, ExecutableRunner } from '../process/runner';
 import { detachedLauncher, executableRunner } from '../process/runner';
 import { ensureAgentForRepo, findProfile, profileForRepo } from '../ssh/agent-session';
 import { isMultiGitSshCommand, readRepoSshCommand } from '../ssh/repo-routing';
-import type { AgentLaunchInput, AgentLaunchResult, AgentSshReadiness } from '../../shared/agent-types';
+import type {
+  AgentLaunchInput,
+  AgentLaunchResult,
+  AgentLaunchState,
+  AgentLaunchView,
+  AgentSshReadiness,
+  AgentStopResult
+} from '../../shared/agent-types';
 import { fallbackShellPlan, findGitBash, shellPlanFor } from '../tools/shells';
 import type { ShellKind } from '../tools/shells';
 import { buildLaunchEnv } from './launch';
@@ -39,6 +56,42 @@ import type { InstallOutcome } from '../../shared/prerequisite-types';
 export interface LaunchDependencies {
   runner?: ExecutableRunner;
   launcher?: DetachedLauncher;
+  /**
+   * How the launched process is looked for afterwards.
+   *
+   * Defaults to the real process table, but only for a real launch: a caller
+   * that injected a launcher has started nothing, so there is nothing to find
+   * unless it says where to look.
+   */
+  probe?: ProcessProbe;
+}
+
+/** The task as the history keeps it, or nothing when it is not kept. */
+function promptForHistory(prompt: string | undefined): string | undefined {
+  const text = prompt?.trim() ?? '';
+
+  if (text === '' || readConfig().settings?.keepAgentPrompts === false) {
+    return undefined;
+  }
+  return text.slice(0, MAX_AGENT_PROMPT_CHARS);
+}
+
+/**
+ * Finds the process a launch became and writes it onto the record.
+ *
+ * Runs after the launch has been answered, never as part of it: it reads the
+ * process table a few times over several seconds, and none of that is a reason
+ * to keep the launch window open.
+ */
+async function trackLaunch(id: string, input: PickInput, probe: ProcessProbe): Promise<void> {
+  try {
+    const tracked = await findLaunchedProcess(input, probe);
+    if (tracked) {
+      updateLaunches([id], { tracked });
+    }
+  } catch {
+    // Not finding it costs this launch its Stop button and nothing else.
+  }
 }
 
 /**
@@ -148,6 +201,13 @@ export async function launchAgent(
 
   const model = modelPreset ? { modelId: modelPreset.id, modelLabel: modelPreset.label } : {};
 
+  const launchId = randomUUID();
+  const prompt = promptForHistory(input.initialPrompt);
+  const kept = prompt === undefined ? {} : { prompt };
+  const probe = dependencies.probe ?? (dependencies.launcher ? null : systemProcessProbe);
+  // Read before anything starts: a process older than this is not this launch's.
+  const since = Date.now();
+
   // Narrowed to the candidate that runs, so the log and the history name the
   // terminal that was actually used rather than the one that was tried first.
   // It starts on the first because choosing is itself a step that can fail,
@@ -161,6 +221,7 @@ export async function launchAgent(
     const { pid } = await runLaunchPlan(chosen, dependencies.launcher ?? detachedLauncher);
 
     recordLaunch({
+      id: launchId,
       at: new Date().toISOString(),
       agentId: definition.id,
       agentLabel: definition.label,
@@ -168,11 +229,21 @@ export async function launchAgent(
       ok: true,
       commandPreview: chosen.preview,
       ...model,
+      ...kept,
       ...(pid !== undefined ? { pid } : {})
     });
 
+    if (probe) {
+      void trackLaunch(
+        launchId,
+        { executable: definition.executable, since, ...(pid !== undefined ? { launcherPid: pid } : {}) },
+        probe
+      );
+    }
+
     return {
       launched: true,
+      launchId,
       commandPreview: chosen.preview,
       ...(pid !== undefined ? { processId: pid } : {}),
       ...(readiness.warning ? { sshWarning: readiness.warning } : {})
@@ -181,6 +252,7 @@ export async function launchAgent(
     const message = error instanceof Error ? error.message : String(error);
 
     recordLaunch({
+      id: launchId,
       at: new Date().toISOString(),
       agentId: definition.id,
       agentLabel: definition.label,
@@ -188,11 +260,161 @@ export async function launchAgent(
       ok: false,
       commandPreview: chosen.preview,
       ...model,
+      ...kept,
       error: message
     });
 
     return { launched: false, commandPreview: chosen.preview, error: message };
   }
+}
+
+// ---------- the agents panel: what is running, and stopping it ----------
+
+/** How long after a launch its process is still being looked for. */
+const TRACKING_WINDOW_MS = 12_000;
+
+function stateOf(launch: AgentLaunchRecord, running: ReadonlySet<number>): AgentLaunchState {
+  if (!launch.ok) {
+    return 'failed';
+  }
+  if (launch.stopped === true) {
+    return 'stopped';
+  }
+  if (launch.endedAt !== undefined) {
+    return 'finished';
+  }
+  if (launch.tracked === undefined) {
+    return 'untracked';
+  }
+  return running.has(launch.tracked.pid) ? 'running' : 'finished';
+}
+
+/**
+ * The launch history with each entry's state read from the machine.
+ *
+ * Only launches not yet known to have ended are looked up, and one that has
+ * gone is written down as ended, so it is never looked up again. A history of
+ * fifty finished launches costs no process listing at all.
+ *
+ * If the process table cannot be read, nothing is marked as finished: an
+ * unanswered question is not evidence that an agent stopped.
+ */
+export async function readLaunchStates(
+  probe: ProcessProbe = systemProcessProbe
+): Promise<AgentLaunchView[]> {
+  const launches = listLaunches();
+  const open = launches.filter(
+    (launch) => launch.ok && launch.tracked !== undefined && launch.endedAt === undefined
+  );
+
+  if (open.length === 0) {
+    return launches.map((launch) => ({ ...launch, state: stateOf(launch, new Set()) }));
+  }
+
+  let running: Set<number>;
+  try {
+    running = await stillRunning(
+      open.map((launch) => launch.tracked as { pid: number; startedAt: number }),
+      probe
+    );
+  } catch {
+    return launches.map((launch) => ({
+      ...launch,
+      state: open.includes(launch) ? 'running' : stateOf(launch, new Set())
+    }));
+  }
+
+  const endedAt = new Date().toISOString();
+  const ended = open
+    .filter((launch) => !running.has((launch.tracked as { pid: number }).pid))
+    .map((launch) => launch.id)
+    .filter((id): id is string => id !== undefined);
+
+  updateLaunches(ended, { endedAt });
+
+  return launches.map((launch) => ({
+    ...launch,
+    ...(launch.id !== undefined && ended.includes(launch.id) ? { endedAt } : {}),
+    state: stateOf(launch, running)
+  }));
+}
+
+/**
+ * Ends the process a launch started, and everything that process started.
+ *
+ * The launch is named by its history id. The page never names a process: the
+ * id it would have to send is in a file it can read but did not write, and a
+ * route that killed whatever number it was handed would be exactly that.
+ *
+ * Nothing is ended unless the process table still shows the same process, by
+ * id and by creation time, that the launch was matched to.
+ */
+export async function stopLaunch(
+  launchId: string,
+  probe: ProcessProbe = systemProcessProbe
+): Promise<AgentStopResult> {
+  const launch = listLaunches().find((candidate) => candidate.id === launchId);
+
+  if (!launch) {
+    return { stopped: false, error: 'That launch is no longer in the list.' };
+  }
+  if (launch.tracked === undefined) {
+    return {
+      stopped: false,
+      error: 'Multi-Git could not tell which process this launch started. Close its window to stop it.'
+    };
+  }
+  if (launch.endedAt !== undefined) {
+    return { stopped: false, error: 'That agent has already finished.' };
+  }
+
+  const { tracked } = launch;
+
+  if (!(await stillRunning([tracked], probe)).has(tracked.pid)) {
+    updateLaunches([launchId], { endedAt: new Date().toISOString() });
+    return { stopped: false, error: 'That agent has already finished.' };
+  }
+
+  await probe.kill(tracked.pid);
+
+  if ((await stillRunning([tracked], probe)).has(tracked.pid)) {
+    return {
+      stopped: false,
+      error: 'The process did not end. It may have to be closed from its own window.'
+    };
+  }
+
+  updateLaunches([launchId], { endedAt: new Date().toISOString(), stopped: true });
+  appendLog({
+    text: `Stopped ${launch.agentLabel} (process ${tracked.pid}) in ${launch.worktreePath}`,
+    type: 'info',
+    repoPath: launch.worktreePath
+  });
+
+  return { stopped: true };
+}
+
+/**
+ * Empties the history of everything that is over.
+ *
+ * A running agent keeps its entry, and so does one launched moments ago whose
+ * process is still being looked for: the entry is the only handle on stopping
+ * it from here, and clearing a list should not quietly give that up.
+ */
+export async function clearFinishedLaunches(probe: ProcessProbe = systemProcessProbe): Promise<void> {
+  const states = await readLaunchStates(probe);
+  const now = Date.now();
+  const kept = new Set(
+    states
+      .filter(
+        (launch) =>
+          launch.state === 'running' ||
+          (launch.state === 'untracked' && now - Date.parse(launch.at) < TRACKING_WINDOW_MS)
+      )
+      .map((launch) => launch.id)
+  );
+
+  keepLaunches((launch) => launch.id !== undefined && kept.has(launch.id));
 }
 
 /**
