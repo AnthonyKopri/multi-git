@@ -109,7 +109,7 @@ describe('collapsing a side panel', () => {
     window.localStorage.setItem('pane_size_sidebar', '500');
     const panes = await mount();
 
-    window.innerWidth = 900;
+    window.innerWidth = 1000;
     window.dispatchEvent(new Event('resize'));
     const withBoth = parseFloat(document.documentElement.style.getPropertyValue('--sidebar-width'));
     expect(withBoth).toBeLessThan(500);

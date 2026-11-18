@@ -8848,3 +8848,79 @@ details[open]::details-content {
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
+
+/* ==========================================================================
+   A FILE DIFF HEADER THAT FITS ITS WIDTH
+
+   The viewer's header held a back button, the file name, its status, the
+   layout and whitespace controls, and Stage and Discard on one line that
+   never wrapped, so a narrow viewer drew them on top of each other. Now the
+   viewer is a size container and the header gives way in steps: the file
+   name truncates first, then the buttons drop their words for their icons
+   (each keeps its tooltip and its accessible name), and below that the
+   controls move to a second line under the name.
+   ========================================================================== */
+
+.diff-viewer-card {
+  container-type: inline-size;
+  container-name: diffviewer;
+}
+#diff-view .diff-viewer-card .card-header.diff-view-header {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  column-gap: 8px;
+}
+.diff-view-header .diff-title-group {
+  flex: 1 1 160px;
+}
+.diff-view-header #diff-file-type {
+  flex-shrink: 0;
+}
+.diff-view-header .diff-view-options,
+.diff-view-header .card-header-actions {
+  flex: 0 0 auto;
+  margin-right: 0;
+}
+.diff-view-header .diff-view-options {
+  margin-left: auto;
+}
+/* Its arrow is drawn 12 px in from the right edge, so the text needs room
+   for it, or the word runs under the arrow. */
+#diff-view #diff-whitespace {
+  padding-right: 32px;
+}
+
+/* Words go before anything overlaps. Hidden visually, still read out. */
+@container diffviewer (max-width: 720px) {
+  .diff-view-header .btn > span:not(.material-symbols-outlined),
+  .diff-selection-bar .btn > span:not(.material-symbols-outlined) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .diff-view-header .btn,
+  .diff-selection-bar .btn {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+/* Too narrow for one line: the name on its own, the controls under it. */
+@container diffviewer (max-width: 460px) {
+  .diff-view-header .diff-title-group {
+    flex-basis: 100%;
+  }
+  .diff-view-header .diff-view-options {
+    margin-left: 0;
+  }
+  .diff-view-header .card-header-actions {
+    margin-left: auto;
+  }
+  .diff-selection-bar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+}
