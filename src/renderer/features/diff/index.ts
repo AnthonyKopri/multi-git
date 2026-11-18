@@ -61,6 +61,8 @@ export function renderDiffActions(): void {
 
   setHidden(ui.diffActions, false);
   ui.btnDiffToggleStageLabel.textContent = active.staged ? 'Unstage' : 'Stage';
+  // A narrow viewer shows only the icon, so the tooltip says it instead.
+  ui.btnDiffToggleStage.title = active.staged ? 'Unstage this file' : 'Stage this file';
 
   const glyph = ui.btnDiffToggleStage.querySelector('.material-symbols-outlined');
   if (glyph) {

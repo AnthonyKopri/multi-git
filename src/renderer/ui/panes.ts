@@ -48,7 +48,10 @@ export const PANE_SPECS: Record<PaneName, PaneSpec> = {
     min: 190,
     max: 640,
     fallback: 280,
-    reserve: 300,
+    // The centre column holds File Diff's file list beside its viewer, so it
+    // needs room for both. At 300 a wide History left the viewer's header
+    // so narrow its buttons piled on top of the file name.
+    reserve: 420,
     siblings: ['history']
   },
   history: {
@@ -58,7 +61,7 @@ export const PANE_SPECS: Record<PaneName, PaneSpec> = {
     min: 220,
     max: 720,
     fallback: 320,
-    reserve: 300,
+    reserve: 420,
     siblings: ['sidebar']
   },
   // The Explorer and Diff panes split the centre column, which is already
