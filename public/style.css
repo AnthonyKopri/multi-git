@@ -8031,3 +8031,406 @@ body.simple-mode .terminal-panel {
     transition: none;
   }
 }
+
+
+/* ==========================================================================
+   THE 6.0 FINISH
+
+   Three passes over the 5.4 look, kept together so each can be read whole.
+
+     1. Tone. Every card owns one tint and wears it in three quiet places: a
+        wash at the top of the card, a dot before its title, and the veil a
+        row takes under the pointer. The canvas carries a faint wash of its
+        own, so the window is never one flat shade.
+     2. Motion. Shorter and crisper: 90 ms for colour, a slightly springy
+        release for anything that moves. Controls dip when pressed, small
+        ones lift a pixel under the pointer, and things that appear (a
+        section, a view, a menu, a dialog) arrive rather than blink in. Only
+        transform and opacity are animated, never layout or shadows.
+     3. Alignment. One row height for the top of the side and centre columns,
+        so the hide button, the Agents row and the view tabs share a top and a
+        bottom line, and the cards under them start together.
+   ========================================================================== */
+
+:root {
+  --row-h: 38px;
+
+  --dur-fast: 90ms;
+  --dur: 150ms;
+  --dur-in: 170ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* A touch of overshoot on release: what makes a press feel like a press. */
+  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+
+  /* The primary fill, as a short ramp within the purple rather than a flat
+     block: the same hue, a few degrees apart at each end. */
+  --primary-fill: linear-gradient(135deg, #c3b4ff 0%, #a99bff 55%, #b79cff 100%);
+  --primary-fill-hover: linear-gradient(135deg, #d0c4ff 0%, #b8acff 55%, #c6afff 100%);
+
+  /* How strongly a card wears its tint at the top, and how far down. */
+  --wash-strength: 11%;
+  --wash-depth: 72px;
+
+  --canvas-wash:
+    radial-gradient(1100px 520px at 0% 0%, rgba(124, 109, 230, 0.1), transparent 70%),
+    radial-gradient(900px 480px at 100% 100%, rgba(78, 170, 196, 0.06), transparent 70%);
+}
+:root[data-theme='light'] {
+  --primary-fill: linear-gradient(135deg, #6866ec 0%, #5755dc 55%, #6a4fdc 100%);
+  --primary-fill-hover: linear-gradient(135deg, #5a58e0 0%, #4947c8 55%, #5c42cc 100%);
+  --wash-strength: 9%;
+  --canvas-wash:
+    radial-gradient(1100px 520px at 0% 0%, rgba(91, 90, 224, 0.09), transparent 70%),
+    radial-gradient(900px 480px at 100% 100%, rgba(12, 128, 121, 0.06), transparent 70%);
+}
+
+/* --- 1. Tone ------------------------------------------------------------- */
+
+.app-layout {
+  background-color: var(--bg-app);
+  background-image: var(--canvas-wash);
+  background-attachment: fixed;
+}
+
+/* The wash: a card's own colour at its top edge, gone by the first row. */
+.sidebar-section:not(.collapsed),
+.file-list-card[data-tint],
+.commit-panel[data-tint],
+.history-card[data-tint] {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tint-fg) var(--wash-strength), transparent) 0,
+    transparent var(--wash-depth)
+  );
+}
+
+/* The dot before a card's title. */
+.file-list-card[data-tint] > .card-header h3,
+.history-card[data-tint] .history-list-view > .card-header h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.file-list-card[data-tint] > .card-header h3::before,
+.history-card[data-tint] .history-list-view > .card-header h3::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--tint-fg);
+  box-shadow: 0 0 0 3px var(--tint-bg);
+}
+
+/* Rows under the pointer take their card's colour, faintly. */
+.file-list-card[data-tint] .file-item:hover,
+.sidebar-section[data-tint] .branch-item:hover,
+.sidebar-section[data-tint] .stash-item:hover {
+  background-color: color-mix(in srgb, var(--tint-fg) 9%, var(--bg-card));
+}
+.history-card[data-tint] .commit-graph-row:hover {
+  background-color: color-mix(in srgb, var(--tint-fg) 7%, var(--bg-card));
+}
+
+/* An open section's bullet is filled with its colour, a closed one is only
+   tinted: the open sections are the ones that read first. */
+.sidebar-section:not(.collapsed) > .section-header .section-bullet {
+  background: var(--tint-fg);
+  color: var(--bg-card);
+}
+.sidebar-section.collapsed .section-toggle:hover .section-bullet,
+.sidebar-launcher:hover .section-bullet {
+  background: color-mix(in srgb, var(--tint-fg) 30%, var(--tint-bg));
+}
+
+/* The primary actions carry the ramp. */
+.btn-primary,
+.tab-btn.active,
+.segmented-option.active {
+  background-image: var(--primary-fill);
+}
+.btn-primary:hover:not(:disabled) {
+  background-image: var(--primary-fill-hover);
+}
+.btn-primary:disabled {
+  background-image: none;
+}
+
+/* The toolbar's sync buttons each keep one colour, like the three segments
+   beside them. */
+#btn-fetch .material-symbols-outlined { color: var(--tint-blue-fg); }
+#btn-pull .material-symbols-outlined { color: var(--tint-green-fg); }
+#btn-push:not(.btn-publish) .material-symbols-outlined { color: var(--tint-violet-fg); }
+#btn-create-pr .material-symbols-outlined { color: var(--tint-pink-fg); }
+.global-actions .btn-icon:disabled .material-symbols-outlined {
+  color: inherit;
+}
+
+/* History ref labels wear their lane's colour rather than all being purple.
+   The row sets --lane; anything without one keeps the old look. */
+.ref-chip[style*='--lane'] {
+  background-color: color-mix(in srgb, var(--lane) 16%, transparent);
+  color: color-mix(in srgb, var(--lane) 80%, var(--text-strong));
+  border-color: color-mix(in srgb, var(--lane) 40%, transparent);
+}
+:root[data-theme='light'] .ref-chip[style*='--lane'] {
+  color: color-mix(in srgb, var(--lane) 78%, var(--text-strong));
+}
+
+/* The terminal line's launchers, told apart by colour too. */
+#btn-open-git-bash { color: var(--tint-orange-fg); }
+#btn-open-tui { color: var(--tint-violet-fg); }
+
+/* --- 2. Motion ----------------------------------------------------------- */
+
+/* One transition list, replacing every `all`: colour fast, movement springy. */
+.btn,
+.btn-icon,
+.btn-chip,
+.tab-btn,
+.header-segment,
+.sidebar-launcher,
+.section-toggle,
+.template-chip,
+.template-chip-add,
+.chip-scroll-btn,
+.pane-toggle,
+.segmented-option,
+.wizard-choice,
+.branch-item,
+.file-item,
+.changed-file-item,
+.recent-item-btn,
+.commit-graph-row {
+  transition:
+    background-color var(--dur-fast) ease,
+    background-image var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    filter var(--dur-fast) ease,
+    opacity var(--dur-fast) ease,
+    transform var(--dur) var(--ease-spring);
+}
+input[type='text'],
+input[type='password'],
+input[type='email'],
+input[type='number'],
+select,
+textarea {
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+/* Small controls lift a pixel under the pointer. Cards and rows do not:
+   a whole column rising would make the window feel adrift. */
+.tab-btn:hover:not(.active),
+.template-chip:hover,
+.template-chip-add:hover,
+.chip-scroll-btn:hover,
+.global-actions .btn-icon:hover:not(:disabled),
+.btn-chip:hover:not(:disabled),
+.segmented-option:hover:not(.active) {
+  transform: translateY(-1px);
+}
+.chip-scroll-btn:hover {
+  transform: translateY(calc(-50% - 1px));
+}
+
+/* Everything pressable dips when pressed, and springs back on release. The
+   press itself is quicker than the release. */
+.btn:active:not(:disabled),
+.tab-btn:active,
+.template-chip:active,
+.template-chip-add:active,
+.pane-toggle:active,
+.segmented-option:active,
+.btn-chip:active:not(:disabled) {
+  transform: scale(0.95);
+  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 60ms;
+}
+.chip-scroll-btn:active {
+  transform: translateY(-50%) scale(0.9);
+  transition-duration: 60ms;
+}
+/* Tiles are bigger, so they dip less. */
+.sidebar-launcher:active,
+.section-toggle:active,
+.header-segment:active,
+.wizard-choice:active,
+.recent-item-btn:active {
+  transform: scale(0.985);
+  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 60ms;
+}
+/* Rows settle by a pixel rather than shrinking, which would shift their
+   text sideways. */
+.file-item:active,
+.branch-item:active,
+.changed-file-item:active,
+.commit-graph-row:active {
+  transform: translateY(1px);
+  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 50ms;
+}
+
+.section-chevron {
+  transition: transform var(--dur) var(--ease-spring);
+}
+.settings-switch,
+.settings-group .maintenance-rules input[type='checkbox'] {
+  transition: background-color var(--dur-fast) ease;
+}
+.settings-switch::before,
+.settings-group .maintenance-rules input[type='checkbox']::before {
+  transition: transform var(--dur) var(--ease-spring);
+}
+
+/* Arrivals. Each plays when its element goes from hidden to shown, which is
+   exactly when the eye needs to know something changed. */
+@keyframes mg-rise {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mg-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mg-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.sidebar-section:not(.collapsed) > .section-body {
+  animation: mg-rise var(--dur-in) var(--ease-out);
+}
+.view-pane:not(.hidden) {
+  animation: mg-fade var(--dur) ease-out;
+}
+.header-dropdown {
+  transform-origin: top center;
+  animation: mg-rise 120ms var(--ease-out);
+}
+.modal-overlay:not(.hidden) {
+  animation: mg-fade 120ms ease-out;
+}
+.modal-overlay:not(.hidden) > .modal-card,
+.overlay-card {
+  animation: mg-pop var(--dur-in) var(--ease-out);
+}
+.toast {
+  animation-duration: 180ms;
+  animation-timing-function: var(--ease-out);
+}
+.count-badge:not(.hidden) {
+  animation: mg-fade var(--dur) ease-out;
+}
+
+/* --- 3. Alignment -------------------------------------------------------- */
+
+/* The side column's own row and the centre's tab row are the same height,
+   so the cards under both start on one line. */
+.sidebar-top {
+  height: var(--row-h);
+  min-height: var(--row-h);
+}
+.sidebar-launcher {
+  height: var(--row-h);
+  padding: 4px 12px 4px 4px;
+}
+.sidebar-launcher .section-bullet {
+  width: 30px;
+  height: 30px;
+}
+.sidebar-top .pane-toggle {
+  width: var(--row-h);
+  height: var(--row-h);
+}
+.view-tabs {
+  min-height: calc(var(--row-h) + var(--shell-gap));
+  flex: 0 0 auto;
+}
+.tab-btn {
+  height: var(--row-h);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+}
+.view-tabs .pane-toggle-reveal {
+  width: var(--row-h);
+  height: var(--row-h);
+  border-radius: 50%;
+  background: var(--bg-card);
+}
+.view-tabs .pane-toggle-reveal:hover {
+  background: var(--bg-raised);
+}
+/* History's own header sits on the same centre line as the tabs. */
+.history-card {
+  padding-top: 0;
+}
+.history-list-view > .card-header {
+  min-height: var(--row-h);
+  margin-bottom: 4px;
+}
+
+/* --- Reduced motion ------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn-icon,
+  .btn-chip,
+  .tab-btn,
+  .header-segment,
+  .sidebar-launcher,
+  .section-toggle,
+  .template-chip,
+  .template-chip-add,
+  .chip-scroll-btn,
+  .pane-toggle,
+  .segmented-option,
+  .wizard-choice,
+  .branch-item,
+  .file-item,
+  .changed-file-item,
+  .recent-item-btn,
+  .commit-graph-row,
+  .section-chevron,
+  .settings-switch::before {
+    transition-property: background-color, color, border-color, opacity;
+  }
+  .sidebar-section:not(.collapsed) > .section-body,
+  .view-pane:not(.hidden),
+  .header-dropdown,
+  .modal-overlay:not(.hidden),
+  .modal-overlay:not(.hidden) > .modal-card,
+  .overlay-card,
+  .count-badge:not(.hidden) {
+    animation: none;
+  }
+  .tab-btn:hover,
+  .template-chip:hover,
+  .template-chip-add:hover,
+  .global-actions .btn-icon:hover,
+  .btn-chip:hover,
+  .segmented-option:hover,
+  .btn:active,
+  .tab-btn:active,
+  .template-chip:active,
+  .template-chip-add:active,
+  .pane-toggle:active,
+  .segmented-option:active,
+  .btn-chip:active,
+  .sidebar-launcher:active,
+  .section-toggle:active,
+  .header-segment:active,
+  .wizard-choice:active,
+  .recent-item-btn:active,
+  .file-item:active,
+  .branch-item:active,
+  .changed-file-item:active,
+  .commit-graph-row:active {
+    transform: none;
+  }
+  .chip-scroll-btn:hover,
+  .chip-scroll-btn:active {
+    transform: translateY(-50%);
+  }
+}

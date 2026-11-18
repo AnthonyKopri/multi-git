@@ -96,6 +96,7 @@ export function buildCommitRow(row: GraphRow): HTMLLIElement {
     })
   );
   for (const chip of refChips) {
+    chip.style.setProperty('--lane', `var(--graph-lane-${row.color})`);
     chip.style.borderColor = `var(--graph-lane-${row.color})`;
   }
 

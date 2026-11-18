@@ -586,7 +586,7 @@
             <!-- Staging Files List -->
             <div class="files-lists-container">
               <!-- Unstaged Files -->
-              <div class="file-list-card">
+              <div class="file-list-card" data-tint="orange">
                 <div class="card-header">
                   <h3>Unstaged Changes</h3>
                   <div class="card-header-actions">
@@ -611,7 +611,7 @@
               </div>
 
               <!-- Staged Files -->
-              <div class="file-list-card">
+              <div class="file-list-card" data-tint="green">
                 <div class="card-header">
                   <h3>Staged Changes</h3>
                   <div class="card-header-actions">
@@ -630,7 +630,7 @@
           <div class="pane-resizer pane-resizer-row" data-pane="commit" role="separator" aria-orientation="horizontal" aria-label="Resize the commit box" title="Drag to resize · double-click to reset" tabindex="0"></div>
 
           <!-- Commit Panel -->
-          <div class="commit-panel">
+          <div class="commit-panel" data-tint="violet">
             <!-- Conventional-commit quick types.
                  One row that scrolls sideways: a wheel over it moves it, the
                  edges fade where there is more, and the arrows are there for
@@ -804,7 +804,7 @@
       <section id="history-panel" class="sync-panel">
 
         <!-- Commit History List -->
-        <div class="history-card" style="position: relative; overflow: hidden;">
+        <div class="history-card" data-tint="blue" style="position: relative; overflow: hidden;">
           
           <!-- History List Pane -->
           <div id="history-list-view" class="history-list-view" style="display: flex; flex-direction: column; height: 100%;">

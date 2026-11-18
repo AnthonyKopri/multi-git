@@ -86,7 +86,14 @@ name says, without waiting for you to press Fetch.
   panel of its own, and a side panel where each section is a card with its own
   colour that folds away. **Integrate** now sits above **Branches**, since the
   current branch is already one click away in the toolbar. The history graph
-  keeps its lanes and the arms between them.
+  keeps its lanes and the arms between them, and its branch labels take
+  their lane's colour. Each card wears its own colour faintly at the top, and
+  the top rows of the side panel, the tabs and History share one line.
+- **Snappier, with a little give.** Colour changes take 90 ms instead of 150
+  to 200, buttons, pills and tabs dip slightly when pressed and spring back,
+  and sections, views, menus and dialogs ease in instead of appearing in one
+  frame. Only movement and fading are animated, never layout, and all of it
+  stops when your system asks for reduced motion.
 - **Commit type pills carry a symbol and a colour each.** They sit below the
   Safety Net line in one row that scrolls sideways: with the mouse wheel while
   the pointer is over it, or with the arrows that appear at a faded edge.
