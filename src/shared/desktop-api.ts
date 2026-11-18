@@ -17,7 +17,7 @@ import type { BisectRunOutcome } from './bisect-types';
 import type { ExternalToolKind } from './config-types';
 import type { UpdateState } from './update-types';
 import type { InstallOutcome, PrerequisiteId } from './prerequisite-types';
-import type { TerminalInstallationStatus } from './terminal-types';
+import type { FollowResult, TerminalInstallationStatus } from './terminal-types';
 
 /** Removes a push-channel listener. Returned by every `on*` method below. */
 export type Unsubscribe = () => void;
@@ -167,6 +167,11 @@ export interface DesktopApi {
    * open repositories produce one popup rather than three.
    */
   onUpdatePopup: (listener: () => void) => Unsubscribe;
+  /**
+   * Fires in every window when the terminal edition was brought up to this
+   * app's version after an update, or when that failed.
+   */
+  onTerminalFollowed: (listener: (result: FollowResult) => void) => Unsubscribe;
 }
 
 /** Mirrors src/main/shell-integration.ts, which the renderer cannot import. */
@@ -212,10 +217,11 @@ export const IPC_CHANNELS = {
   installUpdate: 'update:install',
   skipUpdateVersion: 'update:skip-version',
   openUpdateReleasePage: 'update:open-release-page',
-  // The two below travel the other way, main to renderer. They are the only
-  // push channels in the app; everything else is invoke/handle.
+  // The three below travel the other way, main to renderer. They are the
+  // only push channels in the app; everything else is invoke/handle.
   updateState: 'update:state',
-  updatePopup: 'update:show-popup'
+  updatePopup: 'update:show-popup',
+  terminalFollowed: 'terminal:followed'
 } as const;
 
 declare global {

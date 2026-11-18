@@ -12,6 +12,7 @@ import * as shellIntegration from './shell-integration';
 import * as terminalInstall from '../server/terminal/install';
 import { openCommandInTerminal } from '../server/agents/service';
 import { createUpdateWiring, startUpdateChecks } from './update/wiring';
+import { startTerminalFollow } from './update/terminal-follow';
 import type { UpdateService } from './update/service';
 import { WindowRegistry, clampBoundsToDisplays, restorableWindows } from './window-registry';
 import type { ManagedWindow } from './window-registry';
@@ -47,6 +48,7 @@ let serverUrl = 'http://localhost:3000';
 let windows: WindowRegistry | null = null;
 let updates: UpdateService | null = null;
 let stopUpdateChecks: (() => void) | null = null;
+let stopTerminalFollow: (() => void) | null = null;
 
 /** True once quit has begun, so a closing window stops rewriting the record. */
 let quitting = false;
@@ -436,6 +438,8 @@ async function startApp(): Promise<void> {
     // After the windows exist, so the first broadcast has somewhere to land.
     updates = createUpdateWiring(updateTargetWindows, backend);
     stopUpdateChecks = startUpdateChecks(updates);
+    // An enabled terminal edition catches up with this build, in the background.
+    stopTerminalFollow = startTerminalFollow(updateTargetWindows, backend);
   } catch (error) {
     console.error('Failed to boot desktop app:', error);
     createStartupFailureWindow(error);
@@ -490,6 +494,8 @@ app.on('before-quit', (event) => {
 
   stopUpdateChecks?.();
   stopUpdateChecks = null;
+  stopTerminalFollow?.();
+  stopTerminalFollow = null;
 });
 
 app.on('quit', () => {

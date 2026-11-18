@@ -41,3 +41,11 @@ export interface TerminalInstallationStatus {
   /** Where the agent skills are, for pointing an agent at them. Null until installed. */
   skillsPath: string | null;
 }
+
+/**
+ * What the desktop app reports after bringing an enabled terminal edition up
+ * to its own version in the background (src/main/update/terminal-follow.ts).
+ */
+export type FollowResult =
+  | { outcome: 'updated'; from: string; to: string }
+  | { outcome: 'failed'; from: string; to: string; message: string };

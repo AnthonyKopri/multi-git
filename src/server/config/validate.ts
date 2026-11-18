@@ -370,6 +370,10 @@ export function validateSettings(raw: unknown): Partial<AppSettings> | undefined
     settings.keepAgentPrompts = source['keepAgentPrompts'];
   }
 
+  if (typeof source['terminalFollowsApp'] === 'boolean') {
+    settings.terminalFollowsApp = source['terminalFollowsApp'];
+  }
+
   if (typeof source['experienceChosen'] === 'boolean') {
     settings.experienceChosen = source['experienceChosen'];
   }

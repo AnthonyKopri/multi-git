@@ -375,10 +375,18 @@ function buildIntegrations(): HTMLElement {
   ]);
 }
 
-function buildTerminal(): HTMLElement {
+function buildTerminal(current: AppSettings): HTMLElement {
   return section(SECTIONS.terminal, [
     ...terminalEdition.buildTerminalSettings(render),
-    settingGroup([buildAgentAddress()])
+    settingGroup([
+      toggle(
+        'Update the multi-git command with the app',
+        'After Multi-Git updates, the multi-git command you enabled is brought up to the same version in the background, and a terminal already running keeps its version until you close it. Turn this off to update it yourself, here or with "multi-git update".',
+        current.terminalFollowsApp !== false,
+        (value) => void save({ terminalFollowsApp: value })
+      ),
+      buildAgentAddress()
+    ])
   ]);
 }
 
@@ -545,7 +553,7 @@ function render(): void {
   ui.settingsBody.replaceChildren(
     buildAppearance(current),
     buildIntegrations(),
-    buildTerminal(),
+    buildTerminal(current),
     buildSync(current),
     buildStale(current),
     buildSafetyNet(current),

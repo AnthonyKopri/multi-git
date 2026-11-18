@@ -28,6 +28,20 @@ export function isAvailable(): boolean {
 export function initTerminalEdition(elements: Elements): void {
   ui = elements;
 
+  // After an app update the main process brings the multi-git command along.
+  window.desktopApi?.onTerminalFollowed?.((result) => {
+    if (result.outcome === 'updated') {
+      showToast(`The multi-git command was updated to ${result.to} along with the app.`, 'success', 7000);
+    } else {
+      showToast(
+        `The multi-git command is still ${result.from}: ${result.message} Settings → Terminal and agents can update it.`,
+        'warn',
+        10000
+      );
+    }
+    void refreshTerminalStatus();
+  });
+
   ui.btnTerminalSetupEnable.addEventListener('click', () => {
     void withButtonBusy(ui.btnTerminalSetupEnable, async () => {
       await enable();
@@ -198,7 +212,7 @@ export function buildTerminalSettings(rerender: () => void): HTMLElement[] {
       label: 'Versions',
       description:
         `Included with this app: ${current.bundledVersion ?? 'none'}. Installed: ${current.installedVersion ?? 'none'}. ` +
-        'The installed copy updates separately, with "multi-git update", and is never replaced by an older one.',
+        'The installed copy is never replaced by an older one. "multi-git update" updates it from a terminal too.',
       control: null
     }),
     settingItem({

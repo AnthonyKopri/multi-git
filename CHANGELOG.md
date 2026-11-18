@@ -66,6 +66,14 @@ name says, without waiting for you to press Fetch.
   section and card colours, file status letters, commit types, branch lanes
   and the purple of buttons and selection in grey. Errors, warnings and added
   or removed lines keep their colour, because there the colour is the message.
+- **The multi-git command updates with the app.** Once you have enabled the
+  terminal edition, each Multi-Git update brings it up to the same version a
+  few seconds after the app starts, in the background, with a note when it is
+  done. A terminal already running keeps its version until you close it, a
+  newer installed copy is never replaced by an older one, and nothing is
+  installed for anyone who has not enabled it. **Settings → Terminal and
+  agents → Update the multi-git command with the app** turns this off;
+  `multi-git update` still works on its own.
 - **New Repository asks which account to use.** An **Account** card lists your
   accounts and System SSH. It starts on your default account for new folders,
   or else the one this window is using, and says under the list whose name and

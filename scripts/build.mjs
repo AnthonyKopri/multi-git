@@ -59,6 +59,9 @@ const nodeEntries = [
   { in: 'src/server/agent-cli/main.ts', out: 'out/node/server/agent-cli.js', external: [] },
   { in: 'src/main/main.ts', out: 'out/node/main/main.js', external: ['electron'] },
   { in: 'src/main/preload.ts', out: 'out/node/main/preload.js', external: ['electron'] },
+  // Run as an Electron utility process, so copying the terminal edition after
+  // an update never holds up a window.
+  { in: 'src/main/update/terminal-follow-child.ts', out: 'out/node/main/terminal-follow.js', external: ['electron'] },
   // cli.ts, not index.ts: index.ts is a library that the Electron bundle also
   // inlines, so it must have no top-level side effects. Bundling the CLI entry
   // is what keeps that distinction from being purely conventional.

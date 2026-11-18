@@ -154,6 +154,12 @@ export interface AppSettings {
    * turned off; off means the Agents panel shows what ran and where, only.
    */
   keepAgentPrompts?: boolean;
+  /**
+   * Whether an enabled terminal edition is brought up to the copy inside the
+   * desktop app after the app updates. On unless turned off. Never installs
+   * it for someone who has not enabled it.
+   */
+  terminalFollowsApp?: boolean;
 }
 
 /** A user-defined set of repositories that are fetched and opened together. */

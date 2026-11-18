@@ -42,6 +42,7 @@ export function sanitizeConfigForClient(config: AppConfig): ClientConfig {
       simpleMode: config.settings?.simpleMode === true,
       experienceChosen: config.settings?.experienceChosen === true,
       keepAgentPrompts: config.settings?.keepAgentPrompts !== false,
+      terminalFollowsApp: config.settings?.terminalFollowsApp !== false,
       customCommitTypes: config.settings?.customCommitTypes ?? [],
       ...(config.settings?.recoveryRetentionDays !== undefined
         ? { recoveryRetentionDays: config.settings.recoveryRetentionDays }
