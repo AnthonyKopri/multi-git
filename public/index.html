@@ -540,6 +540,8 @@
           <button type="button" id="sidebar-reveal" class="pane-toggle pane-toggle-reveal pane-reveal-left" aria-expanded="false" aria-controls="sidebar-panel" title="Show side panel (Ctrl+B)" aria-label="Show side panel">
             <span class="material-symbols-outlined" aria-hidden="true">left_panel_open</span>
           </button>
+          <div class="slide-switch view-switch" role="group" aria-label="Views">
+          <span class="slide-switch-thumb" aria-hidden="true"></span>
           <button id="tab-staging" class="tab-btn active" title="Staging Area (Ctrl+1)">
             <span class="material-symbols-outlined" style="font-size: 16px;">rule</span>
             <span>Staging Area</span>
@@ -552,6 +554,7 @@
             <span class="material-symbols-outlined" style="font-size: 16px;">folder_zip</span>
             <span>Workspace Explorer</span>
           </button>
+          </div>
           <!-- A view setting of the Staging Area, kept on the tab row so the two
                file cards start directly under the tabs. Shown only while that
                tab is the open one. -->
@@ -1771,7 +1774,7 @@
       <div class="modal-header">
         <div>
           <h2 id="new-repo-modal-title">New Repository</h2>
-          <p class="form-dialog-subtitle">Pick a folder, then choose what Multi-Git puts in it before your first commit.</p>
+          <p class="form-dialog-subtitle">Pick where it goes and name it, then choose what Multi-Git puts in it before your first commit.</p>
         </div>
         <button id="btn-close-new-repo-modal" class="btn-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
@@ -1784,12 +1787,29 @@
           <section class="form-card" aria-labelledby="new-repo-card-folder">
             <h3 class="form-card-title" id="new-repo-card-folder"><span class="material-symbols-outlined" aria-hidden="true">folder</span>Folder</h3>
             <div class="form-group">
-              <label for="new-repo-path">Repository folder</label>
+              <label for="new-repo-parent">Parent folder</label>
               <div class="input-with-button">
-                <input type="text" id="new-repo-path" placeholder="Select or type a folder..." required autocomplete="off">
+                <input type="text" id="new-repo-parent" placeholder="The folder the repository goes in" required autocomplete="off">
                 <button type="button" id="btn-new-repo-browse" class="btn btn-secondary btn-sm">Browse…</button>
               </div>
+            </div>
+            <div class="form-group">
+              <label for="new-repo-name">Repository name</label>
+              <input type="text" id="new-repo-name" placeholder="my-project" required autocomplete="off" spellcheck="false">
               <p id="new-repo-folder-hint" class="field-hint hidden"></p>
+            </div>
+          </section>
+
+          <section class="form-card" aria-labelledby="new-repo-card-account">
+            <h3 class="form-card-title" id="new-repo-card-account"><span class="material-symbols-outlined" aria-hidden="true">key</span>Account</h3>
+            <div class="form-group">
+              <label for="new-repo-profile-select">Account and SSH key</label>
+              <div class="select-wrapper">
+                <select id="new-repo-profile-select">
+                  <option value="">System SSH (default)</option>
+                </select>
+              </div>
+              <p id="new-repo-profile-hint" class="field-hint"></p>
             </div>
           </section>
 

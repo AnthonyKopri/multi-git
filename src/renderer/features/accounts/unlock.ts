@@ -92,7 +92,18 @@ function reasonSentence(reason: UnlockReason): string {
  * ready by definition. Returns false when the user declined or the key could
  * not be loaded, and the caller decides whether that is fatal.
  */
-export function ensureKeyUsable(options: { reason: UnlockReason; force?: boolean }): Promise<boolean> {
+/**
+ * `profileId` names a key other than the open repository's, for a flow that
+ * is about to act on a different repository: New Repository's first push uses
+ * the account picked in that dialog, not whichever one this window has open.
+ */
+export interface EnsureKeyOptions {
+  reason: UnlockReason;
+  force?: boolean;
+  profileId?: string;
+}
+
+export function ensureKeyUsable(options: EnsureKeyOptions): Promise<boolean> {
   const explicit = isExplicit(options);
 
   // Sharing is only safe when the call already running asks at least as much
@@ -133,21 +144,25 @@ export function ensureKeyUsable(options: { reason: UnlockReason; force?: boolean
   return next;
 }
 
-async function run(options: { reason: UnlockReason; force?: boolean }): Promise<boolean> {
-  const { activeProfileId, sshProfiles } = getState();
+async function run(options: EnsureKeyOptions): Promise<boolean> {
+  const { sshProfiles } = getState();
+  const targetId = options.profileId ?? getState().activeProfileId;
+  // The agent panel reports on the open repository's key. For any other key
+  // its "loaded" flag says nothing, so that shortcut is only taken for this one.
+  const isActive = targetId === getState().activeProfileId;
 
-  if (!activeProfileId) {
+  if (!targetId) {
     return true;
   }
 
-  const profile = sshProfiles.find((candidate) => candidate.id === activeProfileId);
+  const profile = sshProfiles.find((candidate) => candidate.id === targetId);
   if (!profile) {
     return true;
   }
 
   const explicit = isExplicit(options);
 
-  if (declined.has(activeProfileId) && !explicit) {
+  if (declined.has(targetId) && !explicit) {
     return false;
   }
 
@@ -157,7 +172,7 @@ async function run(options: { reason: UnlockReason; force?: boolean }): Promise<
   await refreshAgent();
   const state = agentState();
 
-  if (state?.selectedKeyLoaded) {
+  if (isActive && state?.selectedKeyLoaded) {
     return true;
   }
 
@@ -169,17 +184,17 @@ async function run(options: { reason: UnlockReason; force?: boolean }): Promise<
     return explicit ? reportAgentUnavailable(state, options.reason) : false;
   }
 
-  const attempt = await api.loadSshAgentKey(getState().activeRepo, activeProfileId);
+  const attempt = await api.loadSshAgentKey(getState().activeRepo, targetId);
   if (attempt.success) {
     return true;
   }
 
   if (attempt.code === 'VAULT_LOCKED') {
-    return unlockThroughVault(options.reason);
+    return unlockThroughVault(options.reason, targetId);
   }
 
   if (attempt.code === 'PASSPHRASE_REQUIRED' || attempt.code === 'PASSPHRASE_REJECTED') {
-    return askForPassphrase(profile.label, options.reason);
+    return askForPassphrase(profile.label, options.reason, targetId);
   }
 
   // A key file that has been moved, or a repair that needs administrator
@@ -258,7 +273,7 @@ function continueLabel(reason: UnlockReason): string {
 }
 
 /** The saved-passphrase case: the vault is what is locked, not the key. */
-async function unlockThroughVault(reason: UnlockReason): Promise<boolean> {
+async function unlockThroughVault(reason: UnlockReason, profileId: string): Promise<boolean> {
   const context = reasonSentence(reason);
   showToast(
     context
@@ -271,8 +286,12 @@ async function unlockThroughVault(reason: UnlockReason): Promise<boolean> {
   if (!(await unlockVault())) {
     // Cancelling is a choice. It is remembered so the next refresh, focus or
     // push does not ask again unprompted.
-    declined.add(getState().activeProfileId);
+    declined.add(profileId);
     return false;
+  }
+
+  if (profileId !== getState().activeProfileId) {
+    return (await api.loadSshAgentKey(getState().activeRepo, profileId)).success;
   }
 
   await refreshAgent();
@@ -280,11 +299,15 @@ async function unlockThroughVault(reason: UnlockReason): Promise<boolean> {
 }
 
 /** The unsaved-passphrase case: ask for the key's own passphrase. */
-async function askForPassphrase(profileLabel: string, reason: UnlockReason): Promise<boolean> {
-  const { activeProfileId, activeRepo } = getState();
+async function askForPassphrase(
+  profileLabel: string,
+  reason: UnlockReason,
+  profileId: string
+): Promise<boolean> {
+  const { activeRepo } = getState();
 
   const context = reasonSentence(reason);
-  const remember = rememberOffer(activeProfileId);
+  const remember = rememberOffer(profileId);
   const { value: passphrase, checked: save } = await promptWithCheckbox({
     title: `Unlock "${profileLabel}"`,
     label: context ? `${context} Passphrase for this key` : 'Passphrase for this key',
@@ -293,12 +316,12 @@ async function askForPassphrase(profileLabel: string, reason: UnlockReason): Pro
   });
 
   if (passphrase === null || passphrase === '') {
-    declined.add(activeProfileId);
+    declined.add(profileId);
     return false;
   }
 
   try {
-    const result = await api.loadSshAgentKey(activeRepo, activeProfileId, {
+    const result = await api.loadSshAgentKey(activeRepo, profileId, {
       passphrase,
       ...(save ? { savePassphrase: true } : {})
     });

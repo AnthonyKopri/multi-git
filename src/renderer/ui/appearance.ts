@@ -1,17 +1,22 @@
-// The theme and Simple mode, applied to the page.
+// The theme, reduced colour and Simple mode, applied to the page.
 //
-// Both are app-wide settings stored in the config file, and both are drawn by
-// CSS alone: the theme as `data-theme` on <html>, Simple mode as a class on
-// <body>. Nothing is re-rendered when either changes, which is why switching is
-// instant and loses no state.
+// All three are app-wide settings stored in the config file, and all are drawn
+// by CSS alone: the theme as `data-theme` on <html>, reduced colour as
+// `data-color` beside it, Simple mode as a class on <body>. Nothing is
+// re-rendered when one changes, which is why switching is instant and loses no
+// state.
 //
-// The theme is also copied to localStorage. public/theme.js reads that copy in
-// <head>, before the stylesheet, so the next window opens in the right theme
-// rather than dark-then-flipped; the config file needs a request to read, and
-// the first frame does not wait for one.
+// The theme and reduced colour are also copied to localStorage.
+// public/theme.js reads those copies in <head>, before the stylesheet, so the
+// next window opens in the right look rather than dark-then-flipped; the config
+// file needs a request to read, and the first frame does not wait for one.
 import type { ThemeChoice } from '../../shared/commit-types';
 
 const STORAGE_KEY = 'mg_theme';
+const COLOR_KEY = 'mg_color';
+
+/** The themes CSS draws. "system" is not one of them: it picks dark or light. */
+export type DrawnTheme = 'dark' | 'oled' | 'light';
 
 let choice: ThemeChoice = 'dark';
 let media: MediaQueryList | null = null;
@@ -21,7 +26,7 @@ function systemPrefersLight(): boolean {
 }
 
 /** The theme actually drawn for a choice. */
-export function resolveTheme(value: ThemeChoice, prefersLight: boolean): 'dark' | 'light' {
+export function resolveTheme(value: ThemeChoice, prefersLight: boolean): DrawnTheme {
   if (value === 'system') {
     return prefersLight ? 'light' : 'dark';
   }
@@ -53,6 +58,24 @@ export function applyTheme(value: ThemeChoice): void {
   }
 
   draw();
+}
+
+/**
+ * Turns reduced colour on or off for this window, and remembers it for the
+ * next window's first paint.
+ */
+export function applyReducedColor(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(COLOR_KEY, enabled ? 'reduced' : 'full');
+  } catch {
+    // Storage can be blocked. The look still applies to this window.
+  }
+
+  if (enabled) {
+    document.documentElement.dataset['color'] = 'reduced';
+  } else {
+    delete document.documentElement.dataset['color'];
+  }
 }
 
 /** Turns Simple mode on or off for this window. */

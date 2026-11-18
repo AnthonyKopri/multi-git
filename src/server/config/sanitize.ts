@@ -38,6 +38,7 @@ export function sanitizeConfigForClient(config: AppConfig): ClientConfig {
       // Always sent with their defaults, so the client never has to decide
       // what an absent appearance setting means.
       theme: config.settings?.theme ?? 'dark',
+      reducedColor: config.settings?.reducedColor === true,
       simpleMode: config.settings?.simpleMode === true,
       experienceChosen: config.settings?.experienceChosen === true,
       keepAgentPrompts: config.settings?.keepAgentPrompts !== false,

@@ -17,7 +17,7 @@ import { initAgentPanel, loadSelectedKey, refreshAgent } from './agent';
 import { initRepoAccount, refreshRepoAccount, renderRepoAccount } from './repo-account';
 export { changeIntendedAccount, checkAccountNow, refreshRepoAccount } from './repo-account';
 import type { ClientConfig, ClientSshProfile } from '../../../shared/config-types';
-import { applySimpleMode, applyTheme } from '../../ui/appearance';
+import { applyReducedColor, applySimpleMode, applyTheme } from '../../ui/appearance';
 
 let ui: Elements;
 
@@ -69,6 +69,7 @@ export function applyConfigSnapshot(config: ClientConfig): void {
   // Drawn by CSS from an attribute and a class, so every window that reads the
   // config agrees with the one that changed it.
   applyTheme(config.settings.theme ?? 'dark');
+  applyReducedColor(config.settings.reducedColor === true);
   applySimpleMode(config.settings.simpleMode === true);
 
   // A deleted profile must not stay selected.

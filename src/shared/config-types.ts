@@ -121,10 +121,18 @@ export interface AppSettings {
    */
   staleRules?: StaleRules;
   /**
-   * Which theme to draw: dark, light, or whichever the operating system is
-   * using. Absent means dark, the look the app has always had.
+   * Which theme to draw: dark, OLED black, light, or whichever of dark and
+   * light the operating system is using. Absent means dark, the look the app
+   * has always had.
    */
   theme?: ThemeChoice;
+  /**
+   * Draws every accent in grey: section and card colours, file status letters,
+   * commit types and graph lanes. Kept apart from the theme because it goes
+   * with any of them. Errors, warnings and diff lines keep their colour, since
+   * that colour is the message. Defaults to false.
+   */
+  reducedColor?: boolean;
   /**
    * Simple mode: changes, a message, a commit button and History, with the
    * side panel and the advanced commit options out of the way. Defaults to

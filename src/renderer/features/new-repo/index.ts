@@ -12,16 +12,72 @@ import { logToTerminal } from '../../ui/log';
 import { closeAllDropdowns } from '../../ui/dropdown';
 import { withButtonBusy } from '../../ui/busy';
 import { openRepository } from '../repo';
-import { activeProfile } from '../accounts';
 import { profileIdentity } from '../accounts/identity';
+import { describeAccountChoice, initialAccountChoice } from './account-choice';
+import { joinRepoPath, repoNameProblem } from './folder-choice';
 import { ensureKeyUsable } from '../accounts/unlock';
 import type { NewRepoPreflightResponse } from '../../../shared/api-types';
 import type { LicenseSummary } from '../../../shared/template-types';
+import type { ClientSshProfile } from '../../../shared/config-types';
 
 let ui: Elements;
 
+/** The last parent folder used, offered again next time. */
+const PARENT_KEY = 'mg_new_repo_parent';
+
+/** The folder the repository will be made in: the name, inside the parent. */
+function chosenRepoPath(): string {
+  const parent = asInput(ui.newRepoParentInput).value.trim();
+  const name = asInput(ui.newRepoNameInput).value.trim();
+  return parent && name ? joinRepoPath(parent, name) : '';
+}
+
+function rememberedParent(): string {
+  try {
+    return localStorage.getItem(PARENT_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+/** The account picked in the dialog, or null for System SSH. */
+function chosenProfile(): ClientSshProfile | null {
+  const id = asSelect(ui.newRepoProfileSelect).value;
+  return getState().sshProfiles.find((profile) => profile.id === id) ?? null;
+}
+
+function renderAccountHint(): void {
+  ui.newRepoProfileHint.textContent = describeAccountChoice(chosenProfile());
+}
+
+/**
+ * Fills the account picker. It starts on the account set as the default for
+ * new folders, then on the one this window is using, then on System SSH.
+ */
+function populateAccounts(): void {
+  const { sshProfiles, defaultAccountProfileId, activeProfileId } = getState();
+  const select = asSelect(ui.newRepoProfileSelect);
+
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = 'System SSH (default)';
+
+  select.replaceChildren(
+    none,
+    ...sshProfiles.map((profile) => {
+      const option = document.createElement('option');
+      option.value = profile.id;
+      option.textContent = profile.userEmail ? `${profile.label} (${profile.userEmail})` : profile.label;
+      return option;
+    })
+  );
+  select.value = initialAccountChoice(sshProfiles, defaultAccountProfileId, activeProfileId);
+  renderAccountHint();
+}
+
 export function initNewRepo(elements: Elements): void {
   ui = elements;
+  ui.newRepoProfileSelect.addEventListener('change', renderAccountHint);
 }
 
 type Tone = 'info' | 'error' | 'success' | 'warn';
@@ -94,6 +150,10 @@ function populateTemplateSelects(): void {
 function defaultLicenseHolder(): string {
   const state = getState();
 
+  const picked = ui.newRepoProfileSelect ? chosenProfile() : null;
+  if (picked?.userName) {
+    return picked.userName;
+  }
   const active = state.sshProfiles.find((profile) => profile.id === state.activeProfileId);
   if (active?.userName) {
     return active.userName;
@@ -185,9 +245,9 @@ async function refreshGithubCliStatus(): Promise<void> {
   renderGithubCliStatus();
 }
 
-function renderFolderHint(info: NewRepoPreflightResponse): void {
+function renderFolderHint(repoPath: string, info: NewRepoPreflightResponse): void {
   if (!info.folderExists) {
-    setFieldHint(ui.newRepoFolderHint, 'This folder does not exist yet and will be created.');
+    setFieldHint(ui.newRepoFolderHint, `Creates ${repoPath}`);
     return;
   }
   if (!info.isDirectory) {
@@ -222,22 +282,45 @@ function renderFolderHint(info: NewRepoPreflightResponse): void {
 
   setFieldHint(
     ui.newRepoFolderHint,
-    info.isEmpty ? 'Empty folder, ready to initialise.' : 'Existing files are left untouched.'
+    info.isEmpty
+      ? `${repoPath} already exists and is empty; it becomes the repository.`
+      : `${repoPath} already exists; it becomes the repository and its files are left untouched.`
   );
 }
 
 export async function refreshFolderHint(): Promise<void> {
-  const repoPath = asInput(ui.newRepoPathInput).value.trim();
+  const name = asInput(ui.newRepoNameInput).value;
+  if (name.trim()) {
+    const problem = repoNameProblem(name);
+    if (problem) {
+      setFieldHint(ui.newRepoFolderHint, problem, 'warn');
+      return;
+    }
+  }
+
+  const repoPath = chosenRepoPath();
   if (!repoPath) {
     setFieldHint(ui.newRepoFolderHint, '');
     return;
   }
 
   try {
-    renderFolderHint(await api.newRepoPreflight(repoPath));
+    const info = await api.newRepoPreflight(repoPath);
+    // The fields may have changed while the check was out.
+    if (chosenRepoPath() === repoPath) {
+      renderFolderHint(repoPath, info);
+    }
   } catch (error) {
     setFieldHint(ui.newRepoFolderHint, errorMessage(error), 'warn');
   }
+}
+
+let hintTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Checks the folder once typing in the name pauses, not on every key. */
+export function scheduleFolderHint(): void {
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => void refreshFolderHint(), 250);
 }
 
 export async function browseNewRepoFolder(): Promise<void> {
@@ -249,8 +332,11 @@ export async function browseNewRepoFolder(): Promise<void> {
       return;
     }
 
-    asInput(ui.newRepoPathInput).value = selectedPath;
+    asInput(ui.newRepoParentInput).value = selectedPath;
     await refreshFolderHint();
+    if (!asInput(ui.newRepoNameInput).value.trim()) {
+      asInput(ui.newRepoNameInput).focus();
+    }
   } catch (error) {
     const message = `Could not open the folder dialog: ${errorMessage(error)}`;
     logToTerminal(message, 'error');
@@ -261,16 +347,20 @@ export async function browseNewRepoFolder(): Promise<void> {
 export async function openNewRepoModal(): Promise<void> {
   closeAllDropdowns();
 
-  asInput(ui.newRepoPathInput).value = '';
+  const parent = rememberedParent();
+  asInput(ui.newRepoParentInput).value = parent;
+  asInput(ui.newRepoNameInput).value = '';
   asSelect(ui.newRepoVisibility).value = 'private';
   asInput(ui.newRepoCreateRemote).checked = false;
+  populateAccounts();
   asInput(ui.newRepoLicenseYear).value = String(new Date().getFullYear());
   asInput(ui.newRepoLicenseHolder).value = defaultLicenseHolder();
 
   setFeedback('');
   setFieldHint(ui.newRepoFolderHint, '');
   setHidden(ui.newRepoModal, false);
-  setTimeout(() => asInput(ui.newRepoPathInput).focus(), 30);
+  // With a parent remembered, the name is the only thing left to type.
+  setTimeout(() => asInput(parent ? ui.newRepoNameInput : ui.newRepoParentInput).focus(), 30);
 
   try {
     await loadCatalogue();
@@ -300,12 +390,21 @@ async function openRepoFileInEditor(repoPath: string, filePath: string): Promise
 }
 
 export async function submitNewRepo(): Promise<void> {
-  const repoPath = asInput(ui.newRepoPathInput).value.trim();
-  if (!repoPath) {
-    setFeedback('Choose a folder for the new repository.', 'error');
-    asInput(ui.newRepoPathInput).focus();
+  const parent = asInput(ui.newRepoParentInput).value.trim();
+  if (!parent) {
+    setFeedback('Choose the folder the new repository goes in.', 'error');
+    asInput(ui.newRepoParentInput).focus();
     return;
   }
+
+  const nameProblem = repoNameProblem(asInput(ui.newRepoNameInput).value);
+  if (nameProblem) {
+    setFeedback(nameProblem, 'error');
+    asInput(ui.newRepoNameInput).focus();
+    return;
+  }
+
+  const repoPath = chosenRepoPath();
 
   const licenseId = asSelect(ui.newRepoLicense).value;
   const gitignoreId = asSelect(ui.newRepoGitignore).value;
@@ -352,7 +451,8 @@ export async function submitNewRepo(): Promise<void> {
         // The push at the end of the wizard authenticates with the same key
         // every other network operation uses, so ask for it here rather than
         // letting the push be the thing that discovers the key is locked.
-        if (!(await ensureKeyUsable({ reason: 'push' }))) {
+        const picked = chosenProfile();
+        if (!(await ensureKeyUsable({ reason: 'push', ...(picked ? { profileId: picked.id } : {}) }))) {
           setFeedback(
             'Cancelled: the selected SSH key is not unlocked, so the first push could not be made.',
             'error'
@@ -390,7 +490,13 @@ export async function submitNewRepo(): Promise<void> {
         'cmd'
       );
 
-      const profile = activeProfile();
+      try {
+        localStorage.setItem(PARENT_KEY, parent);
+      } catch {
+        // Only a convenience for next time.
+      }
+
+      const profile = chosenProfile();
       const author = profileIdentity(profile);
 
       const data = await api.createNewRepo({
@@ -427,6 +533,13 @@ export async function submitNewRepo(): Promise<void> {
       );
       if (data.warnings[0]) {
         showToast(data.warnings[0], 'warn', 8000);
+      }
+
+      // Remembered before opening, so the repository opens already set to the
+      // account picked here: its key for every push, and its name and email on
+      // every commit. The same record a clone leaves.
+      if (profile) {
+        localStorage.setItem(`ssh_key_${data.repoPath}`, profile.id);
       }
 
       await openRepository(data.repoPath);

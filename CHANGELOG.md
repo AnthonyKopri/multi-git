@@ -17,8 +17,8 @@ or Security. Remove empty headings when preparing a release.
 ### Highlights
 
 Multi-Git 6 is a new interface and a new first day. The window has been redrawn
-from the ground up, with a dark and a light theme and a Simple mode for people
-who only want to commit. Setting up a computer is now three short screens, with
+from the ground up, with dark, OLED black and light themes, a reduced-colour
+option, and a Simple mode for people who only want to commit. Setting up a computer is now three short screens, with
 the SSH agent one press away on every platform and a key you can validate
 before you ever push. Agents you send out now have a panel of their own, with
 the task you gave them and a Stop button. And auto-pull finally does what its
@@ -57,9 +57,21 @@ name says, without waiting for you to press Fetch.
   behind a single administrator prompt. On macOS and Linux, where there is no
   service to switch on and no password is needed, **Start the SSH agent**
   starts one that belongs to Multi-Git and lasts until the app closes.
-- **A light theme, and a choice to follow the system.** **Settings → Look and
-  layout** picks Dark, Light or System. The choice is applied before the page
-  draws, so a light window does not open dark first.
+- **A light theme, an OLED black theme, and a choice to follow the system.**
+  **Settings → Look and layout** picks Dark, OLED black, Light or Match system.
+  OLED black turns the background fully off and outlines each panel with a
+  hairline instead. The choice is applied before the page draws, so a light
+  window does not open dark first.
+- **Reduce colour.** A switch beside the theme, for any of them, that draws
+  section and card colours, file status letters, commit types, branch lanes
+  and the purple of buttons and selection in grey. Errors, warnings and added
+  or removed lines keep their colour, because there the colour is the message.
+- **New Repository asks which account to use.** An **Account** card lists your
+  accounts and System SSH. It starts on your default account for new folders,
+  or else the one this window is using, and says under the list whose name and
+  email the commits will carry and which key will push. The new repository
+  opens already set to that account, and the first push to GitHub unlocks that
+  key, not the open repository's.
 - **Simple mode.** Also under **Look and layout**: only your changes, the
   history, the message box and the Commit button stay on screen, with Stash and
   Discard beside the changes, Fetch as an icon, and Pull, Push, the menu and
@@ -90,7 +102,9 @@ name says, without waiting for you to press Fetch.
   their lane's colour. Each card has a colour of its own, shown as a dot
   before its title and a faint tint on the row under the pointer, with no
   gradients anywhere, and the top rows of the side panel, the tabs and History
-  share one line.
+  share one line. Staging Area, File Diff and Workspace Explorer sit in one
+  pill, with a highlight that slides to the view you pick. Unstaged and Staged
+  have a hairline under their titles, and the toolbar has room below it.
 - **Snappier, with a little give.** Colour changes take 90 ms instead of 150
   to 200, buttons, pills and tabs dip slightly when pressed and spring back,
   and sections, views, menus and dialogs ease in instead of appearing in one
@@ -101,6 +115,13 @@ name says, without waiting for you to press Fetch.
   the pointer is over it, or with the arrows that appear at a faded edge.
 - **Settings sits beside the menu button** in the toolbar instead of inside the
   menu.
+- **New Repository asks for a parent folder and a name**, and makes the
+  repository as a folder of that name inside the parent, instead of asking for
+  the repository's own folder. The parent you used last is filled in next
+  time, so usually only the name is left to type. A name Windows, macOS or
+  Linux could not use as a folder is pointed out as you type, and the path
+  that will be created is shown under it. Naming a folder that already exists
+  still turns that folder into a repository, as before.
 - **Git Bash and the Multi-Git command line are icons on the terminal line**
   at the bottom of the window, next to the button that opens a terminal.
 - **Fonts ship inside the app.** The interface no longer loads its typefaces

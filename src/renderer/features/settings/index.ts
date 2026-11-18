@@ -198,14 +198,15 @@ function section(info: SectionInfo, children: (Node | null)[]): HTMLElement {
 
 const THEME_LABELS: Record<ThemeChoice, string> = {
   dark: 'Dark',
+  oled: 'OLED black',
   light: 'Light',
   system: 'Match system'
 };
 
 /**
- * A row of mutually exclusive buttons, for a choice with three answers.
+ * A row of mutually exclusive buttons, for a choice with a few answers.
  *
- * Buttons rather than a dropdown, because all three fit and seeing the two you
+ * Buttons rather than a dropdown, because they all fit and seeing the ones you
  * did not pick is most of what makes a theme switch feel safe to try.
  */
 function segmented<T extends string>(
@@ -239,9 +240,16 @@ function buildAppearance(current: AppSettings): HTMLElement {
     settingGroup([
       settingItem({
         label: 'Theme',
-        description: 'Dark is the default. Match system follows your computer, and changes with it.',
+        description:
+          'Dark is the default. OLED black turns the background fully off, for OLED screens and dark rooms. Match system follows your computer between dark and light, and changes with it.',
         control: segmented('Theme', THEME_CHOICES, THEME_LABELS, current.theme ?? 'dark', (value) => void save({ theme: value }))
       }),
+      toggle(
+        'Reduce colour',
+        'Draws section colours, file status letters, commit types and branch lanes in grey, with any theme. Errors, warnings and added or removed lines keep their colour.',
+        current.reducedColor === true,
+        (value) => void save({ reducedColor: value })
+      ),
       toggle(
         'Simple mode',
         'Shows your changes, a message box, the Commit button and History, and puts the side panel and the advanced commit options away. Fetch, Pull and Push stay in the top bar, and everything else is still in the menu.',
