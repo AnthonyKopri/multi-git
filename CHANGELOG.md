@@ -87,8 +87,10 @@ name says, without waiting for you to press Fetch.
   colour that folds away. **Integrate** now sits above **Branches**, since the
   current branch is already one click away in the toolbar. The history graph
   keeps its lanes and the arms between them, and its branch labels take
-  their lane's colour. Each card wears its own colour faintly at the top, and
-  the top rows of the side panel, the tabs and History share one line.
+  their lane's colour. Each card has a colour of its own, shown as a dot
+  before its title and a faint tint on the row under the pointer, with no
+  gradients anywhere, and the top rows of the side panel, the tabs and History
+  share one line.
 - **Snappier, with a little give.** Colour changes take 90 ms instead of 150
   to 200, buttons, pills and tabs dip slightly when pressed and spring back,
   and sections, views, menus and dialogs ease in instead of appearing in one

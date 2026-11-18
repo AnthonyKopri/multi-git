@@ -8038,10 +8038,10 @@ body.simple-mode .terminal-panel {
 
    Three passes over the 5.4 look, kept together so each can be read whole.
 
-     1. Tone. Every card owns one tint and wears it in three quiet places: a
-        wash at the top of the card, a dot before its title, and the veil a
-        row takes under the pointer. The canvas carries a faint wash of its
-        own, so the window is never one flat shade.
+     1. Tone. Every card owns one tint and wears it flat, in small solid
+        spots rather than fills: a dot before its title, a filled bullet
+        while a section is open, and the veil a row takes under the pointer.
+        No gradients: colour marks a thing, it does not light a surface.
      2. Motion. Shorter and crisper: 90 ms for colour, a slightly springy
         release for anything that moves. Controls dip when pressed, small
         ones lift a pixel under the pointer, and things that appear (a
@@ -8061,65 +8061,28 @@ body.simple-mode .terminal-panel {
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   /* A touch of overshoot on release: what makes a press feel like a press. */
   --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
-
-  /* The primary fill, as a short ramp within the purple rather than a flat
-     block: the same hue, a few degrees apart at each end. */
-  --primary-fill: linear-gradient(135deg, #c3b4ff 0%, #a99bff 55%, #b79cff 100%);
-  --primary-fill-hover: linear-gradient(135deg, #d0c4ff 0%, #b8acff 55%, #c6afff 100%);
-
-  /* How strongly a card wears its tint at the top, and how far down. */
-  --wash-strength: 11%;
-  --wash-depth: 72px;
-
-  --canvas-wash:
-    radial-gradient(1100px 520px at 0% 0%, rgba(124, 109, 230, 0.1), transparent 70%),
-    radial-gradient(900px 480px at 100% 100%, rgba(78, 170, 196, 0.06), transparent 70%);
-}
-:root[data-theme='light'] {
-  --primary-fill: linear-gradient(135deg, #6866ec 0%, #5755dc 55%, #6a4fdc 100%);
-  --primary-fill-hover: linear-gradient(135deg, #5a58e0 0%, #4947c8 55%, #5c42cc 100%);
-  --wash-strength: 9%;
-  --canvas-wash:
-    radial-gradient(1100px 520px at 0% 0%, rgba(91, 90, 224, 0.09), transparent 70%),
-    radial-gradient(900px 480px at 100% 100%, rgba(12, 128, 121, 0.06), transparent 70%);
 }
 
 /* --- 1. Tone ------------------------------------------------------------- */
 
-.app-layout {
-  background-color: var(--bg-app);
-  background-image: var(--canvas-wash);
-  background-attachment: fixed;
-}
-
-/* The wash: a card's own colour at its top edge, gone by the first row. */
-.sidebar-section:not(.collapsed),
-.file-list-card[data-tint],
-.commit-panel[data-tint],
-.history-card[data-tint] {
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--tint-fg) var(--wash-strength), transparent) 0,
-    transparent var(--wash-depth)
-  );
-}
-
-/* The dot before a card's title. */
-.file-list-card[data-tint] > .card-header h3,
-.history-card[data-tint] .history-list-view > .card-header h3 {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
+/* The dot before a card's title. Inline, not flex: a title that runs out
+   of room still ends in an ellipsis, which a flex box would not give it. */
 .file-list-card[data-tint] > .card-header h3::before,
 .history-card[data-tint] .history-list-view > .card-header h3::before {
   content: '';
-  width: 8px;
-  height: 8px;
-  flex: 0 0 auto;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  vertical-align: 0.1em;
   border-radius: 50%;
   background: var(--tint-fg);
-  box-shadow: 0 0 0 3px var(--tint-bg);
+}
+/* The header's text buttons give a little of their padding back to the
+   title, so a two-column layout still shows it whole. */
+.file-list-card > .card-header .card-header-actions .btn-text.btn-sm {
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 /* Rows under the pointer take their card's colour, faintly. */
@@ -8141,19 +8104,6 @@ body.simple-mode .terminal-panel {
 .sidebar-section.collapsed .section-toggle:hover .section-bullet,
 .sidebar-launcher:hover .section-bullet {
   background: color-mix(in srgb, var(--tint-fg) 30%, var(--tint-bg));
-}
-
-/* The primary actions carry the ramp. */
-.btn-primary,
-.tab-btn.active,
-.segmented-option.active {
-  background-image: var(--primary-fill);
-}
-.btn-primary:hover:not(:disabled) {
-  background-image: var(--primary-fill-hover);
-}
-.btn-primary:disabled {
-  background-image: none;
 }
 
 /* The toolbar's sync buttons each keep one colour, like the three segments
@@ -8204,7 +8154,6 @@ body.simple-mode .terminal-panel {
 .commit-graph-row {
   transition:
     background-color var(--dur-fast) ease,
-    background-image var(--dur-fast) ease,
     color var(--dur-fast) ease,
     border-color var(--dur-fast) ease,
     filter var(--dur-fast) ease,
@@ -8245,7 +8194,7 @@ textarea {
 .segmented-option:active,
 .btn-chip:active:not(:disabled) {
   transform: scale(0.95);
-  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 60ms;
+  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 60ms;
 }
 .chip-scroll-btn:active {
   transform: translateY(-50%) scale(0.9);
@@ -8258,7 +8207,7 @@ textarea {
 .wizard-choice:active,
 .recent-item-btn:active {
   transform: scale(0.985);
-  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 60ms;
+  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 60ms;
 }
 /* Rows settle by a pixel rather than shrinking, which would shift their
    text sideways. */
@@ -8267,7 +8216,7 @@ textarea {
 .changed-file-item:active,
 .commit-graph-row:active {
   transform: translateY(1px);
-  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 50ms;
+  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 50ms;
 }
 
 .section-chevron {
