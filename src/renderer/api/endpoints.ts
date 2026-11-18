@@ -161,6 +161,7 @@ export interface AppSettingsInput {
   /** The whole list: adding or removing a type sends what should remain. */
   customCommitTypes?: string[];
   keepAgentPrompts?: boolean;
+  terminalFollowsApp?: boolean;
 }
 
 export const saveAppSettings = (input: AppSettingsInput) =>

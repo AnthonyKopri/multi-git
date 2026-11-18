@@ -144,7 +144,8 @@ const desktopApi: DesktopApi = {
     ipcRenderer.invoke(IPC_CHANNELS.openUpdateReleasePage) as Promise<void>,
 
   onUpdateState: (listener) => subscribe<UpdateState>(IPC_CHANNELS.updateState, listener),
-  onUpdatePopup: (listener) => subscribe<void>(IPC_CHANNELS.updatePopup, () => listener())
+  onUpdatePopup: (listener) => subscribe<void>(IPC_CHANNELS.updatePopup, () => listener()),
+  onTerminalFollowed: (listener) => subscribe(IPC_CHANNELS.terminalFollowed, listener)
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);
