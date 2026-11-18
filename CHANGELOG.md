@@ -60,7 +60,8 @@ name says, without waiting for you to press Fetch.
 - **A light theme, an OLED black theme, and a choice to follow the system.**
   **Settings → Look and layout** picks Dark, OLED black, Light or Match system.
   OLED black turns the background fully off and outlines each panel with a
-  hairline instead. The choice is applied before the page draws, so a light
+  hairline drawn just inside its edge, so no panel loses a side where it
+  meets a scrolling column. The choice is applied before the page draws, so a light
   window does not open dark first.
 - **Reduce colour.** A switch beside the theme, for any of them, that draws
   section and card colours, file status letters, commit types, branch lanes
@@ -112,12 +113,21 @@ name says, without waiting for you to press Fetch.
   gradients anywhere, and the top rows of the side panel, the tabs and History
   share one line. Staging Area, File Diff and Workspace Explorer sit in one
   pill, with a highlight that slides to the view you pick. Unstaged and Staged
-  have a hairline under their titles, and the toolbar has room below it.
+  have a hairline under their titles, and the toolbar has room below it. The
+  "Nothing running" line at the bottom is inset like the terminal line, with
+  one rounded highlight under the pointer, and opens into a card of its own.
 - **Snappier, with a little give.** Colour changes take 90 ms instead of 150
   to 200, buttons, pills and tabs dip slightly when pressed and spring back,
   and sections, views, menus and dialogs ease in instead of appearing in one
-  frame. Only movement and fading are animated, never layout, and all of it
-  stops when your system asks for reduced motion.
+  frame. Side panel sections, the branch lists and expandable details open
+  and close by sliding to their height, in about a fifth of a second. Folded
+  section tiles, the guide's choices and the welcome screen's actions grow
+  very slightly under the pointer, and menu items lean in; file, branch and
+  commit rows never move, so nothing shifts under a click. All of it stops
+  when your system asks for reduced motion.
+- **Local and remote branches fold separately.** Each list in Branches has its
+  own heading to fold it, with a count beside it, and is remembered folded or
+  open like the sections are.
 - **Commit type pills carry a symbol and a colour each.** They sit below the
   Safety Net line in one row that scrolls sideways: with the mouse wheel while
   the pointer is over it, or with the arrows that appear at a faded edge.

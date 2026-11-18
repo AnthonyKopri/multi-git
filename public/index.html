@@ -324,15 +324,31 @@
 
             <!-- Branch Lists -->
             <div class="branch-lists">
-              <h4>Local Branches</h4>
-              <ul id="local-branches-list" class="branch-list-ul">
-                <!-- Rendered dynamically -->
-              </ul>
+              <div class="branch-group" data-branch-group="local">
+                <button type="button" class="branch-group-toggle" aria-expanded="true" aria-controls="local-branches-body">
+                  <span class="material-symbols-outlined branch-group-chevron" aria-hidden="true">expand_more</span>
+                  <h4>Local Branches</h4>
+                  <span id="local-branches-count" class="branch-group-count"></span>
+                </button>
+                <div class="branch-group-body" id="local-branches-body">
+                  <ul id="local-branches-list" class="branch-list-ul">
+                    <!-- Rendered dynamically -->
+                  </ul>
+                </div>
+              </div>
 
-              <h4 class="mt-4">Remote Branches</h4>
-              <ul id="remote-branches-list" class="branch-list-ul">
-                <!-- Rendered dynamically -->
-              </ul>
+              <div class="branch-group" data-branch-group="remote">
+                <button type="button" class="branch-group-toggle" aria-expanded="true" aria-controls="remote-branches-body">
+                  <span class="material-symbols-outlined branch-group-chevron" aria-hidden="true">expand_more</span>
+                  <h4>Remote Branches</h4>
+                  <span id="remote-branches-count" class="branch-group-count"></span>
+                </button>
+                <div class="branch-group-body" id="remote-branches-body">
+                  <ul id="remote-branches-list" class="branch-list-ul">
+                    <!-- Rendered dynamically -->
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>

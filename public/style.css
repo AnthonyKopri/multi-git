@@ -8391,7 +8391,8 @@ textarea {
    rule written for "not light" applies to it too; only the fills change. The
    canvas and the cards are both pure black, which leaves the fill steps with
    nothing to separate, so each card gets a hairline instead, through the same
-   --shadow-card token the light theme uses for its lift.
+   --shadow-card token the light theme uses for its lift, drawn just inside
+   the card so no scrolling column can clip it.
 
    Reduced colour is not a theme: it sits beside any of them as
    data-color="reduced" on <html>. It turns every assigned colour (the eight
@@ -8419,7 +8420,10 @@ textarea {
   --color-secondary: #1f1d26;
   --color-secondary-hover: #2c2936;
 
-  --shadow-card: 0 0 0 1px #1f1d27;
+  /* Inset, not outside the card: a scrolling column clips anything drawn
+     past its edge, and an outer hairline lost its sides wherever a card
+     touched one. */
+  --shadow-card: inset 0 0 0 1px #2a2733;
   --shadow-md: 0 0 0 1px #26232e, 0 8px 24px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 0 0 1px #26232e, 0 18px 44px rgba(0, 0, 0, 0.7);
 }
@@ -8584,4 +8588,257 @@ textarea {
   .slide-switch.ready .slide-switch-thumb {
     transition: none;
   }
+}
+
+/* ==========================================================================
+   FOLDING, SMOOTHLY, AND A LITTLE GROWTH UNDER THE POINTER
+
+   Sections, the two branch lists and <details> blocks open and close by
+   animating their height, instead of appearing and vanishing in one frame:
+   200 ms opening, a little quicker closing, on the same ease-out as the rest.
+   interpolate-size lets height run to and from "auto", so nothing has to
+   measure the content. Folded content is visibility: hidden once the fold
+   finishes, which keeps it out of the tab order and away from screen readers,
+   exactly as display: none did.
+
+   Nothing animates until html.motion-ready is set (ui/sections.ts), two
+   frames after the remembered state is restored, so startup is still.
+
+   Growth on hover is kept to targets with room around them: a folded
+   section tile, the guide's choices, the welcome screen's three actions. Rows
+   in lists (files, branches, commits, menu items) and packed button rows never
+   grow, because a target that moves under the pointer is a target that gets
+   missed.
+   ========================================================================== */
+
+:root {
+  interpolate-size: allow-keywords;
+  --dur-open: 200ms;
+  --dur-close: 170ms;
+  /* Eases in as well as out: a fold that does most of its travel in the
+     first frame reads as a jump, not a motion. */
+  --ease-fold: cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+/* --- The bodies that fold ------------------------------------------------ */
+
+.sidebar-section > .section-body,
+.branch-group-body {
+  height: auto;
+  /* A section is a flex column, where a child's minimum is its content and
+     height: 0 would be ignored. */
+  min-height: 0;
+  overflow: clip;
+  /* Room for focus rings and the pressed dip, which would otherwise be cut. */
+  overflow-clip-margin: 6px;
+}
+.sidebar-section.collapsed > .section-body,
+.branch-group.collapsed > .branch-group-body {
+  display: block;
+  height: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+/* The rise-in of the first 6.0 pass is replaced by the fold. */
+.sidebar-section:not(.collapsed) > .section-body {
+  animation: none;
+}
+
+.motion-ready .sidebar-section > .section-body,
+.motion-ready .branch-group-body {
+  transition:
+    height var(--dur-open) var(--ease-fold),
+    opacity var(--dur-open) ease-out,
+    visibility 0s linear 0s;
+}
+.motion-ready .sidebar-section.collapsed > .section-body,
+.motion-ready .branch-group.collapsed > .branch-group-body {
+  transition:
+    height var(--dur-close) var(--ease-fold),
+    opacity 110ms ease-in,
+    visibility 0s linear var(--dur-close);
+}
+.motion-ready .section-header:has(.section-toggle) {
+  transition: margin-bottom var(--dur-open) var(--ease-fold);
+}
+.motion-ready .sidebar-section.collapsed .section-header {
+  transition-duration: var(--dur-close);
+}
+
+/* <details>: the same fold for its content. */
+details::details-content {
+  height: 0;
+  overflow: clip;
+  overflow-clip-margin: 6px;
+}
+details[open]::details-content {
+  height: auto;
+}
+.motion-ready details::details-content {
+  transition:
+    height var(--dur-close) var(--ease-fold),
+    content-visibility var(--dur-close) allow-discrete;
+}
+.motion-ready details[open]::details-content {
+  transition-duration: var(--dur-open);
+}
+
+/* --- The two branch lists ------------------------------------------------ */
+
+.branch-group + .branch-group {
+  margin-top: 6px;
+}
+.branch-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 3px 6px 3px 2px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.branch-group-toggle:hover {
+  background-color: var(--hover-veil);
+  color: var(--text-main);
+}
+.branch-group-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.branch-lists .branch-group-toggle h4 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-group-chevron {
+  font-size: 16px;
+  transition: transform var(--dur) var(--ease-spring);
+}
+.branch-group.collapsed .branch-group-chevron {
+  transform: rotate(-90deg);
+}
+.branch-group-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background-color: var(--tint-bg, var(--bg-raised));
+  color: var(--tint-fg, var(--text-muted));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+.branch-group-count:empty {
+  display: none;
+}
+
+/* --- Growth under the pointer ------------------------------------------- */
+
+.motion-ready .sidebar-section {
+  transition: transform var(--dur) var(--ease-spring), background-color var(--dur-fast) ease;
+}
+.sidebar-section.collapsed:has(> .section-header .section-toggle:hover) {
+  transform: scale(1.015);
+}
+.sidebar-section.collapsed:has(> .section-header .section-toggle:active) {
+  transform: scale(0.99);
+  transition-duration: 60ms;
+}
+
+.wizard-choice:hover {
+  transform: scale(1.015);
+}
+#btn-overlay-open:hover:not(:disabled),
+#btn-overlay-create:hover:not(:disabled),
+#btn-overlay-clone:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+/* Menu items do not grow; they lean in, sideways, so the row under the
+   pointer stays exactly where it was in the direction of travel. */
+.dropdown-item {
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, transform var(--dur) var(--ease-out);
+}
+.dropdown-item:hover {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-ready .sidebar-section > .section-body,
+  .motion-ready .branch-group-body,
+  .motion-ready .sidebar-section.collapsed > .section-body,
+  .motion-ready .branch-group.collapsed > .branch-group-body,
+  .motion-ready details::details-content,
+  .motion-ready .section-header:has(.section-toggle) {
+    transition: none;
+  }
+  .sidebar-section.collapsed:has(> .section-header .section-toggle:hover),
+  .sidebar-section.collapsed:has(> .section-header .section-toggle:active),
+  .wizard-choice:hover,
+  #btn-overlay-open:hover,
+  #btn-overlay-create:hover,
+  #btn-overlay-clone:hover,
+  .dropdown-item:hover {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   THE PROCESS LINE AS ONE SHAPE
+
+   The "Nothing running" line used to light up edge to edge as a rectangle,
+   and its expanded list sat in a card of its own under it. Now it is one
+   rounded shape inset like the terminal line above it: no fill at rest, one
+   rounded highlight under the pointer, and when expanded the line and its
+   list share one card, which the highlight fills as a whole.
+   ========================================================================== */
+
+.operations-bar {
+  margin: 4px var(--shell-gap) var(--shell-gap);
+  border-radius: var(--radius-lg);
+  background-color: transparent;
+  overflow: hidden;
+  transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.operations-summary {
+  padding: 4px 14px;
+  border-radius: var(--radius-lg);
+}
+.operations-summary:hover {
+  background-color: transparent;
+}
+.operations-bar:has(> .operations-summary:hover) {
+  background-color: var(--bg-card-hover);
+}
+.operations-bar:has(> .operations-summary:hover) .operations-summary {
+  color: var(--text-main);
+}
+.operations-bar:has(> .operations-summary[aria-expanded='true']) {
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+.operations-bar:has(> .operations-summary[aria-expanded='true']):has(> .operations-summary:hover) {
+  background-color: var(--bg-card-hover);
+}
+.operations-panel {
+  margin: 0;
+  padding: 0 14px 10px;
+  border-radius: 0;
+  background-color: transparent;
+  border-top: 1px solid var(--border-color);
+}
+.operations-summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
