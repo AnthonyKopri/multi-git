@@ -7453,6 +7453,12 @@ body.simple-mode .commit-toggles {
 body.simple-mode .commit-input-wrapper textarea {
   min-height: 64px;
 }
+/* With Amend and Sign hidden, the button has nothing under it to sit above:
+   kept at the bottom, it hung 20 px low beside the message box. Centred,
+   it has the same space above and below. */
+body.simple-mode .commit-input-wrapper .commit-buttons {
+  align-self: center;
+}
 
 /* One fewer tab, no wrap switch, no terminal line. */
 body.simple-mode #tab-explorer,
