@@ -115,6 +115,8 @@ export const ELEMENT_MAP = {
   newBranchInput: 'new-branch-input',
   btnCreateBranch: 'btn-create-branch',
   localBranchesList: 'local-branches-list',
+  localBranchesCount: 'local-branches-count',
+  remoteBranchesCount: 'remote-branches-count',
   remoteBranchesList: 'remote-branches-list',
   integrateBranchSelect: 'integrate-branch-select',
   btnMerge: 'btn-merge',

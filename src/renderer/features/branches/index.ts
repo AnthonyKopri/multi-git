@@ -61,6 +61,9 @@ export function renderBranches(): void {
   ui.remoteBranchesList.replaceChildren(
     fragment(branches.remote.map((branch) => buildBranchRow(branch, true, false)))
   );
+  // Shown beside each heading, so a folded list still says what it holds.
+  ui.localBranchesCount.textContent = String(branches.local.length);
+  ui.remoteBranchesCount.textContent = String(branches.remote.length);
 
   renderIntegrationSelect();
   renderBranchDropdown();

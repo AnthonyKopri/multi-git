@@ -86,9 +86,24 @@ export function initCollapsibleSections(root: ParentNode = document): void {
     apply(section, remembered ?? declaredDefault(section));
   }
 
+  for (const group of root.querySelectorAll<HTMLElement>('.branch-group[data-branch-group]')) {
+    applyGroup(group, storedCollapsed(groupKey(group)) ?? false);
+  }
+
   for (const container of root.querySelectorAll<HTMLElement>('.sidebar')) {
     container.addEventListener('click', (event) => {
-      const toggle = (event.target as HTMLElement | null)?.closest<HTMLElement>('.section-toggle');
+      const target = event.target as HTMLElement | null;
+
+      const groupToggle = target?.closest<HTMLElement>('.branch-group-toggle');
+      const group = groupToggle?.closest<HTMLElement>('.branch-group');
+      if (groupToggle && group) {
+        const collapsed = !group.classList.contains('collapsed');
+        applyGroup(group, collapsed);
+        persist(groupKey(group), collapsed);
+        return;
+      }
+
+      const toggle = target?.closest<HTMLElement>('.section-toggle');
       const section = toggle?.closest<HTMLElement>('.sidebar-section');
 
       if (toggle && section) {
@@ -96,4 +111,23 @@ export function initCollapsibleSections(root: ParentNode = document): void {
       }
     });
   }
+
+  // Opening and closing animate, but restoring the remembered state on load
+  // must not: every folded section would visibly fold itself shut at startup.
+  // Two frames, so the restored state has been drawn once before motion is on.
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => document.documentElement.classList.add('motion-ready'))
+  );
+}
+
+// ---------- the two branch lists inside Branches ----------
+
+/** Remembered beside the sections, as "branches-local" and "branches-remote". */
+function groupKey(group: HTMLElement): string {
+  return `branches-${group.dataset['branchGroup'] ?? ''}`;
+}
+
+function applyGroup(group: HTMLElement, collapsed: boolean): void {
+  group.classList.toggle('collapsed', collapsed);
+  group.querySelector<HTMLElement>('.branch-group-toggle')?.setAttribute('aria-expanded', String(!collapsed));
 }
