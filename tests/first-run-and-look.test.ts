@@ -66,8 +66,8 @@ describe('commit types of your own', () => {
 });
 
 describe('the look settings', () => {
-  it('accepts the three theme choices and nothing else', () => {
-    expect(['dark', 'light', 'system'].every(isThemeChoice)).toBe(true);
+  it('accepts the four theme choices and nothing else', () => {
+    expect(['dark', 'oled', 'light', 'system'].every(isThemeChoice)).toBe(true);
     expect(isThemeChoice('sepia')).toBe(false);
     expect(isThemeChoice(undefined)).toBe(false);
   });
@@ -78,12 +78,18 @@ describe('the look settings', () => {
     expect(resolveTheme('dark', true)).toBe('dark');
   });
 
+  it('draws OLED black as itself, whatever the system prefers', () => {
+    expect(resolveTheme('oled', true)).toBe('oled');
+    expect(resolveTheme('oled', false)).toBe('oled');
+  });
+
   it('round-trips through the configuration file, dropping nonsense', () => {
     const { config } = validateAppConfig({
       configVersion: 2,
       settings: {
         manageSshConfig: false,
         theme: 'light',
+        reducedColor: true,
         simpleMode: true,
         experienceChosen: true,
         keepAgentPrompts: false,
@@ -93,14 +99,16 @@ describe('the look settings', () => {
 
     expect(config.settings).toMatchObject({
       theme: 'light',
+      reducedColor: true,
       simpleMode: true,
       experienceChosen: true,
       keepAgentPrompts: false,
       customCommitTypes: ['art']
     });
 
-    const { config: odd } = validateAppConfig({ configVersion: 2, settings: { manageSshConfig: false, theme: 'neon', simpleMode: 'yes' } });
+    const { config: odd } = validateAppConfig({ configVersion: 2, settings: { manageSshConfig: false, theme: 'neon', simpleMode: 'yes', reducedColor: 1 } });
     expect(odd.settings?.theme).toBeUndefined();
+    expect(odd.settings?.reducedColor).toBeUndefined();
     expect(odd.settings?.simpleMode).toBeUndefined();
   });
 
@@ -110,6 +118,7 @@ describe('the look settings', () => {
 
     expect(client.settings).toMatchObject({
       theme: 'dark',
+      reducedColor: false,
       simpleMode: false,
       experienceChosen: false,
       keepAgentPrompts: true,

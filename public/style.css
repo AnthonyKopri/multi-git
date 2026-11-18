@@ -8383,3 +8383,205 @@ textarea {
     transform: translateY(-50%);
   }
 }
+
+/* ==========================================================================
+   OLED BLACK AND REDUCED COLOUR
+
+   OLED black is a third theme. It is dark in every other respect, so every
+   rule written for "not light" applies to it too; only the fills change. The
+   canvas and the cards are both pure black, which leaves the fill steps with
+   nothing to separate, so each card gets a hairline instead, through the same
+   --shadow-card token the light theme uses for its lift.
+
+   Reduced colour is not a theme: it sits beside any of them as
+   data-color="reduced" on <html>. It turns every assigned colour (the eight
+   tints, the graph lanes, the brand purple on buttons and selection, info
+   blue) into greys of the theme's own text colour. Lanes keep four steps of
+   lightness so neighbouring branches still part. Danger, warning and success
+   are left alone: on an error, a conflict or a diff line the colour is the
+   message, not decoration.
+   ========================================================================== */
+
+:root[data-theme='oled'] {
+  --bg-app: #000000;
+  --bg-panel: #000000;
+  --bg-card: #000000;
+  --bg-card-hover: #121117;
+  --bg-raised: #141319;
+  --bg-input: #141319;
+  --bg-input-focus: #1c1a22;
+  --bg-overlay: rgba(0, 0, 0, 0.82);
+  --hover-veil: rgba(255, 255, 255, 0.05);
+
+  --border-color: #26232e;
+  --border-color-hover: #3d3948;
+
+  --color-secondary: #1f1d26;
+  --color-secondary-hover: #2c2936;
+
+  --shadow-card: 0 0 0 1px #1f1d27;
+  --shadow-md: 0 0 0 1px #26232e, 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 0 0 1px #26232e, 0 18px 44px rgba(0, 0, 0, 0.7);
+}
+
+/* ---------- reduced colour, dark and OLED ---------- */
+:root[data-color='reduced']:not([data-theme='light']) {
+  --color-primary: #e6e3ee;
+  --color-primary-hover: #ffffff;
+  --color-primary-glow: rgba(230, 227, 238, 0.14);
+  --on-primary: #17151c;
+  --color-info: #c9c4d6;
+
+  --tint-violet-bg: rgba(201, 196, 214, 0.12);
+  --tint-violet-fg: #d4d0de;
+  --tint-green-bg: rgba(201, 196, 214, 0.12);
+  --tint-green-fg: #d4d0de;
+  --tint-amber-bg: rgba(201, 196, 214, 0.12);
+  --tint-amber-fg: #d4d0de;
+  --tint-blue-bg: rgba(201, 196, 214, 0.12);
+  --tint-blue-fg: #d4d0de;
+  --tint-pink-bg: rgba(201, 196, 214, 0.12);
+  --tint-pink-fg: #d4d0de;
+  --tint-teal-bg: rgba(201, 196, 214, 0.12);
+  --tint-teal-fg: #d4d0de;
+  --tint-orange-bg: rgba(201, 196, 214, 0.12);
+  --tint-orange-fg: #d4d0de;
+  --tint-gray-bg: rgba(201, 196, 214, 0.12);
+  --tint-gray-fg: #d4d0de;
+
+  --graph-lane-0: #ece9f2;
+  --graph-lane-1: #a9a3b8;
+  --graph-lane-2: #d0ccda;
+  --graph-lane-3: #8f89a0;
+  --graph-lane-4: #ece9f2;
+  --graph-lane-5: #a9a3b8;
+  --graph-lane-6: #d0ccda;
+  --graph-lane-7: #8f89a0;
+}
+
+/* ---------- reduced colour, light ---------- */
+:root[data-color='reduced'][data-theme='light'] {
+  --color-primary: #2a2d3a;
+  --color-primary-hover: #11131c;
+  --color-primary-glow: rgba(42, 45, 58, 0.12);
+  --on-primary: #ffffff;
+  --color-info: #3d4254;
+
+  --tint-violet-bg: #e9ebf0;
+  --tint-violet-fg: #3d4254;
+  --tint-green-bg: #e9ebf0;
+  --tint-green-fg: #3d4254;
+  --tint-amber-bg: #e9ebf0;
+  --tint-amber-fg: #3d4254;
+  --tint-blue-bg: #e9ebf0;
+  --tint-blue-fg: #3d4254;
+  --tint-pink-bg: #e9ebf0;
+  --tint-pink-fg: #3d4254;
+  --tint-teal-bg: #e9ebf0;
+  --tint-teal-fg: #3d4254;
+  --tint-orange-bg: #e9ebf0;
+  --tint-orange-fg: #3d4254;
+  --tint-gray-bg: #e9ebf0;
+  --tint-gray-fg: #3d4254;
+
+  --graph-lane-0: #2a2d3a;
+  --graph-lane-1: #7b8194;
+  --graph-lane-2: #4b5063;
+  --graph-lane-3: #9aa0b1;
+  --graph-lane-4: #2a2d3a;
+  --graph-lane-5: #7b8194;
+  --graph-lane-6: #4b5063;
+  --graph-lane-7: #9aa0b1;
+}
+
+/* ==========================================================================
+   ONE PILL FOR THE VIEWS, A LINE UNDER EACH FILE LIST'S TITLE, AND ROOM UNDER
+   THE TOP BAR
+
+   The three views are one control, so they sit in one pill. The chosen one is
+   marked by a highlight that slides between them (ui/slide-switch.ts places
+   it from the chosen button's box). Until the script has placed it, the
+   chosen button fills itself, so the first frame is never unmarked.
+   ========================================================================== */
+
+.slide-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  height: var(--row-h);
+  padding: 3px;
+  border-radius: 999px;
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+.slide-switch-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: var(--thumb-w, 0);
+  border-radius: 999px;
+  background-color: var(--color-primary);
+  transform: translateX(var(--thumb-x, 0));
+  pointer-events: none;
+}
+.slide-switch.ready .slide-switch-thumb {
+  transition:
+    transform 240ms var(--ease-out),
+    width 240ms var(--ease-out),
+    background-color var(--dur-fast) ease;
+}
+.slide-switch:not(.ready) .slide-switch-thumb {
+  visibility: hidden;
+}
+
+.slide-switch .tab-btn {
+  position: relative;
+  z-index: 1;
+  height: calc(var(--row-h) - 6px);
+  padding: 0 14px;
+  background-color: transparent;
+  box-shadow: none;
+}
+.slide-switch .tab-btn:hover:not(.active) {
+  background-color: transparent;
+  color: var(--text-strong);
+  transform: none;
+}
+.slide-switch .tab-btn.active {
+  background-color: transparent;
+  color: var(--on-primary);
+}
+.slide-switch:not(.ready) .tab-btn.active {
+  background-color: var(--color-primary);
+}
+/* Pressing a view dips it less than a free-standing button: it sits inside a
+   shape that does not move. */
+.slide-switch .tab-btn:active {
+  transform: scale(0.97);
+}
+
+/* A hairline under Unstaged and Staged's title rows, so the first file never
+   reads as part of the header. */
+.file-list-card > .card-header {
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* The top bar's menus and chips had four pixels between them and the cards.
+   The bar now keeps 8 px above its menus and 12 below, so they sit on the
+   window rather than on the panels. */
+.navbar {
+  height: calc(var(--navbar-height) + 4px);
+  padding-top: 4px;
+  margin-bottom: 8px;
+  flex: 0 0 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-switch.ready .slide-switch-thumb {
+    transition: none;
+  }
+}

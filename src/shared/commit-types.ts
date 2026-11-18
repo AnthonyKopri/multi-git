@@ -73,7 +73,7 @@ export function sanitizeCustomCommitTypes(raw: unknown): string[] | undefined {
 }
 
 /** Which of the two themes to draw, or to follow the operating system. */
-export const THEME_CHOICES = ['dark', 'light', 'system'] as const;
+export const THEME_CHOICES = ['dark', 'oled', 'light', 'system'] as const;
 export type ThemeChoice = (typeof THEME_CHOICES)[number];
 
 export function isThemeChoice(value: unknown): value is ThemeChoice {

@@ -353,9 +353,13 @@ export function validateSettings(raw: unknown): Partial<AppSettings> | undefined
     settings.staleRules = rules;
   }
 
-  // Becomes an attribute value on <html>, so only the three known words count.
+  // Becomes an attribute value on <html>, so only the known words count.
   if (isThemeChoice(source['theme'])) {
     settings.theme = source['theme'];
+  }
+
+  if (typeof source['reducedColor'] === 'boolean') {
+    settings.reducedColor = source['reducedColor'];
   }
 
   if (typeof source['simpleMode'] === 'boolean') {

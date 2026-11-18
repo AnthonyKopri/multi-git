@@ -21,6 +21,7 @@ import { trapTab } from './ui/focus';
 import { isTypingTarget, localizeShortcutHints, matchesShortcut } from './ui/shortcuts';
 import { isMacHost, isWindowsHost } from './ui/platform';
 import { initCollapsibleSections } from './ui/sections';
+import { initSlideSwitch } from './ui/slide-switch';
 import { attachHorizontalWheel } from './ui/wheel-scroll';
 import { logToTerminal, openLogWindow } from './ui/log';
 import { repoBaseName } from './ui/format';
@@ -694,7 +695,8 @@ function wireModals(): void {
   ui.btnCloseNewRepoModal.addEventListener('click', () => setHidden(ui.newRepoModal, true));
   ui.btnCancelNewRepo.addEventListener('click', () => setHidden(ui.newRepoModal, true));
   ui.btnNewRepoBrowse.addEventListener('click', () => void newRepo.browseNewRepoFolder());
-  ui.newRepoPathInput.addEventListener('change', () => void newRepo.refreshFolderHint());
+  ui.newRepoParentInput.addEventListener('change', () => void newRepo.refreshFolderHint());
+  ui.newRepoNameInput.addEventListener('input', () => newRepo.scheduleFolderHint());
   ui.newRepoLicense.addEventListener('change', () => newRepo.onLicenseChanged());
   ui.newRepoGitignore.addEventListener('change', () => newRepo.onGitignoreChanged());
   ui.newRepoForm.addEventListener('submit', (event) => {
@@ -1058,6 +1060,9 @@ async function start(): Promise<void> {
   ssh.initSshManager(ui);
   pullRequest.initPullRequests(ui, { refreshStatus });
   workspace.initWorkspace(ui, { refreshStatus });
+  for (const pill of document.querySelectorAll<HTMLElement>('.slide-switch')) {
+    initSlideSwitch(pill);
+  }
   worktrees.initWorktrees(ui, refreshAll);
   groups.initGroups(ui);
   agents.initAgents(ui);

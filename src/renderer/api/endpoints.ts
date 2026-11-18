@@ -155,6 +155,7 @@ export interface AppSettingsInput {
   /** Folder new worktrees are suggested in. Empty restores the default. */
   worktreeParentDir?: string;
   theme?: ThemeChoice;
+  reducedColor?: boolean;
   simpleMode?: boolean;
   experienceChosen?: boolean;
   /** The whole list: adding or removing a type sends what should remain. */
