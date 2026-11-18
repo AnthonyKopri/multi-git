@@ -12,6 +12,7 @@ import { logToTerminal } from '../../ui/log';
 import { refreshIdentity } from '../accounts/identity';
 import { renderIdentityRow } from '../accounts/profile-ui';
 import { loadWorkspaceTree } from '../explorer';
+import { isSimpleMode } from '../../ui/appearance';
 
 export type ViewTab = 'staging' | 'diff' | 'explorer';
 
@@ -21,6 +22,14 @@ let refreshStatus: () => Promise<void> = async () => {};
 export function initWorkspace(elements: Elements, hooks: { refreshStatus: () => Promise<void> }): void {
   ui = elements;
   refreshStatus = hooks.refreshStatus;
+
+  // Simple mode hides the Explorer's tab. Turned on while the Explorer was
+  // open, it left a view with no tab to leave it by, and an empty highlight.
+  document.addEventListener('multi-git:simple-mode', (event) => {
+    if ((event as CustomEvent<boolean>).detail && ui.tabExplorer.classList.contains('active')) {
+      switchViewTab('staging');
+    }
+  });
 }
 
 function setCountBadge(element: HTMLElement, count: number, arrow: string): void {
@@ -89,6 +98,12 @@ export function renderConflictBanner(): void {
 }
 
 export function switchViewTab(tab: ViewTab): void {
+  // No Explorer in Simple mode: its shortcut does nothing rather than open a
+  // view whose tab is hidden.
+  if (tab === 'explorer' && isSimpleMode()) {
+    return;
+  }
+
   const panes: Record<ViewTab, { button: HTMLElement; pane: HTMLElement }> = {
     staging: { button: ui.tabStaging, pane: ui.stagingView },
     diff: { button: ui.tabDiff, pane: ui.diffView },

@@ -81,6 +81,9 @@ export function applyReducedColor(enabled: boolean): void {
 /** Turns Simple mode on or off for this window. */
 export function applySimpleMode(enabled: boolean): void {
   document.body.classList.toggle('simple-mode', enabled);
+  // Announced, so a feature whose view Simple mode hides can step away from
+  // it without this module importing every feature.
+  document.dispatchEvent(new CustomEvent('multi-git:simple-mode', { detail: enabled }));
 }
 
 export function isSimpleMode(): boolean {
