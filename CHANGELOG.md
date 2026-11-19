@@ -12,7 +12,7 @@ Add changes here under the headings Added, Changed, Deprecated, Removed, Fixed,
 or Security. Remove empty headings when preparing a release.
 -->
 
-## [6.0.0] - 2026-11-11
+## [6.0.0] - 2026-11-19
 
 ### Highlights
 
@@ -142,6 +142,9 @@ name says, without waiting for you to press Fetch.
   still turns that folder into a repository, as before.
 - **Git Bash and the Multi-Git command line are icons on the terminal line**
   at the bottom of the window, next to the button that opens a terminal.
+- **The desktop edition runs on Electron 45.3.0**, up from 45.2.3. It brings
+  Chromium 156.0.8078.96 with its security fixes, among them a use-after-free
+  in libxslt, and backported fixes to GPU error handling and V8.
 - **Fonts ship inside the app.** The interface no longer loads its typefaces
   and icons from Google Fonts, so it looks the same offline and makes one less
   kind of network request. The licences are in `public/fonts`.
